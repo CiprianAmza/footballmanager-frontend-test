@@ -1,0 +1,50 @@
+<div class="card-page">
+  <div *ngIf="loading" class="card-msg">Loading card…</div>
+  <div *ngIf="notFound && !loading" class="card-msg">No card available for this player.</div>
+
+  <div class="fut-card" *ngIf="card && !loading">
+    <div class="fut-top">
+      <div class="fut-rating">
+        <span class="fut-ovr">{{ card.overall }}</span>
+        <span class="fut-pos">{{ card.position }}</span>
+      </div>
+      <div class="fut-face">
+        <app-player-face
+          [baseFaceId]="face.baseFaceId || 0"
+          [skinTone]="face.skinTone || 0"
+          [hairStyle]="face.hairStyle || 0"
+          [hairColor]="face.hairColor || 0"
+          [eyeColor]="face.eyeColor || 0"
+          [faceShape]="face.faceShape || 0"
+          [noseShape]="face.noseShape || 0"
+          [eyeShape]="face.eyeShape || 0"
+          [mouthShape]="face.mouthShape || 0"
+          [browShape]="face.browShape || 0"
+          [nationId]="card.nationId || 0"
+          [species]="face.species || 'human'"
+          [size]="120"></app-player-face>
+      </div>
+    </div>
+
+    <div class="fut-name">{{ card.name }}</div>
+
+    <div class="fut-stats">
+      <div class="fut-col">
+        <div class="fut-stat"><span class="v">{{ card.pac }}</span><span class="k">PAC</span></div>
+        <div class="fut-stat"><span class="v">{{ card.sho }}</span><span class="k">SHO</span></div>
+        <div class="fut-stat"><span class="v">{{ card.pas }}</span><span class="k">PAS</span></div>
+      </div>
+      <div class="fut-divider"></div>
+      <div class="fut-col">
+        <div class="fut-stat"><span class="v">{{ card.dri }}</span><span class="k">DRI</span></div>
+        <div class="fut-stat"><span class="v">{{ card.def }}</span><span class="k">DEF</span></div>
+        <div class="fut-stat"><span class="v">{{ card.phy }}</span><span class="k">PHY</span></div>
+      </div>
+    </div>
+
+    <div class="fut-footer">
+      <span class="fut-age">Age {{ card.age }}</span>
+      <span class="fut-nation" *ngIf="card.nationId !== undefined && card.nationId !== null">Nation #{{ card.nationId }}</span>
+    </div>
+  </div>
+</div>

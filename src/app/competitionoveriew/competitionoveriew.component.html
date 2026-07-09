@@ -1,0 +1,77 @@
+<body>
+    <table>        
+        <tr>
+            <td colspan="13">
+                <div class="competitionTitle">
+                    <a href="/competition"> Gallactick Football Championship </a>
+                </div>
+            </td>
+        </tr>
+
+        <tr>
+          <th (click)="sortBy('position')">Position</th>
+          <th colspan="7" (click)="sortBy('name')">Team Name</th>
+          <th (click)="sortBy('games')">Games</th>
+          <th (click)="sortBy('wins')">Wins</th>
+          <th (click)="sortBy('draws')">Draws</th>
+          <th (click)="sortBy('loses')">Defeats</th>
+          <th (click)="sortBy('points')">Points</th>
+        </tr>
+        <tr *ngFor="let team of _teams; let i = index;" (click)="showDiv(team.name)">
+          <td> {{team.position}}</td>
+          <td colspan="3">
+              <div id="photo-wrapper" class="logo" [ngStyle]="{backgroundColor: team.color1, borderRadius: team.border}">
+              <div class="currentTeam">
+                <span class="name" [ngStyle]="{color: team.color2}" >{{team.name}}</span>
+              </div>
+            </div></td>
+          <td colspan="4" class="teamName"
+              ><a id=i>{{ team.name }}</a></td>
+          <td>{{ team.games }}</td>
+          <td>{{ team.wins }}</td>
+          <td>{{ team.draws }}</td>
+          <td>{{ team.loses }}</td>
+          <td>{{ team.points }}</td>
+        </tr>   
+    
+     </table>
+
+
+	    <div> 
+            <ng-container *ngIf="matchesCup && matchesCup.length > 0; else noMatches">
+                <table>
+                <thead>
+                    <tr>
+                        <td colspan="13">
+                            <div class="competitionTitle">
+                                <a href="/rounds"> Gallactick Football Cup </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="13">
+                            <div class="">
+                                <a href="/rounds"> {{currentRoundCup}} </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                    <th>Home Team</th>
+                    <th>Away Team</th>
+                    <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let match of matchesCup">
+                    <td>{{ match.teamName1 }}</td>
+                    <td>{{ match.teamName2 }}</td>
+                    <td>{{ match.score }}</td>
+                    </tr>
+                </tbody>
+                </table>
+            </ng-container>
+            <ng-template #noMatches>
+                <p class="text">The round has not yet been played.</p>
+            </ng-template>
+          </div>
+</body>

@@ -1,0 +1,128 @@
+<div class="dev-container">
+  
+    <!-- HEADER -->
+    <div class="dev-header">
+      <div class="header-left">
+        <div class="icon-circle">⚙️</div>
+        <div class="titles">
+          <h1>DEVELOPMENT CENTER</h1>
+          <span class="subtitle">Development Center</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn">✏️</button>
+      </div>
+    </div>
+  
+    <!-- NAV TABS -->
+    <div class="nav-bar">
+      <button *ngFor="let tab of tabs" 
+              class="nav-item" 
+              [class.active]="activeTab === tab" 
+              (click)="setTab(tab)">
+        {{ tab }}
+      </button>
+    </div>
+  
+    <!-- MAIN CONTENT -->
+    <div class="content-area" *ngIf="activeTab === 'Loans'">
+      
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <span class="section-title">PLAYERS ON LOAN</span>
+          <button class="view-btn">👁 Details ▼</button>
+        </div>
+        <div class="toolbar-right">
+          <button class="fm-btn">👤 Responsibilities ▼</button>
+          <button class="fm-btn">Filter ▼</button>
+        </div>
+      </div>
+  
+      <!-- TABLE -->
+      <div class="table-responsive">
+        <table class="fm-table">
+          <thead>
+            <tr>
+              <th class="status-col">INF</th>
+              <th class="text-left">NAME</th>
+              <th class="text-left">TEAM</th>
+              <th class="center">PROGRESS</th>
+              <th class="center">LOAN EXPIRES</th>
+              <th class="center">APPS</th>
+              <th class="center">AST</th>
+              <th class="center">GLS</th>
+              <th class="center">AV RAT</th>
+              <th class="action-col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let player of loanPlayers">
+              
+              <!-- Status Icons -->
+              <td class="status-col">
+                <div class="icon-stack">
+                  <span *ngFor="let tag of player.statusIcons" 
+                        class="status-tag" 
+                        [style.background-color]="getStatusColor(tag)">
+                    {{ tag }}
+                  </span>
+                </div>
+              </td>
+  
+              <!-- Name -->
+              <td class="name-col">
+                <a [routerLink]="['/player', player.id]" class="fm-link">{{ player.name }}</a>
+              </td>
+  
+              <!-- Team -->
+              <td class="team-col">
+                <div class="team-flex">
+                  <div class="mini-logo">🛡️</div> <!-- Placeholder -->
+                  <span class="t-name">{{ player.loanTeam }}</span>
+                </div>
+              </td>
+  
+              <!-- Progress Chart (SVG Sparkline) -->
+              <td class="center progress-col">
+                <svg width="80" height="20" class="sparkline">
+                  <path [attr.d]="getSparklinePath(player.progressHistory)" 
+                        fill="none" 
+                        stroke="#2ecc71" 
+                        stroke-width="2" />
+                </svg>
+              </td>
+  
+              <!-- Loan Expires -->
+              <td class="center date-col">{{ player.loanExpires }}</td>
+  
+              <!-- Stats -->
+              <td class="center">{{ player.apps }}</td>
+              <td class="center">{{ player.assists }}</td>
+              <td class="center">{{ player.goals }}</td>
+  
+              <!-- Rating (Colored Badge) -->
+              <td class="center">
+                <div class="rating-badge" [style.background-color]="getRatingColor(player.avgRating)">
+                  {{ player.avgRating | number:'1.2-2' }}
+                </div>
+              </td>
+  
+              <!-- Action Button -->
+              <td class="action-col">
+                <button class="recall-btn">Recall From Loan</button>
+              </td>
+  
+            </tr>
+          </tbody>
+        </table>
+      </div>
+  
+    </div>
+  
+    <!-- PLACEHOLDER FOR OTHER TABS -->
+    <div class="content-area empty-tab" *ngIf="activeTab !== 'Loans'">
+        <p>No data available for {{ activeTab }} in this mock version.</p>
+    </div>
+  
+  </div>

@@ -1,0 +1,72 @@
+<div class="setup-container">
+  <div class="setup-card">
+    <div class="setup-header">
+      <span class="fm-logo">FM</span>
+      <h1>Football Manager</h1>
+      <p class="setup-subtitle">New Career</p>
+    </div>
+
+    <div class="loading-state" *ngIf="loading">
+      Loading teams...
+    </div>
+
+    <div *ngIf="!loading">
+      <!-- Manager Info -->
+      <div class="setup-section">
+        <h2>Manager Profile</h2>
+        <div class="form-row">
+          <label for="managerName">Name</label>
+          <input id="managerName" type="text" [(ngModel)]="managerName" placeholder="Enter your name" maxlength="50" />
+        </div>
+        <div class="form-row">
+          <label for="managerAge">Age</label>
+          <input id="managerAge" type="number" [(ngModel)]="managerAge" min="25" max="75" />
+        </div>
+      </div>
+
+      <!-- Team Selection -->
+      <div class="setup-section">
+        <h2>Select Your Club</h2>
+        <div class="leagues-container">
+          <div class="league-group" *ngFor="let league of leagues">
+            <h3 class="league-name">{{ league.competitionName }}</h3>
+            <div class="teams-grid">
+              <div class="team-card"
+                   *ngFor="let team of league.teams"
+                   [class.selected]="selectedTeamId === team.teamId"
+                   (click)="selectTeam(team.teamId)">
+                <div class="team-colors">
+                  <span class="color-swatch" [style.background]="team.color1"></span>
+                  <span class="color-swatch" [style.background]="team.color2"></span>
+                </div>
+                <span class="team-name">{{ team.teamName }}</span>
+                <span class="team-rep">{{ team.reputation }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div class="error-message" *ngIf="error">{{ error }}</div>
+
+      <!-- Submit -->
+      <div class="setup-actions">
+        <div class="selected-summary" *ngIf="selectedTeamId">
+          Selected: <strong>{{ getSelectedTeamName() }}</strong>
+        </div>
+        <div class="setup-actions-row">
+          <button class="start-btn" (click)="submit()" [disabled]="submitting">
+            {{ submitting ? 'Starting...' : 'Start Career' }}
+          </button>
+          <button class="start-btn secondary" (click)="startAsFreeAgent()" [disabled]="submitting" type="button">
+            Start as Free Agent
+          </button>
+        </div>
+        <div class="free-agent-hint">
+          No team picked? Start unemployed — clubs will reach out with job offers right away.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

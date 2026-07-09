@@ -1,0 +1,231 @@
+.summary-container {
+  padding: 20px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.summary-header h1 {
+  color: #e0e6ed;
+  font-size: 24px;
+  margin: 0;
+}
+
+.season-nav {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-btn {
+  padding: 6px 16px;
+  background: #1e2d44;
+  color: #8899aa;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.nav-btn:hover { background: #2a3d54; color: #e0e6ed; }
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #1e2d44;
+  padding-bottom: 4px;
+}
+
+.tabs button {
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  color: #7a8ba3;
+  cursor: pointer;
+  font-size: 13px;
+  border-radius: 4px 4px 0 0;
+}
+
+.tabs button:hover { color: #e0e6ed; }
+.tabs button.active { background: #1e2d44; color: #1a8fc4; }
+
+.tab-content h2 {
+  color: #c8d6e5;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+/* Tables */
+.standings-table, .stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.standings-table th, .stats-table th {
+  background: #111d2e;
+  color: #7a8ba3;
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.standings-table td, .stats-table td {
+  padding: 7px 10px;
+  color: #c8d6e5;
+  border-bottom: 1px solid #1a2535;
+}
+
+.standings-table tr:hover, .stats-table tr:hover {
+  background: #142236;
+}
+
+.human-team {
+  background: #0f2a3d !important;
+}
+
+.human-team td { color: #1a8fc4; font-weight: 600; }
+
+.pos { width: 30px; text-align: center; }
+.team-col, .player-col { min-width: 140px; }
+.pts { font-weight: 700; }
+.highlight { color: #1a8fc4; font-weight: 700; }
+
+.player-col a {
+  color: #1a8fc4;
+  text-decoration: none;
+}
+.player-col a:hover { text-decoration: underline; }
+
+/* Best XI */
+.best-xi-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.best-xi-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #111d2e;
+  border-radius: 6px;
+}
+
+.bxi-rank {
+  width: 28px;
+  height: 28px;
+  background: #1a8fc4;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.bxi-info { flex: 1; }
+.bxi-name { color: #1a8fc4; text-decoration: none; font-weight: 600; }
+.bxi-name:hover { text-decoration: underline; }
+.bxi-pos { color: #7a8ba3; font-size: 12px; margin-left: 8px; }
+.bxi-stats { text-align: right; }
+.bxi-rating { color: #e0e6ed; font-size: 18px; font-weight: 700; }
+.bxi-details { display: block; color: #7a8ba3; font-size: 11px; }
+
+/* Awards */
+.awards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.award-card {
+  background: #111d2e;
+  border-radius: 8px;
+  padding: 16px;
+  border-left: 3px solid #d4a017;
+}
+
+.award-type {
+  color: #d4a017;
+  font-size: 11px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.award-winner {
+  color: #e0e6ed;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 4px 0;
+}
+
+.award-details {
+  color: #7a8ba3;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.award-value { color: #1a8fc4; font-weight: 600; }
+.award-comp { color: #556677; font-size: 11px; margin-top: 4px; }
+
+/* Objectives */
+.objectives-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.objective-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #111d2e;
+  border-radius: 6px;
+  border-left: 3px solid #556677;
+}
+
+.objective-card.achieved { border-left-color: #22c55e; }
+.objective-card.failed { border-left-color: #ef4444; }
+.objective-card.active-obj { border-left-color: #eab308; }
+
+.status-icon { font-size: 18px; }
+.achieved-icon { color: #22c55e; }
+.failed-icon { color: #ef4444; }
+.active-icon { color: #eab308; }
+
+.obj-info { flex: 1; }
+.obj-desc { color: #e0e6ed; font-size: 14px; }
+.obj-comp { color: #7a8ba3; font-size: 12px; margin-top: 2px; }
+.obj-result { color: #7a8ba3; font-size: 13px; }
+
+.empty-state {
+  color: #556677;
+  text-align: center;
+  padding: 30px;
+  font-size: 14px;
+}
+
+.loading {
+  text-align: center;
+  color: #7a8ba3;
+  padding: 60px;
+  font-size: 16px;
+}
+
+.standings-group {
+  margin-bottom: 24px;
+}

@@ -1,0 +1,55 @@
+<div class="job-search-container">
+
+  <div class="page-header">
+    <h1>Job Search</h1>
+    <p class="subtitle">You are currently unemployed. Browse available managerial positions below.</p>
+  </div>
+
+  <div *ngIf="message" class="success-message">
+    {{ message }}
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading available positions...</div>
+
+  <div *ngIf="!loading && availableJobs.length === 0" class="no-jobs">
+    <p>No managerial positions available at the moment. Check back later.</p>
+  </div>
+
+  <div class="jobs-grid" *ngIf="!loading && availableJobs.length > 0">
+    <div class="job-card" *ngFor="let job of availableJobs">
+      <div class="job-card-header">
+        <span class="team-name">{{ job.teamName }}</span>
+        <span class="job-badge" [ngClass]="{'badge-vacant': job.status === 'Vacant', 'badge-replaceable': job.status === 'Replaceable'}">
+          {{ job.status }}
+        </span>
+      </div>
+      <div class="job-card-body">
+        <div class="job-stat">
+          <span class="stat-label">Club Reputation</span>
+          <span class="stat-value">{{ job.reputation }}</span>
+        </div>
+        <div class="job-stat">
+          <span class="stat-label">League</span>
+          <span class="stat-value">{{ job.league }}</span>
+        </div>
+        <div class="job-stat" *ngIf="job.currentManager">
+          <span class="stat-label">Current Manager</span>
+          <span class="stat-value text-orange">{{ job.currentManager }}</span>
+        </div>
+        <div class="job-stat">
+          <span class="stat-label">Status</span>
+          <span class="stat-value" [ngClass]="{'text-green': job.status === 'Vacant', 'text-orange': job.status === 'Available'}">
+            {{ job.status === 'Vacant' ? 'No Manager' : 'Open to offers' }}
+          </span>
+        </div>
+      </div>
+      <div class="job-card-footer">
+        <button class="accept-btn" (click)="acceptJob(job.teamId)"
+                [disabled]="acceptingJobId !== null">
+          {{ acceptingJobId === job.teamId ? 'Accepting...' : 'Apply for Job' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

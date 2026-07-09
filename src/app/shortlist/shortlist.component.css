@@ -1,0 +1,35 @@
+.scouting-container { padding: 20px; max-width: 1200px; margin: 0 auto; }
+.scout-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.scout-header h1 { color: #e0e0e0; font-size: 1.5rem; margin: 0; }
+.results-count { color: #888; font-size: 0.9rem; }
+
+.loading-container { text-align: center; padding: 40px; color: #888; }
+.spinner { width: 30px; height: 30px; border: 3px solid #333; border-top-color: #4fc3f7; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.table-container { overflow-x: auto; }
+.fm-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.fm-table th { background: #1a1a2e; color: #888; text-transform: uppercase; font-size: 0.75rem; padding: 8px 10px; cursor: pointer; white-space: nowrap; border-bottom: 1px solid #333; }
+.fm-table td { padding: 8px 10px; border-bottom: 1px solid #222; color: #ccc; }
+.fm-table tbody tr:hover { background: #1a1a2e; }
+
+.center { text-align: center; }
+.right { text-align: right; }
+.name-cell .player-link { color: #4fc3f7; text-decoration: none; }
+.name-cell .player-link:hover { text-decoration: underline; }
+.pos-pill { background: #2a2a4a; padding: 2px 8px; border-radius: 3px; font-size: 0.75rem; color: #aaa; }
+.rating-val { font-weight: bold; color: #fff; }
+.money-val { color: #4caf50; }
+
+.notes-cell { min-width: 150px; max-width: 250px; }
+.notes-text { color: #666; cursor: pointer; font-style: italic; font-size: 0.8rem; }
+.notes-text:hover { color: #aaa; }
+.notes-edit { display: flex; gap: 4px; }
+.notes-edit input { background: #1a1a2e; border: 1px solid #444; color: #ccc; padding: 3px 6px; font-size: 0.8rem; flex: 1; border-radius: 3px; }
+.save-btn { background: #2a5a3a; color: #4caf50; border: none; padding: 3px 8px; cursor: pointer; border-radius: 3px; font-size: 0.75rem; }
+
+.remove-btn { background: transparent; border: 1px solid #555; color: #888; width: 24px; height: 24px; cursor: pointer; border-radius: 3px; font-size: 0.7rem; }
+.remove-btn:hover { background: #4a1a1a; color: #ff4444; border-color: #ff4444; }
+
+.retired-row { opacity: 0.5; }
+.no-results { text-align: center; padding: 40px; color: #666; }

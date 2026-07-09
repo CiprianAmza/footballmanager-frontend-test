@@ -1,0 +1,109 @@
+<div class="stats-container">
+    <div class="header-section">
+      <h1>⚽ Golden Boot Tracker</h1>
+      
+      <div class="context-switch-container">
+          <div class="context-switch">
+              <button [class.active]="viewMode === 'currentSeason'" (click)="setViewMode('currentSeason')">
+                  Current Season
+              </button>
+              <button [class.active]="viewMode === 'allTime'" (click)="setViewMode('allTime')">
+                  All Time History
+              </button>
+          </div>
+      </div>
+  
+      <div class="controls-row">
+        <div class="tabs">
+          <button [class.active]="activeTab === 'total'" (click)="setTab('total')">All Competitions</button>
+          <button [class.active]="activeTab === 'league'" (click)="setTab('league')">Top League</button>
+          <button [class.active]="activeTab === 'cup'" (click)="setTab('cup')">National Cup</button>
+          <button [class.active]="activeTab === 'second'" (click)="setTab('second')">2nd League</button>
+        </div>
+  
+        <div class="filter-wrapper">
+          <label for="posFilter">Filter Position:</label>
+          <select id="posFilter" [ngModel]="selectedPosition" (ngModelChange)="filterByPosition($event)">
+            <option *ngFor="let pos of availablePositions" [value]="pos">{{ pos }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  
+    <div *ngIf="loading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading stats...</p>
+    </div>
+  
+    <div class="table-responsive" *ngIf="!loading">
+       <table class="stats-table">
+          <thead>
+              <tr>
+                <th class="rank-col">#</th>
+                <th (click)="sort('name')">Player {{ getSortIcon('name') }}</th>
+                <th (click)="sort('position')" class="center">Pos {{ getSortIcon('position') }}</th>
+                <th (click)="sort('isActive')" class="center">Status {{ getSortIcon('isActive') }}</th>
+                <th (click)="sort('age')" class="center">Age {{ getSortIcon('age') }}</th>
+      
+                <th (click)="sort('matches')" class="center" title="Matches Played">
+                  Matches {{ getSortIcon('matches') }}
+                </th>
+                <th (click)="sort('goals')" class="center" title="Goals Scored">
+                  Goals {{ getSortIcon('goals') }}
+                </th>
+                <th (click)="sort('ratio')" class="center" title="Goals per Match Ratio">
+                  Goals/Matches {{ getSortIcon('ratio') }}
+                </th>
+      
+                <th (click)="sort('currentRating')" class="center" title="Current Rating">
+                  Curr Rtg {{ getSortIcon('currentRating') }}
+                </th>
+                <th (click)="sort('bestRating')" class="center" title="Best Ever Rating">
+                  Peak Rtg {{ getSortIcon('bestRating') }}
+                </th>
+                <th (click)="sort('ratingDiff')" class="center" title="Difference from Peak">
+                    Diff {{ getSortIcon('ratingDiff') }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let player of displayedPlayers; let i = index" [class.highlight]="i < 3">
+                <td class="rank-col">{{ i + 1 }}</td>
+                
+                <td class="player-cell">
+                  <a [routerLink]="['/player', player.playerId]" class="fm-link">
+                    {{ player.name }}
+                  </a>
+                  <span class="team-name" *ngIf="player.teamName">({{ player.teamName }})</span>
+                </td>
+      
+                <td class="center">
+                  <span class="pos-badge">{{ player.position }}</span>
+                </td>
+      
+                <td class="center">
+                  <span class="status-dot" [class.active]="player.isActive" [title]="player.isActive ? 'Active' : 'Retired'"></span>
+                </td>
+      
+                <td class="center">{{ player.age }}</td>
+      
+                <td class="center">{{ getDisplayValue(player, 'matches') }}</td>
+                <td class="center bold-metric">{{ getDisplayValue(player, 'goals') }}</td>
+                <td class="center ratio-metric">{{ getDisplayValue(player, 'ratio') }}</td>
+                
+                <td class="center rating-current">
+                   {{ player.currentRating | number:'1.2-2' }}
+                </td>
+                
+                <td class="center rating-peak">
+                   {{ player.bestEverRating | number:'1.2-2' }} 
+                   <span class="season-sub">(S:{{ player.seasonOfBestEverRating }})</span>
+                </td>
+                <td class="center" [style.color]="(player.currentRating - player.bestEverRating) < 0 ? '#e74c3c' : '#2ecc71'">
+                    {{ (player.currentRating - player.bestEverRating) | number:'1.2-2' }}
+                 </td>
+              </tr>
+            </tbody>
+       </table>
+    </div>
+  </div>

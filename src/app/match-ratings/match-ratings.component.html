@@ -1,0 +1,24 @@
+<div class="mr-wrap">
+  <div *ngIf="loading" class="mr-msg">Loading player ratings…</div>
+  <div *ngIf="error && !loading" class="mr-msg">No player ratings stored for this match yet.</div>
+
+  <div class="mr-grid" *ngIf="data && !loading">
+    <div class="mr-team" *ngFor="let side of [{name: data.homeTeamName, lineup: data.homeLineup}, {name: data.awayTeamName, lineup: data.awayLineup}]">
+      <h3 class="mr-team-name">{{ side.name }}</h3>
+      <table class="fm-table mr-table">
+        <thead>
+          <tr><th>Player</th><th>Pos</th><th>Age</th><th>Nation</th><th>Rating</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of sorted(side.lineup)">
+            <td class="mr-name"><a class="fm-link" [routerLink]="['/player', p.playerId]">{{ p.playerName }}</a></td>
+            <td>{{ p.position }}</td>
+            <td>{{ p.age }}</td>
+            <td>{{ p.nationName }}</td>
+            <td><span class="mr-rating" [ngClass]="ratingClass(p.rating)">{{ p.rating | number:'1.0-0' }}</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

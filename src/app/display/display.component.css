@@ -1,0 +1,115 @@
+.initial {
+    font-family: 'Helvetica', cursive;
+    color: blue;
+    background-color: lightgray;
+    padding: 50px;
+    border-radius: 20px;
+    margin: 50px auto;
+    width: 80%;
+    margin-left: 12%;
+    background-color: #ffe6cc;
+    border: 1px solid #d9b38c;
+    box-shadow: 3px 3px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  label {
+    display: block;
+    font-size: 24px;
+    margin-bottom: 20px;
+    font-family: 'Helvetica', cursive;
+    font-size: 36px;
+    color: #d9b38c;
+    margin-bottom: 40px;
+  }
+  
+  select {
+    font-size: 20px;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    background-color: #eee;
+    width: 200px;
+    margin-bottom: 40px;
+    font-family: 'Parisienne', cursive;
+    font-size: 28px;
+    background-color: #fff;
+    width: 300px;
+    margin-bottom: 60px;
+    color: #d9b38c;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+  }
+  
+  h2 {
+    font-size: 36px;
+    margin-bottom: 30px;
+    font-family: 'Parisienne', cursive;
+    font-size: 48px;
+    color: #d9b38c;
+    margin-bottom: 50px;
+  }
+  
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 50px;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 80px;
+    border: 8px solid #d9b38c;
+    border-radius: 20px;
+  }
+  
+  th,
+  td {
+    padding: 10px;
+    text-align: left;
+    font-size: 20px;
+    padding: 20px;
+    font-family: 'Helvetica', cursive;
+    font-size: 28px;
+    color: #333;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.1);
+  }
+  
+  th {
+    background-color: #333;
+    color: #fff;
+    background-color: #d9b38c;
+    color: #fff;
+    border-radius: 10px 10px 0 0;
+  }
+  
+  tbody tr:nth-child(even) {
+    background-color: #f2f2f2;
+    background-color: #fff;
+  }
+  
+  tbody tr:nth-child(odd) {
+    background-color: #f2e2c7;
+  }
+  
+  /* Add some additional Art Nouveau decoration */
+  .initial:before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    z-index: -1;
+    background-color: #fff;
+    border-radius: 30px;
+    border: 1px solid #333;
+  }
+  
+
+  .text {
+    padding: 10px;
+    text-align: left;
+    font-size: 20px;
+    padding: 20px;
+    font-family: 'Helvetica', cursive;
+    font-size: 28px;
+    color: #333;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.1);
+  }

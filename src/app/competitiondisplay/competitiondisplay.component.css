@@ -1,0 +1,90 @@
+.initial {
+    margin-left: 5%;
+    width: 20%;
+    max-height: 35%;
+    height: 35%;
+  }
+  
+  select {
+    font-size: 20px;
+    padding: 5px;
+    border-radius: 10px;
+    border: none;
+    background-color: #eee;
+    width: 20px;
+    font-family: 'Parisienne', cursive;
+    background-color: #fff;
+    width: 30%;
+    color: #d9b38c;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+  }
+  
+  h2 {
+    font-size: 16px;
+    font-family: 'Parisienne', cursive;
+    color: #d9b38c;
+  }
+  
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 50px;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 8px solid #d9b38c;
+    border-radius: 20px;
+  }
+  
+  th,
+  td {
+    padding: 1px;
+    text-align: left;
+    font-size: 19px;
+    padding: 2px;
+    font-family: 'Helvetica', cursive;
+    color: #333;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.1);
+  }
+  
+  th {
+    background-color: #333;
+    color: #fff;
+    background-color: #d9b38c;
+    color: #fff;
+    border-radius: 10px 10px 0 0;
+  }
+  
+  tbody tr:nth-child(even) {
+    background-color: #f2f2f2;
+    background-color: #fff;
+  }
+  
+  tbody tr:nth-child(odd) {
+    background-color: #f2e2c7;
+  }
+  
+  /* Add some additional Art Nouveau decoration */
+  .initial:before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    z-index: -1;
+    background-color: #fff;
+    border-radius: 30px;
+    border: 1px solid #333;
+  }
+  
+
+  .text {
+    padding: 10px;
+    text-align: left;
+    font-size: 20px;
+    padding: 20px;
+    font-family: 'Helvetica', cursive;
+    font-size: 28px;
+    color: #333;
+    text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.1);
+  }

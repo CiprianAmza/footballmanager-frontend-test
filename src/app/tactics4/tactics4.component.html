@@ -1,0 +1,470 @@
+<div class="lab-shell">
+
+  <!-- ===================== HEADER STRIP ===================== -->
+  <div class="lab-topbar">
+    <div class="lab-brand">
+      <span class="lab-dot"></span>
+      <span class="lab-title">COACH'S LAB</span>
+      <span class="lab-sub">/ tactical analytics</span>
+    </div>
+    <div class="lab-readout">
+      <div class="readout-cell">
+        <span class="ro-label">FORMATION</span>
+        <span class="ro-value mono">{{ selectedTactic }}</span>
+      </div>
+      <div class="readout-cell">
+        <span class="ro-label">XI</span>
+        <span class="ro-value mono">{{ startersPicked }}<span class="ro-faint">/11</span></span>
+      </div>
+      <div class="readout-cell">
+        <span class="ro-label">BENCH</span>
+        <span class="ro-value mono">{{ subsPicked }}<span class="ro-faint">/7</span></span>
+      </div>
+      <div class="readout-cell">
+        <span class="ro-label">XI AVG</span>
+        <span class="ro-value mono" [style.color]="ratingTiers.tierColor(xiAvgRating)">{{ xiAvgRating | number:'1.1-1' }}</span>
+      </div>
+      <div class="readout-cell view-toggle-cell">
+        <span class="ro-label">PITCH</span>
+        <div class="view-toggle" role="group" aria-label="Pitch view mode">
+          <button class="vt-btn" [class.active]="pitchView === 'tokens'" (click)="pitchView = 'tokens'">TOKENS</button>
+          <button class="vt-btn" [class.active]="pitchView === 'faces'" (click)="pitchView = 'faces'">FACES</button>
+        </div>
+      </div>
+    </div>
+    <div class="lab-actions">
+      <button class="lab-btn ghost" (click)="askAssistant()">ASK ASSISTANT</button>
+      <button class="lab-btn solid" (click)="saveData()">SAVE</button>
+    </div>
+  </div>
+
+  <!-- ===================== MAIN GRID ===================== -->
+  <div class="lab-grid">
+
+    <!-- LEFT: WIDGET COLUMN (option control-boxes as gauges/cards) -->
+    <div class="lab-col widgets">
+
+      <!-- FORMATION + MENTALITY card -->
+      <div class="widget card-pick" (click)="openModal('formation')">
+        <div class="w-head"><span class="w-title">FORMATION</span><span class="w-chevron">▸</span></div>
+        <div class="w-bignum mono">{{ selectedTactic }}</div>
+      </div>
+
+      <!-- MENTALITY SLIDER -->
+      <div class="widget" (click)="openModal('mentality')">
+        <div class="w-head"><span class="w-title">MENTALITY</span><span class="w-chevron">▸</span></div>
+        <div class="w-value accent">{{ selectedOptions.mentality }}</div>
+        <div class="slider-track">
+          <div class="slider-fill" [style.width.%]="mentalityPct"></div>
+          <div class="slider-knob" [style.left.%]="mentalityPct"></div>
+        </div>
+        <div class="slider-ends"><span>DEF</span><span>ATT</span></div>
+      </div>
+
+      <!-- GAUGE ROW: PRESSING + TEMPO -->
+      <div class="gauge-row">
+        <div class="widget gauge-card" (click)="openModal('pressing')">
+          <div class="w-title mini">PRESSING</div>
+          <svg class="gauge" viewBox="0 0 64 64">
+            <circle class="g-bg" cx="32" cy="32" r="26"></circle>
+            <circle class="g-fg" cx="32" cy="32" r="26"
+                    [style.stroke-dashoffset]="gaugeDash(pressingPct)"
+                    [attr.stroke]="pressingPct >= 75 ? 'var(--fm-danger)' : pressingPct >= 45 ? 'var(--fm-warning)' : 'var(--fm-info)'"></circle>
+            <text class="g-num" x="32" y="34">{{ pressingPct }}</text>
+          </svg>
+          <div class="w-value tiny">{{ selectedOptions.pressing }}</div>
+        </div>
+
+        <div class="widget gauge-card" (click)="openModal('tempo')">
+          <div class="w-title mini">TEMPO</div>
+          <svg class="gauge" viewBox="0 0 64 64">
+            <circle class="g-bg" cx="32" cy="32" r="26"></circle>
+            <circle class="g-fg" cx="32" cy="32" r="26"
+                    [style.stroke-dashoffset]="gaugeDash(tempoPct)"
+                    [attr.stroke]="'var(--fm-success)'"></circle>
+            <text class="g-num" x="32" y="34">{{ tempoPct }}</text>
+          </svg>
+          <div class="w-value tiny">{{ selectedOptions.tempo }}</div>
+        </div>
+      </div>
+
+      <!-- DEF LINE + WIDTH pickers (drive the on-pitch defensive-line marker + width band) -->
+      <div class="gauge-row">
+        <div class="widget card-pick" (click)="openModal('defensiveLine')">
+          <div class="w-head"><span class="w-title mini">DEF LINE</span><span class="w-chevron">▸</span></div>
+          <div class="w-value accent">{{ selectedOptions.defensiveLine }}</div>
+        </div>
+        <div class="widget card-pick" (click)="openModal('width')">
+          <div class="w-head"><span class="w-title mini">WIDTH</span><span class="w-chevron">▸</span></div>
+          <div class="w-value accent">{{ selectedOptions.width }}</div>
+        </div>
+      </div>
+
+      <!-- BAR METERS: passing directness / passing length / time wasting -->
+      <div class="widget meters">
+        <div class="meter-row clickable" (click)="openModal('possession')">
+          <span class="m-label">DIRECTNESS</span>
+          <div class="m-bar"><div class="m-fill" [style.width.%]="possessionPct"></div></div>
+          <span class="m-val mono">{{ selectedOptions.possession }}</span>
+        </div>
+        <div class="meter-row clickable" (click)="openModal('passing')">
+          <span class="m-label">PASS LEN</span>
+          <div class="m-bar"><div class="m-fill alt" [style.width.%]="passingPct"></div></div>
+          <span class="m-val mono">{{ selectedOptions.passing }}</span>
+        </div>
+        <div class="meter-row clickable" (click)="openModal('timeWasting')">
+          <span class="m-label">TIME WASTE</span>
+          <div class="m-bar"><div class="m-fill warn" [style.width.%]="timeWastingPct"></div></div>
+          <span class="m-val mono">{{ selectedOptions.timeWasting }}</span>
+        </div>
+      </div>
+
+      <!-- TEAM INSTRUCTION CONTROLS (6 extra) -->
+      <div class="instr-controls">
+        <div class="widget card-pick mini-pick" (click)="openModal('dribbling')">
+          <div class="w-head"><span class="w-title mini">DRIBBLING</span><span class="w-chevron">▸</span></div>
+          <div class="w-value accent">{{ selectedOptions.dribbling }}</div>
+        </div>
+        <div class="widget card-pick mini-pick" (click)="openModal('foulFrequency')">
+          <div class="w-head"><span class="w-title mini">FOUL FREQ</span><span class="w-chevron">▸</span></div>
+          <div class="w-value accent">{{ selectedOptions.foulFrequency }}</div>
+        </div>
+        <div class="widget card-pick mini-pick" (click)="openModal('foulHardness')">
+          <div class="w-head"><span class="w-title mini">FOUL HARD</span><span class="w-chevron">▸</span></div>
+          <div class="w-value accent">{{ selectedOptions.foulHardness }}</div>
+        </div>
+        <div class="widget card-pick mini-pick" (click)="openModal('tempoFragmentation')">
+          <div class="w-head"><span class="w-title mini">FRAGMENT</span><span class="w-chevron">▸</span></div>
+          <div class="w-value accent">{{ selectedOptions.tempoFragmentation }}</div>
+        </div>
+        <div class="widget card-pick mini-pick" (click)="openModal('widePlay')">
+          <div class="w-head"><span class="w-title mini">WIDE PLAY</span><span class="w-chevron">▸</span></div>
+          <div class="w-value accent">{{ selectedOptions.widePlay }}</div>
+        </div>
+        <div class="widget card-pick mini-pick" (click)="openModal('transition')">
+          <div class="w-head"><span class="w-title mini">TRANSITION</span><span class="w-chevron">▸</span></div>
+          <div class="w-value accent">{{ selectedOptions.transition }}</div>
+        </div>
+      </div>
+
+      <!-- ATTACK vs DEFENCE BALANCE -->
+      <div class="widget balance">
+        <div class="w-title mini">ATTACK · DEFENCE BALANCE</div>
+        <div class="bal-bar">
+          <div class="bal-att" [style.width.%]="attackBalance">{{ attackBalance }}</div>
+          <div class="bal-def" [style.width.%]="defenceBalance">{{ defenceBalance }}</div>
+        </div>
+        <div class="bal-legend"><span class="att-dot">ATT</span><span class="def-dot">DEF</span></div>
+      </div>
+
+      <!-- SET PIECE TAKERS -->
+      <div class="widget set-pieces">
+        <div class="w-head">
+          <span class="w-title mini">SET PIECES</span>
+          <button class="sp-suggest mono" (click)="suggestSetPieceTakers()">AUTO</button>
+        </div>
+
+        <div class="sp-slot">
+          <span class="sp-label mono">PEN</span>
+          <select class="sp-select" [(ngModel)]="penaltyTakerId">
+            <option [ngValue]="null">— none —</option>
+            <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} · {{ p.position }}</option>
+          </select>
+          <span class="sp-hint mono" *ngIf="suggestedSetPieces?.penaltyTakerName">▸ {{ suggestedSetPieces.penaltyTakerName }}</span>
+        </div>
+
+        <div class="sp-slot">
+          <span class="sp-label mono">FK</span>
+          <select class="sp-select" [(ngModel)]="freeKickTakerId">
+            <option [ngValue]="null">— none —</option>
+            <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} · {{ p.position }}</option>
+          </select>
+          <span class="sp-hint mono" *ngIf="suggestedSetPieces?.freeKickTakerName">▸ {{ suggestedSetPieces.freeKickTakerName }}</span>
+        </div>
+
+        <div class="sp-slot">
+          <span class="sp-label mono">CK·L</span>
+          <select class="sp-select" [(ngModel)]="cornerTakerLeftId">
+            <option [ngValue]="null">— none —</option>
+            <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} · {{ p.position }}</option>
+          </select>
+          <span class="sp-hint mono" *ngIf="suggestedSetPieces?.cornerTakerLeftName">▸ {{ suggestedSetPieces.cornerTakerLeftName }}</span>
+        </div>
+
+        <div class="sp-slot">
+          <span class="sp-label mono">CK·R</span>
+          <select class="sp-select" [(ngModel)]="cornerTakerRightId">
+            <option [ngValue]="null">— none —</option>
+            <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} · {{ p.position }}</option>
+          </select>
+          <span class="sp-hint mono" *ngIf="suggestedSetPieces?.cornerTakerRightName">▸ {{ suggestedSetPieces.cornerTakerRightName }}</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- CENTER: PITCH ANALYTICS BOARD -->
+    <div class="lab-col pitch-col">
+      <div class="pitch-frame"
+           [style.--def-line]="defLineHeightPct + '%'"
+           [style.--flank-inset]="widthInsetPct + '%'">
+
+        <!-- analytics gridlines backdrop -->
+        <div class="pitch-board">
+          <div class="board-vline" *ngFor="let v of [1,2,3,4]"></div>
+          <div class="board-hline" *ngFor="let h of [1,2,3,4,5]"></div>
+
+          <!-- pitch markings -->
+          <div class="mk halfway"></div>
+          <div class="mk center-ring"></div>
+          <div class="mk box-top"></div>
+          <div class="mk box-bottom"></div>
+
+          <!-- WIDTH occupancy shading (driven by widthInsetPct) -->
+          <div class="width-band"></div>
+
+          <!-- DEFENSIVE LINE height indicator (driven by defLineHeightPct) -->
+          <div class="defline">
+            <span class="defline-tag mono">DEF LINE · {{ selectedOptions.defensiveLine | uppercase }}</span>
+          </div>
+
+          <!-- PRESSING zone overlay (opacity scales with intensity) -->
+          <div class="press-zone" [style.opacity]="0.08 + (pressingPct/100)*0.22"></div>
+
+          <!-- 30-CELL DRAG/DROP GRID -->
+          <div class="pitch-grid">
+            <div *ngFor="let cell of fieldPositions"
+                 class="grid-cell"
+                 [class.allowed]="allowedIndexes.includes(cell.positionIndex)"
+                 [style.transform]="'translate(' + cellWidthShift(cell.positionIndex) + '%, ' + cellDefLineShift(cell.positionIndex) + '%)'"
+                 (dragover)="allowDrop($event)"
+                 (drop)="drop($event, cell.positionIndex)"
+                 (contextmenu)="onRightClick(cell.positionIndex, $event)">
+
+                 <div *ngIf="cell.player" class="node"
+                      [class.locked-slot]="isSlotLocked(cell.positionIndex, cell.player.position)"
+                      [attr.draggable]="isSlotLocked(cell.positionIndex, cell.player.position) ? null : 'true'"
+                      (dragstart)="drag($event, cell.player)">
+                    <span class="lock-badge" *ngIf="isSlotLocked(cell.positionIndex, cell.player.position)"
+                          title="Locked by the owner">&#128274;</span>
+                    <button class="node-plus mono" title="Roles & Instructions"
+                            (click)="openPlayerPanel(cell, $event)">+</button>
+                    <div *ngIf="pitchView === 'tokens'" class="node-disc"
+                         (click)="openPlayerCard(cell.player.id)"
+                         [style.background-color]="relColor(cell.player.rating)">
+                        <span class="node-num">{{ cell.player.rating | number:'1.0-0' }}</span>
+                    </div>
+                    <div *ngIf="pitchView === 'faces'" class="fut-mini"
+                         (click)="openPlayerCard(cell.player.id)"
+                         [style.border-color]="relColor(cell.player.rating)">
+                        <div class="fm-top">
+                            <span class="fm-ovr mono" [style.color]="relColor(cell.player.rating)">{{ cell.player.rating | number:'1.0-0' }}</span>
+                            <span class="fm-pos mono">{{ cell.player.position }}</span>
+                        </div>
+                        <div class="fm-face">
+                            <app-player-face [size]="72"
+                                [baseFaceId]="cell.player.baseFaceId || 0" [skinTone]="cell.player.skinTone || 0"
+                                [hairStyle]="cell.player.hairStyle || 0" [hairColor]="cell.player.hairColor || 0"
+                                [eyeColor]="cell.player.eyeColor || 0" [faceShape]="cell.player.faceShape || 0"
+                                [noseShape]="cell.player.noseShape || 0" [eyeShape]="cell.player.eyeShape || 0"
+                                [mouthShape]="cell.player.mouthShape || 0" [browShape]="cell.player.browShape || 0"
+                                [nationId]="cell.player.nationId || 0"
+                                [species]="cell.player.species || 'human'">
+                            </app-player-face>
+                        </div>
+                        <div class="fm-name">{{ cell.player.name }}</div>
+                    </div>
+                    <div class="node-tag">
+                        <div class="nt-name" *ngIf="pitchView === 'tokens'">{{ cell.player.name }}</div>
+                        <div class="nt-pos mono" *ngIf="pitchView === 'tokens'">{{ cell.player.position }}</div>
+                        <div class="nt-stars" [title]="relStars(cell.player.rating) + ' / 5 vs squad'">
+                            <span class="star" *ngFor="let f of starFractions(cell.player.rating)">
+                                <span class="star-bg">&#9733;</span>
+                                <span class="star-fg" [style.width.%]="f * 100">&#9733;</span>
+                            </span>
+                        </div>
+                        <div class="nt-role mono" *ngIf="playerShortLabel(cell)">{{ playerShortLabel(cell) }}</div>
+                    </div>
+
+                 </div>
+
+                 <div *ngIf="!cell.player && allowedIndexes.includes(cell.positionIndex)" class="node-empty">+</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- pitch-side micro legend -->
+        <div class="pitch-legend mono">
+          <span>W {{ widthPct }}</span>
+          <span>P {{ pressingPct }}</span>
+          <span>M {{ mentalityPct }}</span>
+        </div>
+      </div>
+
+      <!-- SUBS BENCH -->
+      <div class="bench">
+        <div class="bench-label mono">SUBSTITUTES</div>
+        <div class="bench-row">
+          <div *ngFor="let sub of substitutes; let i = index"
+               class="bench-slot"
+               (dragover)="allowDrop($event)"
+               (drop)="dropSubstitute($event, i)">
+               <div *ngIf="sub.player" class="node mini" draggable="true" (dragstart)="drag($event, sub.player)">
+                  <div class="node-disc gray"></div>
+                  <div class="nt-name small">{{ sub.player.name }}</div>
+               </div>
+               <div *ngIf="!sub.player" class="bench-empty mono">S{{i+1}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: SQUAD DATA TABLE -->
+    <div class="lab-col squad-col">
+      <div class="squad-head mono">SQUAD · DATA</div>
+      <div class="squad-scroll">
+        <table class="squad-table">
+          <thead>
+            <tr>
+              <th class="c-sel"></th>
+              <th class="c-name">NAME</th>
+              <th class="c-pos">POS</th>
+              <th class="c-rat">RAT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let player of players"
+                draggable="true"
+                (dragstart)="drag($event, player)"
+                [class.picked]="isPlayerSelected(player.id)">
+              <td class="c-sel">
+                  <span *ngIf="isPlayerSelected(player.id)" class="sel-dot">●</span>
+              </td>
+              <td class="c-name" (click)="openPlayerCard(player.id)">{{ player.name }}</td>
+              <td class="c-pos mono">{{ player.position }}</td>
+              <td class="c-rat mono"
+                  [style.color]="player.rating | ratingColor"
+                  [style.font-weight]="700">
+                {{ player.rating | number:'1.2-2' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PER-PLAYER ROLES + INSTRUCTIONS — fixed, centered modal (lifted out of the transformed pitch
+       node so it stops drifting and is always clickable). Backdrop click or × closes it. -->
+  <div class="pp-modal-overlay" *ngIf="(activeRoleSlot || activeInstructionsSlot) as slot"
+       (click)="closePlayerPanel()">
+    <div class="pp-panel" (click)="$event.stopPropagation()">
+        <div class="pp-head">
+            <span class="pp-name">{{ slot.player?.name }}</span>
+            <button class="pp-close" (click)="closePlayerPanel()">×</button>
+        </div>
+        <div class="pp-tabs">
+            <button class="pp-tab" [class.active]="activeRoleSlot === slot" (click)="showRolesTab(slot)">ROLES</button>
+            <button class="pp-tab" [class.active]="activeInstructionsSlot === slot" (click)="showInstructionsTab(slot)">INSTR.</button>
+        </div>
+
+        <!-- ROLES TAB -->
+        <div class="pp-body" *ngIf="activeRoleSlot === slot">
+            <div *ngIf="loadingRoles" class="pp-loading">Loading…</div>
+            <div *ngIf="!loadingRoles && availableRoles.length === 0" class="pp-loading">No roles</div>
+            <div class="pp-role" *ngFor="let role of availableRoles">
+                <div class="pp-role-head">
+                    <span class="pp-role-name">{{ role.name }}</span>
+                    <span class="pp-suit" [ngClass]="suitabilityClass(role.suitability || 0)">{{ role.suitability }}%</span>
+                </div>
+                <div class="pp-duties">
+                    <button class="pp-duty" *ngFor="let d of role.duties"
+                            [class.active]="slot.role === role.name && slot.duty === d"
+                            (click)="selectRole(slot, role, d)">{{ d.charAt(0) }}</button>
+                </div>
+            </div>
+            <button class="pp-clear" *ngIf="slot.role" (click)="clearRole(slot)">Clear Role</button>
+        </div>
+
+        <!-- INSTRUCTIONS TAB -->
+        <div class="pp-body" *ngIf="activeInstructionsSlot === slot">
+            <div *ngIf="loadingInstructions" class="pp-loading">Loading…</div>
+            <div *ngIf="!loadingInstructions" class="pp-instr-list">
+                <div *ngFor="let cat of getInstructionCategories()" class="pp-cat">
+                    <div class="pp-cat-title mono">{{ cat }}</div>
+                    <div class="pp-instr" *ngFor="let instr of getInstructionsByCategory(cat)"
+                         [class.active]="hasInstruction(slot, instr.name)"
+                         [title]="instr.description"
+                         (click)="toggleInstruction(slot, instr.name)">
+                        <span class="pp-check">{{ hasInstruction(slot, instr.name) ? '☑' : '☐' }}</span>
+                        <span class="pp-instr-name">{{ instr.name }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- ===================== OPTION MODAL ===================== -->
+  <div class="modal-overlay" *ngIf="activeModal" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header mono">{{ activeModal | uppercase }}</div>
+        <div class="modal-options">
+            <div *ngFor="let opt of currentOptions"
+                 class="modal-option"
+                 (click)="selectOption(opt)">
+                 {{ opt }}
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- ===================== FIFA PLAYER CARD ===================== -->
+  <div class="player-card-backdrop" *ngIf="selectedCard || cardLoading" (click)="closePlayerCard()">
+    <div class="player-card" (click)="$event.stopPropagation()" *ngIf="selectedCard"
+         [style.--tier-color]="selectedCard.tierColor"
+         [class.tier-legendary]="selectedCard.tier === 'LEGENDARY'">
+      <button class="card-close" (click)="closePlayerCard()">×</button>
+
+      <div class="card-header" [style.background]="'linear-gradient(135deg, ' + selectedCard.tierColor + ' 0%, ' + selectedCard.tierColor + '88 100%)'">
+        <div class="card-tier">{{ selectedCard.tier }}</div>
+        <div class="card-overall">{{ selectedCard.rating | number:'1.0-0' }}</div>
+        <div class="card-position">{{ selectedCard.position }}</div>
+      </div>
+
+      <div class="card-identity">
+        <h2 class="card-name">{{ selectedCard.name }}</h2>
+        <div class="card-meta">
+          <span>Age {{ selectedCard.age }}</span>
+          <span *ngIf="selectedCard.preferredFoot">{{ selectedCard.preferredFoot }} foot</span>
+          <span *ngIf="selectedCard.heightCm">{{ selectedCard.heightCm }}cm</span>
+        </div>
+        <div class="card-team" *ngIf="selectedCard.teamName"
+             [style.color]="selectedCard.teamColor1 || '#aaa'">
+          {{ selectedCard.teamName }}
+        </div>
+      </div>
+
+      <div class="card-attrs">
+        <div *ngFor="let attr of selectedCard.topAttributes" class="card-attr">
+          <span class="attr-label">{{ attr.label }}</span>
+          <span class="attr-value">{{ attr.value }}</span>
+          <div class="attr-bar">
+            <div class="attr-bar-fill"
+                 [style.width.%]="attr.value * 5"
+                 [style.background-color]="attr.value >= 17 ? '#2ecc71' : attr.value >= 14 ? '#3498db' : attr.value >= 10 ? '#f39c12' : '#7f8c8d'"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <span class="footer-label">Global percentile</span>
+        <span class="footer-value">{{ selectedCard.percentile }}%</span>
+      </div>
+    </div>
+
+    <div class="card-loading" *ngIf="cardLoading && !selectedCard">Loading…</div>
+  </div>
+
+</div>

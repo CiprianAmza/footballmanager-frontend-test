@@ -1,0 +1,378 @@
+/* ===== Classic / Legacy CM-FM aesthetic ===== */
+.cm-container {
+    display: flex;
+    height: calc(100vh - 50px);
+    background-color: #d9d6cc;
+    color: #1c1c1c;
+    font-family: Verdana, Tahoma, 'Segoe UI', sans-serif;
+    font-size: 11px;
+    position: relative;
+}
+
+/* --- LEFT: spreadsheet control panel --- */
+.cm-controls {
+    width: 230px;
+    background-color: #cfccc0;
+    border-right: 1px solid #8f8b7e;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 0 8px 0;
+}
+
+.cm-panel-title,
+.cm-section-head {
+    background: linear-gradient(180deg, #6f7d5a 0%, #5a6748 100%);
+    color: #f4f2e9;
+    font-weight: bold;
+    font-size: 10px;
+    letter-spacing: 0.5px;
+    padding: 4px 6px;
+    border-bottom: 1px solid #4a553a;
+}
+.cm-section-head { margin-top: 6px; }
+
+.cm-control-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.cm-row td {
+    border-bottom: 1px solid #b7b3a6;
+    padding: 4px 6px;
+    vertical-align: middle;
+}
+.cm-row.clickable { cursor: pointer; }
+.cm-row.clickable:hover td { background-color: #e7e4d8; }
+.cm-key {
+    color: #4a4a42;
+    width: 55%;
+}
+.cm-val {
+    font-weight: bold;
+    color: #1c1c1c;
+    text-align: right;
+    background-color: #e9e6db;
+    border-left: 1px solid #b7b3a6;
+}
+.cm-val.cm-highlight { color: #1f5e23; }
+
+.cm-btn-row {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 6px 2px 6px;
+}
+.cm-btn {
+    padding: 5px 6px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: bold;
+    color: #1c1c1c;
+    background: linear-gradient(180deg, #efece2 0%, #cfccc0 100%);
+    border: 1px solid #8f8b7e;
+    border-radius: 1px;
+    cursor: pointer;
+}
+.cm-btn:hover { background: linear-gradient(180deg, #f7f5ec 0%, #ddd9cc 100%); }
+.cm-btn-primary {
+    background: linear-gradient(180deg, #6f7d5a 0%, #5a6748 100%);
+    color: #f4f2e9;
+    border-color: #4a553a;
+}
+.cm-btn-primary:hover { background: linear-gradient(180deg, #7c8b65 0%, #647155 100%); }
+
+/* --- CENTER: flat pitch --- */
+.cm-pitch-wrap {
+    flex: 1;
+    background-color: #c4c1b5;
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    min-width: 0;
+    overflow: hidden;
+}
+.cm-pitch-title {
+    background: #b3b0a3;
+    border: 1px solid #8f8b7e;
+    color: #2c2c26;
+    font-weight: bold;
+    font-size: 10px;
+    padding: 3px 6px;
+    margin-bottom: 6px;
+}
+
+.cm-pitch {
+    flex: 1;
+    background-color: #2f6b34;
+    background-image: repeating-linear-gradient(
+        0deg, #2f6b34 0, #2f6b34 8%, #357a3a 8%, #357a3a 16%);
+    border: 2px solid #e9e6db;
+    position: relative;
+    min-height: 0;
+}
+
+.cm-line { position: absolute; border: 1px solid rgba(255,255,255,0.5); pointer-events: none; }
+.cm-half { top: 50%; left: 0; width: 100%; height: 0; border: none; border-top: 1px solid rgba(255,255,255,0.5); }
+.cm-circle { top: 50%; left: 50%; width: 86px; height: 86px; border-radius: 50%; transform: translate(-50%, -50%); }
+.cm-box-top { top: 0; left: 28%; width: 44%; height: 14%; border-top: none; }
+.cm-box-bottom { bottom: 0; left: 28%; width: 44%; height: 14%; border-bottom: none; }
+
+/* DEFENSIVE LINE indicator — flat chalk-white line across the pitch.
+   Vertical position driven by [style.top.%]=defLineTopPercent.
+   pointer-events: none so it never blocks drag/drop on the grid below. */
+.cm-def-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 0;
+    border-top: 2px dashed rgba(255,255,255,0.85);
+    z-index: 6;
+    pointer-events: none;
+    transition: top 0.3s ease;
+}
+.cm-def-line-tag {
+    position: absolute;
+    right: 6px;
+    top: -8px;
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    color: #2f6b34;
+    background: #e9e6db;
+    padding: 1px 5px;
+    white-space: nowrap;
+}
+
+.cm-grid {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    z-index: 5;
+}
+.cm-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+.cm-cell.allowed { background-color: rgba(255,255,255,0.06); border: 1px dashed rgba(255,255,255,0.18); }
+
+.cm-empty {
+    border: 1px dashed rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.7);
+    width: 30px; height: 30px;
+    display: flex; justify-content: center; align-items: center;
+    font-weight: bold;
+}
+
+.cm-player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: grab;
+    z-index: 10;
+}
+.cm-shirt {
+    width: 28px; height: 28px;
+    background-color: #b53030;
+    border: 2px solid #fff;
+    display: flex; justify-content: center; align-items: center;
+}
+.cm-shirt-num { font-size: 10px; font-weight: bold; }
+.cm-tag {
+    background: #1c1c1c;
+    color: #f4f2e9;
+    padding: 1px 4px;
+    text-align: center;
+    margin-top: 2px;
+    min-width: 64px;
+    border: 1px solid #000;
+}
+.cm-tag-name { font-size: 10px; font-weight: bold; white-space: nowrap; }
+.cm-tag-pos { font-size: 9px; color: #d7c46a; }
+
+/* Bench */
+.cm-bench {
+    margin-top: 6px;
+    background: #cfccc0;
+    border: 1px solid #8f8b7e;
+    padding: 4px 6px;
+    flex: 0 0 auto;
+}
+.cm-bench-label { font-size: 10px; font-weight: bold; color: #4a4a42; margin-bottom: 4px; }
+.cm-bench-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.cm-sub {
+    width: 44px; height: 44px;
+    background-color: #e0ddd1;
+    border: 1px dashed #8f8b7e;
+    display: flex; justify-content: center; align-items: center;
+}
+.cm-empty-sub { color: #8f8b7e; font-size: 10px; }
+.cm-player.mini .cm-shirt { width: 20px; height: 20px; }
+.cm-player.mini .cm-tag { min-width: 0; }
+.cm-shirt.gray { background-color: #7f8c8d; }
+
+/* --- RIGHT: dense squad list (SCROLL FIX) --- */
+.cm-list {
+    width: 280px;
+    background-color: #cfccc0;
+    border-left: 1px solid #8f8b7e;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+.cm-list-head {
+    background: linear-gradient(180deg, #6f7d5a 0%, #5a6748 100%);
+    color: #f4f2e9;
+    font-weight: bold;
+    font-size: 10px;
+    padding: 4px 6px;
+    border-bottom: 1px solid #4a553a;
+    flex: 0 0 auto;
+}
+.cm-list-scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+.cm-squad-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.cm-squad-table th {
+    text-align: left;
+    background: #b3b0a3;
+    color: #2c2c26;
+    padding: 3px 5px;
+    border-bottom: 1px solid #8f8b7e;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.cm-th-status { width: 16px; }
+.cm-th-rat { text-align: right; }
+.cm-squad-table td {
+    padding: 3px 5px;
+    border-bottom: 1px solid #bdb9ac;
+    cursor: grab;
+}
+.cm-squad-table tr:nth-child(even) td { background-color: #d7d4c8; }
+.cm-squad-table tr:hover td { background-color: #e7e4d8; }
+.cm-squad-table tr.picked td { color: #8f8b7e; font-style: italic; }
+.cm-status-col { text-align: center; }
+.cm-picked-dot { color: #1f5e23; font-weight: bold; }
+.cm-name-cell { cursor: pointer; }
+.cm-name-cell:hover { text-decoration: underline; }
+.cm-rating-cell { text-align: right; font-weight: bold; }
+
+/* --- Classic modal picker --- */
+.cm-modal-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.45);
+    z-index: 1000;
+    display: flex; justify-content: center; align-items: center;
+}
+.cm-modal {
+    background-color: #cfccc0;
+    border: 2px solid #5a6748;
+    width: 320px;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.35);
+}
+.cm-modal-head {
+    background: linear-gradient(180deg, #6f7d5a 0%, #5a6748 100%);
+    padding: 5px 8px;
+    font-weight: bold;
+    font-size: 11px;
+    color: #f4f2e9;
+}
+.cm-modal-options { max-height: 360px; overflow-y: auto; background: #e9e6db; }
+.cm-modal-option {
+    padding: 6px 10px;
+    border-bottom: 1px solid #c4c1b5;
+    cursor: pointer;
+    font-size: 11px;
+}
+.cm-modal-option:hover { background-color: #6f7d5a; color: #f4f2e9; }
+
+/* --- Player card (flat legacy variant) --- */
+.cm-card-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1100;
+}
+.cm-card {
+    position: relative;
+    width: 320px; max-width: 92vw;
+    background: #e9e6db;
+    border: 2px solid #5a6748;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.35);
+    color: #1c1c1c;
+}
+.cm-card.tier-legendary { border-color: #b8860b; }
+.cm-card-close {
+    position: absolute; top: 4px; right: 4px;
+    width: 20px; height: 20px;
+    background: #b53030; color: #fff; border: 1px solid #000;
+    cursor: pointer; font-size: 13px; line-height: 1; padding: 0;
+    z-index: 2;
+}
+.cm-card-header {
+    display: flex; align-items: center; gap: 10px;
+    background: #cfccc0;
+    padding: 8px 10px;
+    border-bottom: 1px solid #8f8b7e;
+}
+.cm-card-overall { font-size: 34px; font-weight: 900; line-height: 1; color: #1c1c1c; }
+.cm-card-tier { font-size: 10px; font-weight: bold; letter-spacing: 1px; }
+.cm-card-position {
+    display: inline-block; margin-top: 2px;
+    padding: 1px 6px; background: #b3b0a3; border: 1px solid #8f8b7e;
+    font-size: 10px; font-weight: bold;
+}
+.cm-card-identity { padding: 8px 10px; border-bottom: 1px solid #bdb9ac; }
+.cm-card-name { margin: 0; font-size: 14px; font-weight: bold; }
+.cm-card-meta { display: flex; gap: 10px; margin-top: 4px; font-size: 10px; color: #5a5a50; }
+.cm-card-team { margin-top: 4px; font-size: 11px; font-weight: bold; }
+
+.cm-card-attrs { width: 100%; border-collapse: collapse; }
+.cm-card-attrs td { padding: 3px 10px; border-bottom: 1px solid #d7d4c8; vertical-align: middle; }
+.cm-attr-label { font-size: 10px; color: #4a4a42; width: 40%; }
+.cm-attr-bar-cell { width: 45%; }
+.cm-attr-bar { height: 6px; background: #c4c1b5; border: 1px solid #b7b3a6; }
+.cm-attr-bar-fill { height: 100%; }
+.cm-attr-value { font-size: 11px; font-weight: bold; text-align: right; width: 24px; }
+
+.cm-card-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 10px; background: #cfccc0; border-top: 1px solid #8f8b7e;
+    font-size: 10px;
+}
+.cm-footer-label { color: #4a4a42; text-transform: uppercase; letter-spacing: 0.5px; }
+.cm-footer-value { font-weight: bold; font-size: 12px; }
+
+.cm-card-loading {
+    background: #e9e6db; border: 2px solid #5a6748;
+    padding: 20px 40px; color: #4a4a42; font-style: italic;
+}
+
+/* ===== Boardroom XI lock (owner-pinned slots / revoked XI rights) ===== */
+.cm-player { position: relative; }
+.cm-player.locked-slot { cursor: not-allowed; }
+.cm-player.locked-slot:hover { transform: none; }
+.cm-player .lock-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-size: 0.8em;
+  line-height: 1;
+  background: rgba(0,0,0,0.65);
+  border-radius: 50%;
+  padding: 2px 3px;
+  z-index: 20;
+  pointer-events: none;
+}

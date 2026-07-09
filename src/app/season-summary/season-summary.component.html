@@ -1,0 +1,248 @@
+<div class="summary-container" *ngIf="!loading && summary">
+  <div class="summary-header">
+    <h1>Season {{ season }} Summary</h1>
+    <div class="season-nav">
+      <a *ngIf="season > 1" [routerLink]="['/season-summary', season - 1]" class="nav-btn">Previous</a>
+      <a [routerLink]="['/season-summary', season + 1]" class="nav-btn">Next</a>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button [class.active]="activeTab === 'standings'" (click)="activeTab = 'standings'">Standings</button>
+    <button [class.active]="activeTab === 'scorers'" (click)="activeTab = 'scorers'">Top Scorers</button>
+    <button [class.active]="activeTab === 'bestXI'" (click)="activeTab = 'bestXI'">Best XI</button>
+    <button [class.active]="activeTab === 'awards'" (click)="activeTab = 'awards'">Awards</button>
+    <button [class.active]="activeTab === 'objectives'" (click)="activeTab = 'objectives'">Objectives</button>
+    <button [class.active]="activeTab === 'transfers'" (click)="activeTab = 'transfers'">Transfers</button>
+  </div>
+
+  <!-- Standings Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'standings'">
+    <div class="standings-group" *ngFor="let comp of getLeagueStandings()">
+      <h2>{{ comp.competitionName }}</h2>
+      <table class="standings-table">
+        <thead>
+          <tr>
+            <th class="pos">#</th>
+            <th class="team-col">Team</th>
+            <th>P</th>
+            <th>W</th>
+            <th>D</th>
+            <th>L</th>
+            <th>GF</th>
+            <th>GA</th>
+            <th>GD</th>
+            <th class="pts">Pts</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let team of comp.teams" [class.human-team]="team.isHumanTeam">
+            <td class="pos">{{ team.position }}</td>
+            <td class="team-col">{{ team.teamName }}</td>
+            <td>{{ team.games }}</td>
+            <td>{{ team.wins }}</td>
+            <td>{{ team.draws }}</td>
+            <td>{{ team.losses }}</td>
+            <td>{{ team.goalsFor }}</td>
+            <td>{{ team.goalsAgainst }}</td>
+            <td>{{ team.goalDifference >= 0 ? '+' : '' }}{{ team.goalDifference }}</td>
+            <td class="pts">{{ team.points }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Top Scorers Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'scorers'">
+    <h2>Top Scorers</h2>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th class="pos">#</th>
+          <th class="player-col">Player</th>
+          <th>Team</th>
+          <th>Pos</th>
+          <th>Age</th>
+          <th>G</th>
+          <th>A</th>
+          <th>Apps</th>
+          <th>Avg</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of summary.topScorers; let i = index">
+          <td class="pos">{{ i + 1 }}</td>
+          <td class="player-col"><a [routerLink]="['/player', p.playerId]" class="fm-link">{{ p.playerName }}</a></td>
+          <td>{{ p.teamName }}</td>
+          <td>{{ p.position }}</td>
+          <td>{{ p.age }}</td>
+          <td class="highlight">{{ p.goals }}</td>
+          <td>{{ p.assists }}</td>
+          <td>{{ p.games }}</td>
+          <td>{{ p.avgRating }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Best XI Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'bestXI'">
+    <h2>Your Best XI</h2>
+    <div class="best-xi-grid">
+      <div class="best-xi-card" *ngFor="let p of summary.bestXI; let i = index">
+        <div class="bxi-rank">{{ i + 1 }}</div>
+        <div class="bxi-info">
+          <a [routerLink]="['/player', p.playerId]" class="fm-link bxi-name">{{ p.playerName }}</a>
+          <span class="bxi-pos">{{ p.position }}</span>
+        </div>
+        <div class="bxi-stats">
+          <span class="bxi-rating">{{ p.avgRating }}</span>
+          <span class="bxi-details">{{ p.goals }}G {{ p.assists }}A | {{ p.games }} apps</span>
+        </div>
+      </div>
+    </div>
+
+    <h2 style="margin-top: 24px">League Best Players</h2>
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th class="pos">#</th>
+          <th class="player-col">Player</th>
+          <th>Team</th>
+          <th>Pos</th>
+          <th>G</th>
+          <th>A</th>
+          <th>Apps</th>
+          <th>Rating</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of summary.bestPlayers; let i = index">
+          <td class="pos">{{ i + 1 }}</td>
+          <td class="player-col"><a [routerLink]="['/player', p.playerId]" class="fm-link">{{ p.playerName }}</a></td>
+          <td>{{ p.teamName }}</td>
+          <td>{{ p.position }}</td>
+          <td>{{ p.goals }}</td>
+          <td>{{ p.assists }}</td>
+          <td>{{ p.games }}</td>
+          <td class="highlight">{{ p.avgRating }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Awards Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'awards'">
+    <h2>Awards</h2>
+    <div class="awards-grid" *ngIf="summary.awards?.length > 0">
+      <div class="award-card" *ngFor="let award of summary.awards">
+        <div class="award-type">{{ award.awardType | titlecase }}</div>
+        <div class="award-winner">{{ award.winnerName }}</div>
+        <div class="award-details">
+          <span>{{ award.winnerTeamName }}</span>
+          <span *ngIf="award.value" class="award-value">{{ award.value }}</span>
+        </div>
+        <div class="award-comp">{{ award.competitionName }}</div>
+      </div>
+    </div>
+    <p *ngIf="!summary.awards?.length" class="empty-state">No awards recorded for this season.</p>
+  </div>
+
+  <!-- Objectives Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'objectives'">
+    <h2>Season Objectives</h2>
+    <div class="objectives-list" *ngIf="summary.objectives?.length > 0">
+      <div class="objective-card" *ngFor="let obj of summary.objectives"
+           [class.achieved]="obj.status === 'achieved'"
+           [class.failed]="obj.status === 'failed'"
+           [class.active-obj]="obj.status === 'active'">
+        <div class="obj-status">
+          <span *ngIf="obj.status === 'achieved'" class="status-icon achieved-icon">&#10003;</span>
+          <span *ngIf="obj.status === 'failed'" class="status-icon failed-icon">&#10007;</span>
+          <span *ngIf="obj.status === 'active'" class="status-icon active-icon">&#9679;</span>
+        </div>
+        <div class="obj-info">
+          <div class="obj-desc">{{ obj.description }}</div>
+          <div class="obj-comp">{{ obj.competitionName }} | {{ obj.importance | titlecase }}</div>
+        </div>
+        <div class="obj-result" *ngIf="obj.actualValue > 0">
+          Result: {{ obj.actualValue }}
+        </div>
+      </div>
+    </div>
+    <p *ngIf="!summary.objectives?.length" class="empty-state">No objectives for this season.</p>
+  </div>
+
+  <!-- Transfers Tab -->
+  <div class="tab-content" *ngIf="activeTab === 'transfers'">
+    <h2>Your Transfers In</h2>
+    <table class="stats-table" *ngIf="summary.transfersIn?.length > 0">
+      <thead>
+        <tr>
+          <th class="player-col">Player</th>
+          <th>From</th>
+          <th>Age</th>
+          <th>Rating</th>
+          <th>Fee</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let t of summary.transfersIn">
+          <td class="player-col">{{ t.playerName }}</td>
+          <td>{{ t.sellTeamName }}</td>
+          <td>{{ t.playerAge }}</td>
+          <td [style.color]="t.rating | ratingColor" [style.font-weight]="700">{{ t.rating | number:'1.1-1' }}</td>
+          <td>{{ formatMoney(t.playerTransferValue) }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="!summary.transfersIn?.length" class="empty-state">No incoming transfers.</p>
+
+    <h2 style="margin-top: 24px">Your Transfers Out</h2>
+    <table class="stats-table" *ngIf="summary.transfersOut?.length > 0">
+      <thead>
+        <tr>
+          <th class="player-col">Player</th>
+          <th>To</th>
+          <th>Age</th>
+          <th>Rating</th>
+          <th>Fee</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let t of summary.transfersOut">
+          <td class="player-col">{{ t.playerName }}</td>
+          <td>{{ t.buyTeamName }}</td>
+          <td>{{ t.playerAge }}</td>
+          <td [style.color]="t.rating | ratingColor" [style.font-weight]="700">{{ t.rating | number:'1.1-1' }}</td>
+          <td>{{ formatMoney(t.playerTransferValue) }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p *ngIf="!summary.transfersOut?.length" class="empty-state">No outgoing transfers.</p>
+
+    <h2 style="margin-top: 24px">Biggest Transfers in the League</h2>
+    <table class="stats-table" *ngIf="summary.topTransfers?.length > 0">
+      <thead>
+        <tr>
+          <th class="player-col">Player</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Fee</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let t of summary.topTransfers">
+          <td class="player-col">{{ t.playerName }}</td>
+          <td>{{ t.sellTeamName }}</td>
+          <td>{{ t.buyTeamName }}</td>
+          <td>{{ formatMoney(t.playerTransferValue) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="loading" *ngIf="loading">Loading season summary...</div>

@@ -1,0 +1,606 @@
+/* ==================== STADIUM PAGE ==================== */
+.stadium-page {
+  background: linear-gradient(135deg, #1b1b1b 0%, #2a1a3e 100%);
+  min-height: 100vh;
+  color: #ecf0f1;
+  font-family: 'Segoe UI', 'Roboto Condensed', sans-serif;
+}
+
+/* HEADER */
+.page-header {
+  background: rgba(0,0,0,0.4);
+  padding: 20px 30px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-icon {
+  font-size: 2em;
+}
+
+.header-titles h1 {
+  margin: 0;
+  font-size: 1.6em;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.header-sub {
+  font-size: 0.9em;
+  color: #aaa;
+}
+
+/* UPGRADE TOAST */
+.upgrade-toast {
+  background: rgba(46, 204, 113, 0.15);
+  border: 1px solid #2ecc71;
+  color: #2ecc71;
+  padding: 12px 30px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* COMPLETED UPGRADE BANNER */
+.completed-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 30px;
+  background: linear-gradient(90deg, rgba(46, 204, 113, 0.15), rgba(46, 204, 113, 0.05));
+  border-left: 4px solid #2ecc71;
+  border-bottom: 1px solid rgba(46, 204, 113, 0.2);
+  animation: completedSlideIn 0.4s ease-out;
+}
+
+@keyframes completedSlideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.completed-icon {
+  font-size: 1.5em;
+}
+
+.completed-text {
+  color: #2ecc71;
+  font-size: 0.95em;
+}
+
+.completed-text strong {
+  color: #fff;
+}
+
+/* CONTENT */
+.stadium-content {
+  padding: 25px 30px;
+}
+
+/* ==================== STADIUM OVERVIEW ==================== */
+.stadium-overview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+  margin-bottom: 30px;
+}
+
+/* Stadium Visual */
+.stadium-visual {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.stadium-svg {
+  padding: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 15px 15px;
+}
+
+.svg-field {
+  position: relative;
+  width: 300px;
+  height: 200px;
+}
+
+.svg-pitch {
+  position: absolute;
+  top: 30px; left: 30px; right: 30px; bottom: 30px;
+  background: linear-gradient(90deg,
+    #2d6b2d 0%, #358135 10%, #2d6b2d 10%, #2d6b2d 20%,
+    #358135 20%, #358135 30%, #2d6b2d 30%, #2d6b2d 40%,
+    #358135 40%, #358135 50%, #2d6b2d 50%, #2d6b2d 60%,
+    #358135 60%, #358135 70%, #2d6b2d 70%, #2d6b2d 80%,
+    #358135 80%, #358135 90%, #2d6b2d 90%, #2d6b2d 100%);
+  border: 2px solid rgba(255,255,255,0.7);
+  z-index: 2;
+}
+
+.pitch-markings { position: relative; width: 100%; height: 100%; }
+
+.center-line {
+  position: absolute;
+  left: 50%; top: 0;
+  width: 2px; height: 100%;
+  background: rgba(255,255,255,0.6);
+}
+
+.center-circle {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 40px; height: 40px;
+  border: 2px solid rgba(255,255,255,0.6);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.penalty-box {
+  position: absolute;
+  top: 20%; height: 60%;
+  width: 18%;
+  border: 2px solid rgba(255,255,255,0.6);
+}
+.left-box { left: 0; border-left: none; }
+.right-box { right: 0; border-right: none; }
+
+.goal-box {
+  position: absolute;
+  top: 35%; height: 30%;
+  width: 7%;
+  border: 2px solid rgba(255,255,255,0.6);
+}
+.left-goal { left: 0; border-left: none; }
+.right-goal { right: 0; border-right: none; }
+
+/* Stands */
+.svg-stand {
+  position: absolute;
+  background: linear-gradient(to bottom, #34495e, #2c3e50);
+  z-index: 1;
+}
+
+.stand-top {
+  top: 0; left: 20px; right: 20px;
+  height: 26px;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(to bottom, #4a6785, #34495e);
+}
+
+.stand-bottom {
+  bottom: 0; left: 20px; right: 20px;
+  height: 26px;
+  border-radius: 0 0 6px 6px;
+  background: linear-gradient(to top, #4a6785, #34495e);
+}
+
+.stand-left {
+  left: 0; top: 20px; bottom: 20px;
+  width: 26px;
+  border-radius: 6px 0 0 6px;
+  background: linear-gradient(to right, #4a6785, #34495e);
+}
+
+.stand-right {
+  right: 0; top: 20px; bottom: 20px;
+  width: 26px;
+  border-radius: 0 6px 6px 0;
+  background: linear-gradient(to left, #4a6785, #34495e);
+}
+
+.stadium-name-plate {
+  text-align: center;
+  padding: 15px;
+  font-size: 1.3em;
+  font-weight: 800;
+  color: white;
+  background: rgba(0,0,0,0.3);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  letter-spacing: 0.5px;
+}
+
+/* Stats Grid */
+.stadium-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat-card {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: border-color 0.2s;
+}
+
+.stat-card:hover { border-color: rgba(255,255,255,0.2); }
+
+.stat-card.highlight {
+  border-left: 4px solid #2ecc71;
+}
+.stat-card.highlight .stat-value { color: #2ecc71; }
+
+.stat-card.accent {
+  border-left: 4px solid #3498db;
+}
+.stat-card.accent .stat-value { color: #3498db; }
+
+.stat-icon {
+  font-size: 2em;
+  min-width: 40px;
+  text-align: center;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.65em;
+  color: #aaa;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 1.4em;
+  font-weight: 800;
+  font-family: monospace;
+  color: white;
+}
+
+/* ==================== SECTIONS ==================== */
+.section {
+  margin-bottom: 30px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.1em;
+  font-weight: 800;
+  color: #b39ddb;
+  padding: 12px 0;
+  margin-bottom: 15px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.construction-header { color: #e67e22; }
+
+.section-icon { font-size: 1.2em; }
+
+/* ==================== CONSTRUCTION IN PROGRESS ==================== */
+.construction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.construction-item {
+  background: rgba(230, 126, 34, 0.08);
+  border: 1px solid rgba(230, 126, 34, 0.25);
+  border-radius: 8px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.construction-icon {
+  font-size: 2em;
+  min-width: 45px;
+  text-align: center;
+}
+
+.construction-info {
+  flex: 1;
+}
+
+.construction-name {
+  font-weight: 700;
+  font-size: 1em;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.level-badge {
+  background: rgba(255,255,255,0.1);
+  color: #f1c40f;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.construction-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8em;
+  color: #aaa;
+  margin-top: 6px;
+}
+
+.days-remaining {
+  color: #e67e22;
+  font-weight: 700;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+  height: 8px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-container.small { height: 5px; margin-top: 6px; }
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e67e22, #f39c12);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* ==================== FACILITY CARDS ==================== */
+.facilities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.facility-card {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.facility-card:hover {
+  border-color: rgba(255,255,255,0.18);
+  transform: translateY(-1px);
+}
+
+.facility-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.facility-icon-box {
+  font-size: 2em;
+  min-width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+}
+
+.facility-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.facility-name {
+  font-weight: 700;
+  font-size: 1em;
+  color: white;
+}
+
+.facility-desc {
+  font-size: 0.75em;
+  color: #999;
+  line-height: 1.3;
+}
+
+/* Level Section */
+.facility-level-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.level-info {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.level-text {
+  font-size: 0.7em;
+  color: #aaa;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.level-number {
+  font-size: 1.3em;
+  font-weight: 900;
+}
+
+.level-max {
+  font-size: 0.85em;
+  color: #666;
+}
+
+.level-bar {
+  height: 5px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.level-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+/* Upgrading State */
+.facility-upgrading {
+  background: rgba(230, 126, 34, 0.08);
+  border: 1px solid rgba(230, 126, 34, 0.2);
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upgrading-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75em;
+  font-weight: 800;
+  color: #e67e22;
+  letter-spacing: 0.5px;
+}
+
+.pulse-dot {
+  width: 8px; height: 8px;
+  background: #e67e22;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.days-text {
+  font-size: 0.75em;
+  color: #e67e22;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* Upgrade Action */
+.facility-upgrade-action {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.upgrade-details {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+}
+
+.upgrade-cost, .upgrade-duration {
+  display: flex;
+  flex-direction: column;
+}
+
+.cost-label, .dur-label {
+  font-size: 0.6em;
+  color: #888;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cost-value {
+  font-size: 0.95em;
+  font-weight: 700;
+  color: #e74c3c;
+  font-family: monospace;
+}
+
+.dur-value {
+  font-size: 0.95em;
+  font-weight: 700;
+  color: #e67e22;
+}
+
+.upgrade-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #2980b9, #3498db);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.8em;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+.upgrade-btn:hover {
+  background: linear-gradient(135deg, #3498db, #5dade2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+/* Max Level */
+.facility-maxed {
+  text-align: center;
+  padding: 4px 0;
+}
+
+.max-badge {
+  background: rgba(46, 204, 113, 0.12);
+  border: 1px solid rgba(46, 204, 113, 0.3);
+  color: #2ecc71;
+  padding: 6px 20px;
+  border-radius: 20px;
+  font-size: 0.75em;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+/* LOADING */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 80px;
+}
+
+.spinner {
+  width: 40px; height: 40px;
+  border: 4px solid rgba(255,255,255,0.15);
+  border-top-color: #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .stadium-overview { grid-template-columns: 1fr; }
+  .facilities-grid { grid-template-columns: 1fr; }
+}

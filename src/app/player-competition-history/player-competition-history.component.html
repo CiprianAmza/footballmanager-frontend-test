@@ -1,0 +1,154 @@
+<!-- ALL-COMPETITIONS BREAKDOWN (includes European: League of Champions / Stars Cup) -->
+<div class="fm-history-panel" *ngIf="byCompetition && byCompetition.length > 0">
+  <div class="panel-header">ALL COMPETITIONS</div>
+  <div class="table-responsive">
+    <table class="fm-table">
+      <thead>
+        <tr class="header-sub">
+          <th class="text-left">Competition</th>
+          <th class="center">Apps</th>
+          <th class="center">Gls</th>
+          <th class="center">Ast</th>
+          <th class="center">Avg</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of byCompetition">
+          <td class="comp-name">
+            {{ row.competitionName }}
+            <small class="sub-count" *ngIf="competitionTypeLabel(row.competitionTypeId)">
+              ({{ competitionTypeLabel(row.competitionTypeId) }})
+            </small>
+          </td>
+          <td class="center stat-val">{{ row.appearances ?? 0 }}</td>
+          <td class="center goal-val">{{ (row.goals ?? 0) > 0 ? row.goals : '-' }}</td>
+          <td class="center stat-val">{{ (row.assists ?? 0) > 0 ? row.assists : '-' }}</td>
+          <td class="center stat-val">{{ row.avgRating ? (row.avgRating | number:'1.2-2') : '-' }}</td>
+        </tr>
+        <tr class="career-total-row" *ngIf="breakdownTotal">
+          <td class="text-right bold">ALL COMPETITIONS</td>
+          <td class="center bold">{{ breakdownTotal.appearances ?? 0 }}</td>
+          <td class="center bold">{{ breakdownTotal.goals ?? 0 }}</td>
+          <td class="center bold">{{ breakdownTotal.assists ?? 0 }}</td>
+          <td class="center bold">{{ breakdownTotal.avgRating ? (breakdownTotal.avgRating | number:'1.2-2') : '-' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Per competition-type + season drill-down (LoC / Stars Cup kept separate per season) -->
+<div class="fm-history-panel" *ngIf="byTypeAndSeason && byTypeAndSeason.length > 0">
+  <div class="panel-header">BY COMPETITION TYPE &amp; SEASON</div>
+  <div class="table-responsive">
+    <table class="fm-table">
+      <thead>
+        <tr class="header-sub">
+          <th class="center">Season</th>
+          <th class="text-left">Competition Type</th>
+          <th class="center">Apps</th>
+          <th class="center">Gls</th>
+          <th class="center">Ast</th>
+          <th class="center">Avg</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of byTypeAndSeason">
+          <td class="center stat-val">{{ row.seasonNumber }}</td>
+          <td class="comp-name">{{ row.competitionTypeName || competitionTypeLabel(row.competitionTypeId) }}</td>
+          <td class="center stat-val">{{ row.appearances ?? 0 }}</td>
+          <td class="center goal-val">{{ (row.goals ?? 0) > 0 ? row.goals : '-' }}</td>
+          <td class="center stat-val">{{ (row.assists ?? 0) > 0 ? row.assists : '-' }}</td>
+          <td class="center stat-val">{{ row.avgRating ? (row.avgRating | number:'1.2-2') : '-' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="fm-history-panel" *ngIf="playerStats && playerStats.length > 0">
+  <div class="panel-header">CAREER STATISTICS</div>
+  
+  <div class="table-responsive">
+    <table class="fm-table">
+      <thead>
+        <!-- Header Principal -->
+        <tr class="header-top">
+          <th colspan="2" class="section-header">SEASON INFO</th>
+          <th colspan="3" class="section-header league-header">LEAGUE</th>
+          <th colspan="3" class="section-header cup-header">NATIONAL CUP</th>
+          <th colspan="2" class="section-header total-header">TOTAL</th>
+        </tr>
+        <!-- Sub-header -->
+        <tr class="header-sub">
+          <th class="text-left">Club</th>
+          <th class="center">Year</th>
+          
+          <!-- League Cols -->
+          <th class="text-left">Competition</th>
+          <th class="center">Apps</th>
+          <th class="center">Gls</th>
+
+          <!-- Cup Cols -->
+          <th class="text-left">Competition</th>
+          <th class="center">Apps</th>
+          <th class="center">Gls</th>
+
+          <!-- Total Cols -->
+          <th class="center">Apps</th>
+          <th class="center">Gls</th>
+        </tr>
+      </thead>
+      
+      <tbody>
+        <tr *ngFor="let entry of playerStats">
+          <!-- Club & Season -->
+          <td class="club-cell">{{ entry.teamName }}</td>
+          <td class="center year-cell">{{ entry.seasonNumber }}</td>
+          
+          <!-- League Stats -->
+          <td class="comp-name">{{ entry.leagueEntry.name === '-' ? '' : entry.leagueEntry.name }}</td>
+          <td class="center stat-val">
+            <span *ngIf="entry.leagueEntry.games > 0 || entry.leagueEntry.gamesAsSubstitute > 0">
+                {{ entry.leagueEntry.games }} <span class="sub-count">({{entry.leagueEntry.gamesAsSubstitute}})</span>
+            </span>
+            <span *ngIf="entry.leagueEntry.games === 0 && entry.leagueEntry.gamesAsSubstitute === 0" class="dash">-</span>
+          </td>
+          <td class="center goal-val">
+            {{ entry.leagueEntry.goals > 0 ? entry.leagueEntry.goals : '-' }}
+          </td>
+  
+          <!-- Cup Stats -->
+          <td class="comp-name">{{ entry.cupEntry.name === '-' ? '' : entry.cupEntry.name }}</td>
+          <td class="center stat-val">
+            <span *ngIf="entry.cupEntry.games > 0 || entry.cupEntry.gamesAsSubstitute > 0">
+                {{ entry.cupEntry.games }} <span class="sub-count">({{entry.cupEntry.gamesAsSubstitute}})</span>
+            </span>
+            <span *ngIf="entry.cupEntry.games === 0 && entry.cupEntry.gamesAsSubstitute === 0" class="dash">-</span>
+          </td>
+          <td class="center goal-val">
+            {{ entry.cupEntry.goals > 0 ? entry.cupEntry.goals : '-' }}
+          </td>
+  
+          <!-- Total Stats -->
+          <td class="center total-stat">
+            {{ entry.totalGames }} <span class="sub-count">({{entry.leagueEntry.gamesAsSubstitute + entry.cupEntry.gamesAsSubstitute}})</span>
+          </td>
+          <td class="center total-goals">
+            {{ entry.totalGoals }}
+          </td>
+        </tr>
+        
+        <!-- TOTAL CAREER ROW (Opțional, calculat în TS sau doar vizual aici) -->
+        <tr class="career-total-row">
+            <td colspan="2" class="text-right bold">CAREER TOTAL</td>
+            <td colspan="3"></td>
+            <td colspan="3"></td>
+            <td class="center bold">{{ getTotalApps() }}</td>
+            <td class="center bold">{{ getTotalGoals() }}</td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+</div>

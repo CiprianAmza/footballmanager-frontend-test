@@ -1,0 +1,49 @@
+.card-page {
+  display: flex;
+  justify-content: center;
+  padding: 30px 12px;
+}
+.card-msg { color: #666; font-size: 1.1rem; }
+
+.fut-card {
+  width: 300px;
+  padding: 22px 20px 18px;
+  border-radius: 18px;
+  background: linear-gradient(160deg, #f7e7a6 0%, #e6c95f 38%, #caa53a 70%, #f3e08f 100%);
+  box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 0 0 3px rgba(255,255,255,.35);
+  color: #3a2e0a;
+  font-family: "Arial Narrow", Arial, sans-serif;
+  position: relative;
+}
+
+.fut-top { display: flex; align-items: flex-start; }
+.fut-rating { display: flex; flex-direction: column; align-items: center; min-width: 64px; }
+.fut-ovr { font-size: 3.2rem; font-weight: 800; line-height: 1; }
+.fut-pos { font-size: 1.1rem; font-weight: 700; letter-spacing: 1px; margin-top: 2px; }
+.fut-face { flex: 1; display: flex; justify-content: center; }
+.fut-face app-player-face { filter: drop-shadow(0 4px 6px rgba(0,0,0,.25)); }
+
+.fut-name {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 8px 0 12px;
+  border-bottom: 2px solid rgba(58,46,10,.4);
+  padding-bottom: 8px;
+}
+
+.fut-stats { display: flex; justify-content: center; align-items: center; gap: 14px; }
+.fut-col { display: flex; flex-direction: column; gap: 6px; }
+.fut-divider { width: 2px; align-self: stretch; background: rgba(58,46,10,.35); }
+.fut-stat { display: flex; gap: 8px; align-items: baseline; }
+.fut-stat .v { font-size: 1.3rem; font-weight: 800; width: 30px; text-align: right; }
+.fut-stat .k { font-size: 1rem; font-weight: 700; letter-spacing: 1px; }
+
+.fut-footer {
+  display: flex; justify-content: space-between;
+  margin-top: 14px; padding-top: 8px;
+  border-top: 2px solid rgba(58,46,10,.4);
+  font-weight: 700; font-size: .9rem;
+}

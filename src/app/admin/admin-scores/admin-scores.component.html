@@ -1,0 +1,64 @@
+<div class="admin-container">
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Predetermined Scores</h2>
+      <div class="header-actions">
+        <a class="secondary" routerLink="/admin" style="text-decoration:none;padding:6px 12px;border-radius:4px;">← Hub</a>
+        <button class="secondary" (click)="loadMatches()" [disabled]="loadingMatches">Refresh</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <select [(ngModel)]="filterCompetitionId">
+        <option [ngValue]="null">All competitions</option>
+        <option *ngFor="let c of competitions" [ngValue]="c.id">{{ c.name }}</option>
+      </select>
+      <input type="text" placeholder="Filter by team or competition..." [(ngModel)]="filterText" />
+      <span class="count">{{ filteredMatches.length }} / {{ matches.length }} matches</span>
+    </div>
+
+    <div *ngIf="loadingMatches" class="status">Loading matches...</div>
+    <div *ngIf="loadError" class="status error">{{ loadError }}</div>
+
+    <table *ngIf="!loadingMatches && matches.length > 0" class="matches-table">
+      <thead>
+        <tr>
+          <th>Day</th>
+          <th>Competition</th>
+          <th>Round</th>
+          <th class="home">Home</th>
+          <th class="score">Score</th>
+          <th class="away">Away</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let m of filteredMatches" [class.has-preset]="m.predeterminedId">
+          <td class="day">{{ m.day }}</td>
+          <td class="comp">{{ m.competitionName }}</td>
+          <td class="round">R{{ m.roundNumber }}</td>
+          <td class="home">{{ m.team1Name }}</td>
+          <td class="score">
+            <input type="number" min="0" max="20" [(ngModel)]="m.editTeam1Score" />
+            <span class="sep">-</span>
+            <input type="number" min="0" max="20" [(ngModel)]="m.editTeam2Score" />
+          </td>
+          <td class="away">{{ m.team2Name }}</td>
+          <td class="actions">
+            <button class="primary" (click)="saveMatch(m)" [disabled]="m.saving">
+              {{ m.saving ? '...' : (m.predeterminedId ? 'Update' : 'Set') }}
+            </button>
+            <button class="ghost" *ngIf="m.predeterminedId" (click)="clearMatch(m)">Clear</button>
+            <span class="save-msg" [class.ok]="m.saveStatus === 'ok'" [class.err]="m.saveStatus === 'err'">
+              {{ m.saveMessage }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="!loadingMatches && matches.length === 0 && !loadError" class="status">
+      No upcoming matches in this season.
+    </div>
+  </div>
+</div>

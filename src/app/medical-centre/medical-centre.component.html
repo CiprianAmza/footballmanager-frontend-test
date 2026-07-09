@@ -1,0 +1,221 @@
+<div class="medical-container">
+
+    <!-- HEADER -->
+    <div class="page-header">
+      <div class="header-left">
+          <div class="icon-circle">+</div>
+          <div class="titles">
+              <h1>MEDICAL CENTRE</h1>
+              <span class="subtitle">{{ activeInjuries.length }} injured players</span>
+          </div>
+      </div>
+
+      <!-- TABS -->
+      <div class="nav-tabs">
+          <button *ngFor="let tab of tabs"
+                  class="tab-btn"
+                  [class.active]="activeTab === tab"
+                  (click)="setTab(tab)">
+              {{ tab }}
+          </button>
+      </div>
+    </div>
+
+    <!-- RISK ASSESSMENT TAB -->
+    <div class="content-area" *ngIf="activeTab === 'Risk Assessment'">
+
+      <!-- TABLE HEADER -->
+      <div class="table-controls">
+          <span class="section-title">RISK ASSESSMENT</span>
+      </div>
+
+      <!-- MAIN TABLE -->
+      <div class="table-panel">
+          <table class="fm-table">
+              <thead>
+                  <tr>
+                      <th class="text-left">PLAYER</th>
+                      <th class="text-left">MATCH LOAD</th>
+                      <th class="text-left">INJURY SUSCEPTIBILITY</th>
+                      <th class="text-left">FATIGUE</th>
+                      <th class="text-left">STATUS</th>
+                      <th class="text-left">OVERALL RISK</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  <tr *ngFor="let p of riskPlayers">
+
+                      <!-- Player -->
+                      <td class="player-col">
+                          <div class="p-flex">
+                              <div class="p-info">
+                                  <a [routerLink]="['/player', p.id]" class="fm-link"><span class="p-name">{{ p.name }}</span></a>
+                                  <span class="p-role">{{ p.position }} - Rating:
+                                    <span [style.color]="p.rating | ratingColor"
+                                          [style.font-weight]="700">{{ p.rating | number:'1.1-1' }}</span>
+                                  </span>
+                              </div>
+                          </div>
+                      </td>
+
+                      <!-- Match Load -->
+                      <td>
+                          <div class="stat-cell">
+                              <span class="stat-val" [ngClass]="getLevelClass(p.matchLoad)">{{ p.matchLoad }}</span>
+                              <span class="stat-sub">{{ p.matchLoadInfo }}</span>
+                          </div>
+                      </td>
+
+                      <!-- Susceptibility -->
+                      <td>
+                          <div class="stat-cell">
+                              <span class="stat-val" [ngClass]="getLevelClass(p.injurySusceptibility)">{{ p.injurySusceptibility }}</span>
+                              <span class="stat-sub">{{ p.injuryInfo }}</span>
+                          </div>
+                      </td>
+
+                      <!-- Fatigue -->
+                      <td>
+                          <div class="stat-cell">
+                              <span class="stat-val" [ngClass]="getLevelClass(p.fatigue)">{{ p.fatigue }}</span>
+                          </div>
+                      </td>
+
+                      <!-- Status -->
+                      <td>
+                          <span *ngIf="p.currentlyInjured" class="bad">
+                              Injured - {{ p.currentInjuryType }} ({{ p.currentDaysRemaining }} rounds)
+                          </span>
+                          <span *ngIf="!p.currentlyInjured" class="good">Available</span>
+                      </td>
+
+                      <!-- Overall Risk (Colored Box) -->
+                      <td class="risk-col">
+                          <div class="risk-box" [ngClass]="getRiskBoxClass(p.overallRisk)">
+                              <span class="risk-title">{{ p.riskLabel }}</span>
+                          </div>
+                      </td>
+
+                  </tr>
+              </tbody>
+          </table>
+      </div>
+
+    </div>
+
+    <!-- CURRENT INJURIES TAB -->
+    <div class="content-area" *ngIf="activeTab === 'Current Injuries'">
+
+      <div class="table-controls">
+          <span class="section-title">CURRENT INJURIES</span>
+      </div>
+
+      <div class="table-panel" *ngIf="activeInjuries.length > 0">
+          <table class="fm-table">
+              <thead>
+                  <tr>
+                      <th class="text-left">PLAYER</th>
+                      <th class="text-left">POSITION</th>
+                      <th class="text-left">RATING</th>
+                      <th class="text-left">INJURY TYPE</th>
+                      <th class="text-left">SEVERITY</th>
+                      <th class="text-left">ROUNDS REMAINING</th>
+                      <th class="text-left">SEASON</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  <tr *ngFor="let injury of activeInjuries">
+                      <td>
+                          <div class="p-flex">
+                              <div class="p-info">
+                                  <a [routerLink]="['/player', injury.playerId]" class="fm-link"><span class="p-name">{{ injury.playerName }}</span></a>
+                              </div>
+                          </div>
+                      </td>
+                      <td>{{ injury.position }}</td>
+                      <td [style.color]="injury.rating | ratingColor" [style.font-weight]="700">{{ injury.rating | number:'1.1-1' }}</td>
+                      <td>{{ injury.injuryType }}</td>
+                      <td>
+                          <span [ngClass]="getSeverityClass(injury.severity)">{{ injury.severity }}</span>
+                      </td>
+                      <td>
+                          <span class="days-remaining">{{ injury.daysRemaining }}</span> rounds
+                      </td>
+                      <td>{{ injury.seasonNumber }}</td>
+                  </tr>
+              </tbody>
+          </table>
+      </div>
+
+      <div class="empty-state" *ngIf="activeInjuries.length === 0">
+          <p>No players are currently injured.</p>
+      </div>
+
+    </div>
+
+    <!-- INJURY HISTORY TAB -->
+    <div class="content-area" *ngIf="activeTab === 'Injury History'">
+
+      <div class="table-controls">
+          <span class="section-title">INJURY HISTORY</span>
+      </div>
+
+      <div class="table-panel" *ngIf="injuryHistory.length > 0">
+          <table class="fm-table">
+              <thead>
+                  <tr>
+                      <th class="text-left">PLAYER</th>
+                      <th class="text-left">POSITION</th>
+                      <th class="text-left">INJURY TYPE</th>
+                      <th class="text-left">SEVERITY</th>
+                      <th class="text-left">STATUS</th>
+                      <th class="text-left">SEASON</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  <tr *ngFor="let injury of injuryHistory">
+                      <td>
+                          <div class="p-flex">
+                              <div class="p-info">
+                                  <a [routerLink]="['/player', injury.playerId]" class="fm-link"><span class="p-name">{{ injury.playerName }}</span></a>
+                              </div>
+                          </div>
+                      </td>
+                      <td>{{ injury.position }}</td>
+                      <td>{{ injury.injuryType }}</td>
+                      <td>
+                          <span [ngClass]="getSeverityClass(injury.severity)">{{ injury.severity }}</span>
+                      </td>
+                      <td>
+                          <span *ngIf="injury.recovered" class="good">Recovered</span>
+                          <span *ngIf="!injury.recovered" class="bad">{{ injury.daysRemaining }} rounds left</span>
+                      </td>
+                      <td>{{ injury.seasonNumber }}</td>
+                  </tr>
+              </tbody>
+          </table>
+      </div>
+
+      <div class="empty-state" *ngIf="injuryHistory.length === 0">
+          <p>No injury records found.</p>
+      </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer-bar">
+        <div class="footer-section">
+            <span class="footer-title">INJURIES</span>
+            <div class="injury-stats">
+                <span class="inj-count red">{{ seriousCount }} serious</span>
+                <span class="inj-count orange">{{ moderateCount }} moderate</span>
+                <span class="inj-count yellow">{{ minorCount }} minor</span>
+            </div>
+        </div>
+        <div class="footer-section border-left">
+            <span class="footer-title">TOTAL INJURY HISTORY</span>
+            <span class="return-count">{{ injuryHistory.length }}</span>
+        </div>
+    </div>
+
+  </div>

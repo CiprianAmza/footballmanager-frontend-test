@@ -1,0 +1,96 @@
+/* Container Principal */
+.fm-history-panel {
+  background-color: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 0; /* Margin 0 pentru că e învelit în părinte */
+  color: #ecf0f1;
+  font-family: 'Segoe UI', 'Roboto Condensed', sans-serif;
+}
+
+.panel-header {
+  background-color: #303030;
+  color: #aaa;
+  padding: 10px 15px;
+  font-size: 0.85em;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border-bottom: 1px solid #444;
+}
+
+/* Table Styles */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.fm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+/* HEADERS */
+.header-top th {
+  background-color: #2c2c2c;
+  color: #888;
+  font-size: 0.75em;
+  padding: 4px;
+  border-bottom: 1px solid #444;
+  letter-spacing: 1px;
+}
+
+.section-header { border-right: 1px solid #444; }
+.section-header:last-child { border-right: none; }
+
+/* Culori subtile pentru secțiuni */
+.league-header { border-bottom: 2px solid #3498db; } /* Albastru */
+.cup-header { border-bottom: 2px solid #f1c40f; }    /* Galben */
+.total-header { border-bottom: 2px solid #e74c3c; }  /* Rosu */
+
+.header-sub th {
+  background-color: #333;
+  color: #ccc;
+  font-weight: normal;
+  font-size: 0.85em;
+  padding: 8px 10px;
+  border-bottom: 1px solid #555;
+}
+
+/* BODY CELLS */
+td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #333;
+  color: #ddd;
+}
+
+tr:hover { background-color: #3a3a3a; }
+tr:last-child td { border-bottom: none; }
+
+/* Specific Columns */
+.club-cell { font-weight: 600; color: white; }
+.year-cell { color: #888; font-family: monospace; }
+.comp-name { color: #aaa; font-size: 0.9em; }
+
+/* Stats */
+.stat-val { font-family: monospace; font-size: 1.1em; color: #ccc; }
+.sub-count { font-size: 0.8em; color: #777; } /* Meciuri din postura de rezervă */
+.dash { color: #444; }
+
+.goal-val { font-weight: bold; color: #f1c40f; font-family: monospace; } /* Golurile galbene */
+
+.total-stat { font-weight: bold; color: white; }
+.total-goals { font-weight: bold; color: #e74c3c; font-size: 1.1em; }
+
+/* Career Total Row */
+.career-total-row {
+  background-color: #202020;
+  border-top: 2px solid #444;
+}
+.career-total-row td { padding-top: 15px; padding-bottom: 15px; }
+.bold { font-weight: 900; color: white; }
+
+/* Utils */
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+.center { text-align: center; }

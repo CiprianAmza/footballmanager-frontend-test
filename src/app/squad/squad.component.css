@@ -1,0 +1,299 @@
+/* Per-row procedural face thumbnail */
+.face-col {
+  width: 60px;
+  height: 60px;
+  text-align: center;
+  padding: 2px 4px;
+}
+.face-col app-player-face {
+  display: inline-block;
+  line-height: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  vertical-align: middle;
+}
+/* Keep rows tall enough for the enlarged 54px face to render sharply. */
+.fm-table tbody tr {
+  height: 60px;
+}
+
+/* Container Principal */
+.squad-container {
+  padding: 20px;
+  background-color: #1b1b1b;
+  min-height: 100vh;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* --- View Controls --- */
+.view-controls {
+  margin-bottom: 15px;
+  background-color: #2c2c2c;
+  padding: 10px 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.view-label {
+  color: #aaa;
+  font-weight: bold;
+  font-size: 0.9em;
+  text-transform: uppercase;
+}
+
+.fm-dropdown {
+  background-color: #1b1b1b;
+  color: white;
+  border: 1px solid #444;
+  padding: 5px 15px;
+  border-radius: 4px;
+  font-size: 0.95em;
+  cursor: pointer;
+  outline: none;
+}
+
+.fm-dropdown:focus {
+  border-color: #3498db;
+}
+
+/* --- Table Styling --- */
+.table-responsive {
+  overflow-x: auto;
+}
+
+.fm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  background-color: #252525;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.fm-table th {
+  background-color: #2c2c2c;
+  color: #aaa;
+  text-align: left;
+  padding: 12px 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.8em;
+  border-bottom: 2px solid #3a3a3a;
+  cursor: pointer; /* Sugerează sortare */
+}
+
+.fm-table th:hover {
+  color: white;
+  background-color: #333;
+}
+
+.fm-table td {
+  padding: 10px;
+  border-bottom: 1px solid #333;
+  color: #ccc;
+  vertical-align: middle;
+}
+
+.fm-table tr:hover {
+  background-color: #303030;
+}
+
+/* Alignments */
+.center { text-align: center; }
+.pos-col { width: 60px; text-align: center; }
+
+/* --- Specific Components --- */
+
+/* Tactic Selector (in table) */
+.tactic-select {
+  background-color: #1f2f2f; /* Dark Green tint */
+  color: #2ecc71; /* Green Text */
+  border: 1px solid #2ecc71;
+  border-radius: 3px;
+  padding: 2px;
+  font-size: 0.85em;
+  font-weight: bold;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Player Name Link */
+.player-link {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 1.05em;
+}
+
+.player-link:hover {
+  text-decoration: underline;
+  color: #6bb9f0;
+}
+
+/* Position Badge (Best Pos) */
+.pos-badge {
+  background-color: #3a3a3a;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+  color: #ddd;
+}
+
+/* Values styling */
+.rating-val { font-weight: bold; color: white; }
+.money-val { color: #f1c40f; font-weight: bold; } /* Galben pentru bani */
+.rating-stars { color: #f1c40f; letter-spacing: 1px; }
+
+/* --- Context Menu --- */
+.name-wrapper {
+  position: relative;
+}
+
+.context-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: #2c2c2c;
+  border: 1px solid #444;
+  border-radius: 4px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+  z-index: 100;
+  min-width: 150px;
+}
+
+.context-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.context-menu li a {
+  display: block;
+  padding: 8px 15px;
+  color: #e0e0e0;
+  text-decoration: none;
+  font-size: 0.9em;
+  border-bottom: 1px solid #3a3a3a;
+}
+
+.context-menu li a:hover {
+  background-color: #3498db;
+  color: white;
+}
+
+.context-menu li:last-child a {
+  border-bottom: none;
+}
+
+/* ... restul stilurilor ... */
+
+.fm-table th {
+  /* ... stiluri existente ... */
+  cursor: pointer; /* Cursor mânuță pentru a indica click */
+  user-select: none; /* Previne selectarea textului când dai dublu click rapid */
+}
+
+.fm-table th:hover {
+  color: white;
+  background-color: #333; /* Highlight la hover pe coloană */
+}
+
+/* Morale Indicator Styles */
+.morale-indicator {
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.morale-excellent {
+  color: #2ecc71;
+  background-color: rgba(46, 204, 113, 0.15);
+}
+
+.morale-good {
+  color: #a3d977;
+  background-color: rgba(163, 217, 119, 0.12);
+}
+
+.morale-average {
+  color: #f1c40f;
+  background-color: rgba(241, 196, 15, 0.12);
+}
+
+.morale-poor {
+  color: #e67e22;
+  background-color: rgba(230, 126, 34, 0.15);
+}
+
+.morale-very-poor {
+  color: #e74c3c;
+  background-color: rgba(231, 76, 60, 0.15);
+}
+
+/* Expiring Contracts Banner */
+.expiring-contracts-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background-color: rgba(255, 68, 68, 0.12);
+  border: 1px solid rgba(255, 68, 68, 0.35);
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  color: #ff8a80;
+  font-size: 13px;
+}
+
+.expiring-contracts-banner .banner-icon {
+  font-size: 18px;
+  color: #ff4444;
+  flex-shrink: 0;
+}
+
+.expiring-contracts-banner .banner-content {
+  line-height: 1.5;
+}
+
+.expiring-contracts-banner .expiring-link {
+  color: #4fc3f7;
+  text-decoration: none;
+}
+
+/* Unhappy players panel */
+.unhappy-panel {
+  background: #2a1f1f;
+  border: 1px solid #7d3a3a;
+  border-radius: 6px;
+  padding: 12px 15px;
+  margin-bottom: 15px;
+}
+.unhappy-header {
+  color: #e67e22;
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+.unhappy-table { width: 100%; }
+.promise-btn {
+  background: #2980b9;
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8em;
+}
+.promise-btn:hover:not(:disabled) { background: #3498db; }
+.promise-btn:disabled { opacity: 0.6; cursor: default; }
+.promise-result { margin-top: 8px; padding: 6px 10px; border-radius: 4px; font-size: 0.85em; }
+.promise-ok { background: #1e3a2a; color: #2ecc71; }
+.promise-fail { background: #3a1e1e; color: #e74c3c; }
+
+.expiring-contracts-banner .expiring-link:hover {
+  text-decoration: underline;
+}

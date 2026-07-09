@@ -1,0 +1,31 @@
+<div class="initial">
+  <div>
+    <select id="roundSelect" (change)="selectRound($event)" style="width: 120px">
+      <option [value]="round" *ngFor="let round of rounds" 
+      [selected]="round.toString() === currentRound.toString()">Round {{ round }} </option>
+    </select>
+  </div>
+  <div>
+    <ng-container *ngIf="matches && matches.length > 0; else noMatches">
+        <table>
+        <thead>
+            <tr>
+            <th>Home Team</th>
+            <th>Away Team</th>
+            <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let match of matches">
+            <td>{{ match.teamName1 }}</td>
+            <td>{{ match.teamName2 }}</td>
+            <td>{{ match.score }}</td>
+            </tr>
+        </tbody>
+        </table>
+    </ng-container>
+    <ng-template #noMatches>
+        <p class="text">The round has not yet been drawed.</p>
+    </ng-template>
+  </div>
+</div>

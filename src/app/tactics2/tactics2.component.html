@@ -1,0 +1,222 @@
+<div class="cm-container">
+
+  <!-- 1. LEFT: Spreadsheet-style control panel -->
+  <div class="cm-controls">
+    <div class="cm-panel-title">TEAM TALK &amp; TACTICS</div>
+
+    <table class="cm-control-table">
+      <tbody>
+        <tr class="cm-row clickable" (click)="openModal('formation')">
+          <td class="cm-key">Formation</td>
+          <td class="cm-val cm-highlight">{{ formationLabel(selectedTactic) }}</td>
+        </tr>
+        <tr class="cm-row clickable" (click)="openModal('mentality')">
+          <td class="cm-key">Mentality</td>
+          <td class="cm-val">{{ selectedOptions.mentality }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="cm-section-head">TEAM INSTRUCTIONS</div>
+    <table class="cm-control-table">
+      <tbody>
+        <tr class="cm-row clickable" (click)="openModal('possession')">
+          <td class="cm-key">Passing Directness</td>
+          <td class="cm-val">{{ selectedOptions.possession }}</td>
+        </tr>
+        <tr class="cm-row clickable" (click)="openModal('passing')">
+          <td class="cm-key">Passing Length</td>
+          <td class="cm-val">{{ selectedOptions.passing }}</td>
+        </tr>
+        <tr class="cm-row clickable" (click)="openModal('tempo')">
+          <td class="cm-key">Tempo</td>
+          <td class="cm-val">{{ selectedOptions.tempo }}</td>
+        </tr>
+        <tr class="cm-row clickable" (click)="openModal('timeWasting')">
+          <td class="cm-key">Time Wasting</td>
+          <td class="cm-val">{{ selectedOptions.timeWasting }}</td>
+        </tr>
+        <tr class="cm-row clickable" (click)="openModal('defensiveLine')">
+          <td class="cm-key">Defensive Line</td>
+          <td class="cm-val">{{ selectedOptions.defensiveLine }}</td>
+        </tr>
+        <tr class="cm-row clickable" (click)="openModal('pressing')">
+          <td class="cm-key">Pressing</td>
+          <td class="cm-val">{{ selectedOptions.pressing }}</td>
+        </tr>
+        <tr class="cm-row clickable" (click)="openModal('width')">
+          <td class="cm-key">Width</td>
+          <td class="cm-val">{{ selectedOptions.width }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="cm-btn-row">
+      <button class="cm-btn" (click)="askAssistant()">Ask Assistant</button>
+      <button class="cm-btn cm-btn-primary" (click)="saveData()">Save Tactics</button>
+    </div>
+  </div>
+
+  <!-- 2. CENTER: Flat pitch -->
+  <div class="cm-pitch-wrap">
+    <div class="cm-pitch-title">PITCH &mdash; {{ formationLabel(selectedTactic) }}</div>
+    <div class="cm-pitch">
+      <div class="cm-line cm-half"></div>
+      <div class="cm-line cm-circle"></div>
+      <div class="cm-line cm-box-top"></div>
+      <div class="cm-line cm-box-bottom"></div>
+
+      <!-- DEFENSIVE LINE indicator (visual only; reflects selectedOptions.defensiveLine) -->
+      <div class="cm-def-line" [style.top.%]="defLineTopPercent">
+        <span class="cm-def-line-tag">DEF LINE: {{ selectedOptions.defensiveLine }}</span>
+      </div>
+
+      <div class="cm-grid">
+        <div *ngFor="let cell of fieldPositions"
+             class="cm-cell"
+             [class.allowed]="allowedIndexes.includes(cell.positionIndex)"
+             [style.transform]="'translate(' + cellWidthShift(cell.positionIndex) + '%, ' + cellDefLineShift(cell.positionIndex) + '%)'"
+             (dragover)="allowDrop($event)"
+             (drop)="drop($event, cell.positionIndex)"
+             (contextmenu)="onRightClick(cell.positionIndex, $event)">
+
+          <div *ngIf="cell.player" class="cm-player"
+               [class.locked-slot]="isSlotLocked(cell.positionIndex, cell.player.position)"
+               [attr.draggable]="isSlotLocked(cell.positionIndex, cell.player.position) ? null : 'true'"
+               (dragstart)="drag($event, cell.player)"
+               (click)="openPlayerCard(cell.player.id)">
+            <span class="lock-badge" *ngIf="isSlotLocked(cell.positionIndex, cell.player.position)"
+                  title="Locked by the owner">&#128274;</span>
+            <div class="cm-shirt"
+                 [style.background-color]="teamColor1"
+                 [style.border-color]="ratingTiers.tierColor(cell.player.rating)">
+              <span class="cm-shirt-num"
+                    [style.color]="ratingTiers.tierColor(cell.player.rating)">{{ cell.player.rating | number:'1.0-0' }}</span>
+            </div>
+            <div class="cm-tag">
+              <div class="cm-tag-name">{{ cell.player.name }}</div>
+              <div class="cm-tag-pos">{{ cell.player.position }}</div>
+            </div>
+          </div>
+
+          <div *ngIf="!cell.player && allowedIndexes.includes(cell.positionIndex)" class="cm-empty">+</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bench -->
+    <div class="cm-bench">
+      <div class="cm-bench-label">SUBSTITUTES</div>
+      <div class="cm-bench-row">
+        <div *ngFor="let sub of substitutes; let i = index"
+             class="cm-sub"
+             (dragover)="allowDrop($event)"
+             (drop)="dropSubstitute($event, i)">
+          <div *ngIf="sub.player" class="cm-player mini" draggable="true" (dragstart)="drag($event, sub.player)">
+            <div class="cm-shirt gray"></div>
+            <div class="cm-tag small">{{ sub.player.name }}</div>
+          </div>
+          <div *ngIf="!sub.player" class="cm-empty-sub">S{{ i + 1 }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. RIGHT: Dense squad list -->
+  <div class="cm-list">
+    <div class="cm-list-head">SQUAD LIST</div>
+    <div class="cm-list-scroll">
+      <table class="cm-squad-table">
+        <thead>
+          <tr>
+            <th class="cm-th-status"></th>
+            <th>Name</th>
+            <th>Pos</th>
+            <th class="cm-th-rat">Rat</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let player of players"
+              draggable="true"
+              (dragstart)="drag($event, player)"
+              [class.picked]="isPlayerSelected(player.id)">
+            <td class="cm-status-col">
+              <span *ngIf="isPlayerSelected(player.id)" class="cm-picked-dot">&#10003;</span>
+            </td>
+            <td class="cm-name-cell" (click)="openPlayerCard(player.id)">{{ player.name }}</td>
+            <td class="cm-pos-cell">{{ player.position }}</td>
+            <td class="cm-rating-cell"
+                [style.color]="player.rating | ratingColor"
+                [style.font-weight]="700">
+              {{ player.rating | number:'1.2-2' }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 4. MODAL (classic list picker) -->
+  <div class="cm-modal-overlay" *ngIf="activeModal" (click)="closeModal()">
+    <div class="cm-modal" (click)="$event.stopPropagation()">
+      <div class="cm-modal-head">{{ activeModal | uppercase }}</div>
+      <div class="cm-modal-options">
+        <div *ngFor="let opt of currentOptions" class="cm-modal-option" (click)="selectOption(opt)">{{ activeModal === 'formation' ? formationLabel(opt) : opt }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Player Card Modal (flatter, but same bindings) -->
+  <div class="cm-card-backdrop" *ngIf="selectedCard || cardLoading" (click)="closePlayerCard()">
+    <div class="cm-card" (click)="$event.stopPropagation()" *ngIf="selectedCard"
+         [style.--tier-color]="selectedCard.tierColor"
+         [class.tier-legendary]="selectedCard.tier === 'LEGENDARY'">
+      <button class="cm-card-close" (click)="closePlayerCard()">×</button>
+
+      <div class="cm-card-header" [style.border-left]="'6px solid ' + selectedCard.tierColor">
+        <div class="cm-card-overall">{{ selectedCard.rating | number:'1.0-0' }}</div>
+        <div class="cm-card-headtext">
+          <div class="cm-card-tier" [style.color]="selectedCard.tierColor">{{ selectedCard.tier }}</div>
+          <div class="cm-card-position">{{ selectedCard.position }}</div>
+        </div>
+      </div>
+
+      <div class="cm-card-identity">
+        <h2 class="cm-card-name">{{ selectedCard.name }}</h2>
+        <div class="cm-card-meta">
+          <span>Age {{ selectedCard.age }}</span>
+          <span *ngIf="selectedCard.preferredFoot">{{ selectedCard.preferredFoot }} foot</span>
+          <span *ngIf="selectedCard.heightCm">{{ selectedCard.heightCm }}cm</span>
+        </div>
+        <div class="cm-card-team" *ngIf="selectedCard.teamName"
+             [style.color]="selectedCard.teamColor1 || '#444'">
+          {{ selectedCard.teamName }}
+        </div>
+      </div>
+
+      <table class="cm-card-attrs">
+        <tbody>
+          <tr *ngFor="let attr of selectedCard.topAttributes">
+            <td class="cm-attr-label">{{ attr.label }}</td>
+            <td class="cm-attr-bar-cell">
+              <div class="cm-attr-bar">
+                <div class="cm-attr-bar-fill"
+                     [style.width.%]="attr.value * 5"
+                     [style.background-color]="attr.value >= 17 ? '#2e7d32' : attr.value >= 14 ? '#1565c0' : attr.value >= 10 ? '#e69500' : '#777'"></div>
+              </div>
+            </td>
+            <td class="cm-attr-value">{{ attr.value }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="cm-card-footer">
+        <span class="cm-footer-label">Global percentile</span>
+        <span class="cm-footer-value">{{ selectedCard.percentile }}%</span>
+      </div>
+    </div>
+
+    <div class="cm-card-loading" *ngIf="cardLoading && !selectedCard">Loading&hellip;</div>
+  </div>
+
+</div>

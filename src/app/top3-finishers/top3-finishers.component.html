@@ -1,0 +1,24 @@
+<!-- top3-finishers.component.html -->
+<div class="container">
+    <h2>Top 3 Finishers History</h2>
+    
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>Season Number</th>
+          <th>Place 1</th>
+          <th>Place 2</th>
+          <th>Place 3</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of top3FinishersList">
+          <td>{{ item.seasonNumber }}</td>
+          <td>{{ item.teamPlace1 }}</td>
+          <td>{{ item.teamPlace2 }}</td>
+          <td>{{ item.teamPlace3 }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  

@@ -1,0 +1,76 @@
+.sim-container {
+  padding: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+  font-family: -apple-system, system-ui, sans-serif;
+  color: #e0e0e0;
+}
+.panel-header h2 { margin: 0 0 12px; color: #fff; }
+.hint { color: #aaa; font-size: 0.88em; margin: 0 0 16px; line-height: 1.45; }
+.muted { color: #888; font-size: 0.82em; }
+
+.sim-picker {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.sim-add {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.sim-add label, .seasons-row {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85em;
+  color: #aaa;
+  gap: 4px;
+}
+.sim-add select, .seasons-row input {
+  background: #0f0f1f; color: #fff; border: 1px solid #333;
+  padding: 6px 10px; border-radius: 4px; min-width: 200px;
+}
+.seasons-row { margin-bottom: 12px; max-width: 160px; }
+.seasons-row input { min-width: 120px; }
+
+.sim-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.sim-chip {
+  background: #0f0f1f; border: 1px solid #333; border-radius: 14px;
+  padding: 4px 12px; color: #fff; font-size: 0.85em;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.sim-chip a { color: #ff6b6b; cursor: pointer; font-weight: bold; }
+
+.sim-actions { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+.primary {
+  background: #27ae60; color: #fff; border: 0;
+  padding: 8px 20px; border-radius: 4px; cursor: pointer;
+}
+.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.secondary {
+  background: #34495e; color: #fff; border: 0;
+  padding: 7px 14px; border-radius: 4px; cursor: pointer;
+}
+.secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+.ghost {
+  background: transparent; border: 1px solid #555; color: #aaa;
+  padding: 6px 12px; border-radius: 4px; cursor: pointer;
+}
+
+.status { padding: 12px; text-align: center; color: #888; background: #12122a; border-radius: 4px; }
+.status.error { color: #ff6b6b; }
+
+.sim-table { width: 100%; border-collapse: collapse; font-size: 0.9em; background: #1a1a2e; }
+.sim-table th, .sim-table td {
+  padding: 8px 10px; text-align: left; border-bottom: 1px solid #2a2a4a;
+}
+.sim-table th { color: #888; text-transform: uppercase; font-size: 0.82em; letter-spacing: 0.4px; }
+.sim-table td { color: #ddd; }
+.sim-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.sim-table .sim-pts-cell { color: #2ecc71; font-weight: 700; }
+.sim-table .sim-best-row { background: rgba(46, 204, 113, 0.12); }
+.sim-table .sim-best-row td { color: #fff; font-weight: 600; }

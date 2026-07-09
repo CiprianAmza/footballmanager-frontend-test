@@ -1,0 +1,148 @@
+<div class="scouting-container">
+
+    <!-- HEADER & SEARCH BAR -->
+    <div class="scout-header">
+      <h1>🌎 Player Search</h1>
+      <div class="results-count">
+        {{ displayedPlayers.length }} players found
+      </div>
+    </div>
+  
+    <!-- FILTER PANEL -->
+    <div class="filters-panel">
+      
+      <!-- Row 1: Text Inputs -->
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>Name</label>
+          <input type="text" [(ngModel)]="filters.name" (keyup)="applyFilters()" placeholder="Search name...">
+        </div>
+  
+        <div class="filter-group">
+          <label>Club</label>
+          <input type="text" [(ngModel)]="filters.team" (keyup)="applyFilters()" placeholder="Search club...">
+        </div>
+  
+        <div class="filter-group">
+          <label>Position</label>
+          <select [(ngModel)]="filters.position" (change)="applyFilters()">
+            <option *ngFor="let pos of positions" [value]="pos">{{ pos }}</option>
+          </select>
+        </div>
+      </div>
+  
+      <!-- Row 2: Ranges -->
+      <div class="filter-row">
+        <div class="filter-group range-group">
+          <label>Age ({{filters.minAge}} - {{filters.maxAge}})</label>
+          <div class="range-inputs">
+              <input type="number" [(ngModel)]="filters.minAge" (change)="applyFilters()" min="15" max="45" class="small-input">
+              <span>to</span>
+              <input type="number" [(ngModel)]="filters.maxAge" (change)="applyFilters()" min="15" max="45" class="small-input">
+          </div>
+        </div>
+  
+        <div class="filter-group range-group">
+          <label>Min Rating</label>
+          <input type="number" [(ngModel)]="filters.minRating" (change)="applyFilters()" class="small-input" step="5">
+        </div>
+  
+        <div class="filter-group">
+          <label>Min Salary (€)</label>
+          <input type="number" [(ngModel)]="filters.minSalary" (change)="applyFilters()" placeholder="Min Salary">
+        </div>
+  
+        <button class="btn-reset" (click)="resetFilters()">✖ Clear Filters</button>
+      </div>
+  
+    </div>
+  
+    <!-- LOADING STATE -->
+    <div *ngIf="loading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Scouting the world...</p>
+    </div>
+  
+    <!-- DATA TABLE -->
+    <div class="table-container" *ngIf="!loading">
+      <table class="fm-table">
+        <thead>
+          <tr>
+            <th class="center" style="width:40px;">SL</th>
+            <th (click)="sort('name')">Name {{ getSortIcon('name') }}</th>
+            <th class="center" (click)="sort('position')">Position {{ getSortIcon('position') }}</th>
+            <th (click)="sort('teamName')">Club {{ getSortIcon('teamName') }}</th>
+            <th class="center" (click)="sort('age')">Age {{ getSortIcon('age') }}</th>
+            <th class="center" (click)="sort('rating')">Rating {{ getSortIcon('rating') }}</th>
+            <th class="right" (click)="sort('salary')">Salary {{ getSortIcon('salary') }}</th>
+            <th class="right" (click)="sort('transferValue')">Value {{ getSortIcon('transferValue') }}</th>
+            <th class="right" (click)="sort('fitness')">Condition {{ getSortIcon('fitness') }}</th>
+            <th class="center" (click)="sort('morale')">Morale {{ getSortIcon('morale') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let player of displayedPlayers">
+
+            <!-- SHORTLIST -->
+            <td class="center">
+              <button class="shortlist-btn" [class.active]="isShortlisted(player.id)" (click)="toggleShortlist(player.id, $event)" [title]="isShortlisted(player.id) ? 'Remove from shortlist' : 'Add to shortlist'">
+                {{ isShortlisted(player.id) ? '\u2605' : '\u2606' }}
+              </button>
+            </td>
+
+            <!-- NAME -->
+            <td class="name-cell">
+              <a [routerLink]="['/player', player.id]" class="fm-link">{{ player.name }}</a>
+            </td>
+  
+            <!-- POSITION (Pill) -->
+            <td class="center">
+              <span class="pos-pill">{{ player.position }}</span>
+            </td>
+  
+            <!-- CLUB -->
+            <td class="club-cell">
+              {{ player.teamName || 'Free Agent' }}
+            </td>
+  
+            <!-- AGE -->
+            <td class="center">{{ player.age }}</td>
+  
+            <!-- RATING -->
+            <td class="center rating-val"
+                [style.color]="player.rating | ratingColor"
+                [style.font-weight]="700">{{ player.rating | number:'1.0-0' }}</td>
+  
+            <!-- SALARY -->
+            <td class="right money-val">
+              {{ player.salary | currency:'EUR':'symbol':'1.0-0' }}
+            </td>
+
+            <!-- VALUE -->
+            <td class="right money-val">
+              {{ player.transferValue | currency:'EUR':'symbol':'1.0-0' }}
+            </td>
+
+            <!-- CONDITION -->
+            <td class="right">
+              {{ player.fitness | number:'1.0-0' }}%
+            </td>
+  
+            <!-- MORALE -->
+            <td class="center">
+              <span [class.morale-high]="player.morale > 80" [class.morale-low]="player.morale < 40">
+                  {{ player.morale | number:'1.0-0' }}
+              </span>
+            </td>
+  
+          </tr>
+        </tbody>
+      </table>
+      
+      <!-- No Results -->
+      <div *ngIf="displayedPlayers.length === 0" class="no-results">
+          No players found matching your criteria.
+      </div>
+    </div>
+  
+  </div>

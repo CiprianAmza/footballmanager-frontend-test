@@ -1,0 +1,131 @@
+<label id="tactics1" style="font-size: 40px; color: gold;">Select tactic</label>
+
+    <select onInput='changeTactic()' name="tactics" id="tactics2" style="font-size:20px; margin-left: 50px">
+        <option value="442">4-4-2</option>
+        <option value="451">4-5-1</option>
+        <option value="433">4-3-3</option>
+        <option value="541">5-4-1</option>
+    </select>
+
+<div class="tactic">
+    <div class="attack">
+        <div class="row2">
+            <div class="container" id="attack01">
+                <div class="draggable" id="attack1" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+
+                </div>
+            </div>
+            <div class="container" id="attack02">
+                <div class="draggable" id="attack2" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+            <div class="container" id="attack03">
+                <div class="draggable" id="attack3" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="midlefield">
+        <div class="row2">
+            <div class="container" id="middlefield01">
+                <div id="middlefield1" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+            <div class="container" id="middlefield02">
+                <div id="middlefield2" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+            <div class="container" id="middlefield03">
+                <div id="middlefield3" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+            <div class="container" id="middlefield04">
+                <div id="middlefield4" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+            <div class="container" id="middlefield05">
+                <div id="middlefield5" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="defensive">
+        <div class="row2">
+            <div class="container" id="defending01">
+                <div id="defending1" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+            <div class="container" id="defending02">
+                <div id="defending2" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+            <div class="container" id="defending03">
+                <div id="defending3" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+            <div class="container" id="defending04">
+                <div id="defending4" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+            <div class="container" id="defending05">
+                <div id="defending5" draggable=true>
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="goalkeeper">
+        <div class="row5" draggable="false">
+            <div class="container" id="F10">
+                <div class="draggable" id="p1" draggable="true">
+                    <div playerid="-1" class="mydivheader"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<form action="/tactic" id="vote-form">
+    <button class="btn btn-xs btn-primary btn-block" type="submit" style="font-size: 50px; margin-left: 85%">Save tactic</button>
+</form>
+
+<div class="row" draggable="false">
+    <div class="container" *ngFor="let player of players;">
+      <div class="draggable" [id]="player.positionNumber" draggable="true">
+        <div class="mydivheader">
+          <ul class="">
+            <li class="column orange">
+              <div class="column-header">
+                <img width="50" [src]="player.imageUrl" draggable="true"/>
+                <h4>{{ player.name }}</h4>
+              </div>
+              <div class="rowexample"><p>Position: </p><p>{{ player.position }}</p></div>
+              <div class="rowexample"><p>Age: </p><p>{{ player.age }}</p></div>
+              <div class="rowexample"><p>Nationality: </p><p>{{ player.imageUrl }}</p></div>
+              <div class="rowexample"><p>Skill: </p><p>{{ player.currentAbility }}</p></div>
+              <div class="space"></div>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+

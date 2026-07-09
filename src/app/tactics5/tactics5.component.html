@@ -1,0 +1,367 @@
+<div class="wiz-shell">
+
+  <!-- ============ TOP: BLUEPRINT HEADER + STEPPER ============ -->
+  <header class="wiz-head">
+    <div class="wiz-brand">
+      <span class="wiz-kicker">MATCHDAY PLANNER</span>
+      <h1 class="wiz-title">Tactics Wizard</h1>
+    </div>
+
+    <ol class="stepper">
+      <li *ngFor="let s of steps; let i = index"
+          class="step"
+          [class.active]="currentStep === i"
+          [class.done]="isStepDone(i)"
+          (click)="goToStep(i)">
+        <span class="step-dot">
+          <span *ngIf="!isStepDone(i)">{{ i + 1 }}</span>
+          <span *ngIf="isStepDone(i)" class="step-check">✓</span>
+        </span>
+        <span class="step-text">
+          <span class="step-label">{{ s.label }}</span>
+          <span class="step-sub">{{ s.sub }}</span>
+        </span>
+      </li>
+    </ol>
+
+    <div class="wiz-progress">
+      <div class="wiz-progress-fill" [style.width.%]="progressPercent"></div>
+    </div>
+  </header>
+
+  <!-- ============ BODY: ONE FOCUSED PANEL AT A TIME ============ -->
+  <main class="wiz-body">
+
+    <!-- ---------- STEP 1: FORMATION ---------- -->
+    <section class="wiz-step" *ngIf="currentStep === 0">
+      <div class="step-intro">
+        <h2>Choose your system</h2>
+        <p>Pick the shape your side lines up in. This decides which slots open on the pitch in the next step.</p>
+      </div>
+
+      <div class="formation-stage">
+        <div class="formation-pick">
+          <button class="big-pick" (click)="openModal('formation')">
+            <span class="big-pick-label">FORMATION</span>
+            <span class="big-pick-value">{{ selectedTactic }}</span>
+            <span class="big-pick-hint">tap to change ▾</span>
+          </button>
+
+          <button class="big-pick alt" (click)="openModal('mentality')">
+            <span class="big-pick-label">MENTALITY</span>
+            <span class="big-pick-value">{{ selectedOptions.mentality }}</span>
+            <span class="big-pick-hint">tap to change ▾</span>
+          </button>
+        </div>
+
+        <!-- live formation preview (read-only mini pitch) -->
+        <div class="mini-pitch">
+          <div class="mini-grid">
+            <div *ngFor="let cell of fieldPositions"
+                 class="mini-cell"
+                 [class.on]="allowedIndexes.includes(cell.positionIndex)"
+                 [style.transform]="'translate(' + cellWidthShift(cell.positionIndex) + '%, ' + cellDefLineShift(cell.positionIndex) + '%)'"></div>
+          </div>
+          <span class="mini-pitch-cap">{{ selectedTactic }} · {{ allowedIndexes.length }} positions</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- STEP 2: SQUAD (PITCH + BENCH + LIST) ---------- -->
+    <section class="wiz-step squad-step" *ngIf="currentStep === 1">
+      <div class="step-intro tight">
+        <h2>Assign your players</h2>
+        <p>Drag names from the squad list onto a glowing slot. Right-click a pitch player to remove. <strong>{{ assignedCount }}/11</strong> on the pitch · <strong>{{ subsCount }}</strong> subs.</p>
+      </div>
+
+      <div class="squad-layout">
+
+        <!-- PITCH + BENCH -->
+        <div class="pitch-zone">
+          <div class="board-pitch">
+            <div class="pitch-line outline"></div>
+            <div class="pitch-line half-line"></div>
+            <div class="pitch-line center-circle"></div>
+            <div class="pitch-line box-top"></div>
+            <div class="pitch-line box-bottom"></div>
+
+            <!-- DEFENSIVE LINE blueprint indicator (moves with selectedOptions.defensiveLine) -->
+            <div class="def-line" [style.top.%]="defLineTopPercent">
+              <span class="def-line-label">DEF LINE: {{ selectedOptions.defensiveLine }}</span>
+            </div>
+
+            <div class="pitch-grid">
+              <div *ngFor="let cell of fieldPositions"
+                   class="grid-cell"
+                   [class.allowed]="allowedIndexes.includes(cell.positionIndex)"
+                   [style.transform]="'translate(' + cellWidthShift(cell.positionIndex) + '%, ' + cellDefLineShift(cell.positionIndex) + '%)'"
+                   (dragover)="allowDrop($event)"
+                   (drop)="drop($event, cell.positionIndex)"
+                   (contextmenu)="onRightClick(cell.positionIndex, $event)">
+
+                   <div *ngIf="cell.player" class="pitch-player"
+                        [class.locked-slot]="isSlotLocked(cell.positionIndex, cell.player.position)"
+                        [attr.draggable]="isSlotLocked(cell.positionIndex, cell.player.position) ? null : 'true'"
+                        (dragstart)="drag($event, cell.player)"
+                        (click)="openPlayerCard(cell.player.id)">
+                      <span class="lock-badge" *ngIf="isSlotLocked(cell.positionIndex, cell.player.position)"
+                            title="Locked by the owner">&#128274;</span>
+                      <app-player-face class="pitch-face"
+                           [size]="26"
+                           [baseFaceId]="cell.player.baseFaceId || 0"
+                           [skinTone]="cell.player.skinTone || 0"
+                           [hairStyle]="cell.player.hairStyle || 0"
+                           [hairColor]="cell.player.hairColor || 0"
+                           [eyeColor]="cell.player.eyeColor || 0"
+                           [faceShape]="cell.player.faceShape || 0"
+                           [noseShape]="cell.player.noseShape || 0"
+                           [eyeShape]="cell.player.eyeShape || 0"
+                           [mouthShape]="cell.player.mouthShape || 0"
+                           [browShape]="cell.player.browShape || 0"
+                           [nationId]="cell.player.nationId || 0"
+                           [species]="cell.player.species || 'human'"></app-player-face>
+                      <div class="shirt-icon"
+                           [style.background-color]="teamColor1"
+                           [style.border-color]="ratingTiers.tierColor(cell.player.rating)">
+                          <span class="shirt-num"
+                                [style.color]="ratingTiers.tierColor(cell.player.rating)">{{ cell.player.rating | number:'1.0-0' }}</span>
+                      </div>
+                      <div class="player-tag">
+                          <div class="tag-name">{{ cell.player.name }}</div>
+                          <div class="tag-pos">{{ cell.player.position }}</div>
+                      </div>
+                   </div>
+
+                   <div *ngIf="!cell.player && allowedIndexes.includes(cell.positionIndex)" class="empty-slot">
+                      +
+                   </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="subs-bench">
+              <div class="subs-label">SUBSTITUTES</div>
+              <div class="subs-row">
+                  <div *ngFor="let sub of substitutes; let i = index"
+                       class="sub-slot"
+                       (dragover)="allowDrop($event)"
+                       (drop)="dropSubstitute($event, i)">
+
+                       <div *ngIf="sub.player" class="pitch-player mini" draggable="true" (dragstart)="drag($event, sub.player)">
+                          <div class="shirt-icon gray"></div>
+                          <div class="player-tag small">{{ sub.player.name }}</div>
+                       </div>
+                       <div *ngIf="!sub.player" class="empty-sub">S{{i+1}}</div>
+                  </div>
+              </div>
+          </div>
+        </div>
+
+        <!-- SQUAD LIST (bounded, internal scroll) -->
+        <div class="list-panel">
+          <div class="list-header">
+            SQUAD LIST
+            <button class="ghost-btn" (click)="askAssistant()">ASK ASSISTANT</button>
+          </div>
+          <div class="table-scroll">
+            <table class="tactic-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Name</th>
+                  <th>Pos</th>
+                  <th>Rat</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let player of players"
+                    draggable="true"
+                    (dragstart)="drag($event, player)"
+                    [class.picked]="isPlayerSelected(player.id)">
+
+                  <td class="status-col">
+                      <span *ngIf="isPlayerSelected(player.id)" class="picked-dot">✔</span>
+                  </td>
+                  <td class="name-cell" (click)="openPlayerCard(player.id)">{{ player.name }}</td>
+                  <td class="pos-cell">{{ player.position }}</td>
+                  <td class="rating-cell"
+                      [style.color]="player.rating | ratingColor"
+                      [style.font-weight]="700">
+                    {{ player.rating | number:'1.2-2' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ---------- STEP 3: STYLE / TEAM INSTRUCTIONS ---------- -->
+    <section class="wiz-step" *ngIf="currentStep === 2">
+      <div class="step-intro">
+        <h2>Dial in the style</h2>
+        <p>Tune how your team behaves with and without the ball. Tap any card to change it.</p>
+      </div>
+
+      <div class="instruction-grid">
+        <button class="instr-card" (click)="openModal('possession')">
+          <span class="instr-label">PASSING DIRECTNESS</span>
+          <span class="instr-value">{{ selectedOptions.possession }}</span>
+        </button>
+        <button class="instr-card" (click)="openModal('passing')">
+          <span class="instr-label">PASSING LENGTH</span>
+          <span class="instr-value">{{ selectedOptions.passing }}</span>
+        </button>
+        <button class="instr-card" (click)="openModal('tempo')">
+          <span class="instr-label">TEMPO</span>
+          <span class="instr-value">{{ selectedOptions.tempo }}</span>
+        </button>
+        <button class="instr-card" (click)="openModal('timeWasting')">
+          <span class="instr-label">TIME WASTING</span>
+          <span class="instr-value">{{ selectedOptions.timeWasting }}</span>
+        </button>
+        <button class="instr-card" (click)="openModal('defensiveLine')">
+          <span class="instr-label">DEFENSIVE LINE</span>
+          <span class="instr-value">{{ selectedOptions.defensiveLine }}</span>
+        </button>
+        <button class="instr-card" (click)="openModal('pressing')">
+          <span class="instr-label">PRESSING</span>
+          <span class="instr-value">{{ selectedOptions.pressing }}</span>
+        </button>
+        <button class="instr-card" (click)="openModal('width')">
+          <span class="instr-label">WIDTH</span>
+          <span class="instr-value">{{ selectedOptions.width }}</span>
+        </button>
+        <button class="instr-card alt" (click)="openModal('mentality')">
+          <span class="instr-label">MENTALITY</span>
+          <span class="instr-value">{{ selectedOptions.mentality }}</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ---------- STEP 4: REVIEW & SAVE ---------- -->
+    <section class="wiz-step review-step" *ngIf="currentStep === 3">
+      <div class="step-intro">
+        <h2>Review &amp; commit</h2>
+        <p *ngIf="lineupComplete">Everything's set. Confirm the team sheet below and save.</p>
+        <p *ngIf="!lineupComplete" class="warn">You have <strong>{{ assignedCount }}/11</strong> players assigned — you can still save, but the lineup is incomplete.</p>
+      </div>
+
+      <div class="review-grid">
+        <!-- summary cards -->
+        <div class="review-block">
+          <h3>System</h3>
+          <ul class="review-list">
+            <li><span>Formation</span><b>{{ selectedTactic }}</b></li>
+            <li><span>Mentality</span><b>{{ selectedOptions.mentality }}</b></li>
+            <li><span>Starting XI</span><b>{{ assignedCount }}/11</b></li>
+            <li><span>Subs</span><b>{{ subsCount }}</b></li>
+          </ul>
+
+          <h3>Instructions</h3>
+          <ul class="review-list">
+            <li><span>Directness</span><b>{{ selectedOptions.possession }}</b></li>
+            <li><span>Passing</span><b>{{ selectedOptions.passing }}</b></li>
+            <li><span>Tempo</span><b>{{ selectedOptions.tempo }}</b></li>
+            <li><span>Time Wasting</span><b>{{ selectedOptions.timeWasting }}</b></li>
+            <li><span>Def. Line</span><b>{{ selectedOptions.defensiveLine }}</b></li>
+            <li><span>Pressing</span><b>{{ selectedOptions.pressing }}</b></li>
+            <li><span>Width</span><b>{{ selectedOptions.width }}</b></li>
+          </ul>
+        </div>
+
+        <!-- team sheet -->
+        <div class="review-block sheet">
+          <h3>Team sheet <small>(top rated first)</small></h3>
+          <div class="sheet-scroll">
+            <div *ngFor="let p of startingEleven" class="sheet-row" (click)="openPlayerCard(p.id)">
+              <span class="sheet-pos">{{ p.position }}</span>
+              <span class="sheet-name">{{ p.name }}</span>
+              <span class="sheet-rat" [style.color]="p.rating | ratingColor">{{ p.rating | number:'1.0-0' }}</span>
+            </div>
+            <div *ngIf="assignedCount === 0" class="sheet-empty">No players assigned yet.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ============ FOOTER NAV ============ -->
+  <footer class="wiz-foot">
+    <button class="nav-btn back" (click)="prevStep()" [disabled]="currentStep === 0">‹ Back</button>
+
+    <div class="foot-spacer"></div>
+
+    <button class="nav-btn next" *ngIf="currentStep < steps.length - 1" (click)="nextStep()">
+      Next: {{ steps[currentStep + 1].label }} ›
+    </button>
+    <button class="nav-btn save" *ngIf="currentStep === steps.length - 1" (click)="saveData()">
+      SAVE TACTICS
+    </button>
+  </footer>
+
+  <!-- ============ OPTION MODAL (pop-up) ============ -->
+  <div class="modal-overlay" *ngIf="activeModal" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">{{ activeModal | uppercase }}</div>
+        <div class="modal-options">
+            <div *ngFor="let opt of currentOptions"
+                 class="modal-option"
+                 (click)="selectOption(opt)">
+                 {{ opt }}
+            </div>
+        </div>
+    </div>
+  </div>
+
+  <!-- ============ FIFA-style Player Card Modal ============ -->
+  <div class="player-card-backdrop" *ngIf="selectedCard || cardLoading" (click)="closePlayerCard()">
+    <div class="player-card" (click)="$event.stopPropagation()" *ngIf="selectedCard"
+         [style.--tier-color]="selectedCard.tierColor"
+         [class.tier-legendary]="selectedCard.tier === 'LEGENDARY'">
+      <button class="card-close" (click)="closePlayerCard()">×</button>
+
+      <div class="card-header" [style.background]="'linear-gradient(135deg, ' + selectedCard.tierColor + ' 0%, ' + selectedCard.tierColor + '88 100%)'">
+        <div class="card-tier">{{ selectedCard.tier }}</div>
+        <div class="card-overall">{{ selectedCard.rating | number:'1.0-0' }}</div>
+        <div class="card-position">{{ selectedCard.position }}</div>
+      </div>
+
+      <div class="card-identity">
+        <h2 class="card-name">{{ selectedCard.name }}</h2>
+        <div class="card-meta">
+          <span>Age {{ selectedCard.age }}</span>
+          <span *ngIf="selectedCard.preferredFoot">{{ selectedCard.preferredFoot }} foot</span>
+          <span *ngIf="selectedCard.heightCm">{{ selectedCard.heightCm }}cm</span>
+        </div>
+        <div class="card-team" *ngIf="selectedCard.teamName"
+             [style.color]="selectedCard.teamColor1 || '#aaa'">
+          {{ selectedCard.teamName }}
+        </div>
+      </div>
+
+      <div class="card-attrs">
+        <div *ngFor="let attr of selectedCard.topAttributes" class="card-attr">
+          <span class="attr-label">{{ attr.label }}</span>
+          <span class="attr-value">{{ attr.value }}</span>
+          <div class="attr-bar">
+            <div class="attr-bar-fill"
+                 [style.width.%]="attr.value * 5"
+                 [style.background-color]="attr.value >= 17 ? '#2ecc71' : attr.value >= 14 ? '#3498db' : attr.value >= 10 ? '#f39c12' : '#7f8c8d'"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <span class="footer-label">Global percentile</span>
+        <span class="footer-value">{{ selectedCard.percentile }}%</span>
+      </div>
+    </div>
+
+    <div class="card-loading" *ngIf="cardLoading && !selectedCard">Loading…</div>
+  </div>
+
+</div>

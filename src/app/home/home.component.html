@@ -1,0 +1,413 @@
+<!-- Manager Fired Banner -->
+<div class="fired-banner" *ngIf="managerFired">
+  <div class="fired-header">YOU HAVE BEEN SACKED</div>
+  <p class="fired-message">The board has lost confidence in your ability. Go to <a routerLink="/job-search">Job Search</a> to find a new club.</p>
+</div>
+
+<div class="fm-container">
+
+    <div class="top-bar">
+      <div class="manager-info">
+        <span class="manager-name">{{ teamName }}</span>
+      </div>
+    </div>
+
+    <div class="nav-bar">
+      <button class="nav-btn active">Home</button>
+    </div>
+
+    <div class="upper-section">
+
+      <div class="panel next-match-panel">
+        <div class="panel-header">NEXT MATCH</div>
+        <div class="match-content" *ngIf="matchPreview">
+          <div class="match-info-top">
+            <span class="preview-comp-badge">{{ matchPreview.competitionName }}</span>
+            <p class="preview-round">Day {{ matchPreview.round }}</p>
+            <h2><a [routerLink]="['/team', matchPreview.homeTeamId]" class="fm-link">{{ matchPreview.homeTeamName }}</a> v <a [routerLink]="['/team', matchPreview.awayTeamId]" class="fm-link">{{ matchPreview.awayTeamName }}</a></h2>
+          </div>
+
+          <div class="logos-container">
+            <div class="team-side">
+              <div class="team-logo home-logo">{{ matchPreview.homeTeamName?.slice(0,3)?.toUpperCase() || 'HOM' }}</div>
+              <div class="team-position" *ngIf="matchPreview.homeLeaguePosition > 0">
+                #{{ matchPreview.homeLeaguePosition }}
+              </div>
+              <div class="team-form-row" *ngIf="matchPreview.homeForm">
+                <span *ngFor="let char of matchPreview.homeForm.split('')"
+                      class="form-badge-sm"
+                      [ngClass]="getFormClass(char)">
+                  {{ char }}
+                </span>
+              </div>
+            </div>
+            <div class="vs-badge">VS</div>
+            <div class="team-side">
+              <div class="team-logo away-logo">{{ matchPreview.awayTeamName?.slice(0,3)?.toUpperCase() || 'AWY' }}</div>
+              <div class="team-position" *ngIf="matchPreview.awayLeaguePosition > 0">
+                #{{ matchPreview.awayLeaguePosition }}
+              </div>
+              <div class="team-form-row" *ngIf="matchPreview.awayForm">
+                <span *ngFor="let char of matchPreview.awayForm.split('')"
+                      class="form-badge-sm"
+                      [ngClass]="getFormClass(char)">
+                  {{ char }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="preview-stats">
+            <div class="preview-prediction">
+              <span class="prediction-label">PREDICTION</span>
+              <span class="prediction-value">{{ matchPreview.prediction }}</span>
+            </div>
+            <div class="preview-power">
+              <div class="power-bar-container">
+                <div class="power-bar home-power"
+                     [style.width.%]="matchPreview.homePowerRating / (matchPreview.homePowerRating + matchPreview.awayPowerRating) * 100">
+                  {{ matchPreview.homePowerRating }}
+                </div>
+                <div class="power-bar away-power"
+                     [style.width.%]="matchPreview.awayPowerRating / (matchPreview.homePowerRating + matchPreview.awayPowerRating) * 100">
+                  {{ matchPreview.awayPowerRating }}
+                </div>
+              </div>
+              <span class="power-label">POWER RATING</span>
+            </div>
+            <div class="preview-h2h" *ngIf="matchPreview.h2hHomeWins + matchPreview.h2hAwayWins + matchPreview.h2hDraws > 0">
+              <span class="h2h-label">HEAD TO HEAD</span>
+              <div class="h2h-stats">
+                <span class="h2h-item h2h-win">{{ matchPreview.h2hHomeWins }}W</span>
+                <span class="h2h-item h2h-draw">{{ matchPreview.h2hDraws }}D</span>
+                <span class="h2h-item h2h-loss">{{ matchPreview.h2hAwayWins }}W</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="match-content" *ngIf="!matchPreview && !nextMatch">
+          <div class="match-info-top">
+            <p>No upcoming matches</p>
+          </div>
+        </div>
+        <div class="match-content" *ngIf="!matchPreview && nextMatch">
+          <div class="match-info-top">
+            <p>{{ nextMatch.date }}</p>
+            <h2>{{ nextMatch.opponentTeam }}</h2>
+            <p class="sub-info">{{ nextMatch.competitionName }} ({{ nextMatch.homeOrAway }})</p>
+          </div>
+          <div class="logos-container">
+            <div class="team-logo home-logo">{{ nextMatch.homeTeamAbbr || (nextMatch.homeOrAway === 'H' ? teamName?.slice(0,3)?.toUpperCase() : nextMatch.opponentTeam?.slice(0,3)?.toUpperCase()) }}</div>
+            <div class="vs-badge">VS</div>
+            <div class="team-logo away-logo">{{ nextMatch.awayTeamAbbr || (nextMatch.homeOrAway === 'A' ? teamName?.slice(0,3)?.toUpperCase() : nextMatch.opponentTeam?.slice(0,3)?.toUpperCase()) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel team-news-panel">
+          <div class="panel-header red-text">RECENT RESULTS</div>
+          <div class="results-list" *ngIf="recentResults.length > 0">
+            <div class="result-item" *ngFor="let match of recentResults">
+              <span class="result-teams">vs {{ match.opponentTeam }} ({{ match.homeOrAway }}) {{ match.score }}</span>
+              <span class="result-comp">{{ match.competitionName }}</span>
+            </div>
+          </div>
+          <div *ngIf="recentResults.length === 0" class="no-data">
+            No matches played yet
+          </div>
+
+          <div class="panel-header blue-text" style="margin-top: 15px;" *ngIf="form && form !== 'null'">FORM</div>
+          <div class="form-display" *ngIf="form && form !== 'null'">
+            <span *ngFor="let char of form.split('')"
+                  class="form-badge"
+                  [ngClass]="getFormClass(char)">
+              {{ char }}
+            </span>
+          </div>
+      </div>
+
+      <div class="panel fixtures-panel">
+        <div class="panel-header red-text">UPCOMING FIXTURES</div>
+        <table class="fixtures-table" *ngIf="upcomingFixtures.length > 0">
+          <tbody>
+            <tr *ngFor="let match of upcomingFixtures">
+              <td>{{ match.date }}</td>
+              <td class="opponent-cell">{{ match.homeTeamAbbr || '???' }} vs {{ match.awayTeamAbbr || '???' }}</td>
+              <td>{{ match.competitionName }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="upcomingFixtures.length === 0" class="no-data">
+          No upcoming fixtures
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Talk Section -->
+    <div class="team-talk-section">
+      <div class="panel team-talk-panel">
+        <div class="panel-header red-text">TEAM TALK</div>
+
+        <!-- Phase Tabs -->
+        <div class="tt-phase-tabs">
+          <button *ngFor="let phase of teamTalkPhases"
+                  class="tt-phase-tab"
+                  [class.active]="teamTalkPhase === phase"
+                  [class.used]="phasesUsed.has(phase)"
+                  (click)="setTeamTalkPhase(phase)">
+            {{ getPhaseLabel(phase) }}
+            <span class="tt-used-badge" *ngIf="phasesUsed.has(phase)">Done</span>
+          </button>
+        </div>
+
+        <!-- Match Context (for HALF_TIME and POST_MATCH) -->
+        <div class="tt-context" *ngIf="teamTalkPhase !== 'PRE_MATCH'">
+          <span class="tt-context-label">Match situation:</span>
+          <button class="tt-ctx-btn" [class.active]="matchContext === 'winning'" (click)="setMatchContext('winning')">Winning</button>
+          <button class="tt-ctx-btn" [class.active]="matchContext === 'drawing'" (click)="setMatchContext('drawing')">Drawing</button>
+          <button class="tt-ctx-btn" [class.active]="matchContext === 'losing'" (click)="setMatchContext('losing')">Losing</button>
+        </div>
+
+        <!-- Talk Result -->
+        <div *ngIf="teamTalkResult" class="team-talk-result">
+          <p class="talk-result-message">{{ teamTalkResult }}</p>
+          <button *ngIf="teamTalkPlayerReactions.length > 0" class="toggle-details-btn" (click)="togglePlayerReactions()">
+            {{ showPlayerReactions ? 'Hide Details' : 'Show Player Reactions' }}
+          </button>
+          <div *ngIf="showPlayerReactions" class="player-changes-list">
+            <div class="player-change-item" *ngFor="let pr of teamTalkPlayerReactions">
+              <span class="pc-name">
+                <a *ngIf="pr.playerId" [routerLink]="['/player', pr.playerId]" class="fm-link">{{ pr.playerName }}</a>
+                <ng-container *ngIf="!pr.playerId">{{ pr.playerName }}</ng-container>
+              </span>
+              <span class="pc-reaction" [ngClass]="getReactionClass(pr.reaction)">{{ pr.reaction }}</span>
+              <span class="pc-change" [ngClass]="pr.change >= 0 ? 'positive-change' : 'negative-change'">
+                {{ pr.change >= 0 ? '+' : '' }}{{ pr.change }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Talk Options -->
+        <div *ngIf="!phasesUsed.has(teamTalkPhase) && !teamTalkLoading">
+          <div *ngIf="loadingTalkOptions" class="team-talk-loading">Loading options...</div>
+          <div *ngIf="!loadingTalkOptions && teamTalkOptions.length > 0" class="team-talk-options">
+            <div class="talk-buttons">
+              <button class="talk-btn" *ngFor="let opt of teamTalkOptions" (click)="giveExpandedTeamTalk(opt.id)">
+                <span class="talk-btn-title">{{ opt.label }}</span>
+                <span class="talk-btn-desc">{{ opt.description }}</span>
+              </button>
+            </div>
+          </div>
+          <div *ngIf="!loadingTalkOptions && teamTalkOptions.length === 0 && teamTalkPhase !== 'PRE_MATCH' && !matchContext" class="tt-select-context">
+            Select a match situation above to see available options.
+          </div>
+        </div>
+
+        <div *ngIf="phasesUsed.has(teamTalkPhase)" class="team-talk-used">
+          {{ getPhaseLabel(teamTalkPhase) }} talk already delivered. Switch phase above to give another talk.
+        </div>
+
+        <div *ngIf="teamTalkLoading" class="team-talk-loading">
+          Delivering team talk...
+        </div>
+      </div>
+
+      <!-- Individual Player Talk -->
+      <div class="panel team-talk-panel" style="margin-top: 10px;">
+        <div class="panel-header red-text">INDIVIDUAL PLAYER TALK</div>
+        <div class="tt-individual">
+          <div class="tt-player-select">
+            <select [(ngModel)]="selectedTalkPlayerId" class="tt-select">
+              <option [ngValue]="null">-- Select Player --</option>
+              <option *ngFor="let p of squadPlayers" [ngValue]="p.id">{{ p.name }} ({{ p.position }})</option>
+            </select>
+          </div>
+          <div *ngIf="individualTalkResult" class="tt-individual-result">{{ individualTalkResult }}</div>
+          <div class="talk-buttons tt-individual-btns" *ngIf="selectedTalkPlayerId && !individualTalkLoading">
+            <button class="talk-btn talk-small" *ngFor="let opt of individualTalkOptions" (click)="giveIndividualTalk(opt.id)">
+              <span class="talk-btn-title">{{ opt.label }}</span>
+              <span class="talk-btn-desc">{{ opt.description }}</span>
+            </button>
+          </div>
+          <div *ngIf="individualTalkLoading" class="team-talk-loading">Delivering talk...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Season Objectives Section -->
+    <div class="objectives-section" *ngIf="seasonObjectives.length > 0">
+      <div class="panel objectives-panel">
+        <div class="panel-header red-text">SEASON OBJECTIVES</div>
+        <div class="objectives-list">
+          <div class="objective-item" *ngFor="let obj of seasonObjectives"
+               [ngClass]="getObjectiveStatusClass(obj.status)">
+            <div class="obj-left">
+              <span class="obj-type-badge" [ngClass]="getObjectiveTypeBadgeClass(obj.objectiveType)">
+                {{ getObjectiveTypeLabel(obj.objectiveType) }}
+              </span>
+              <span class="obj-importance" [ngClass]="'importance-' + (obj.importance || 'medium')"
+                    *ngIf="obj.importance">{{ obj.importance | uppercase }}</span>
+              <div class="obj-details">
+                <span class="obj-description">{{ obj.description || getObjectiveDescription(obj) }}</span>
+                <span class="obj-competition">{{ obj.competitionName }}</span>
+              </div>
+            </div>
+            <div class="obj-right">
+              <span class="obj-target">Target: {{ obj.targetValue }}</span>
+              <span class="obj-actual" *ngIf="obj.actualValue > 0">Actual: {{ obj.actualValue }}</span>
+              <span class="obj-status-badge"
+                    [ngClass]="{'status-active': obj.status === 'active', 'status-achieved': obj.status === 'achieved', 'status-failed': obj.status === 'failed'}">
+                {{ obj.status | uppercase }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Board Requests -->
+    <div class="objectives-section" *ngIf="boardRequests.length > 0">
+      <div class="panel objectives-panel">
+        <div class="panel-header red-text">BOARD REQUESTS</div>
+        <div class="objectives-list">
+          <div class="objective-item" *ngFor="let req of boardRequests">
+            <div class="obj-left">
+              <span class="obj-type-badge">{{ req.requestType }}</span>
+              <div class="obj-details">
+                <span class="obj-description">{{ req.description }}</span>
+              </div>
+            </div>
+            <div class="obj-right">
+              <span class="obj-target" *ngIf="req.deadline">Deadline: Day {{ req.deadline }}</span>
+              <span class="obj-status-badge"
+                    [ngClass]="{'status-active': req.status === 'ACTIVE', 'status-achieved': req.status === 'MET', 'status-failed': req.status === 'FAILED' || req.status === 'EXPIRED'}">
+                {{ req.status }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- League News Feed -->
+    <div class="objectives-section" *ngIf="leagueNews.length > 0">
+      <div class="panel objectives-panel">
+        <div class="panel-header red-text">LEAGUE NEWS</div>
+        <div class="news-list">
+          <div class="news-item" *ngFor="let item of leagueNews">
+            <div class="news-title">{{ item.title }}</div>
+            <div class="news-content">{{ item.content }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lower-section">
+
+      <div class="panel">
+        <div class="panel-header red-text">LEAGUE TABLE</div>
+        <table class="mini-table" *ngIf="leagueTable.length > 0">
+          <thead>
+            <tr>
+              <th>Pos</th>
+              <th>Team</th>
+              <th>P</th>
+              <th>W</th>
+              <th>D</th>
+              <th>L</th>
+              <th>GD</th>
+              <th>Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of leagueTable" [class.highlight]="row.isHumanTeam || row.name === teamName">
+              <td>{{ row.position }}</td>
+              <td><a [routerLink]="['/team', row.teamId]" class="fm-link">{{ row.name || row.teamName }}</a></td>
+              <td>{{ row.games }}</td>
+              <td>{{ row.wins }}</td>
+              <td>{{ row.draws }}</td>
+              <td>{{ row.loses }}</td>
+              <td>{{ row.goalDifference }}</td>
+              <td>{{ row.points }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="leagueTable.length === 0" class="no-data">
+          No league data available
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header red-text">PLAYER STATS</div>
+        <div class="stats-list">
+          <div class="stat-item" *ngFor="let stat of playerStats">
+              <div class="stat-name"><a [routerLink]="['/player', stat.playerId]" class="fm-link">{{ stat.playerName }}</a></div>
+              <div class="stat-value">{{ stat.goals }} goals, {{ stat.assists }} assists</div>
+              <div class="stat-label">Rating: {{ stat.averageRating }}</div>
+          </div>
+          <div *ngIf="playerStats.length === 0" class="no-data">
+              No stats available yet
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header red-text">LEAGUE STANDING</div>
+        <div class="performance-box" *ngIf="leagueCompetition">
+          <div class="standing-info">
+            <div class="standing-row">
+              <span>Competition</span>
+              <span class="standing-value">{{ leagueCompetition.name }}</span>
+            </div>
+            <div class="standing-row">
+              <span>Position</span>
+              <span class="standing-value">{{ leagueCompetition.position }} / {{ leagueCompetition.totalTeams }}</span>
+            </div>
+            <div class="standing-row">
+              <span>Points</span>
+              <span class="standing-value">{{ leagueCompetition.points }}</span>
+            </div>
+            <div class="standing-row">
+              <span>Played</span>
+              <span class="standing-value">{{ leagueCompetition.games }}</span>
+            </div>
+            <div class="standing-row">
+              <span>Record (W-D-L)</span>
+              <span class="standing-value">{{ leagueCompetition.wins }}-{{ leagueCompetition.draws }}-{{ leagueCompetition.loses }}</span>
+            </div>
+            <div class="standing-row">
+              <span>Goals</span>
+              <span class="standing-value">{{ leagueCompetition.goalsFor }} - {{ leagueCompetition.goalsAgainst }}</span>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="!leagueCompetition" class="no-data">
+          No competition data available
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header red-text">FINANCE & SALARY</div>
+        <div class="standing-info">
+          <div class="standing-row">
+            <span>Total Finances</span>
+            <span class="standing-value" style="color: #2ecc71;">{{ totalFinances | number }}</span>
+          </div>
+          <div class="standing-row">
+            <span>Transfer Budget</span>
+            <span class="standing-value" style="color: #3498db;">{{ transferBudget | number }}</span>
+          </div>
+          <div class="standing-row" *ngIf="debt > 0">
+            <span>Debt</span>
+            <span class="standing-value" style="color: #e74c3c;">{{ debt | number }}</span>
+          </div>
+          <div class="standing-row">
+            <span>Board Confidence</span>
+            <span class="standing-value">{{ boardConfidence }}%</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>

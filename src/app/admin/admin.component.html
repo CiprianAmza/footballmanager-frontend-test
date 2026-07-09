@@ -1,0 +1,55 @@
+<div class="admin-container">
+
+  <!-- ===== Login form ===== -->
+  <div *ngIf="!adminService.isAuthenticated" class="login-panel">
+    <h2>Admin Login</h2>
+    <form (ngSubmit)="login()" #loginForm="ngForm">
+      <div class="form-row">
+        <label>Username</label>
+        <input type="text" name="username" [(ngModel)]="username" autocomplete="username" required />
+      </div>
+      <div class="form-row">
+        <label>Password</label>
+        <input type="password" name="password" [(ngModel)]="password" autocomplete="current-password" required />
+      </div>
+      <div class="login-error" *ngIf="loginError">{{ loginError }}</div>
+      <button type="submit" [disabled]="loginLoading">
+        {{ loginLoading ? 'Logging in...' : 'Login' }}
+      </button>
+      <p class="hint">Default credentials: <code>admin</code> / <code>admin</code></p>
+    </form>
+  </div>
+
+  <!-- ===== Admin hub ===== -->
+  <div *ngIf="adminService.isAuthenticated" class="panel">
+    <div class="panel-header">
+      <h2>Admin Panel</h2>
+      <div class="header-actions">
+        <button class="danger" (click)="logout()">Logout</button>
+      </div>
+    </div>
+
+    <p class="hint" style="text-align:left;margin-bottom:18px;">
+      Pick a tool to manage. Each opens its own dedicated page.
+    </p>
+
+    <div class="hub-buttons">
+      <a routerLink="/admin/scores" class="hub-card">
+        <span class="hub-title">Predetermined Scores</span>
+        <span class="hub-desc">Set fixed results for upcoming matches.</span>
+      </a>
+      <a routerLink="/admin/offers" class="hub-card">
+        <span class="hub-title">Job Offers</span>
+        <span class="hub-desc">Toggle auto-offers and generate manual offers.</span>
+      </a>
+      <a routerLink="/admin/players" class="hub-card">
+        <span class="hub-title">Generate Player</span>
+        <span class="hub-desc">Create a new player and assign to a team.</span>
+      </a>
+      <a routerLink="/tactics" class="hub-card">
+        <span class="hub-title">Tactics Advisor</span>
+        <span class="hub-desc">Best-tactic analysis &amp; simulation (user page).</span>
+      </a>
+    </div>
+  </div>
+</div>

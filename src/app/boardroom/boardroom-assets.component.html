@@ -1,0 +1,116 @@
+<div class="container py-4">
+  <div class="d-flex align-items-center mb-3">
+    <a routerLink="/boardroom/wealth" class="btn btn-sm btn-outline-secondary me-3"><i class="bi bi-arrow-left"></i></a>
+    <h3 class="mb-0"><i class="bi bi-houses me-2"></i>Personal Assets</h3>
+  </div>
+
+  <div *ngIf="loading" class="text-muted">Loading...</div>
+  <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+  <div *ngIf="message" class="alert alert-info py-2">{{ message }}</div>
+
+  <ng-container *ngIf="data && !loading">
+    <div class="card mb-3 shadow-sm">
+      <div class="card-body d-flex justify-content-between flex-wrap">
+        <div><strong>{{ data.name }}</strong></div>
+        <div>Wealth: <span class="wealth-positive">{{ money(data.wealth) }}</span></div>
+        <div>Career earnings: {{ money(data.careerEarnings) }}</div>
+        <div>Reputation: {{ data.managerReputation }}</div>
+      </div>
+    </div>
+
+    <!-- Buy personal asset -->
+    <div class="card mb-3 shadow-sm">
+      <div class="card-header">Buy a House or Car</div>
+      <div class="card-body row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label small">Type</label>
+          <select class="form-select" [(ngModel)]="newAssetType">
+            <option value="HOUSE">House</option>
+            <option value="CAR">Car</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Name</label>
+          <input type="text" class="form-control" [(ngModel)]="newAssetName" placeholder="e.g. Villa in Marbella">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Value (0 = default)</label>
+          <input type="number" class="form-control" [(ngModel)]="newAssetValue" min="0">
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-primary w-100" (click)="buyAsset()">Buy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Houses + Cars -->
+    <div class="row">
+      <div class="col-md-6">
+        <h5>Houses</h5>
+        <ul class="list-group mb-3">
+          <li class="list-group-item d-flex justify-content-between align-items-center" *ngFor="let a of houses">
+            <span>{{ a.name }} <small class="text-muted">({{ money(a.value) }})</small></span>
+            <button class="btn btn-sm btn-outline-danger" (click)="sellAsset(a.id)">Sell</button>
+          </li>
+          <li class="list-group-item text-muted" *ngIf="!houses.length">No houses owned.</li>
+        </ul>
+      </div>
+      <div class="col-md-6">
+        <h5>Cars</h5>
+        <ul class="list-group mb-3">
+          <li class="list-group-item d-flex justify-content-between align-items-center" *ngFor="let a of cars">
+            <span>{{ a.name }} <small class="text-muted">({{ money(a.value) }})</small></span>
+            <button class="btn btn-sm btn-outline-danger" (click)="sellAsset(a.id)">Sell</button>
+          </li>
+          <li class="list-group-item text-muted" *ngIf="!cars.length">No cars owned.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Club shares -->
+    <div class="card mb-3 shadow-sm">
+      <div class="card-header">Buy Club Shares</div>
+      <div class="card-body row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label small">Club</label>
+          <select class="form-select" [(ngModel)]="shareTeamId">
+            <option [ngValue]="undefined" disabled>Select a club...</option>
+            <option *ngFor="let t of teams" [ngValue]="t.id">{{ t.name }}</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label small">Percent</label>
+          <input type="number" class="form-control" [(ngModel)]="sharePercent" min="1" max="100">
+        </div>
+        <div class="col-md-3">
+          <button class="btn btn-primary w-100" (click)="buyShares()">Buy Shares</button>
+        </div>
+      </div>
+    </div>
+
+    <h5>Shareholdings</h5>
+    <table class="table table-sm align-middle">
+      <thead class="table-light">
+        <tr><th>Club</th><th class="text-end">Stake</th><th class="text-end">Price / 1%</th><th></th><th></th></tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let s of data.shareholdings">
+          <td>
+            {{ s.teamName }}
+            <span *ngIf="s.isOwner" class="badge bg-success owner-badge ms-1">OWNER</span>
+          </td>
+          <td class="text-end">{{ s.percent | number:'1.1-1' }}%</td>
+          <td class="text-end">{{ money(s.pricePerPercent) }}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-danger" (click)="sellShares(s.teamId, 5)"
+                    [disabled]="s.percent < 5">Sell 5%</button>
+          </td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-danger" (click)="sellShares(s.teamId, s.percent)">Sell all</button>
+          </td>
+        </tr>
+        <tr *ngIf="!data.shareholdings.length"><td colspan="5" class="text-muted">No shareholdings.</td></tr>
+      </tbody>
+    </table>
+  </ng-container>
+</div>

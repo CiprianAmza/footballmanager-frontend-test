@@ -1,0 +1,26 @@
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <span class="fm-logo">FM</span>
+      <h1>Football Manager</h1>
+      <p class="login-subtitle">Enter your manager name to continue</p>
+    </div>
+
+    <div class="login-form">
+      <div class="form-row">
+        <label for="username">Username</label>
+        <input id="username" type="text" [(ngModel)]="username"
+               placeholder="Enter username"
+               maxlength="30"
+               (keydown)="onKeydown($event)"
+               autofocus />
+      </div>
+
+      <div class="error-message" *ngIf="error">{{ error }}</div>
+
+      <button class="login-btn" (click)="submit()" [disabled]="loading">
+        {{ loading ? 'Connecting...' : 'Continue' }}
+      </button>
+    </div>
+  </div>
+</div>

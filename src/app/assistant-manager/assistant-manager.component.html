@@ -1,0 +1,168 @@
+<div class="am-container">
+
+  <!-- Header -->
+  <div class="am-header">
+    <h1>ASSISTANT MANAGER</h1>
+    <div class="am-tabs">
+      <button class="am-tab" [class.active]="activeTab === 'briefing'" (click)="setTab('briefing')">Pre-Match Briefing</button>
+      <button class="am-tab" [class.active]="activeTab === 'formation'" (click)="setTab('formation')">Formation</button>
+      <button class="am-tab" [class.active]="activeTab === 'concerns'" (click)="setTab('concerns')">Lineup Concerns</button>
+      <button class="am-tab" [class.active]="activeTab === 'opponent'" (click)="setTab('opponent')">Opponent Analysis</button>
+      <button class="am-tab" [class.active]="activeTab === 'transfers'" (click)="setTab('transfers')">Transfer Needs</button>
+    </div>
+  </div>
+
+  <div class="am-content">
+
+    <!-- PRE-MATCH BRIEFING -->
+    <div *ngIf="activeTab === 'briefing'" class="am-section">
+      <div *ngIf="loadingBriefing" class="am-loading">Preparing briefing...</div>
+      <div *ngIf="!loadingBriefing && !briefing && !nextOpponentId" class="am-empty">No upcoming match found.</div>
+
+      <div *ngIf="!loadingBriefing && briefing" class="briefing-content">
+        <div class="am-card" *ngIf="briefing.recommendedFormation">
+          <div class="am-card-title">RECOMMENDED FORMATION</div>
+          <div class="formation-badge">{{ briefing.recommendedFormation }}</div>
+          <div class="am-card-desc" *ngIf="briefing.formationReason">{{ briefing.formationReason }}</div>
+        </div>
+
+        <div class="am-card" *ngIf="briefing.concerns?.length > 0">
+          <div class="am-card-title">LINEUP ISSUES</div>
+          <div class="concern-item" *ngFor="let c of briefing.concerns">
+            <span class="concern-icon">{{ getConcernIcon(c.type) }}</span>
+            <span class="concern-text">{{ c.message }}</span>
+            <span class="concern-severity" [ngClass]="getConcernSeverityClass(c.severity)">{{ c.severity }}</span>
+          </div>
+        </div>
+
+        <div class="am-card" *ngIf="briefing.opponentAnalysis">
+          <div class="am-card-title">OPPONENT: {{ briefing.opponentName || nextOpponentName }}</div>
+          <div class="am-card-desc" *ngIf="briefing.opponentAnalysis.recommendedMentality">
+            Suggested mentality: <strong>{{ briefing.opponentAnalysis.recommendedMentality }}</strong>
+          </div>
+          <div class="opp-positions" *ngIf="briefing.opponentAnalysis.positionAnalysis">
+            <div class="opp-pos-item" *ngFor="let pos of briefing.opponentAnalysis.positionAnalysis | keyvalue">
+              <span class="opp-pos-name">{{ pos.key }}</span>
+              <span class="opp-pos-strength" [ngClass]="getStrengthClass($any(pos.value))">{{ pos.value }}</span>
+            </div>
+          </div>
+          <div *ngIf="briefing.opponentAnalysis.vulnerabilities?.length > 0" class="vulnerabilities">
+            <div class="vuln-title">Vulnerabilities:</div>
+            <div class="vuln-item" *ngFor="let v of briefing.opponentAnalysis.vulnerabilities">{{ v }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORMATION SUGGESTION -->
+    <div *ngIf="activeTab === 'formation'" class="am-section">
+      <div *ngIf="loadingFormation" class="am-loading">Analyzing squad...</div>
+      <div *ngIf="!loadingFormation && !formationSuggestion" class="am-empty">Unable to analyze formations.</div>
+
+      <div *ngIf="!loadingFormation && formationSuggestion" class="formation-content">
+        <div class="am-card">
+          <div class="am-card-title">BEST FORMATION</div>
+          <div class="formation-badge large">{{ formationSuggestion.bestFormation }}</div>
+          <div class="am-card-desc" *ngIf="formationSuggestion.reason">{{ formationSuggestion.reason }}</div>
+        </div>
+
+        <div class="am-card" *ngIf="formationSuggestion.formations">
+          <div class="am-card-title">ALL FORMATIONS RANKED</div>
+          <div class="formation-rank-list">
+            <div class="formation-rank-item" *ngFor="let f of formationSuggestion.formations; let i = index">
+              <span class="rank-pos">{{ i + 1 }}.</span>
+              <span class="rank-name">{{ f.formation }}</span>
+              <span class="rank-rating">{{ f.totalRating | number:'1.1-1' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LINEUP CONCERNS -->
+    <div *ngIf="activeTab === 'concerns'" class="am-section">
+      <div *ngIf="loadingConcerns" class="am-loading">Checking squad...</div>
+      <div *ngIf="!loadingConcerns && !lineupConcerns" class="am-empty">No data available.</div>
+
+      <div *ngIf="!loadingConcerns && lineupConcerns">
+        <div class="am-card" *ngIf="lineupConcerns.concerns?.length > 0">
+          <div class="am-card-title">ISSUES FOUND ({{ lineupConcerns.concerns.length }})</div>
+          <div class="concern-item" *ngFor="let c of lineupConcerns.concerns">
+            <span class="concern-icon">{{ getConcernIcon(c.type) }}</span>
+            <div class="concern-body">
+              <span class="concern-player" *ngIf="c.playerName">
+                <a *ngIf="c.playerId" [routerLink]="['/player', c.playerId]" class="fm-link">{{ c.playerName }}</a>
+                <ng-container *ngIf="!c.playerId">{{ c.playerName }}</ng-container>
+              </span>
+              <span class="concern-text">{{ c.message }}</span>
+            </div>
+            <span class="concern-severity" [ngClass]="getConcernSeverityClass(c.severity)">{{ c.severity }}</span>
+          </div>
+        </div>
+        <div class="am-card" *ngIf="!lineupConcerns.concerns || lineupConcerns.concerns.length === 0">
+          <div class="am-card-title">ALL CLEAR</div>
+          <div class="am-card-desc">No lineup issues detected. Squad is ready.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPPONENT ANALYSIS -->
+    <div *ngIf="activeTab === 'opponent'" class="am-section">
+      <div class="opp-selector">
+        <label>Opponent Team ID:</label>
+        <input type="number" [(ngModel)]="opponentIdForAnalysis" class="opp-input" />
+        <button class="analyze-btn" (click)="loadOpponentAnalysis()">Analyze</button>
+      </div>
+
+      <div *ngIf="loadingOpponent" class="am-loading">Analyzing opponent...</div>
+
+      <div *ngIf="!loadingOpponent && opponentAnalysis">
+        <div class="am-card">
+          <div class="am-card-title">{{ opponentAnalysis.opponentName || 'OPPONENT' }}</div>
+          <div class="am-card-desc" *ngIf="opponentAnalysis.recommendedMentality">
+            Suggested mentality: <strong>{{ opponentAnalysis.recommendedMentality }}</strong>
+          </div>
+        </div>
+
+        <div class="am-card" *ngIf="opponentAnalysis.positionAnalysis">
+          <div class="am-card-title">POSITION BREAKDOWN</div>
+          <div class="opp-positions">
+            <div class="opp-pos-item" *ngFor="let pos of opponentAnalysis.positionAnalysis | keyvalue">
+              <span class="opp-pos-name">{{ pos.key }}</span>
+              <span class="opp-pos-strength" [ngClass]="getStrengthClass($any(pos.value))">{{ pos.value }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="am-card" *ngIf="opponentAnalysis.vulnerabilities?.length > 0">
+          <div class="am-card-title">VULNERABILITIES</div>
+          <div class="vuln-item" *ngFor="let v of opponentAnalysis.vulnerabilities">{{ v }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSFER NEEDS -->
+    <div *ngIf="activeTab === 'transfers'" class="am-section">
+      <div *ngIf="loadingTransferNeeds" class="am-loading">Analyzing squad depth...</div>
+      <div *ngIf="!loadingTransferNeeds && !transferNeeds" class="am-empty">Unable to analyze transfer needs.</div>
+
+      <div *ngIf="!loadingTransferNeeds && transferNeeds">
+        <div class="am-card" *ngIf="transferNeeds.needs?.length > 0">
+          <div class="am-card-title">POSITIONS NEEDING REINFORCEMENT</div>
+          <div class="transfer-need-item" *ngFor="let need of transferNeeds.needs">
+            <div class="need-position">{{ need.position }}</div>
+            <div class="need-reason">{{ need.reason }}</div>
+            <div class="need-priority" [ngClass]="'priority-' + (need.priority || 'medium').toLowerCase()">
+              {{ need.priority || 'MEDIUM' }}
+            </div>
+          </div>
+        </div>
+        <div class="am-card" *ngIf="!transferNeeds.needs || transferNeeds.needs.length === 0">
+          <div class="am-card-title">SQUAD DEPTH OK</div>
+          <div class="am-card-desc">No urgent transfer needs identified.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,219 @@
+.european-container {
+  padding: 20px;
+  color: #e0e0e0;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 1.4rem;
+  color: #fff;
+  margin: 0;
+}
+
+.season-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.season-nav button {
+  background: #16213e;
+  border: 1px solid #2a2a4a;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.season-nav button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.season-nav span {
+  font-size: 0.95rem;
+  color: #ccc;
+}
+
+h2 {
+  font-size: 1.1rem;
+  color: #aaa;
+  margin: 20px 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* GROUPS */
+.groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.group-card {
+  background: #1a1a2e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.group-header {
+  background: #16213e;
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #f1c40f;
+}
+
+.group-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.group-table th {
+  padding: 8px 6px;
+  text-align: center;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #666;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+.group-table th:first-child {
+  text-align: left;
+  padding-left: 16px;
+}
+
+.group-table td {
+  padding: 8px 6px;
+  text-align: center;
+  font-size: 0.82rem;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+.group-table .team-name {
+  text-align: left;
+  padding-left: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.group-table .points {
+  font-weight: 700;
+  color: #f1c40f;
+}
+
+.group-table tr.qualified {
+  background: rgba(46, 204, 113, 0.08);
+}
+
+/* ROUNDS */
+.round-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.round-tabs button {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  color: #aaa;
+  padding: 8px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.round-tabs button.active {
+  background: #2e3192;
+  border-color: #2e3192;
+  color: #fff;
+}
+
+.matches-list {
+  background: #1a1a2e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.match-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid #2a2a4a;
+}
+
+.match-row:last-child {
+  border-bottom: none;
+}
+
+.home-team {
+  flex: 1;
+  text-align: right;
+  font-weight: 600;
+  color: #fff;
+  padding-right: 16px;
+}
+
+.score {
+  font-weight: 700;
+  color: #f1c40f;
+  min-width: 60px;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.away-team {
+  flex: 1;
+  text-align: left;
+  font-weight: 600;
+  color: #fff;
+  padding-left: 16px;
+}
+
+/* POT BADGES */
+.pot-badge {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pot-1 {
+  background: #f1c40f;
+  color: #1a1a2e;
+}
+
+.pot-2 {
+  background: #95a5a6;
+  color: #1a1a2e;
+}
+
+.pot-3 {
+  background: #cd7f32;
+  color: #1a1a2e;
+}
+
+.pot-4 {
+  background: #555;
+  color: #ddd;
+}
+
+.no-matches, .no-data {
+  text-align: center;
+  padding: 30px;
+  color: #666;
+  font-style: italic;
+}

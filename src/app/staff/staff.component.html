@@ -1,0 +1,655 @@
+<div class="staff-container">
+
+    <!-- HEADER -->
+    <div class="page-header">
+      <div class="header-left">
+          <div class="icon-circle">S</div>
+          <div class="titles">
+              <h1>STAFF</h1>
+              <span class="subtitle">{{ teamScouts.length }} Scouts Hired</span>
+          </div>
+      </div>
+
+      <!-- TABS -->
+      <div class="nav-tabs">
+          <button *ngFor="let tab of tabs"
+                  class="tab-btn"
+                  [class.active]="activeTab === tab"
+                  (click)="setTab(tab)">
+              {{ tab }}
+          </button>
+      </div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <div class="content-area" *ngIf="activeTab === 'Overview'">
+      <div class="staff-grid">
+          <div class="category-column" *ngFor="let cat of categories">
+              <div class="fm-panel info-panel">
+                  <div class="panel-header">{{ cat.title }} ></div>
+                  <div class="panel-body">
+                      <div class="total-count">
+                          <span class="big-num">{{ cat.totalStaff }}</span> Staff
+                      </div>
+                      <p class="board-opinion">{{ cat.boardOpinion }}</p>
+                      <div class="roles-list">
+                          <div class="role-row" *ngFor="let role of cat.roles" [class.vacancy]="role.current < role.max">
+                              <span class="r-name">{{ role.name }}</span>
+                              <span class="r-count">
+                                  <span [class.red-text]="role.current < role.max">{{ role.current }}</span>
+                                  /{{ role.max }}
+                              </span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+              <div class="fm-panel chart-panel">
+                  <div class="panel-header small">{{ cat.title }} COMPARISON</div>
+                  <div class="chart-container">
+                      <div class="chart-area">
+                          <div class="avg-line-global" style="bottom: 60%">
+                              <span class="line-label">League Avg</span>
+                          </div>
+                          <div class="bar-group" *ngFor="let stat of cat.chartData">
+                              <div class="bar-wrapper">
+                                  <div class="the-bar"
+                                       [style.height]="getBarHeight(stat.value)"
+                                       [style.background-color]="cat.colorAccent">
+                                       <span class="bar-val">{{ stat.value }}</span>
+                                  </div>
+                                  <div class="avg-marker" [style.bottom]="getAvgLineHeight(stat.leagueAvg)"></div>
+                              </div>
+                              <span class="bar-label">{{ stat.label }}</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+    </div>
+
+    <!-- COACHING STAFF -->
+    <div class="content-area" *ngIf="activeTab === 'Coaching Staff'">
+      <div class="coaching-header-row">
+        <div class="coaching-stat">
+          <span class="stat-label">Coaching Multiplier</span>
+          <span class="stat-value" [style.color]="coachingMultiplier >= 1.0 ? '#2ecc71' : '#e67e22'">{{ coachingMultiplier.toFixed(2) }}x</span>
+        </div>
+        <div class="coaching-stat">
+          <span class="stat-label">Youth Multiplier</span>
+          <span class="stat-value" [style.color]="youthMultiplier >= 1.0 ? '#2ecc71' : '#e67e22'">{{ youthMultiplier.toFixed(2) }}x</span>
+        </div>
+        <div class="coaching-stat">
+          <span class="stat-label">HOYD Quality</span>
+          <span class="stat-value" [style.color]="getAbilityColor(hoydQuality)">{{ hoydQuality }}/20</span>
+        </div>
+        <button class="btn-hire-coach" (click)="loadAvailableCoachesForHire()">Browse Available Coaches</button>
+      </div>
+
+      <div class="empty-state" *ngIf="coachingStaff.length === 0">
+        No coaching staff. Hire coaches to improve your team's training.
+      </div>
+
+      <div class="coach-cards" *ngIf="coachingStaff.length > 0">
+        <div class="coach-card" *ngFor="let coach of coachingStaff">
+          <div class="coach-card-header">
+            <span class="coach-name">{{ coach.name }}</span>
+            <span class="coach-role">{{ coach.role }}</span>
+          </div>
+          <div class="coach-card-body">
+            <div class="coach-meta">
+              <span>Age: {{ coach.age }}</span>
+              <span>Wage: {{ formatCurrency(coach.wage) }}/w</span>
+              <span>Contract: S{{ coach.contractEndSeason }}</span>
+              <span>Avg: <strong [style.color]="getAbilityColor(getCoachAvgRating(coach))">{{ getCoachAvgRating(coach) }}</strong></span>
+            </div>
+            <div class="coach-attrs">
+              <div class="coach-attr">
+                <span class="ca-label">Att</span>
+                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingAttacking)">{{ coach.coachingAttacking }}</span>
+              </div>
+              <div class="coach-attr">
+                <span class="ca-label">Def</span>
+                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingDefending)">{{ coach.coachingDefending }}</span>
+              </div>
+              <div class="coach-attr">
+                <span class="ca-label">Tac</span>
+                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingTactical)">{{ coach.coachingTactical }}</span>
+              </div>
+              <div class="coach-attr">
+                <span class="ca-label">Tec</span>
+                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingTechnical)">{{ coach.coachingTechnical }}</span>
+              </div>
+              <div class="coach-attr">
+                <span class="ca-label">Men</span>
+                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingMental)">{{ coach.coachingMental }}</span>
+              </div>
+              <div class="coach-attr">
+                <span class="ca-label">Fit</span>
+                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingFitness)">{{ coach.coachingFitness }}</span>
+              </div>
+              <div class="coach-attr">
+                <span class="ca-label">GK</span>
+                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingGK)">{{ coach.coachingGK }}</span>
+              </div>
+              <div class="coach-attr">
+                <span class="ca-label">Yth</span>
+                <span class="ca-value" [style.color]="getAbilityColor(coach.workingWithYoungsters)">{{ coach.workingWithYoungsters }}</span>
+              </div>
+              <div class="coach-attr">
+                <span class="ca-label">Mot</span>
+                <span class="ca-value" [style.color]="getAbilityColor(coach.motivating)">{{ coach.motivating }}</span>
+              </div>
+            </div>
+            <div class="coach-actions-row">
+              <button class="btn-fire" (click)="fireCoach(coach)">Release</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Available Coaches for hire -->
+      <div *ngIf="availableCoaches.length > 0" style="margin-top: 24px;">
+        <div class="section-title">Available Coaches for Hire</div>
+        <div class="coach-cards">
+          <div class="coach-card hire-card" *ngFor="let coach of availableCoaches">
+            <div class="coach-card-header">
+              <span class="coach-name">{{ coach.name }}</span>
+              <span class="coach-role">{{ coach.role }}</span>
+            </div>
+            <div class="coach-card-body">
+              <div class="coach-meta">
+                <span>Age: {{ coach.age }}</span>
+                <span>Wage: {{ formatCurrency(coach.wage) }}/w</span>
+                <span>Avg: <strong [style.color]="getAbilityColor(getCoachAvgRating(coach))">{{ getCoachAvgRating(coach) }}</strong></span>
+              </div>
+              <div class="coach-attrs">
+                <div class="coach-attr">
+                  <span class="ca-label">Att</span>
+                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingAttacking)">{{ coach.coachingAttacking }}</span>
+                </div>
+                <div class="coach-attr">
+                  <span class="ca-label">Def</span>
+                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingDefending)">{{ coach.coachingDefending }}</span>
+                </div>
+                <div class="coach-attr">
+                  <span class="ca-label">Tac</span>
+                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingTactical)">{{ coach.coachingTactical }}</span>
+                </div>
+                <div class="coach-attr">
+                  <span class="ca-label">Tec</span>
+                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingTechnical)">{{ coach.coachingTechnical }}</span>
+                </div>
+                <div class="coach-attr">
+                  <span class="ca-label">Men</span>
+                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingMental)">{{ coach.coachingMental }}</span>
+                </div>
+                <div class="coach-attr">
+                  <span class="ca-label">Fit</span>
+                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingFitness)">{{ coach.coachingFitness }}</span>
+                </div>
+                <div class="coach-attr">
+                  <span class="ca-label">GK</span>
+                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingGK)">{{ coach.coachingGK }}</span>
+                </div>
+                <div class="coach-attr">
+                  <span class="ca-label">Yth</span>
+                  <span class="ca-value" [style.color]="getAbilityColor(coach.workingWithYoungsters)">{{ coach.workingWithYoungsters }}</span>
+                </div>
+                <div class="coach-attr">
+                  <span class="ca-label">Mot</span>
+                  <span class="ca-value" [style.color]="getAbilityColor(coach.motivating)">{{ coach.motivating }}</span>
+                </div>
+              </div>
+              <div class="coach-actions-row">
+                <button class="btn-hire" (click)="openCoachHireModal(coach)">Hire</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COACH HIRE MODAL -->
+    <div class="modal-overlay" *ngIf="showCoachHireModal" (click)="closeCoachHireModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">Hire Coach: {{ selectedCoach?.name }}</div>
+        <div class="modal-body" *ngIf="selectedCoach">
+          <div class="modal-stats">
+            <span>Role: <strong>{{ selectedCoach.role }}</strong></span>
+            <span>Wage: <strong style="color: #f1c40f;">{{ formatCurrency(selectedCoach.wage) }}/w</strong></span>
+          </div>
+          <div class="modal-stats">
+            <span>Att: <strong [style.color]="getAbilityColor(selectedCoach.coachingAttacking)">{{ selectedCoach.coachingAttacking }}</strong></span>
+            <span>Def: <strong [style.color]="getAbilityColor(selectedCoach.coachingDefending)">{{ selectedCoach.coachingDefending }}</strong></span>
+            <span>Tac: <strong [style.color]="getAbilityColor(selectedCoach.coachingTactical)">{{ selectedCoach.coachingTactical }}</strong></span>
+            <span>Tec: <strong [style.color]="getAbilityColor(selectedCoach.coachingTechnical)">{{ selectedCoach.coachingTechnical }}</strong></span>
+          </div>
+          <div class="modal-stats">
+            <span>Men: <strong [style.color]="getAbilityColor(selectedCoach.coachingMental)">{{ selectedCoach.coachingMental }}</strong></span>
+            <span>Fit: <strong [style.color]="getAbilityColor(selectedCoach.coachingFitness)">{{ selectedCoach.coachingFitness }}</strong></span>
+            <span>GK: <strong [style.color]="getAbilityColor(selectedCoach.coachingGK)">{{ selectedCoach.coachingGK }}</strong></span>
+            <span>Yth: <strong [style.color]="getAbilityColor(selectedCoach.workingWithYoungsters)">{{ selectedCoach.workingWithYoungsters }}</strong></span>
+          </div>
+          <div class="modal-result" *ngIf="coachHireResult"
+               [class.success]="coachHireSuccess" [class.failure]="!coachHireSuccess">
+            {{ coachHireResult }}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-submit" (click)="hireCoach()" [disabled]="coachHireLoading">
+            {{ coachHireLoading ? 'Hiring...' : 'Confirm Hire' }}
+          </button>
+          <button class="btn-cancel" (click)="closeCoachHireModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESPONSIBILITIES -->
+    <div class="content-area" *ngIf="activeTab === 'Responsibilities'">
+      <div class="responsibilities-grid">
+        <div class="fm-panel responsibilities-panel">
+          <div class="panel-header">MANAGER RESPONSIBILITIES</div>
+          <div class="panel-body">
+            <p class="resp-intro">Delegate responsibilities to your assistant manager.</p>
+            <div class="resp-list">
+              <div class="resp-item">
+                <div class="resp-info">
+                  <span class="resp-name">Press Conferences</span>
+                  <span class="resp-desc">Attend pre-match press conferences.</span>
+                </div>
+                <div class="resp-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" [checked]="attendPressConferences" (change)="togglePressConferences()">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-label">{{ attendPressConferences ? 'Manager' : 'Assistant' }}</span>
+                </div>
+              </div>
+              <div class="resp-item">
+                <div class="resp-info">
+                  <span class="resp-name">Auto-Continue</span>
+                  <span class="resp-desc">Automatically advance the game day by day.</span>
+                </div>
+                <div class="resp-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" [checked]="teamService.autoContinue" (change)="toggleAutoContinue()">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-label">{{ teamService.autoContinue ? 'On' : 'Off' }}</span>
+                </div>
+              </div>
+              <div class="resp-item" [class.resp-disabled]="!teamService.autoContinue">
+                <div class="resp-info">
+                  <span class="resp-name">Auto-Continue Match Report</span>
+                  <span class="resp-desc">Automatically dismiss match result screens.</span>
+                </div>
+                <div class="resp-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" [checked]="teamService.autoContinueMatchReport" (change)="toggleAutoContinueMatchReport()" [disabled]="!teamService.autoContinue">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-label">{{ teamService.autoContinueMatchReport ? 'On' : 'Off' }}</span>
+                </div>
+              </div>
+              <div class="resp-item">
+                <div class="resp-info">
+                  <span class="resp-name">View Full Match</span>
+                  <span class="resp-desc">Watch a live minute-by-minute simulation of your matches.</span>
+                </div>
+                <div class="resp-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" [checked]="viewFullMatch" (change)="toggleViewFullMatch()">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-label">{{ viewFullMatch ? 'On' : 'Off' }}</span>
+                </div>
+              </div>
+              <div class="resp-item" [class.resp-disabled]="!viewFullMatch">
+                <div class="resp-info">
+                  <span class="resp-name">Match Highlights</span>
+                  <span class="resp-desc">How much of each match you want to see animated.</span>
+                </div>
+                <div class="resp-toggle highlights-radio-group" role="radiogroup" aria-label="Match highlights level">
+                  <label class="radio-pill">
+                    <input type="radio" name="matchHighlightsLevel" value="NONE"
+                           [checked]="matchHighlightsLevel === 'NONE'"
+                           (change)="setMatchHighlightsLevel('NONE')"
+                           [disabled]="!viewFullMatch">
+                    <span>None</span>
+                  </label>
+                  <label class="radio-pill">
+                    <input type="radio" name="matchHighlightsLevel" value="GOALS_ONLY"
+                           [checked]="matchHighlightsLevel === 'GOALS_ONLY'"
+                           (change)="setMatchHighlightsLevel('GOALS_ONLY')"
+                           [disabled]="!viewFullMatch">
+                    <span>Goals only</span>
+                  </label>
+                  <label class="radio-pill">
+                    <input type="radio" name="matchHighlightsLevel" value="KEY_MOMENTS"
+                           [checked]="matchHighlightsLevel === 'KEY_MOMENTS'"
+                           (change)="setMatchHighlightsLevel('KEY_MOMENTS')"
+                           [disabled]="!viewFullMatch">
+                    <span>Key moments</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCOUTS TAB -->
+    <div class="content-area" *ngIf="activeTab === 'Scouts'">
+
+      <!-- Scout sub-tabs -->
+      <div class="scout-sub-tabs">
+        <button class="sub-tab" [class.active]="scoutSubTab === 'my-scouts'" (click)="setScoutSubTab('my-scouts')">My Scouts</button>
+        <button class="sub-tab" [class.active]="scoutSubTab === 'assignments'" (click)="setScoutSubTab('assignments')">Active Assignments</button>
+        <button class="sub-tab" [class.active]="scoutSubTab === 'expiring'" (click)="setScoutSubTab('expiring')">Expiring Contracts</button>
+      </div>
+
+      <!-- My Scouts -->
+      <div *ngIf="scoutSubTab === 'my-scouts'">
+        <div class="empty-state" *ngIf="teamScouts.length === 0">
+          No scouts hired yet. Go to <strong>Staff Search</strong> to hire scouts.
+        </div>
+        <div class="scout-cards" *ngIf="teamScouts.length > 0">
+          <div class="scout-card" *ngFor="let scout of teamScouts">
+            <div class="scout-card-header">
+              <span class="scout-name">{{ scout.name }}</span>
+              <span class="scout-contract">Contract: Season {{ scout.contractEndSeason }}</span>
+            </div>
+            <div class="scout-card-body">
+              <div class="scout-attrs">
+                <div class="attr-row">
+                  <span class="attr-label">Scouting</span>
+                  <span class="attr-value" [style.color]="getAbilityColor(scout.scoutingAbility)">{{ scout.scoutingAbility }}</span>
+                </div>
+                <div class="attr-row">
+                  <span class="attr-label">Experience</span>
+                  <span class="attr-value" [style.color]="getAbilityColor(scout.experience)">{{ scout.experience }}</span>
+                </div>
+                <div class="attr-row">
+                  <span class="attr-label">Judging Potential</span>
+                  <span class="attr-value" [style.color]="getAbilityColor(scout.judgingPotential)">{{ scout.judgingPotential }}</span>
+                </div>
+                <div class="attr-row">
+                  <span class="attr-label">Wage</span>
+                  <span class="attr-value wage">{{ formatCurrency(scout.wage) }}/week</span>
+                </div>
+                <div class="attr-row">
+                  <span class="attr-label">Known Leagues</span>
+                  <span class="attr-value leagues">{{ getLeagueNames(scout.knownLeagues) }}</span>
+                </div>
+              </div>
+              <div class="scout-status" *ngIf="scout.onAssignment">
+                <span class="status-badge on-assignment">Scouting: {{ scout.assignmentPlayerName }}</span>
+              </div>
+              <div class="scout-status" *ngIf="!scout.onAssignment">
+                <span class="status-badge available">Available</span>
+              </div>
+              <div class="scout-actions">
+                <button class="btn-assign" (click)="openAssignModal(scout)" [disabled]="scout.onAssignment">
+                  {{ scout.onAssignment ? 'On Assignment' : 'Send to Scout' }}
+                </button>
+                <button class="btn-fire" (click)="fireScout(scout)">Release</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Assignments -->
+      <div *ngIf="scoutSubTab === 'assignments'">
+        <div class="empty-state" *ngIf="activeAssignments.length === 0">
+          No active scouting assignments.
+        </div>
+        <table class="scout-table" *ngIf="activeAssignments.length > 0">
+          <thead>
+            <tr>
+              <th>Scout</th>
+              <th>Player</th>
+              <th>Position</th>
+              <th>Team</th>
+              <th>Days Left</th>
+              <th>Cost</th>
+              <th>League</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let a of activeAssignments">
+              <td>{{ a.scoutName }}</td>
+              <td class="player-name">{{ a.playerName }}</td>
+              <td>{{ a.playerPosition }}</td>
+              <td>{{ a.playerTeamName }}</td>
+              <td><span class="days-badge">{{ a.daysRemaining }} days</span></td>
+              <td>{{ formatCurrency(a.cost) }}</td>
+              <td>
+                <span class="league-badge" [class.same]="a.sameLeague" [class.foreign]="!a.sameLeague">
+                  {{ a.sameLeague ? 'Same' : 'Foreign' }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Expiring Contracts -->
+      <div *ngIf="scoutSubTab === 'expiring'">
+        <div class="empty-state" *ngIf="expiringScouts.length === 0">
+          No scout contracts expiring soon.
+        </div>
+        <div class="scout-cards" *ngIf="expiringScouts.length > 0">
+          <div class="scout-card expiring" *ngFor="let scout of expiringScouts">
+            <div class="scout-card-header">
+              <span class="scout-name">{{ scout.name }}</span>
+              <span class="scout-contract expiring-label">Expires: Season {{ scout.contractEndSeason }}</span>
+            </div>
+            <div class="scout-card-body">
+              <div class="scout-attrs">
+                <div class="attr-row">
+                  <span class="attr-label">Scouting</span>
+                  <span class="attr-value" [style.color]="getAbilityColor(scout.scoutingAbility)">{{ scout.scoutingAbility }}</span>
+                </div>
+                <div class="attr-row">
+                  <span class="attr-label">Current Wage</span>
+                  <span class="attr-value wage">{{ formatCurrency(scout.wage) }}/week</span>
+                </div>
+                <div class="attr-row">
+                  <span class="attr-label">Wage Demand</span>
+                  <span class="attr-value wage demand">{{ formatCurrency(scout.wageDemand) }}/week</span>
+                </div>
+              </div>
+              <div class="scout-actions">
+                <button class="btn-renew" (click)="openRenewModal(scout)">Renew Contract</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCOUT REPORTS TAB -->
+    <div class="content-area" *ngIf="activeTab === 'Scout Reports'">
+      <div class="empty-state" *ngIf="completedReports.length === 0">
+        No completed scout reports yet. Hire scouts and send them to watch players.
+      </div>
+      <table class="scout-table reports-table" *ngIf="completedReports.length > 0">
+        <thead>
+          <tr>
+            <th>Player</th>
+            <th>Position</th>
+            <th>Team</th>
+            <th>Rating</th>
+            <th>Potential</th>
+            <th>Value</th>
+            <th>Scouted By</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of completedReports">
+            <td class="player-name">{{ r.playerName }}</td>
+            <td>{{ r.playerPosition }}</td>
+            <td>{{ r.playerTeamName }}</td>
+            <td><span class="rating-badge">{{ r.revealedRating }}</span></td>
+            <td><span class="potential-badge">{{ r.revealedPotential }}</span></td>
+            <td>{{ formatCurrency(r.revealedTransferValue) }}</td>
+            <td class="scout-by">{{ r.scoutName }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- STAFF SEARCH TAB -->
+    <div class="content-area" *ngIf="activeTab === 'Staff Search'">
+      <div class="section-title">Available Scouts for Hire</div>
+      <div class="empty-state" *ngIf="availableScouts.length === 0">
+        No scouts available for hire at the moment.
+      </div>
+      <div class="scout-cards" *ngIf="availableScouts.length > 0">
+        <div class="scout-card hire-card" *ngFor="let scout of availableScouts">
+          <div class="scout-card-header">
+            <span class="scout-name">{{ scout.name }}</span>
+            <span class="scout-overall">Avg: {{ ((scout.scoutingAbility + scout.experience + scout.judgingPotential) / 3).toFixed(0) }}</span>
+          </div>
+          <div class="scout-card-body">
+            <div class="scout-attrs">
+              <div class="attr-row">
+                <span class="attr-label">Scouting Ability</span>
+                <span class="attr-value" [style.color]="getAbilityColor(scout.scoutingAbility)">{{ scout.scoutingAbility }}</span>
+              </div>
+              <div class="attr-row">
+                <span class="attr-label">Experience</span>
+                <span class="attr-value" [style.color]="getAbilityColor(scout.experience)">{{ scout.experience }}</span>
+              </div>
+              <div class="attr-row">
+                <span class="attr-label">Judging Potential</span>
+                <span class="attr-value" [style.color]="getAbilityColor(scout.judgingPotential)">{{ scout.judgingPotential }}</span>
+              </div>
+              <div class="attr-row">
+                <span class="attr-label">Wage Demand</span>
+                <span class="attr-value wage demand">{{ formatCurrency(scout.wageDemand) }}/week</span>
+              </div>
+              <div class="attr-row">
+                <span class="attr-label">Known Leagues</span>
+                <span class="attr-value leagues">{{ getLeagueNames(scout.knownLeagues) }}</span>
+              </div>
+            </div>
+            <div class="scout-actions">
+              <button class="btn-hire" (click)="openHireModal(scout)">Negotiate & Hire</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HIRE MODAL -->
+    <div class="modal-overlay" *ngIf="showHireModal" (click)="closeHireModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">Hire Scout: {{ selectedScout?.name }}</div>
+        <div class="modal-body" *ngIf="selectedScout">
+          <div class="modal-stats">
+            <span>Scouting: <strong [style.color]="getAbilityColor(selectedScout.scoutingAbility)">{{ selectedScout.scoutingAbility }}</strong></span>
+            <span>Experience: <strong [style.color]="getAbilityColor(selectedScout.experience)">{{ selectedScout.experience }}</strong></span>
+            <span>Potential: <strong [style.color]="getAbilityColor(selectedScout.judgingPotential)">{{ selectedScout.judgingPotential }}</strong></span>
+          </div>
+          <div class="modal-field">
+            <label>Wage Demand: <strong>{{ formatCurrency(selectedScout.wageDemand) }}/week</strong></label>
+          </div>
+          <div class="modal-field">
+            <label>Your Offer (per week):</label>
+            <input type="number" [(ngModel)]="offeredWage" min="0" class="modal-input">
+          </div>
+          <div class="modal-field">
+            <label>Contract Length:</label>
+            <select [(ngModel)]="contractYears" class="modal-input">
+              <option [value]="1">1 Year</option>
+              <option [value]="2">2 Years</option>
+              <option [value]="3">3 Years</option>
+              <option [value]="4">4 Years</option>
+            </select>
+          </div>
+          <div class="modal-result" *ngIf="hireResultMessage"
+               [class.success]="hireResultSuccess" [class.failure]="!hireResultSuccess">
+            {{ hireResultMessage }}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-submit" (click)="submitHire()" [disabled]="hireLoading">
+            {{ hireLoading ? 'Negotiating...' : 'Submit Offer' }}
+          </button>
+          <button class="btn-cancel" (click)="closeHireModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RENEW MODAL -->
+    <div class="modal-overlay" *ngIf="showRenewModal" (click)="closeRenewModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">Renew Contract: {{ renewScout?.name }}</div>
+        <div class="modal-body" *ngIf="renewScout">
+          <div class="modal-field">
+            <label>Current Wage: <strong>{{ formatCurrency(renewScout.wage) }}/week</strong></label>
+          </div>
+          <div class="modal-field">
+            <label>Wage Demand: <strong>{{ formatCurrency(renewScout.wageDemand) }}/week</strong></label>
+          </div>
+          <div class="modal-field">
+            <label>Your Offer (per week):</label>
+            <input type="number" [(ngModel)]="renewWage" min="0" class="modal-input">
+          </div>
+          <div class="modal-field">
+            <label>Extension Length:</label>
+            <select [(ngModel)]="renewYears" class="modal-input">
+              <option [value]="1">+1 Year</option>
+              <option [value]="2">+2 Years</option>
+              <option [value]="3">+3 Years</option>
+            </select>
+          </div>
+          <div class="modal-result" *ngIf="renewResultMessage"
+               [class.success]="renewResultSuccess" [class.failure]="!renewResultSuccess">
+            {{ renewResultMessage }}
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-submit" (click)="submitRenew()" [disabled]="renewLoading">
+            {{ renewLoading ? 'Negotiating...' : 'Submit Offer' }}
+          </button>
+          <button class="btn-cancel" (click)="closeRenewModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ASSIGN MODAL -->
+    <div class="modal-overlay" *ngIf="showAssignModal" (click)="closeAssignModal()">
+      <div class="modal-content assign-modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">Send {{ assignScout?.name }} to Scout a Player</div>
+        <div class="modal-body">
+          <div class="modal-field">
+            <label>Search Player:</label>
+            <input type="text" [(ngModel)]="playerSearchQuery" (input)="filterPlayers()"
+                   placeholder="Search by name, team, or position..." class="modal-input search-input">
+          </div>
+          <div class="modal-result" *ngIf="assignResultMessage"
+               [class.success]="assignResultSuccess" [class.failure]="!assignResultSuccess">
+            {{ assignResultMessage }}
+          </div>
+          <div class="player-list">
+            <div class="player-row" *ngFor="let p of filteredPlayers" (click)="assignToPlayer(p)">
+              <span class="p-name">{{ p.name }}</span>
+              <span class="p-pos">{{ p.position }}</span>
+              <span class="p-team">{{ p.teamName }}</span>
+              <span class="p-rating">~{{ p.estimatedRating }}</span>
+              <span class="p-value">{{ formatCurrency(p.transferValue) }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" (click)="closeAssignModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
+</div>

@@ -1,0 +1,664 @@
+<!-- Login Screen -->
+<app-login *ngIf="!authService.isLoggedIn"
+           (loggedIn)="onLoggedIn()"></app-login>
+
+<!-- Game Setup Screen -->
+<app-game-setup *ngIf="authService.isLoggedIn && teamService.setupChecked && !teamService.setupComplete"
+                (setupComplete)="onSetupComplete($event)"></app-game-setup>
+
+<!-- Main Game -->
+<div class="app-container" *ngIf="authService.isLoggedIn && teamService.setupComplete">
+
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <span class="fm-logo">FM</span> 24
+    </div>
+
+    <!-- Always visible -->
+    <div class="menu-group">
+      <a routerLink="/home" routerLinkActive="active">Home</a>
+      <a routerLink="/inbox" routerLinkActive="active">Inbox</a>
+      <a href="javascript:void(0)" (click)="openMyManager()">My Manager</a>
+    </div>
+
+    <div class="border"></div>
+
+    <!-- Fired / Free Agent: show job search + read-only browsing -->
+    <div class="menu-group" *ngIf="teamService.managerFired">
+      <a routerLink="/job-search" routerLinkActive="active" class="job-search-link">Job Search</a>
+      <a routerLink="/hall-of-fame/managers" routerLinkActive="active">Hall of Fame</a>
+    </div>
+    <div class="border" *ngIf="teamService.managerFired"></div>
+    <div class="menu-group" *ngIf="teamService.managerFired">
+      <a routerLink="/competition-list" routerLinkActive="active">Competitions</a>
+      <a routerLink="/coefficients" routerLinkActive="active">Coefficients</a>
+      <a routerLink="/all-time-champions" routerLinkActive="active">Champions</a>
+      <a routerLink="/stats/scorers" routerLinkActive="active">Top Scorers</a>
+      <a routerLink="/manager-leaderboard" routerLinkActive="active">Manager Rankings</a>
+    </div>
+
+    <!-- Normal: show team pages -->
+    <div class="menu-group" *ngIf="!teamService.managerFired">
+      <a [routerLink]="['/team', teamService.teamId]" routerLinkActive="active">Squad</a>
+      <a [routerLink]="['/gallery', teamService.teamId]" routerLinkActive="active">Card Gallery</a>
+      <a routerLink="/squad-planner" routerLinkActive="active">Squad Planner</a>
+      <a routerLink="/squad-dynamics" routerLinkActive="active">Dynamics</a>
+      <a [routerLink]="['/tactics', teamService.teamId]" routerLinkActive="active">Tactics</a>
+      <a routerLink="/tactics" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Tactics Advisor</a>
+      <a routerLink="/simulate" routerLinkActive="active">Simulator</a>
+      <a routerLink="/data-hub" routerLinkActive="active">Data Hub</a>
+      <a routerLink="/assistant" routerLinkActive="active">Assistant Manager</a>
+      <a routerLink="/staff" routerLinkActive="active">Staff</a>
+      <a routerLink="/training" routerLinkActive="active">Training</a>
+      <a routerLink="/medical" routerLinkActive="active">Medical Centre</a>
+      <a routerLink="/youth-academy" routerLinkActive="active">Youth Academy</a>
+    </div>
+
+    <div class="border"></div>
+
+    <div class="menu-group" *ngIf="!teamService.managerFired">
+      <a [routerLink]="['/fixtures', teamService.teamId]" routerLinkActive="active">Schedule</a>
+      <a routerLink="/friendlies" routerLinkActive="active">Friendlies</a>
+      <a routerLink="/competition-list" routerLinkActive="active">Competitions</a>
+      <a routerLink="/coefficients" routerLinkActive="active">Coefficients</a>
+      <a routerLink="/all-time-champions" routerLinkActive="active">Champions</a>
+    </div>
+
+    <div class="border" *ngIf="!teamService.managerFired"></div>
+
+    <div class="menu-group" *ngIf="!teamService.managerFired">
+      <a routerLink="/scouting" routerLinkActive="active">Scouting</a>
+      <a [routerLink]="['/transfers', teamService.teamId, teamService.currentSeason]" routerLinkActive="active">Transfers</a>
+    </div>
+
+    <div class="border" *ngIf="!teamService.managerFired"></div>
+
+    <div class="menu-group" *ngIf="!teamService.managerFired">
+      <a [routerLink]="['/team', teamService.teamId]" routerLinkActive="active">Club Info</a>
+      <a routerLink="/stats/scorers" routerLinkActive="active">Club Vision</a>
+      <a routerLink="/finances" routerLinkActive="active">Finances</a>
+      <a routerLink="/stadium" routerLinkActive="active">Stadium</a>
+    </div>
+
+    <div class="border"></div>
+
+    <div class="menu-group">
+      <a [routerLink]="['/season-summary', teamService.currentSeason > 1 ? teamService.currentSeason - 1 : 1]" routerLinkActive="active">Season Summary</a>
+    </div>
+
+    <div class="border"></div>
+
+    <div class="menu-group bottom-group">
+      <a routerLink="/dev-center" routerLinkActive="active">Dev. Centre</a>
+      <a routerLink="/animation-preview" routerLinkActive="active">Anim. Preview</a>
+      <a href="javascript:void(0)" (click)="saveGame()" class="save-link">Save Game</a>
+      <a href="javascript:void(0)" (click)="triggerLoadGame()" class="load-link">Load Game</a>
+      <input type="file" #fileInput style="display:none" accept=".json" (change)="loadGame($event)">
+    </div>
+
+    <div class="menu-group user-group">
+      <span class="user-label">{{ authService.currentUsername }}</span>
+      <a href="javascript:void(0)" (click)="logout()" class="logout-link">Logout</a>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <!-- Job-offer banner: pinned at the top whenever any offer is pending.
+         Clicking it opens the accept/decline modal. CONTINUE is disabled
+         below as long as offers are pending. -->
+    <div *ngIf="pendingOffers.length > 0" class="job-offer-banner" (click)="openOfferModal()">
+      <span class="job-offer-icon">📩</span>
+      <span class="job-offer-text">
+        You have {{ pendingOffers.length }} pending job offer{{ pendingOffers.length === 1 ? '' : 's' }}.
+        Decide before continuing.
+      </span>
+      <button class="job-offer-action">Review</button>
+    </div>
+
+    <!-- Game Top Bar -->
+    <div class="game-top-bar">
+      <button class="continue-btn" (click)="advanceGame()"
+              [disabled]="advancing || pendingOffers.length > 0"
+              [title]="pendingOffers.length > 0 ? 'Resolve your job offer(s) first' : ''">
+        {{ advancing ? 'Processing...' : (pendingOffers.length > 0 ? 'OFFER PENDING' : 'CONTINUE') }}
+      </button>
+      <div class="date-info">
+        <span class="day-date">{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }}</span>
+        <span class="day-phase">{{ teamService.currentPhase }} - {{ teamService.seasonPhase }}</span>
+      </div>
+      <div class="season-info">
+        Season {{ teamService.currentSeason }}
+      </div>
+    </div>
+
+    <!-- Event Feed (shows last processed events) -->
+    <div class="event-feed" *ngIf="lastEvents.length > 0">
+      <div class="event-item" *ngFor="let event of lastEvents" [ngClass]="getEventClass(event.type)">
+        <span class="event-icon">{{ getEventIcon(event.type) }}</span>
+        <span class="event-title">{{ event.title }}</span>
+        <span class="event-details" *ngIf="event.details">{{ event.details }}</span>
+      </div>
+    </div>
+
+    <!-- Match Result Modal -->
+    <div class="modal-overlay" *ngIf="showMatchResult && matchResult" (click)="$event.stopPropagation()">
+      <div class="match-result-modal">
+        <div class="mr-competition">{{ matchResult.competitionName }} - Matchday {{ matchResult.matchday }}</div>
+        <div class="mr-teams">
+          <div class="mr-team" [class.mr-winner]="matchResult.score?.split(' - ')[0] > matchResult.score?.split(' - ')[1]">
+            <span class="mr-team-name"><a [routerLink]="['/team', matchResult.team1Id]" class="fm-link">{{ matchResult.team1Name }}</a></span>
+          </div>
+          <div class="mr-score">{{ matchResult.score }}</div>
+          <div class="mr-team" [class.mr-winner]="matchResult.score?.split(' - ')[1] > matchResult.score?.split(' - ')[0]">
+            <span class="mr-team-name"><a [routerLink]="['/team', matchResult.team2Id]" class="fm-link">{{ matchResult.team2Name }}</a></span>
+          </div>
+        </div>
+
+        <div class="mr-events">
+          <div class="mr-events-column">
+            <div *ngFor="let goal of getGoals(matchResult.team1Id)" class="mr-goal">
+              <a *ngIf="goal.playerId" [routerLink]="['/player', goal.playerId]" class="fm-link">{{ goal.playerName }}</a><ng-container *ngIf="!goal.playerId">{{ goal.playerName }}</ng-container> {{ goal.minute }}'
+              <span class="mr-goal-detail" *ngIf="goal.details">{{ goal.details }}</span>
+            </div>
+          </div>
+          <div class="mr-events-divider"></div>
+          <div class="mr-events-column mr-events-right">
+            <div *ngFor="let goal of getGoals(matchResult.team2Id)" class="mr-goal">
+              {{ goal.minute }}' <a *ngIf="goal.playerId" [routerLink]="['/player', goal.playerId]" class="fm-link">{{ goal.playerName }}</a><ng-container *ngIf="!goal.playerId">{{ goal.playerName }}</ng-container>
+              <span class="mr-goal-detail" *ngIf="goal.details">{{ goal.details }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mr-all-events" *ngIf="matchResult.matchEvents?.length > 0">
+          <div class="mr-timeline-title">Match Timeline</div>
+          <div *ngFor="let event of matchResult.matchEvents" class="mr-timeline-event"
+               [class.mr-event-home]="event.teamId === matchResult.team1Id"
+               [class.mr-event-away]="event.teamId === matchResult.team2Id">
+            <span class="mr-event-minute">{{ event.minute }}'</span>
+            <span class="mr-event-icon" [ngSwitch]="event.eventType">
+              <ng-container *ngSwitchCase="'goal'">&#9917;</ng-container>
+              <ng-container *ngSwitchCase="'assist'">&#127919;</ng-container>
+              <ng-container *ngSwitchCase="'yellow_card'">&#129299;</ng-container>
+              <ng-container *ngSwitchCase="'red_card'">&#128308;</ng-container>
+              <ng-container *ngSwitchCase="'substitution'">&#128260;</ng-container>
+              <ng-container *ngSwitchDefault>&#8226;</ng-container>
+            </span>
+            <span class="mr-event-text"><a *ngIf="event.playerId" [routerLink]="['/player', event.playerId]" class="fm-link">{{ event.playerName }}</a><ng-container *ngIf="!event.playerId">{{ event.playerName }}</ng-container></span>
+            <span class="mr-event-detail" *ngIf="event.details && event.eventType === 'goal'">{{ event.details }}</span>
+          </div>
+        </div>
+
+        <button class="mr-close-btn" (click)="closeMatchResult()">Continue</button>
+      </div>
+    </div>
+
+    <!-- Live Match Modal -->
+    <div class="modal-overlay live-match-overlay" *ngIf="showLiveMatch && liveMatchData" (click)="$event.stopPropagation()">
+      <div class="live-match-modal">
+        <!-- Header -->
+        <div class="lm-header">
+          <span class="lm-competition">{{ liveMatchData.competitionName }} - Round {{ liveMatchData.round }}</span>
+        </div>
+
+        <!-- Scoreboard -->
+        <div class="lm-scoreboard">
+          <div class="lm-team lm-home">
+            <span class="lm-team-name">{{ liveMatchData.homeTeamName }}</span>
+          </div>
+          <div class="lm-score-box">
+            <span class="lm-score">{{ scoreboardHomeScore }} - {{ scoreboardAwayScore }}</span>
+            <span class="lm-minute" [class.lm-minute-et]="syntheticPhase !== 'none'">{{ scoreboardMinuteLabel }}</span>
+          </div>
+          <div class="lm-team lm-away">
+            <span class="lm-team-name">{{ liveMatchData.awayTeamName }}</span>
+          </div>
+        </div>
+
+        <!-- Speed controls + substitutions -->
+        <div class="lm-controls">
+          <button class="lm-speed-btn" [class.active]="liveMatchSpeed === 1" (click)="setLiveMatchSpeed(1)">1x</button>
+          <button class="lm-speed-btn" [class.active]="liveMatchSpeed === 2" (click)="setLiveMatchSpeed(2)">2x</button>
+          <button class="lm-speed-btn" [class.active]="liveMatchSpeed === 4" (click)="setLiveMatchSpeed(4)">4x</button>
+          <button class="lm-speed-btn" [class.active]="liveMatchSpeed === 8" (click)="setLiveMatchSpeed(8)">8x</button>
+          <button class="lm-skip-btn" (click)="skipToEnd()">Skip to End</button>
+          <button class="lm-sub-btn" (click)="openSubModal()" [disabled]="!canMakeSubstitution">
+            Make Substitution
+            <span class="lm-sub-count" *ngIf="liveMatchData">({{ userSubsRemaining }}/3)</span>
+          </button>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="lm-progress-bar">
+          <div class="lm-progress-fill"
+               [style.width.%]="((liveCurrentMinute?.minute ?? 0) / (90 + (liveMatchData?.firstHalfStoppage || 0) + (liveMatchData?.secondHalfStoppage || 0))) * 100"></div>
+          <span class="lm-progress-half"
+                *ngIf="(liveCurrentMinute?.minute ?? 0) >= (45 + (liveMatchData?.firstHalfStoppage || 0))">HT</span>
+        </div>
+
+        <!-- Commentary feed -->
+        <div class="lm-commentary">
+          <div *ngFor="let event of liveVisibleEvents" class="lm-event-row"
+               [class.lm-event-goal]="event.eventType === 'goal'"
+               [class.lm-event-card]="event.eventType === 'yellow_card' || event.eventType === 'red_card'"
+               [class.lm-event-half]="event.eventType === 'half_time' || event.eventType === 'full_time' || event.eventType === 'kickoff'">
+            <span class="lm-event-minute">{{ formatMatchMinute(event.minute, liveMatchData?.firstHalfStoppage) }}</span>
+            <span class="lm-event-icon">{{ getLiveEventIcon(event.eventType) }}</span>
+            <span class="lm-event-text">{{ event.commentary }}</span>
+          </div>
+          <div *ngIf="liveVisibleEvents.length === 0" class="lm-no-events">
+            Match in progress...
+          </div>
+        </div>
+
+        <!-- Toggle between Squad Fitness and Match Facts. Both update live. -->
+        <div class="lm-panel-tabs">
+          <button class="lm-panel-tab" type="button"
+                  [class.active]="liveMatchPanelView === 'squad'"
+                  (click)="setLivePanelView('squad')">Squad Fitness</button>
+          <button class="lm-panel-tab" type="button"
+                  [class.active]="liveMatchPanelView === 'facts'"
+                  (click)="setLivePanelView('facts')">Match Facts</button>
+        </div>
+
+        <!-- Match Facts (live stats) — updates on every /advance response -->
+        <div class="lm-stats lm-stats-live" *ngIf="liveMatchPanelView === 'facts'">
+          <div class="lm-stat-row">
+            <span class="lm-stat-home">{{ liveMatchData.homePossession }}%</span>
+            <span class="lm-stat-label">Possession</span>
+            <span class="lm-stat-away">{{ liveMatchData.awayPossession }}%</span>
+          </div>
+          <div class="lm-stat-row">
+            <span class="lm-stat-home">{{ liveMatchData.homeShots }}</span>
+            <span class="lm-stat-label">Shots</span>
+            <span class="lm-stat-away">{{ liveMatchData.awayShots }}</span>
+          </div>
+          <div class="lm-stat-row">
+            <span class="lm-stat-home">{{ liveMatchData.homeShotsOnTarget }}</span>
+            <span class="lm-stat-label">On Target</span>
+            <span class="lm-stat-away">{{ liveMatchData.awayShotsOnTarget }}</span>
+          </div>
+          <div class="lm-stat-row">
+            <span class="lm-stat-home">{{ liveMatchData.homeCorners }}</span>
+            <span class="lm-stat-label">Corners</span>
+            <span class="lm-stat-away">{{ liveMatchData.awayCorners }}</span>
+          </div>
+          <div class="lm-stat-row">
+            <span class="lm-stat-home">{{ liveMatchData.homeOffsides || 0 }}</span>
+            <span class="lm-stat-label">Offsides</span>
+            <span class="lm-stat-away">{{ liveMatchData.awayOffsides || 0 }}</span>
+          </div>
+          <div class="lm-stat-row">
+            <span class="lm-stat-home">{{ liveMatchData.homeFouls }}</span>
+            <span class="lm-stat-label">Fouls</span>
+            <span class="lm-stat-away">{{ liveMatchData.awayFouls }}</span>
+          </div>
+          <div class="lm-stat-row">
+            <span class="lm-stat-home">{{ liveMatchData.homeYellowCards }}</span>
+            <span class="lm-stat-label">Yellow Cards</span>
+            <span class="lm-stat-away">{{ liveMatchData.awayYellowCards }}</span>
+          </div>
+          <div class="lm-stat-row" *ngIf="liveMatchData.homeRedCards > 0 || liveMatchData.awayRedCards > 0">
+            <span class="lm-stat-home">{{ liveMatchData.homeRedCards }}</span>
+            <span class="lm-stat-label">Red Cards</span>
+            <span class="lm-stat-away">{{ liveMatchData.awayRedCards }}</span>
+          </div>
+        </div>
+
+        <!-- Squad stamina panel — updates from the latest snapshot (≤ current
+             minute). On-pitch players first, then anyone who came off via
+             substitution. Bench players who never played are hidden. -->
+        <div class="lm-stamina-panel" *ngIf="liveMatchPanelView === 'squad' && currentStaminaSnapshot as snap">
+          <div class="lm-stamina-title">
+            <span>Squad Fitness</span>
+            <span class="lm-stamina-min">{{ formatMatchMinute(snap.minute, liveMatchData?.firstHalfStoppage) }}</span>
+          </div>
+          <div class="lm-stamina-cols">
+            <div class="lm-stamina-col">
+              <div *ngFor="let p of snap.homePlayers" class="lm-stamina-row" [class.off-pitch]="!p.onPitch">
+                <span class="lm-stamina-pos">{{ p.position }}</span>
+                <span class="lm-stamina-name">
+                  {{ p.name }}
+                  <span class="lm-stamina-card yc" *ngIf="p.yellowCardMinute > 0" [title]="'Yellow card at minute ' + p.yellowCardMinute"></span>
+                  <span class="lm-stamina-card rc" *ngIf="p.redCardMinute > 0" [title]="'Red card at minute ' + p.redCardMinute"></span>
+                </span>
+                <div class="lm-stamina-bar">
+                  <div class="lm-stamina-fill" [class]="staminaTier(p.stamina)" [style.width.%]="p.stamina"></div>
+                </div>
+                <span class="lm-stamina-val">{{ p.stamina }}</span>
+                <span class="lm-stamina-mins" [title]="'Minutes played'">{{ p.minutesPlayed }}'</span>
+                <span class="lm-stamina-subind" *ngIf="!p.onPitch && p.minutesPlayed > 0 && !p.redCardMinute" title="Substituted off">↓</span>
+                <span class="lm-stamina-subind on" *ngIf="p.onPitch && p.minutesPlayed < snap.minute" title="Came on as sub">↑</span>
+              </div>
+            </div>
+            <div class="lm-stamina-col">
+              <div *ngFor="let p of snap.awayPlayers" class="lm-stamina-row" [class.off-pitch]="!p.onPitch">
+                <span class="lm-stamina-pos">{{ p.position }}</span>
+                <span class="lm-stamina-name">
+                  {{ p.name }}
+                  <span class="lm-stamina-card yc" *ngIf="p.yellowCardMinute > 0" [title]="'Yellow card at minute ' + p.yellowCardMinute"></span>
+                  <span class="lm-stamina-card rc" *ngIf="p.redCardMinute > 0" [title]="'Red card at minute ' + p.redCardMinute"></span>
+                </span>
+                <div class="lm-stamina-bar">
+                  <div class="lm-stamina-fill" [class]="staminaTier(p.stamina)" [style.width.%]="p.stamina"></div>
+                </div>
+                <span class="lm-stamina-val">{{ p.stamina }}</span>
+                <span class="lm-stamina-mins" [title]="'Minutes played'">{{ p.minutesPlayed }}'</span>
+                <span class="lm-stamina-subind" *ngIf="!p.onPitch && p.minutesPlayed > 0 && !p.redCardMinute" title="Substituted off">↓</span>
+                <span class="lm-stamina-subind on" *ngIf="p.onPitch && p.minutesPlayed < snap.minute" title="Came on as sub">↑</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Match Events panel — only at full time, alongside the statistics.
+             Listed in chronological order: goals + cards + subs are always
+             shown; penalty/free-kick non-goals only when there was a visible
+             animation for them (so we never advertise a phase the user
+             didn't actually see). -->
+        <div class="lm-key-events-panel" *ngIf="liveMatchFinished && keyMatchEvents.length > 0">
+          <div class="lm-key-events-title">Match Events</div>
+          <div class="lm-key-events-list">
+            <div *ngFor="let e of keyMatchEvents" class="lm-key-event-row"
+                 [class.lm-key-event-goal]="e.eventType === 'goal'"
+                 [class.lm-key-event-yellow]="e.eventType === 'yellow_card'"
+                 [class.lm-key-event-red]="e.eventType === 'red_card'"
+                 [class.lm-key-event-sub]="e.eventType === 'substitution'"
+                 [class.lm-key-event-miss]="e.eventType === 'shot_wide' || e.eventType === 'shot_saved'">
+              <span class="lm-key-event-minute">{{ formatMatchMinute(e.minute, liveMatchData?.firstHalfStoppage) }}</span>
+              <span class="lm-key-event-icon">{{ keyEventIcon(e.eventType, e.commentary) }}</span>
+              <span class="lm-key-event-team">{{ e.teamName }}</span>
+              <span class="lm-key-event-text">{{ e.commentary }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Synthetic extra-time / penalty sequence (FRONTEND-ONLY, cosmetic —
+             the backend coin-flips the winner; this is a visual fill-in so the
+             video doesn't jump straight from 90' to the result). -->
+        <div class="lm-et-panel" *ngIf="showSyntheticOverlay">
+          <div class="lm-et-banner">{{ syntheticEtBanner }}</div>
+
+          <!-- Extra-time mini commentary -->
+          <div class="lm-et-feed" *ngIf="syntheticEtFeed.length > 0">
+            <div *ngFor="let e of syntheticEtFeed" class="lm-et-feed-row">
+              <span class="lm-et-feed-min">{{ e.minute }}'</span>
+              <span class="lm-et-feed-text">{{ e.text }}</span>
+            </div>
+          </div>
+
+          <!-- Penalty shootout grid -->
+          <div class="lm-pen-board" *ngIf="syntheticDecidedByPenalties && penaltyKicks.length > 0">
+            <div class="lm-pen-score">
+              <span class="lm-pen-team">{{ liveMatchData.homeTeamName }}</span>
+              <span class="lm-pen-tally">{{ penaltyHomeScore }} - {{ penaltyAwayScore }}</span>
+              <span class="lm-pen-team">{{ liveMatchData.awayTeamName }}</span>
+            </div>
+            <div class="lm-pen-rows">
+              <div class="lm-pen-side">
+                <ng-container *ngFor="let k of penaltyKicks">
+                  <span *ngIf="k.team === 'home'" class="lm-pen-dot"
+                        [class.scored]="k.revealed && k.scored"
+                        [class.missed]="k.revealed && !k.scored"
+                        [class.pending]="!k.revealed"
+                        [title]="k.taker">{{ k.revealed ? (k.scored ? '✓' : '✗') : '•' }}</span>
+                </ng-container>
+              </div>
+              <div class="lm-pen-side">
+                <ng-container *ngFor="let k of penaltyKicks">
+                  <span *ngIf="k.team === 'away'" class="lm-pen-dot"
+                        [class.scored]="k.revealed && k.scored"
+                        [class.missed]="k.revealed && !k.scored"
+                        [class.pending]="!k.revealed"
+                        [title]="k.taker">{{ k.revealed ? (k.scored ? '✓' : '✗') : '•' }}</span>
+                </ng-container>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Knockout outcome (aggregate / extra time / penalties / first leg) -->
+        <div class="lm-ko-result" *ngIf="showKnockoutReveal && liveKnockoutResultText">
+          {{ liveKnockoutResultText }}
+        </div>
+
+        <!-- Continue button -->
+        <button class="lm-continue-btn" *ngIf="showKnockoutReveal" (click)="closeLiveMatch()">Continue</button>
+      </div>
+    </div>
+
+    <!-- Lineup preview — shown ONCE at the start of every live match. Layout
+         is a single green pitch with both teams on it: home occupies the top
+         half (GK at the back, ATK at the centre line), away mirrors below.
+         Banner sits ABOVE the pitch so it never overlaps players. -->
+    <div class="modal-overlay lineup-preview-overlay"
+         *ngIf="showLineupPreview && lineupPreviewData"
+         (click)="dismissLineupPreview()">
+      <div class="lineup-card">
+
+        <!-- Top banner — title + matchup -->
+        <div class="lineup-banner-top">
+          <span class="lineup-title">STARTING LINE UP</span>
+          <span class="lineup-vs">
+            <span class="lineup-vs-home">{{ lineupPreviewData.homeTeamName }}</span>
+            <span class="lineup-vs-sep">vs</span>
+            <span class="lineup-vs-away">{{ lineupPreviewData.awayTeamName }}</span>
+          </span>
+        </div>
+
+        <!-- The pitch itself: green field with markings + two team halves -->
+        <div class="lineup-pitch-board">
+
+          <!-- Home label strip (top edge of the card, outside the pitch markings) -->
+          <div class="lineup-team-strip lineup-team-strip-home">
+            <span class="lineup-team-strip-name">{{ lineupPreviewData.homeTeamName }}</span>
+            <span class="lineup-team-strip-formation">{{ formationOf(lineupPreviewData.homeTeamId) }}</span>
+          </div>
+
+          <!-- HOME side (top half of the pitch) -->
+          <div class="lineup-side lineup-home">
+            <div class="lineup-pitch lineup-pitch-home">
+              <div class="lineup-row"
+                   *ngFor="let r of lineupRows(lineupPreviewData.homeTeamId)"
+                   [class.lineup-row-gk]="r.row === 'GK'"
+                   [class.lineup-row-def]="r.row === 'DEF'"
+                   [class.lineup-row-mid]="r.row === 'MID'"
+                   [class.lineup-row-atk]="r.row === 'ATK'">
+                <div class="lineup-player"
+                     *ngFor="let p of r.players; let i = index"
+                     [style.grid-column]="lineupColumn(r.players.length, i)">
+                  <div class="lineup-shirt"
+                       [style.background]="p.position === 'GK' ?
+                          (lineupPreviewData.homeKit?.gkPrimary || '#fde047') :
+                          (lineupPreviewData.homeKit?.outfieldPrimary || '#3498db')"
+                       [style.border-color]="p.position === 'GK' ?
+                          (lineupPreviewData.homeKit?.gkBorder || '#ca8a04') :
+                          (lineupPreviewData.homeKit?.outfieldBorder || '#2980b9')">
+                    {{ shirtLabel(p) }}
+                  </div>
+                  <div class="lineup-name">{{ surnameOf(p) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AWAY side (bottom half — column-reverse so ATKs meet at centre) -->
+          <div class="lineup-side lineup-away">
+            <div class="lineup-pitch lineup-pitch-away">
+              <div class="lineup-row"
+                   *ngFor="let r of lineupRows(lineupPreviewData.awayTeamId)"
+                   [class.lineup-row-gk]="r.row === 'GK'"
+                   [class.lineup-row-def]="r.row === 'DEF'"
+                   [class.lineup-row-mid]="r.row === 'MID'"
+                   [class.lineup-row-atk]="r.row === 'ATK'">
+                <div class="lineup-player"
+                     *ngFor="let p of r.players; let i = index"
+                     [style.grid-column]="lineupColumn(r.players.length, i)">
+                  <div class="lineup-shirt"
+                       [style.background]="p.position === 'GK' ?
+                          (lineupPreviewData.awayKit?.gkPrimary || '#22d3ee') :
+                          (lineupPreviewData.awayKit?.outfieldPrimary || '#e74c3c')"
+                       [style.border-color]="p.position === 'GK' ?
+                          (lineupPreviewData.awayKit?.gkBorder || '#0e7490') :
+                          (lineupPreviewData.awayKit?.outfieldBorder || '#c0392b')">
+                    {{ shirtLabel(p) }}
+                  </div>
+                  <div class="lineup-name">{{ surnameOf(p) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Away label strip (bottom edge of the card) -->
+          <div class="lineup-team-strip lineup-team-strip-away">
+            <span class="lineup-team-strip-formation">{{ formationOf(lineupPreviewData.awayTeamId) }}</span>
+            <span class="lineup-team-strip-name">{{ lineupPreviewData.awayTeamName }}</span>
+          </div>
+        </div>
+
+        <div class="lineup-hint">Tap or press SPACE to skip</div>
+      </div>
+    </div>
+
+    <!-- Goal Animation Modal -->
+    <div class="modal-overlay goal-anim-overlay" *ngIf="showGoalAnimation && goalAnimationData" (click)="$event.stopPropagation()">
+      <div class="goal-anim-modal">
+        <div class="ga-header">
+          <span class="ga-anim-type" *ngIf="goalAnimationData.animationType !== 'OPEN_PLAY'">{{ goalAnimationData.animationType === 'PENALTY' ? 'PENALTY' : 'FREE KICK' }}</span>
+          <span class="ga-scorer-name">{{ goalAnimationData.scorerName }}</span>
+          <span class="ga-minute">{{ formatMatchMinute(goalAnimationData.minute, goalAnimationData.firstHalfStoppage) }}</span>
+        </div>
+        <div class="ga-canvas-wrapper">
+          <canvas #goalCanvas width="640" height="400" class="ga-canvas"></canvas>
+        </div>
+        <div class="ga-controls">
+          <button class="ga-skip-btn" *ngIf="!goalAnimationFinished" (click)="skipGoalAnimation()">Skip</button>
+          <button class="ga-replay-btn" *ngIf="goalAnimationFinished" (click)="replayGoalAnimation()">Replay</button>
+          <button class="ga-continue-btn" *ngIf="goalAnimationFinished" (click)="closeGoalAnimation()">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Substitution Modal (Faza 3) — opened from the live match controls. -->
+    <div class="modal-overlay sub-modal-overlay" *ngIf="showSubModal" (click)="$event.stopPropagation()">
+      <div class="sub-modal">
+        <div class="sub-modal-header">
+          <h2>Make Substitution</h2>
+          <span class="sub-modal-sub-count">{{ userSubsRemaining }}/3 remaining</span>
+        </div>
+
+        <div class="sub-modal-cols">
+          <!-- ON-PITCH (choose who comes off) -->
+          <div class="sub-modal-col">
+            <div class="sub-modal-col-title">On Pitch — choose who comes off</div>
+            <div class="sub-modal-list">
+              <div *ngFor="let p of userPitch"
+                   class="sub-modal-row"
+                   [class.sub-selected]="subPlayerOutId === p.playerId"
+                   (click)="selectSubOut(p.playerId)">
+                <span class="sub-pos">{{ p.position }}</span>
+                <span class="sub-name">{{ p.name }}</span>
+                <div class="sub-bar">
+                  <div class="sub-bar-fill" [class]="staminaTier(p.stamina)" [style.width.%]="p.stamina"></div>
+                </div>
+                <span class="sub-val">{{ p.stamina }}</span>
+              </div>
+              <div *ngIf="userPitch.length === 0" class="sub-empty">No data available.</div>
+            </div>
+          </div>
+
+          <!-- BENCH (choose who comes on) -->
+          <div class="sub-modal-col">
+            <div class="sub-modal-col-title">Bench — choose who comes on</div>
+            <div class="sub-modal-list">
+              <div *ngFor="let p of userBench"
+                   class="sub-modal-row"
+                   [class.sub-selected]="subPlayerInId === p.playerId"
+                   [class.sub-recommended]="benchIsRecommended(p)"
+                   (click)="selectSubIn(p.playerId)">
+                <span class="sub-pos">{{ p.position }}</span>
+                <span class="sub-name">{{ p.name }}</span>
+                <div class="sub-bar">
+                  <div class="sub-bar-fill" [class]="staminaTier(p.stamina)" [style.width.%]="p.stamina"></div>
+                </div>
+                <span class="sub-val">{{ p.stamina }}</span>
+              </div>
+              <div *ngIf="userBench.length === 0" class="sub-empty">No bench players available.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sub-modal-error" *ngIf="subError">{{ subError }}</div>
+
+        <div class="sub-modal-actions">
+          <button class="sub-cancel-btn" (click)="closeSubModal()" [disabled]="subSubmitting">Cancel</button>
+          <button class="sub-confirm-btn"
+                  (click)="applySubstitution()"
+                  [disabled]="subSubmitting || subPlayerOutId == null || subPlayerInId == null">
+            {{ subSubmitting ? 'Applying...' : 'Apply' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Press Conference Modal -->
+    <div class="modal-overlay" *ngIf="showPressConference" (click)="$event.stopPropagation()">
+      <div class="press-conference-modal">
+        <div class="pc-header">
+          <span class="pc-icon">&#127908;</span>
+          <h2>{{ pressConferenceTitle }}</h2>
+        </div>
+        <p class="pc-question">{{ pcQuestionLine() }}</p>
+        <div class="pc-options">
+          <button class="pc-btn pc-confident" (click)="respondToPressConference('confident')" [disabled]="pressConferenceResponding">
+            <span class="pc-btn-title">Confident</span>
+            <span class="pc-btn-desc">Express full confidence in the team (+2 morale, risky reputation)</span>
+          </button>
+          <button class="pc-btn pc-cautious" (click)="respondToPressConference('cautious')" [disabled]="pressConferenceResponding">
+            <span class="pc-btn-title">Cautious</span>
+            <span class="pc-btn-desc">Give a measured, safe response (no morale/reputation change)</span>
+          </button>
+          <button class="pc-btn pc-aggressive" (click)="respondToPressConference('aggressive')" [disabled]="pressConferenceResponding">
+            <span class="pc-btn-title">Aggressive</span>
+            <span class="pc-btn-desc">Make bold statements (+3 morale, high risk reputation)</span>
+          </button>
+          <button class="pc-btn pc-deflect" (click)="respondToPressConference('deflect')" [disabled]="pressConferenceResponding">
+            <span class="pc-btn-title">Deflect</span>
+            <span class="pc-btn-desc">Dodge all questions (-1 morale, safe reputation)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <router-outlet></router-outlet>
+  </main>
+
+  <!-- ===== Job Offer Modal ===== -->
+  <div class="modal-overlay" *ngIf="showOfferModal && pendingOffers.length > 0">
+    <div class="offer-modal">
+      <div class="offer-modal-header">
+        <h2>📩 Job Offer{{ pendingOffers.length > 1 ? 's' : '' }}</h2>
+        <button class="modal-close" (click)="closeOfferModal()">×</button>
+      </div>
+      <div class="offer-list">
+        <div *ngFor="let offer of pendingOffers" class="offer-card">
+          <div class="offer-team">
+            <span class="offer-team-name">{{ offer.teamName }}</span>
+            <span class="offer-team-rep">Reputation {{ offer.teamReputation }}</span>
+          </div>
+          <p class="offer-pitch">"{{ offer.pitch }}"</p>
+          <div class="offer-terms">
+            <div><span class="term-label">Wage</span><span class="term-value">{{ offer.offeredWage | currency:'EUR':'symbol':'1.0-0' }}/month</span></div>
+            <div><span class="term-label">Signing bonus</span><span class="term-value">{{ offer.signingBonus | currency:'EUR':'symbol':'1.0-0' }}</span></div>
+            <div><span class="term-label">Contract</span><span class="term-value">{{ offer.contractLengthSeasons }} seasons</span></div>
+          </div>
+          <div class="offer-actions">
+            <button class="offer-decline" (click)="declineOffer(offer)" [disabled]="offerActionInFlight">Decline</button>
+            <button class="offer-accept" (click)="acceptOffer(offer)" [disabled]="offerActionInFlight">Accept</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

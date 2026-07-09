@@ -1,0 +1,93 @@
+<div class="anim-preview-page">
+  <h2>Live Match Preview</h2>
+  <p class="lmp-subtitle">
+    Simulates a full match with the current live engine and plays back its
+    timeline of minute events &mdash; the same data the in-game live-match view uses.
+  </p>
+
+  <!-- Controls -->
+  <div class="anim-controls">
+    <div class="control-row">
+      <label>Home Team
+        <select [(ngModel)]="teamId1">
+          <option [value]="0" disabled>-- Select --</option>
+          <option *ngFor="let t of teams" [value]="t.id">{{ t.name }}</option>
+        </select>
+      </label>
+
+      <button class="btn-swap" (click)="swapTeams()" title="Swap teams">&#8644;</button>
+
+      <label>Away Team
+        <select [(ngModel)]="teamId2">
+          <option [value]="0" disabled>-- Select --</option>
+          <option *ngFor="let t of teams" [value]="t.id">{{ t.name }}</option>
+        </select>
+      </label>
+
+      <label>Speed
+        <select [(ngModel)]="speed" (ngModelChange)="setSpeed($event)">
+          <option [ngValue]="1">1x</option>
+          <option [ngValue]="2">2x</option>
+          <option [ngValue]="4">4x</option>
+          <option [ngValue]="8">8x</option>
+        </select>
+      </label>
+
+      <button class="btn-generate" (click)="generate()"
+              [disabled]="loading || !teamId1 || !teamId2 || teamId1 === teamId2">
+        {{ loading ? 'Simulating...' : 'Simulate' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Live match playback -->
+  <div class="anim-canvas-area lmp-board" *ngIf="liveMatchData">
+    <div class="lmp-comp" *ngIf="liveMatchData.competitionName">
+      {{ liveMatchData.competitionName }}
+    </div>
+
+    <!-- Scoreboard -->
+    <div class="lmp-scoreboard">
+      <span class="lmp-team lmp-home">{{ liveMatchData.homeTeamName }}</span>
+      <span class="lmp-score">{{ homeScore }} - {{ awayScore }}</span>
+      <span class="lmp-team lmp-away">{{ liveMatchData.awayTeamName }}</span>
+    </div>
+    <div class="lmp-minute">
+      {{ formatMatchMinute(currentMinute?.minute ?? 0, liveMatchData?.firstHalfStoppage) }}
+      <span class="lmp-ft" *ngIf="finished">FT</span>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="lmp-progress">
+      <div class="lmp-progress-fill" [style.width.%]="progressPct"></div>
+    </div>
+
+    <!-- Event feed -->
+    <div class="lmp-feed">
+      <div *ngFor="let event of visibleEvents" class="lmp-event"
+           [class.lmp-event-goal]="event.eventType === 'goal'"
+           [class.lmp-event-card]="event.eventType === 'yellow_card' || event.eventType === 'red_card'"
+           [class.lmp-event-half]="event.eventType === 'half_time' || event.eventType === 'full_time' || event.eventType === 'kickoff'">
+        <span class="lmp-event-minute">{{ formatMatchMinute(event.minute, liveMatchData?.firstHalfStoppage) }}</span>
+        <span class="lmp-event-icon">{{ getLiveEventIcon(event.eventType) }}</span>
+        <span class="lmp-event-text">{{ event.commentary || event.playerName }}</span>
+      </div>
+      <div *ngIf="visibleEvents.length === 0" class="lmp-no-events">
+        Kick-off! Events will appear here as the match unfolds&hellip;
+      </div>
+    </div>
+
+    <div class="anim-buttons">
+      <button *ngIf="!finished" (click)="skip()">Skip to Full Time</button>
+      <button *ngIf="finished" (click)="replay()">Replay</button>
+      <button (click)="generate()">New Match</button>
+      <!-- Deep-link to the per-player ratings for this match (shown at full time). -->
+      <a *ngIf="finished" class="anim-ratings-link"
+         [routerLink]="playerRatingsLink">Player ratings</a>
+    </div>
+  </div>
+
+  <div class="anim-empty" *ngIf="!liveMatchData && !loading">
+    Select two teams and click Simulate to preview a full live match.
+  </div>
+</div>

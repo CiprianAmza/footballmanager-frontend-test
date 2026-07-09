@@ -1,0 +1,234 @@
+<div class="container">
+  <!-- Lista jucătorilor -->
+  <div class="player-list">
+    <h3>Players</h3>
+    <div 
+      class="player-card" 
+      *ngFor="let player of players" 
+      draggable="true" 
+      (dragstart)="drag($event, player)"
+    >
+    {{ player.name }} | {{ player.position }} |
+    <span [style.color]="player.rating | ratingColor" [style.font-weight]="700">{{ player.rating }}⭐</span>
+    | {{ player.age }} ani
+    </div>
+  </div>
+
+  <select id="competitionType" [(ngModel)]="selectedTactic" (change)="onTacticChange(selectedTactic)" style="width:100px; height:100px;">
+    <option *ngFor="let opt of formationOptions" [value]="opt.key">{{ opt.label }}</option>
+  </select>
+  
+  <!-- Buton pentru a goli toate selecțiile -->
+  <button (click)="removeAll()" style="width:100px;height:50px;">Remove All</button>
+
+  <!-- Terenul de fotbal -->
+  <div class="field">
+    <h3>Formation</h3>
+    <div class="grid">
+      <div *ngFor="let position of fieldPositions; index as i"
+        class="position-box"
+        [class.has-player]="position.player"
+        [class.has-role]="position.role"
+        [style.transform]="'translate(' + cellWidthShift(i) + '%, ' + cellDefLineShift(i) + '%)'"
+        (dragover)="allowDrop($event)"
+        (drop)="drop($event, i)"
+        (contextmenu)="onRightClick(i, $event)"
+        [ngClass]="{'hidden-position': !allowedIndexes.includes(i)}">
+        <div *ngIf="position.player" class="player-slot" (click)="openRoleSelector(position)">
+          <span class="slot-name">{{ position.player.name }}</span>
+          <span class="slot-info">{{ position.player.position }} |
+            <span [style.color]="position.player.rating | ratingColor" [style.font-weight]="700">{{ position.player.rating }}&#11088;</span>
+          </span>
+          <span class="slot-role" *ngIf="position.role">{{ position.role }} ({{ position.duty }})</span>
+          <span class="slot-role slot-no-role" *ngIf="!position.role">Click to assign role</span>
+          <span class="slot-instr-count" *ngIf="position.instructions.length > 0">{{ position.instructions.length }} instr.</span>
+        </div>
+
+        <!-- Instructions Button -->
+        <button class="instr-btn" *ngIf="position.player" (click)="openInstructionsPanel(position); $event.stopPropagation()" title="Player Instructions">&#9881;</button>
+
+        <!-- Instructions Popup -->
+        <div class="instr-popup" *ngIf="activeInstructionsSlot === position && position.player" (click)="$event.stopPropagation()">
+          <div class="role-popup-header">
+            <span>{{ position.player.name }} - Instructions</span>
+            <button class="role-popup-close" (click)="closeInstructionsPanel()">&#x2715;</button>
+          </div>
+          <div *ngIf="loadingInstructions" class="role-loading">Loading...</div>
+          <div *ngIf="!loadingInstructions" class="instr-list">
+            <div *ngFor="let cat of getInstructionCategories()" class="instr-category">
+              <div class="instr-cat-title">{{ cat }}</div>
+              <div class="instr-item" *ngFor="let instr of getInstructionsByCategory(cat)"
+                   [class.instr-active]="hasInstruction(position, instr.name)"
+                   (click)="toggleInstruction(position, instr.name)"
+                   [title]="instr.description">
+                <span class="instr-check">{{ hasInstruction(position, instr.name) ? '&#x2611;' : '&#x2610;' }}</span>
+                <span class="instr-name">{{ instr.name }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Role Selector Popup -->
+        <div class="role-popup" *ngIf="activeRoleSlot === position && position.player" (click)="$event.stopPropagation()">
+          <div class="role-popup-header">
+            <span>{{ position.player.name }} - Roles</span>
+            <button class="role-popup-close" (click)="closeRoleSelector()">&#x2715;</button>
+          </div>
+          <div *ngIf="loadingRoles" class="role-loading">Loading roles...</div>
+          <div *ngIf="!loadingRoles && availableRoles.length === 0" class="role-loading">No roles available</div>
+          <div class="role-list" *ngIf="!loadingRoles">
+            <div class="role-item" *ngFor="let role of availableRoles">
+              <div class="role-item-header">
+                <span class="role-name">{{ role.name }}</span>
+                <span class="role-suit" [ngClass]="getSuitabilityClass(role.suitability || 0)">{{ role.suitability }}%</span>
+              </div>
+              <div class="role-duties">
+                <button class="duty-btn" *ngFor="let d of role.duties"
+                        [class.active-duty]="position.role === role.name && position.duty === d"
+                        (click)="selectRole(position, role, d)">
+                  {{ d.charAt(0) }}
+                </button>
+              </div>
+            </div>
+          </div>
+          <button class="clear-role-btn" *ngIf="position.role" (click)="clearRole(position)">Clear Role</button>
+        </div>
+      </div>
+    </div>
+    <!-- Secțiunea pentru rezerve -->
+    <div class="substitutes">
+      <h3>Substitutes</h3>
+      <div class="grid-substitutes">
+        <div *ngFor="let position of substitutes; index as i" 
+          class="position-box"
+          (dragover)="allowDrop($event)" 
+          (drop)="dropSubstitute($event, i)"
+          (contextmenu)="onRightClickSub(i, $event)">
+          <span [ngStyle]="{ 'color': position.player ? 'black' : 'red' }">
+            {{ position.player ? position.player.name + ' | ' + position.player.position + ' | ' + position.player.rating + '⭐ | ' + position.player.age + ' ani' : '' }}
+          </span>          
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Set Piece Takers -->
+  <div class="set-pieces-section">
+    <h3>Set Piece Takers</h3>
+    <button class="suggest-btn" (click)="suggestSetPieceTakers()">Auto-Suggest</button>
+    <div class="set-piece-grid">
+      <div class="sp-item">
+        <label>Penalty</label>
+        <select [(ngModel)]="penaltyTakerId">
+          <option [ngValue]="null">-- Select --</option>
+          <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} ({{ p.position }})</option>
+        </select>
+        <span class="sp-suggested" *ngIf="suggestedSetPieces?.penaltyTakerName">Suggested: {{ suggestedSetPieces.penaltyTakerName }}</span>
+      </div>
+      <div class="sp-item">
+        <label>Free Kicks</label>
+        <select [(ngModel)]="freeKickTakerId">
+          <option [ngValue]="null">-- Select --</option>
+          <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} ({{ p.position }})</option>
+        </select>
+        <span class="sp-suggested" *ngIf="suggestedSetPieces?.freeKickTakerName">Suggested: {{ suggestedSetPieces.freeKickTakerName }}</span>
+      </div>
+      <div class="sp-item">
+        <label>Corner (Left)</label>
+        <select [(ngModel)]="cornerTakerLeftId">
+          <option [ngValue]="null">-- Select --</option>
+          <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} ({{ p.position }})</option>
+        </select>
+        <span class="sp-suggested" *ngIf="suggestedSetPieces?.cornerTakerLeftName">Suggested: {{ suggestedSetPieces.cornerTakerLeftName }}</span>
+      </div>
+      <div class="sp-item">
+        <label>Corner (Right)</label>
+        <select [(ngModel)]="cornerTakerRightId">
+          <option [ngValue]="null">-- Select --</option>
+          <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} ({{ p.position }})</option>
+        </select>
+        <span class="sp-suggested" *ngIf="suggestedSetPieces?.cornerTakerRightName">Suggested: {{ suggestedSetPieces.cornerTakerRightName }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Buton Save Formation -->
+  <button (click)="saveFormation()" style="width:100px;height:100px;">Save Formation</button>
+
+  <!-- Fereastra pentru opțiuni tactice lângă butonul de Save -->
+  <div class="save-options-container">
+    <button class="btn btn-primary" (click)="saveData()">Save</button>
+    
+    <div class="dropdown">
+      <button class="btn btn-secondary dropdown-toggle" type="button" (click)="toggleDropdown()">
+        Options
+      </button>
+      <div class="dropdown-menu" *ngIf="showDropdown">
+        <!-- Mentality -->
+        <div class="dropdown-item">
+          <label>Mentality:</label>
+          <select [(ngModel)]="selectedOptions.mentality" class="form-control">
+            <option *ngFor="let option of mentalityOptions" [value]="option">{{ option }}</option>
+          </select>
+        </div>
+
+        <!-- Time Wasting -->
+        <div class="dropdown-item">
+          <label>Time Wasting:</label>
+          <select [(ngModel)]="selectedOptions.timeWasting" class="form-control">
+            <option *ngFor="let option of timeWastingOptions" [value]="option">{{ option }}</option>
+          </select>
+        </div>
+
+        <!-- In Possession -->
+        <div class="dropdown-item">
+          <label>In Possession:</label>
+          <select [(ngModel)]="selectedOptions.inPossession" class="form-control">
+            <option *ngFor="let option of possessionOptions" [value]="option">{{ option }}</option>
+          </select>
+        </div>
+
+        <!-- Passing Type -->
+        <div class="dropdown-item">
+          <label>Passing Type:</label>
+          <select [(ngModel)]="selectedOptions.passingType" class="form-control">
+            <option *ngFor="let option of passingOptions" [value]="option">{{ option }}</option>
+          </select>
+        </div>
+
+        <!-- Tempo -->
+        <div class="dropdown-item">
+          <label>Tempo:</label>
+          <select [(ngModel)]="selectedOptions.tempo" class="form-control">
+            <option *ngFor="let option of tempoOptions" [value]="option">{{ option }}</option>
+          </select>
+        </div>
+
+        <!-- Defensive Line -->
+        <div class="dropdown-item">
+          <label>Defensive Line:</label>
+          <select [(ngModel)]="selectedOptions.defensiveLine" class="form-control">
+            <option *ngFor="let option of defensiveLineOptions" [value]="option">{{ option }}</option>
+          </select>
+        </div>
+
+        <!-- Pressing -->
+        <div class="dropdown-item">
+          <label>Pressing:</label>
+          <select [(ngModel)]="selectedOptions.pressing" class="form-control">
+            <option *ngFor="let option of pressingOptions" [value]="option">{{ option }}</option>
+          </select>
+        </div>
+
+        <!-- Width -->
+        <div class="dropdown-item">
+          <label>Width:</label>
+          <select [(ngModel)]="selectedOptions.width" class="form-control">
+            <option *ngFor="let option of widthOptions" [value]="option">{{ option }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+

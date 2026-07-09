@@ -1,0 +1,95 @@
+<div class="analytics-wrap">
+
+  <!-- Picker -->
+  <div class="picker-row">
+    <div class="picker-field">
+      <label>Competition</label>
+      <select [(ngModel)]="selectedCompetitionId" (change)="loadAnalytics()">
+        <option *ngFor="let c of competitions" [ngValue]="c.competitionId">{{ c.competitionName }}</option>
+      </select>
+    </div>
+    <div class="picker-field">
+      <label>Season</label>
+      <select [(ngModel)]="selectedSeason" (change)="loadAnalytics()">
+        <option *ngFor="let s of seasons" [ngValue]="s">Season {{ s }}</option>
+      </select>
+    </div>
+  </div>
+
+  <div *ngIf="loadingPicker || loading" class="state-msg">Loading analytics…</div>
+  <div *ngIf="error" class="state-msg error">{{ error }}</div>
+  <div *ngIf="!loadingPicker && !competitions.length" class="state-msg">No competition data for this player.</div>
+
+  <div *ngIf="analytics && !loading" class="analytics-body fade-in">
+
+    <!-- Header: overall badge + meta -->
+    <div class="header-row">
+      <div class="overall-badge" [style.borderColor]="badgeColor()" [style.color]="badgeColor()">
+        <div class="badge-value">{{ analytics.overall | number:'1.0-0' }}</div>
+        <div class="badge-tier">{{ badgeTier() }}</div>
+      </div>
+      <div class="header-meta">
+        <div class="meta-name">{{ analytics.playerName }}</div>
+        <div class="meta-sub">
+          {{ analytics.position }} · group {{ analytics.positionGroup }}
+        </div>
+        <div class="meta-sub">
+          {{ analytics.sampleAppearances }} apps · ranked vs {{ analytics.peerCount }} peers
+        </div>
+      </div>
+    </div>
+
+    <div class="panels">
+
+      <!-- Percentile bars -->
+      <div class="panel bars-panel">
+        <div class="panel-title">Per-90 Percentiles</div>
+        <div class="metric-row" *ngFor="let m of analytics.metrics">
+          <div class="metric-label">{{ m.metric }}</div>
+          <div class="metric-track">
+            <div class="metric-fill"
+                 [style.width.%]="barWidthPct(m.percentile)"
+                 [style.backgroundColor]="percentileColor(m.percentile)"></div>
+            <span class="metric-pct">{{ m.percentile | number:'1.0-0' }}</span>
+          </div>
+          <div class="metric-value">{{ m.valuePer90 | number:'1.0-2' }}</div>
+        </div>
+        <div class="legend">
+          <span><i style="background:#c0392b"></i> Low</span>
+          <span><i style="background:#e67e22"></i> Mid</span>
+          <span><i style="background:#27ae60"></i> High</span>
+        </div>
+      </div>
+
+      <!-- Heatmap -->
+      <div class="panel heat-panel">
+        <div class="panel-title">Activity Heatmap</div>
+        <svg [attr.viewBox]="'0 0 ' + pitchW + ' ' + pitchH" class="pitch-svg" preserveAspectRatio="xMidYMid meet">
+          <!-- pitch background -->
+          <rect x="0" y="0" [attr.width]="pitchW" [attr.height]="pitchH" fill="#0e5a2b"/>
+          <!-- density cells -->
+          <ng-container *ngFor="let row of analytics.heatmap; let r = index">
+            <rect *ngFor="let d of row; let c = index"
+                  [attr.x]="c * cellW()" [attr.y]="r * cellH()"
+                  [attr.width]="cellW()" [attr.height]="cellH()"
+                  [attr.fill]="cellColor(d)" [attr.fill-opacity]="cellOpacity(d)"/>
+          </ng-container>
+          <!-- markings -->
+          <rect x="1" y="1" [attr.width]="pitchW - 2" [attr.height]="pitchH - 2"
+                fill="none" stroke="#ffffff" stroke-opacity="0.7" stroke-width="2"/>
+          <line [attr.x1]="pitchW/2" y1="0" [attr.x2]="pitchW/2" [attr.y2]="pitchH"
+                stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5"/>
+          <circle [attr.cx]="pitchW/2" [attr.cy]="pitchH/2" r="26"
+                  fill="none" stroke="#ffffff" stroke-opacity="0.5" stroke-width="1.5"/>
+          <!-- penalty boxes -->
+          <rect x="0" [attr.y]="pitchH*0.25" [attr.width]="pitchW*0.14" [attr.height]="pitchH*0.5"
+                fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="1.5"/>
+          <rect [attr.x]="pitchW*0.86" [attr.y]="pitchH*0.25" [attr.width]="pitchW*0.14" [attr.height]="pitchH*0.5"
+                fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="1.5"/>
+        </svg>
+        <div class="heat-caption">Own goal ← &nbsp;&nbsp; attacking direction &nbsp;&nbsp; → opponent goal</div>
+      </div>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,92 @@
+<div class="sim-container">
+
+  <div class="panel-header">
+    <h2>Competition Simulator</h2>
+  </div>
+
+  <p class="hint">
+    Pick a set of teams and a number of seasons. The backend plays a full round-robin
+    competition between them over the chosen seasons and returns the aggregate standings.
+    Your own league is pre-selected; add or remove teams from any league.
+  </p>
+
+  <!-- Team picker -->
+  <div class="sim-picker">
+    <div class="sim-add">
+      <label>
+        League
+        <select [(ngModel)]="pickLeagueId">
+          <option [ngValue]="null">— select league —</option>
+          <option *ngFor="let l of leagues" [ngValue]="l.competitionId">{{ l.competitionName }}</option>
+        </select>
+      </label>
+      <label>
+        Team
+        <select [(ngModel)]="pickTeamId">
+          <option [ngValue]="null">— select team —</option>
+          <option *ngFor="let t of teamsForPickLeague" [ngValue]="t.teamId">{{ t.teamName }}</option>
+        </select>
+      </label>
+      <button class="secondary" (click)="addTeam()">Add team</button>
+      <button class="secondary" (click)="addWholeLeague()" [disabled]="pickLeagueId == null">Add whole league</button>
+      <button class="ghost" (click)="clearTeams()" *ngIf="selectedTeams.length">Clear</button>
+    </div>
+
+    <label class="seasons-row">
+      Seasons
+      <input type="number" min="1" max="50" [(ngModel)]="seasons" />
+    </label>
+
+    <div class="sim-chips" *ngIf="selectedTeams.length">
+      <span class="sim-chip" *ngFor="let t of selectedTeams">
+        {{ t.teamName }}
+        <a (click)="removeTeam(t.teamId)">×</a>
+      </span>
+    </div>
+    <div class="muted" *ngIf="!selectedTeams.length">No teams selected.</div>
+  </div>
+
+  <div class="sim-actions">
+    <button class="primary" (click)="simulate()" [disabled]="loading">
+      {{ loading ? 'Simulating...' : 'Simulate' }}
+    </button>
+    <span class="muted">{{ selectedTeams.length }} teams selected</span>
+  </div>
+
+  <div class="status error" *ngIf="error">{{ error }}</div>
+
+  <div class="sim-result" *ngIf="ran && !loading && standings.length">
+    <table class="sim-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Team</th>
+          <th class="num">P</th>
+          <th class="num">W</th>
+          <th class="num">D</th>
+          <th class="num">L</th>
+          <th class="num">GF</th>
+          <th class="num">GA</th>
+          <th class="num">Pts</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let s of standings; let i = index" [class.sim-best-row]="i === 0">
+          <td>{{ i + 1 }}</td>
+          <td>{{ s.teamName }}</td>
+          <td class="num">{{ s.played }}</td>
+          <td class="num">{{ s.wins }}</td>
+          <td class="num">{{ s.draws }}</td>
+          <td class="num">{{ s.losses }}</td>
+          <td class="num">{{ s.goalsFor }}</td>
+          <td class="num">{{ s.goalsAgainst }}</td>
+          <td class="num sim-pts-cell">{{ s.points }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="status" *ngIf="ran && !loading && !standings.length && !error">
+    No standings returned.
+  </div>
+</div>

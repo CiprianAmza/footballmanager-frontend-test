@@ -1,0 +1,141 @@
+/* ============================================================
+ *  GLOBAL DESIGN TOKENS
+ *  Use these via CSS variables in any component's stylesheet.
+ *  Existing component styles keep working unchanged.
+ * ============================================================ */
+
+:root {
+  /* Surfaces — darkest at the page, slightly lighter for cards, lighter still for hovers */
+  --fm-bg:           #1a1d2e;
+  --fm-bg-elevated: #232639;
+  --fm-bg-row:      #2a2e44;
+  --fm-bg-row-hover:#353a55;
+  --fm-bg-input:    #1f2334;
+
+  /* Borders / dividers */
+  --fm-border:      #3a3f5c;
+  --fm-divider:     rgba(255,255,255,0.08);
+
+  /* Text */
+  --fm-text:        #e8eaf0;
+  --fm-text-dim:    #aab0c3;
+  --fm-text-faded:  #7f8499;
+
+  /* Brand / accents */
+  --fm-accent:      #f1c40f;     /* gold — primary accent */
+  --fm-accent-soft: rgba(241, 196, 15, 0.18);
+  --fm-danger:      #e74c3c;
+  --fm-success:     #27ae60;
+  --fm-info:        #3498db;
+  --fm-warning:     #f39c12;
+
+  /* Rating tier colors (mirror RatingTierService palette) */
+  --fm-tier-legendary:  #f1c40f;
+  --fm-tier-world:      #9b59b6;
+  --fm-tier-very-good:  #3498db;
+  --fm-tier-good:       #27ae60;
+  --fm-tier-average:    #7f8c8d;
+  --fm-tier-weak:       #8d6e63;
+
+  /* Spacing scale (multiples of 4) */
+  --fm-sp-1: 4px;
+  --fm-sp-2: 8px;
+  --fm-sp-3: 12px;
+  --fm-sp-4: 16px;
+  --fm-sp-6: 24px;
+  --fm-sp-8: 32px;
+
+  /* Radius */
+  --fm-radius-sm: 3px;
+  --fm-radius:    6px;
+  --fm-radius-lg: 12px;
+
+  /* Shadows */
+  --fm-shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+  --fm-shadow:    0 2px 8px rgba(0,0,0,0.4);
+  --fm-shadow-lg: 0 12px 36px rgba(0,0,0,0.55);
+
+  /* Type */
+  --fm-font:       'Segoe UI', 'Roboto Condensed', sans-serif;
+  --fm-fs-xs:      0.75em;
+  --fm-fs-sm:      0.85em;
+  --fm-fs-md:      0.95em;
+  --fm-fs-lg:      1.1em;
+  --fm-fs-xl:      1.4em;
+}
+
+/* ============================================================
+ *  RATING TIER CLASSES (used by RatingTierService.tierClass)
+ * ============================================================ */
+.rating-legendary  { color: var(--fm-tier-legendary);  font-weight: 800; }
+.rating-world-class{ color: var(--fm-tier-world);      font-weight: 700; }
+.rating-very-good  { color: var(--fm-tier-very-good);  font-weight: 700; }
+.rating-good       { color: var(--fm-tier-good);       font-weight: 600; }
+.rating-average    { color: var(--fm-tier-average);    font-weight: 500; }
+.rating-weak       { color: var(--fm-tier-weak);       font-weight: 500; }
+
+/* ============================================================
+ *  FM-STYLE CLICKABLE LINKS (for teams & players)
+ * ============================================================ */
+a.fm-link {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+a.fm-link:hover { color: #5dade2; }
+a.fm-link:active{ color: #3498db; }
+
+/* ============================================================
+ *  UTILITY: panels v2 (reusable card style — opt-in for new components)
+ *    <div class="fm-panel-v2">
+ *      <div class="fm-panel-v2-header">...</div>
+ *      <div class="fm-panel-v2-body">...</div>
+ *    </div>
+ * ============================================================ */
+.fm-panel-v2 {
+  background: var(--fm-bg-elevated);
+  border-radius: var(--fm-radius);
+  box-shadow: var(--fm-shadow-sm);
+  color: var(--fm-text);
+  font-family: var(--fm-font);
+  overflow: hidden;
+}
+.fm-panel-v2-header {
+  background: var(--fm-bg-row);
+  padding: var(--fm-sp-3) var(--fm-sp-4);
+  border-bottom: 1px solid var(--fm-border);
+  display: flex; align-items: center; gap: var(--fm-sp-2);
+  font-weight: 700; color: #fff;
+}
+.fm-panel-v2-body { padding: var(--fm-sp-4); }
+
+/* Standard tables — usage: <table class="fm-table-v2"> */
+table.fm-table-v2 { width: 100%; border-collapse: collapse; font-family: var(--fm-font); }
+.fm-table-v2 th {
+  background: var(--fm-bg-input);
+  color: var(--fm-text-dim);
+  font-size: var(--fm-fs-xs);
+  text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
+  text-align: center; padding: var(--fm-sp-2) var(--fm-sp-1);
+  border-bottom: 1px solid var(--fm-border);
+}
+.fm-table-v2 td {
+  padding: var(--fm-sp-2) var(--fm-sp-1);
+  text-align: center; font-size: var(--fm-fs-md);
+  border-bottom: 1px solid var(--fm-divider);
+}
+.fm-table-v2 tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+/* Buttons — usage: <button class="fm-btn-v2 primary"> */
+.fm-btn-v2 {
+  background: var(--fm-bg-row); color: var(--fm-text);
+  border: 1px solid var(--fm-border); padding: var(--fm-sp-2) var(--fm-sp-4);
+  border-radius: var(--fm-radius-sm); cursor: pointer; font-weight: 600;
+  transition: all 0.15s; font-family: var(--fm-font);
+}
+.fm-btn-v2:hover { background: var(--fm-bg-row-hover); }
+.fm-btn-v2.primary { background: var(--fm-accent); color: var(--fm-bg); border-color: var(--fm-accent); }
+.fm-btn-v2.primary:hover { background: #f5d033; }
+.fm-btn-v2.danger { background: var(--fm-danger); color: #fff; border-color: var(--fm-danger); }
+.fm-btn-v2:disabled { opacity: 0.5; cursor: not-allowed; }

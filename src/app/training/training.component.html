@@ -1,0 +1,240 @@
+<div class="training-container">
+  
+    <!-- HEADER -->
+    <div class="page-header">
+      <div class="header-left">
+          <div class="icon-circle">🏋️</div>
+          <div class="titles">
+              <h1>TRAINING</h1>
+              <span class="subtitle">Overview & Schedules</span>
+          </div>
+      </div>
+      
+      <div class="nav-tabs">
+          <button *ngFor="let tab of tabs" 
+                  class="tab-btn" 
+                  [class.active]="activeTab === tab"
+                  (click)="setTab(tab)">
+              {{ tab }}
+          </button>
+      </div>
+    </div>
+  
+    <!-- CALENDAR VIEW -->
+    <div class="calendar-panel" *ngIf="activeTab === 'Calendar'">
+      
+      <div class="calendar-grid">
+          
+          <div class="day-column" *ngFor="let day of currentWeek; let dIndex = index">
+              
+              <div class="day-header">
+                  <span class="day-date">{{ day.date | date:'d MMM' }}</span>
+                  <span class="day-name">{{ day.dayName }}</span>
+              </div>
+  
+              <div class="sessions-container">
+                  <!-- 🔹 AICI: Adaugat (click) pentru a deschide modalul -->
+                  <div class="session-card clickable" 
+                       *ngFor="let session of day.sessions; let sIndex = index"
+                       (click)="openSessionModal(dIndex, sIndex)"
+                       [style.border-left-color]="getSessionColor(session.type)"
+                       [style.background]="'linear-gradient(90deg, ' + getSessionColor(session.type) + '22 0%, rgba(40,40,40,1) 100%)'">
+                      
+                      <div class="session-icon" [style.color]="getSessionColor(session.type)">{{ session.icon }}</div>
+                      <div class="session-info">
+                          <span class="s-name">{{ session.name }}</span>
+                          <span class="s-unit">{{ session.unit }}</span>
+                      </div>
+                  </div>
+  
+                  <div class="empty-slot" *ngIf="day.sessions.length < 3"></div>
+              </div>
+  
+              <div class="intensity-footer">
+                  <div class="intensity-track">
+                      <div class="intensity-fill" 
+                           [style.width.%]="day.overallIntensity"
+                           [class.high]="day.overallIntensity > 80"
+                           [class.med]="day.overallIntensity <= 80 && day.overallIntensity > 40"
+                           [class.low]="day.overallIntensity <= 40">
+                      </div>
+                  </div>
+              </div>
+  
+          </div>
+  
+      </div>
+  
+    </div>
+  
+    <!-- OVERVIEW TAB -->
+    <div class="overview-panel" *ngIf="activeTab === 'Overview'">
+
+      <!-- Training Focus Section -->
+      <div class="focus-section">
+        <h2 class="section-heading">TRAINING FOCUS</h2>
+        <p class="section-desc">Select the primary focus for your team's training sessions.</p>
+
+        <div class="focus-message" *ngIf="focusMessage">{{ focusMessage }}</div>
+
+        <div class="focus-options">
+          <label class="focus-option" *ngFor="let focus of focusOptions"
+                 [class.selected]="trainingFocus === focus"
+                 (click)="setTrainingFocus(focus)">
+            <input type="radio" name="trainingFocus" [value]="focus"
+                   [checked]="trainingFocus === focus"
+                   [disabled]="focusSaving">
+            <div class="focus-card">
+              <span class="focus-icon">{{ getFocusIcon(focus) }}</span>
+              <span class="focus-name">{{ focus }}</span>
+              <span class="focus-desc">{{ getFocusDescription(focus) }}</span>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Next Session Info -->
+      <div class="next-session-card" *ngIf="nextSessionInfo">
+        <div class="next-session-icon">&#x1F4C5;</div>
+        <div class="next-session-info">
+          <span class="next-label">UPCOMING</span>
+          <span class="next-value">{{ nextSessionInfo }}</span>
+        </div>
+      </div>
+
+      <!-- Current Focus Summary -->
+      <div class="current-focus-summary">
+        <div class="summary-icon">{{ getFocusIcon(trainingFocus) }}</div>
+        <div class="summary-text">
+          <span class="summary-label">CURRENT FOCUS</span>
+          <span class="summary-value">{{ trainingFocus }}</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- INDIVIDUAL TRAINING TAB -->
+    <div class="individual-panel" *ngIf="activeTab === 'Individual'">
+
+      <div *ngIf="loadingIndividualPlayers" class="loading-state">Loading squad...</div>
+
+      <div class="ind-layout" *ngIf="!loadingIndividualPlayers">
+        <!-- Player List -->
+        <div class="ind-player-list">
+          <div class="ind-player-item"
+               *ngFor="let p of individualPlayers"
+               [class.selected]="selectedIndividualPlayer?.id === p.id"
+               (click)="selectIndividualPlayer(p)">
+            <div class="ind-player-info">
+              <span class="ind-player-name">{{ p.name }}</span>
+              <span class="ind-player-pos">{{ p.position }} |
+                <span [style.color]="p.rating | ratingColor" [style.font-weight]="700">{{ p.rating }}</span>
+              </span>
+            </div>
+            <span class="ind-player-training" [class.has-training]="p.individualFocus || p.individualAttribute || p.individualRole">
+              {{ getIndividualTrainingSummary(p) }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Training Config -->
+        <div class="ind-config" *ngIf="selectedIndividualPlayer">
+          <div class="ind-config-header">
+            <span class="ind-config-name">{{ selectedIndividualPlayer.name }}</span>
+            <span class="ind-config-pos">{{ selectedIndividualPlayer.position }}</span>
+          </div>
+
+          <div *ngIf="loadingIndividualOptions" class="loading-state">Loading options...</div>
+
+          <div *ngIf="!loadingIndividualOptions && individualTrainingOptions" class="ind-config-body">
+
+            <!-- Focus Category -->
+            <div class="ind-field">
+              <label>Focus Category</label>
+              <select [(ngModel)]="indFocus" class="ind-select">
+                <option [ngValue]="null">-- None --</option>
+                <option *ngFor="let f of individualTrainingOptions.focusCategories" [value]="f">{{ f }}</option>
+              </select>
+            </div>
+
+            <!-- Specific Attribute -->
+            <div class="ind-field">
+              <label>Specific Attribute</label>
+              <select [(ngModel)]="indAttribute" class="ind-select">
+                <option [ngValue]="null">-- None --</option>
+                <option *ngFor="let a of individualTrainingOptions.attributes" [value]="a">{{ a }}</option>
+              </select>
+            </div>
+
+            <!-- Role Training -->
+            <div class="ind-field">
+              <label>Role Training</label>
+              <select [(ngModel)]="indRole" class="ind-select">
+                <option [ngValue]="null">-- None --</option>
+                <option *ngFor="let r of individualTrainingOptions.roles" [value]="r">{{ r }}</option>
+              </select>
+            </div>
+
+            <div class="ind-priority-note">
+              Priority: Specific Attribute > Focus Category > Role Training > Team Focus
+            </div>
+
+            <div class="ind-message" *ngIf="individualMessage">{{ individualMessage }}</div>
+
+            <div class="ind-actions">
+              <button class="ind-save-btn" (click)="saveIndividualTraining()" [disabled]="individualSaving">
+                {{ individualSaving ? 'Saving...' : 'Save' }}
+              </button>
+              <button class="ind-clear-btn" (click)="clearIndividualTraining()" [disabled]="individualSaving">
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="ind-config ind-empty" *ngIf="!selectedIndividualPlayer">
+          <p>Select a player to configure individual training.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- OTHER TABS PLACEHOLDER -->
+    <div class="placeholder-content" *ngIf="activeTab !== 'Calendar' && activeTab !== 'Overview' && activeTab !== 'Individual'">
+        <div class="empty-state">
+            This section is under construction for the mock version.
+        </div>
+    </div>
+  
+    <!-- 🔹 SAVE BUTTON (Bottom Right) -->
+    <button class="save-schedule-btn" (click)="saveSchedule()">
+        💾 Save Schedule
+    </button>
+  
+    <!-- 🔹 SESSION SELECTOR MODAL -->
+    <div class="modal-overlay" *ngIf="isModalOpen" (click)="closeModal()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <span>Select Training Session</span>
+                <button class="close-btn" (click)="closeModal()">✕</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Listam categoriile -->
+                <div class="session-group" *ngFor="let cat of sessionCategories">
+                    <div class="group-title" [style.color]="getSessionColor(cat)">{{ cat }}</div>
+                    <div class="options-grid">
+                        <!-- Listam optiunile din fiecare categorie -->
+                        <button class="option-btn" 
+                                *ngFor="let opt of availableSessions[cat]"
+                                (click)="selectNewSession(cat, opt)">
+                            <span class="opt-icon">{{ opt.icon }}</span>
+                            <span class="opt-name">{{ opt.name }}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+  
+  </div>

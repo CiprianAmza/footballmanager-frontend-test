@@ -1,0 +1,139 @@
+<div class="gallery-page">
+
+  <!-- ===== HEADER / CONTROLS ===== -->
+  <div class="gallery-bar">
+    <div class="gb-title">
+      <span class="gb-h">PLAYER CARDS</span>
+      <span class="gb-count">{{ filtered.length }} players</span>
+    </div>
+
+    <div class="gb-mode" role="group" aria-label="Source">
+      <button class="gm-btn" [class.active]="mode === 'team'" (click)="setMode('team')">MY TEAM</button>
+      <button class="gm-btn" [class.active]="mode === 'all'" (click)="setMode('all')">ALL PLAYERS</button>
+    </div>
+
+    <div class="gb-filters">
+      <input class="gb-search" type="text" placeholder="Search name…"
+             [(ngModel)]="search" (ngModelChange)="onFilterChange()">
+      <select class="gb-select" [(ngModel)]="positionFilter" (ngModelChange)="onFilterChange()">
+        <option value="All">All positions</option>
+        <option *ngFor="let p of POSITIONS" [value]="p">{{ p }}</option>
+      </select>
+      <select class="gb-select" [(ngModel)]="sortKey" (ngModelChange)="onFilterChange()">
+        <option value="ratingDesc">Rating ↓</option>
+        <option value="ratingAsc">Rating ↑</option>
+        <option value="nameAsc">Name A–Z</option>
+        <option value="ageAsc">Age ↑</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ===== ADVANCED STACKED FILTERS ===== -->
+  <div class="gallery-filters">
+    <div class="gf-head">
+      <span class="gf-title">EXTRA FILTERS</span>
+      <button class="gf-add" (click)="addFilter()">+ Add filter</button>
+      <span class="gf-cap" *ngIf="futCapped">FUT filter limited to the top {{ FUT_FETCH_CAP }} matches — narrow down with other filters.</span>
+    </div>
+
+    <div class="gf-row" *ngFor="let f of filters; let i = index">
+      <!-- field -->
+      <select class="gf-sel field" [(ngModel)]="f.field" (ngModelChange)="onFieldChange(f)">
+        <optgroup label="General">
+          <option value="rating">Rating</option>
+          <option value="age">Age</option>
+          <option value="position">Position</option>
+          <option value="nationality">Nationality</option>
+          <option value="team">Team</option>
+        </optgroup>
+        <optgroup label="FUT stats">
+          <option *ngFor="let k of FUT_KEYS" [value]="'fut:' + k">{{ k | uppercase }}</option>
+        </optgroup>
+        <optgroup label="Attributes">
+          <option *ngFor="let a of attributeNames" [value]="'attr:' + a">{{ a }}</option>
+        </optgroup>
+      </select>
+
+      <!-- operator (numeric only) -->
+      <select class="gf-sel op" *ngIf="!isCategorical(f.field)" [(ngModel)]="f.op" (ngModelChange)="onFilterChange()">
+        <option value="<">&lt;</option>
+        <option value=">">&gt;</option>
+        <option value="=">=</option>
+      </select>
+      <span class="gf-is" *ngIf="isCategorical(f.field)">is</span>
+
+      <!-- value -->
+      <select class="gf-sel val" *ngIf="f.field === 'position'" [(ngModel)]="f.value" (ngModelChange)="onFilterChange()">
+        <option value="">—</option>
+        <option *ngFor="let p of POSITIONS" [value]="p">{{ p }}</option>
+      </select>
+      <select class="gf-sel val" *ngIf="f.field === 'nationality'" [(ngModel)]="f.value" (ngModelChange)="onFilterChange()">
+        <option value="">—</option>
+        <option *ngFor="let n of nationChoices" [value]="n">{{ n }}</option>
+      </select>
+      <select class="gf-sel val" *ngIf="f.field === 'team'" [(ngModel)]="f.value" (ngModelChange)="onFilterChange()">
+        <option value="">—</option>
+        <option *ngFor="let t of teamChoices" [value]="t.id">{{ t.name }}</option>
+      </select>
+      <input class="gf-input val" *ngIf="!isCategorical(f.field)" type="number"
+             placeholder="value" [(ngModel)]="f.value" (ngModelChange)="onFilterChange()">
+
+      <button class="gf-del" (click)="removeFilter(i)" title="Remove filter">×</button>
+    </div>
+  </div>
+
+  <!-- ===== STATES ===== -->
+  <div class="gallery-msg" *ngIf="loadingList">Loading players…</div>
+  <div class="gallery-msg" *ngIf="!loadingList && filtered.length === 0">No players match your filters.</div>
+
+  <!-- ===== CARD GRID ===== -->
+  <div class="gallery-grid" *ngIf="!loadingList && filtered.length > 0">
+    <div class="fut-card" *ngFor="let p of pageItems" (click)="openPlayer(p.id)" [title]="p.name">
+
+      <div class="fut-top">
+        <div class="fut-rating">
+          <span class="fut-ovr">{{ card(p.id)?.overall ?? '—' }}</span>
+          <span class="fut-pos">{{ p.position }}</span>
+        </div>
+        <div class="fut-face">
+          <app-player-face [size]="96"
+            [baseFaceId]="p.baseFaceId || 0" [skinTone]="p.skinTone || 0"
+            [hairStyle]="p.hairStyle || 0" [hairColor]="p.hairColor || 0"
+            [eyeColor]="p.eyeColor || 0" [faceShape]="p.faceShape || 0"
+            [noseShape]="p.noseShape || 0" [eyeShape]="p.eyeShape || 0"
+            [mouthShape]="p.mouthShape || 0" [browShape]="p.browShape || 0"
+            [nationId]="p.nationId || 0"></app-player-face>
+        </div>
+      </div>
+
+      <div class="fut-name">{{ p.name }}</div>
+
+      <div class="fut-stats">
+        <div class="fut-col">
+          <div class="fut-stat"><span class="v">{{ stat(p.id, 'pac') }}</span><span class="k">PAC</span></div>
+          <div class="fut-stat"><span class="v">{{ stat(p.id, 'sho') }}</span><span class="k">SHO</span></div>
+          <div class="fut-stat"><span class="v">{{ stat(p.id, 'pas') }}</span><span class="k">PAS</span></div>
+        </div>
+        <div class="fut-divider"></div>
+        <div class="fut-col">
+          <div class="fut-stat"><span class="v">{{ stat(p.id, 'dri') }}</span><span class="k">DRI</span></div>
+          <div class="fut-stat"><span class="v">{{ stat(p.id, 'def') }}</span><span class="k">DEF</span></div>
+          <div class="fut-stat"><span class="v">{{ stat(p.id, 'phy') }}</span><span class="k">PHY</span></div>
+        </div>
+      </div>
+
+      <div class="fut-footer">
+        <span class="fut-age">Age {{ p.age ?? '—' }}</span>
+        <span class="fut-nation" *ngIf="p.nationId !== undefined && p.nationId !== null">Nation #{{ p.nationId }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PAGINATION ===== -->
+  <div class="gallery-pager" *ngIf="!loadingList && pageCount > 1">
+    <button class="pg-btn" [disabled]="page === 0" (click)="prevPage()">‹ Prev</button>
+    <span class="pg-info mono">Page {{ page + 1 }} / {{ pageCount }}</span>
+    <button class="pg-btn" [disabled]="page >= pageCount - 1" (click)="nextPage()">Next ›</button>
+  </div>
+
+</div>

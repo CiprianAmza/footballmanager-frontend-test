@@ -1,0 +1,104 @@
+<div class="inbox-container">
+
+  <div class="inbox-sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title-row">
+        <span class="sidebar-title">Inbox</span>
+        <span class="unread-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+        <button class="mark-all-btn" (click)="markAllRead()" title="Mark all as read">Mark all read</button>
+      </div>
+      <div class="filter-bar">
+        <button *ngFor="let cat of categories"
+                class="filter-btn"
+                [class.active]="activeFilter === cat"
+                [ngClass]="'filter-' + cat"
+                (click)="filterByCategory(cat)">
+          {{ getCategoryFilterLabel(cat) }}
+        </button>
+      </div>
+    </div>
+
+    <div class="message-list">
+      <div *ngIf="filteredMessages.length === 0" class="no-messages">
+        No messages found.
+      </div>
+      <div *ngFor="let msg of filteredMessages"
+           class="msg-item"
+           [class.unread]="!msg.isRead"
+           [class.active]="selectedMessage?.id === msg.id"
+           (click)="selectMessage(msg)">
+
+        <div class="msg-category-indicator" [ngClass]="'cat-' + msg.category"></div>
+
+        <div class="msg-preview">
+          <div class="msg-title-row">
+            <span class="msg-title">{{ msg.title }}</span>
+            <span class="category-badge" [ngClass]="'badge-' + msg.category">{{ getCategoryLabel(msg.category) }}</span>
+          </div>
+          <div class="msg-subtitle">
+            <span class="msg-season-info">S{{ msg.seasonNumber }} R{{ msg.roundNumber }}</span>
+            <span class="unread-dot" *ngIf="!msg.isRead"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="message-viewer">
+
+    <div *ngIf="selectedMessage; else noMessage" class="viewer-content">
+
+      <div class="email-header-bar">
+        <div class="header-info">
+          <div class="header-title-row">
+            <span class="header-subject">{{ selectedMessage.title }}</span>
+            <span class="category-badge large" [ngClass]="'badge-' + selectedMessage.category">{{ getCategoryLabel(selectedMessage.category) }}</span>
+          </div>
+          <div class="header-meta">
+            <span class="meta-season">Season {{ selectedMessage.seasonNumber }}, Round {{ selectedMessage.roundNumber }}</span>
+            <span class="meta-date">{{ selectedMessage.createdAt }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="email-body">
+        <div class="news-article-container">
+          <div class="article-top-bar" [ngClass]="'bar-' + selectedMessage.category"></div>
+          <div class="article-content" [style.white-space]="'pre-line'">{{ selectedMessage.content }}</div>
+
+          <!-- Inline accept/decline for an offer that is still pending. Pressing CONTINUE
+               is blocked elsewhere until the user picks one. -->
+          <div *ngIf="isJobOfferMessage(selectedMessage)" class="offer-inline-panel">
+            <ng-container *ngIf="getOfferForMessage(selectedMessage) as offer">
+              <div class="offer-inline-summary">
+                <strong>{{ offer.teamName }}</strong>
+                <span class="offer-inline-rep">Reputation {{ offer.teamReputation }}</span>
+              </div>
+              <div class="offer-inline-terms">
+                <span>Wage <strong>{{ offer.offeredWage | currency:'EUR':'symbol':'1.0-0' }}/mo</strong></span>
+                <span>Signing bonus <strong>{{ offer.signingBonus | currency:'EUR':'symbol':'1.0-0' }}</strong></span>
+                <span>Contract <strong>{{ offer.contractLengthSeasons }} seasons</strong></span>
+              </div>
+              <div class="offer-inline-actions">
+                <button class="offer-decline-inline" (click)="declineOfferMsg(selectedMessage)" [disabled]="offerActionInFlight">Decline</button>
+                <button class="offer-accept-inline" (click)="acceptOfferMsg(selectedMessage)" [disabled]="offerActionInFlight">Accept</button>
+              </div>
+            </ng-container>
+            <div *ngIf="offerActionMessage" class="offer-inline-status">{{ offerActionMessage }}</div>
+          </div>
+
+          <!-- The offer for this message has already been resolved (accept/declined/expired). -->
+          <div *ngIf="selectedMessage.category === 'JOB_OFFER' && !isJobOfferMessage(selectedMessage)" class="offer-resolved">
+            This offer is no longer pending.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <ng-template #noMessage>
+      <div class="empty-state">Select a message to read</div>
+    </ng-template>
+
+  </div>
+</div>

@@ -1,0 +1,61 @@
+<div class="scouting-container">
+  <div class="scout-header">
+    <h1>Shortlist</h1>
+    <div class="results-count">{{ players.length }} players tracked</div>
+  </div>
+
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading shortlist...</p>
+  </div>
+
+  <div class="table-container" *ngIf="!loading">
+    <table class="fm-table" *ngIf="players.length > 0">
+      <thead>
+        <tr>
+          <th (click)="sort('playerName')">Name {{ getSortIcon('playerName') }}</th>
+          <th class="center" (click)="sort('position')">Pos {{ getSortIcon('position') }}</th>
+          <th (click)="sort('teamName')">Club {{ getSortIcon('teamName') }}</th>
+          <th class="center" (click)="sort('age')">Age {{ getSortIcon('age') }}</th>
+          <th class="center" (click)="sort('rating')">Rating {{ getSortIcon('rating') }}</th>
+          <th class="right" (click)="sort('transferValue')">Value {{ getSortIcon('transferValue') }}</th>
+          <th class="right" (click)="sort('wage')">Wage {{ getSortIcon('wage') }}</th>
+          <th class="center">Contract</th>
+          <th>Notes</th>
+          <th class="center" style="width:40px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let player of players" [class.retired-row]="player.retired">
+          <td class="name-cell">
+            <a [routerLink]="['/player', player.playerId]" class="fm-link">{{ player.playerName }}</a>
+          </td>
+          <td class="center"><span class="pos-pill">{{ player.position }}</span></td>
+          <td>{{ player.teamName }}</td>
+          <td class="center">{{ player.age }}</td>
+          <td class="center rating-val"
+              [style.color]="player.rating | ratingColor"
+              [style.font-weight]="700">{{ player.rating | number:'1.0-0' }}</td>
+          <td class="right money-val">{{ player.transferValue | currency:'EUR':'symbol':'1.0-0' }}</td>
+          <td class="right money-val">{{ player.wage | currency:'EUR':'symbol':'1.0-0' }}</td>
+          <td class="center">S{{ player.contractEndSeason }}</td>
+          <td class="notes-cell">
+            <span *ngIf="editingNotes !== player.id" (click)="startEditNotes(player)" class="notes-text">
+              {{ player.notes || 'Click to add notes...' }}
+            </span>
+            <div *ngIf="editingNotes === player.id" class="notes-edit">
+              <input type="text" [(ngModel)]="editNotesText" (keyup.enter)="saveNotes(player)" (keyup.escape)="cancelEditNotes()">
+              <button class="save-btn" (click)="saveNotes(player)">OK</button>
+            </div>
+          </td>
+          <td class="center">
+            <button class="remove-btn" (click)="removePlayer(player.playerId)" title="Remove">X</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div *ngIf="players.length === 0" class="no-results">
+      Your shortlist is empty. Add players from the Scouting page or Player pages.
+    </div>
+  </div>
+</div>

@@ -1,0 +1,81 @@
+<div class="european-container">
+
+  <div class="page-header">
+    <h1>{{ competitionName }}</h1>
+    <div class="season-nav">
+      <button (click)="changeSeason(-1)" [disabled]="season <= 1">&lt;</button>
+      <span>Season {{ season }}</span>
+      <button (click)="changeSeason(1)" [disabled]="season >= maxSeason">&gt;</button>
+    </div>
+  </div>
+
+  <!-- GROUP STANDINGS -->
+  <div class="groups-section" *ngIf="groupNumbers.length > 0">
+    <h2>Group Stage</h2>
+    <div class="groups-grid">
+      <div class="group-card" *ngFor="let gn of groupNumbers">
+        <div class="group-header">Group {{ gn }}</div>
+        <table class="group-table">
+          <thead>
+            <tr>
+              <th>Team</th>
+              <th>P</th>
+              <th>W</th>
+              <th>D</th>
+              <th>L</th>
+              <th>GF</th>
+              <th>GA</th>
+              <th>GD</th>
+              <th>Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let team of groups.get(gn); let i = index"
+                [class.qualified]="i < 2">
+              <td class="team-name">
+                <span *ngIf="team.potNumber > 0" class="pot-badge pot-{{team.potNumber}}">{{ getPotLabel(team.potNumber) }}</span>
+                <a [routerLink]="['/team', team.teamId]" class="fm-link">{{ team.teamName }}</a>
+              </td>
+              <td>{{ team.games }}</td>
+              <td>{{ team.wins }}</td>
+              <td>{{ team.draws }}</td>
+              <td>{{ team.loses }}</td>
+              <td>{{ team.goalsFor }}</td>
+              <td>{{ team.goalsAgainst }}</td>
+              <td>{{ team.goalDifference }}</td>
+              <td class="points">{{ team.points }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROUND SELECTOR -->
+  <div class="rounds-section" *ngIf="roundNumbers.length > 0">
+    <h2>Results</h2>
+    <div class="round-tabs">
+      <button *ngFor="let r of roundNumbers"
+              (click)="selectRound(r)"
+              [class.active]="r === selectedRound">
+        {{ getRoundLabel(r) }}
+      </button>
+    </div>
+
+    <div class="matches-list">
+      <div class="match-row" *ngFor="let m of getMatchesForRound()">
+        <span class="home-team"><a [routerLink]="['/team', m.team1Id]" class="fm-link">{{ m.teamName1 }}</a></span>
+        <span class="score">{{ m.score }}</span>
+        <span class="away-team"><a [routerLink]="['/team', m.team2Id]" class="fm-link">{{ m.teamName2 }}</a></span>
+      </div>
+      <div *ngIf="getMatchesForRound().length === 0" class="no-matches">
+        No matches played yet in this round.
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="roundNumbers.length === 0 && groupNumbers.length === 0" class="no-data">
+    No data available for this competition in season {{ season }}.
+  </div>
+
+</div>

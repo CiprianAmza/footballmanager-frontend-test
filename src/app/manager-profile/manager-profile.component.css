@@ -1,0 +1,397 @@
+.profile-container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 25px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #e0e0e0;
+}
+
+.profile-header {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  padding: 30px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.resign-btn {
+  background: #b53b3b;
+  color: #fff;
+  border: 1px solid #d44a4a;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95em;
+  transition: background 0.15s ease;
+}
+.resign-btn:hover { background: #cf4242; }
+.resign-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.resign-status {
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.4);
+  border-radius: 8px;
+  color: #b5e8b8;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.resign-modal {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 25px 28px;
+  max-width: 460px;
+  width: 92%;
+  color: #e0e0e0;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+.resign-modal h3 {
+  color: #f0c040;
+  margin: 0 0 12px 0;
+}
+.resign-modal-actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.btn-secondary {
+  background: transparent;
+  color: #ccc;
+  border: 1px solid #555;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.05); }
+.btn-danger {
+  background: #b53b3b;
+  color: #fff;
+  border: 1px solid #d44a4a;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.btn-danger:hover { background: #cf4242; }
+.btn-danger:disabled, .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.header-info h1 {
+  color: #f0c040;
+  margin: 0 0 10px 0;
+  font-size: 2em;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.team-name {
+  color: #4a9eff;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.rep-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+.rep-elite {
+  background-color: rgba(240, 192, 64, 0.2);
+  color: #f0c040;
+}
+
+.rep-high {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.rep-medium {
+  background-color: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+.rep-low {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+.status-badge.active {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.status-badge.retired {
+  background-color: rgba(150, 150, 150, 0.2);
+  color: #999;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background-color: #1a1a2e;
+  padding: 20px 15px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border: 1px solid #2a2a4a;
+}
+
+.stat-card .stat-value {
+  font-size: 1.8em;
+  font-weight: bold;
+  color: #e0e0e0;
+}
+
+.stat-card .stat-label {
+  font-size: 0.8em;
+  color: #8a8a9a;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 5px;
+}
+
+.stat-card.wins .stat-value {
+  color: #4caf50;
+}
+
+.stat-card.losses .stat-value {
+  color: #f44336;
+}
+
+.stat-card.pct .stat-value {
+  color: #ff9800;
+}
+
+.stat-card.trophies .stat-value {
+  color: #f0c040;
+}
+
+.stat-card.salary .stat-value {
+  color: #26c6da;
+  font-size: 1.4em;
+}
+
+.stat-card.earnings .stat-value {
+  color: #66bb6a;
+  font-size: 1.4em;
+}
+
+/* Current-season per-competition breakdown — reuses the timeline table look. */
+.comp-breakdown {
+  background-color: #1a1a2e;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  margin-bottom: 25px;
+}
+
+.comp-breakdown h2 {
+  color: #f0c040;
+  margin: 0 0 20px 0;
+  font-size: 1.3em;
+}
+
+.comp-breakdown .comp-name-cell {
+  text-align: left;
+  font-weight: 600;
+}
+
+.career-timeline {
+  background-color: #1a1a2e;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.career-timeline h2 {
+  color: #f0c040;
+  margin: 0 0 20px 0;
+  font-size: 1.3em;
+}
+
+.timeline-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.timeline-table th {
+  background-color: #16213e;
+  color: #b0b0c0;
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 2px solid #2a2a4a;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.timeline-table td {
+  padding: 8px;
+  border-bottom: 1px solid #2a2a3e;
+  color: #c0c0d0;
+  font-size: 0.9em;
+}
+
+.timeline-table tr:hover {
+  background-color: #1f2f4a;
+}
+
+tr.trophy-season td {
+  background-color: rgba(240, 192, 64, 0.05);
+}
+
+tr.promoted td {
+  border-left: 3px solid #4caf50;
+}
+
+tr.relegated td {
+  border-left: 3px solid #f44336;
+}
+
+.team-link {
+  color: #4a9eff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.team-link:hover {
+  text-decoration: underline;
+  color: #6db3ff;
+}
+
+.position-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+.position-badge.pos-1 {
+  background-color: rgba(240, 192, 64, 0.2);
+  color: #f0c040;
+}
+
+.position-badge.pos-top3 {
+  background-color: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+}
+
+.highlight-wins {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.trophy-tag {
+  display: inline-block;
+  background-color: rgba(240, 192, 64, 0.15);
+  color: #f0c040;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.8em;
+  margin: 2px;
+  white-space: nowrap;
+}
+
+.no-trophy {
+  color: #555;
+}
+
+.note-badge {
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.75em;
+  font-weight: bold;
+}
+
+.promoted-badge {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.relegated-badge {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.loading-state, .error-state {
+  text-align: center;
+  padding: 40px;
+  color: #8a8a9a;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #2a2a4a;
+  border-top: 3px solid #4a9eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 15px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===== Live (in-progress) season row ===== */
+.timeline-table tr.in-progress {
+  background: rgba(46, 204, 113, 0.08);
+  border-left: 3px solid #2ecc71;
+}
+.timeline-table tr.in-progress td {
+  font-style: italic;
+}
+.live-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  background: #2ecc71;
+  color: #fff;
+  font-size: 0.65em;
+  font-weight: bold;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+  font-style: normal;
+}

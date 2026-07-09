@@ -1,0 +1,200 @@
+.coefficients-container {
+  padding: 20px;
+  color: #e0e0e0;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+.page-header h1 {
+  font-size: 1.4rem;
+  color: #fff;
+  margin: 0 0 12px 0;
+}
+
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.tab-bar button {
+  padding: 8px 20px;
+  border: none;
+  background: #1a1a2e;
+  color: #888;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  transition: all 0.2s;
+}
+
+.tab-bar button.active {
+  background: #16213e;
+  color: #fff;
+  font-weight: 600;
+}
+
+.tab-bar button:hover:not(.active) {
+  background: #222244;
+  color: #ccc;
+}
+
+.coefficient-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1a1a2e;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.coefficient-table thead {
+  background: #16213e;
+}
+
+.coefficient-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #888;
+  border-bottom: 1px solid #2a2a4a;
+  white-space: nowrap;
+}
+
+.coefficient-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #2a2a4a;
+  font-size: 0.82rem;
+}
+
+.coefficient-table tbody tr:hover {
+  background: #16213e;
+}
+
+.rank {
+  width: 40px;
+  font-weight: 700;
+  color: #f1c40f;
+  text-align: center;
+}
+
+.league-name, .team-name {
+  font-weight: 600;
+  color: #fff;
+}
+
+.league-ref {
+  color: #888;
+  font-size: 0.78rem;
+}
+
+.coefficient {
+  font-weight: 700;
+  color: #3498db;
+}
+
+.season-col {
+  text-align: center;
+  min-width: 50px;
+}
+
+.season-val {
+  text-align: center;
+  color: #aaa;
+  font-size: 0.8rem;
+}
+
+.spots {
+  font-weight: 700;
+  text-align: center;
+}
+
+.loc-spots {
+  color: #2e3192;
+}
+
+.sc-spots {
+  color: #009460;
+}
+
+.entry-info {
+  color: #aaa;
+  font-size: 0.78rem;
+}
+
+.allocation-summary {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.summary-card {
+  flex: 1;
+  background: #1a1a2e;
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.loc-card {
+  border-left: 3px solid #2e3192;
+}
+
+.sc-card {
+  border-left: 3px solid #009460;
+}
+
+.summary-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.summary-card p {
+  margin: 4px 0;
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+.points-info {
+  margin-top: 24px;
+  background: #1a1a2e;
+  border-radius: 8px;
+  padding: 16px 20px;
+  border-left: 3px solid #f1c40f;
+}
+
+.points-info h3 {
+  margin: 0 0 12px 0;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.points-grid {
+  display: flex;
+  gap: 40px;
+}
+
+.points-col h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.points-col p {
+  margin: 3px 0;
+  font-size: 0.8rem;
+  color: #aaa;
+}
+
+.points-col strong {
+  color: #f1c40f;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  font-style: italic;
+}

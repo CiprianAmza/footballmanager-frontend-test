@@ -1,0 +1,20 @@
+<div class="view-container">
+    <div class="view-header">
+      <h1>SQUAD OVERVIEW</h1>
+      <button class="back-btn" (click)="goBack()">❮ Back to Club</button>
+    </div>
+    <div class="squad-grid">
+      <div class="player-card" *ngFor="let p of players">
+          <div class="p-pos">{{ p.position }}</div>
+          <div class="p-info">
+              <div class="p-name"><a [routerLink]="['/player', p.id]" class="fm-link">{{ p.name }}</a></div>
+              <div class="p-meta">{{ p.age }} y/o</div>
+          </div>
+          <div class="p-rating">
+              <span class="val"
+                    [style.color]="p.rating | ratingColor"
+                    [style.font-weight]="800">{{ p.rating | number:'1.0-0' }}</span>
+          </div>
+      </div>
+    </div>
+  </div>

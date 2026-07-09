@@ -1,0 +1,415 @@
+<div class="finances-container">
+
+    <!-- HEADER -->
+    <div class="page-header">
+      <div class="title-section">
+          <div class="icon-circle">$</div>
+          <div>
+              <h1>FINANCES</h1>
+              <span class="status">{{ teamName }} - Season {{ viewSeason }}</span>
+          </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="nav-tabs">
+          <button *ngFor="let tab of tabs"
+                  class="tab-btn"
+                  [class.active]="activeTab === tab"
+                  (click)="setTab(tab)">
+              {{ tab }}
+          </button>
+      </div>
+    </div>
+
+    <div class="content-area">
+
+      <!-- OVERVIEW TAB -->
+      <ng-container *ngIf="activeTab === 'Overview'">
+
+        <!-- Key Financial Cards -->
+        <div class="finance-cards-grid">
+          <div class="finance-card card-finances">
+            <div class="fc-label">TOTAL FINANCES</div>
+            <div class="fc-value">{{ totalFinances | number }}</div>
+          </div>
+          <div class="finance-card card-budget">
+            <div class="fc-label">TRANSFER BUDGET</div>
+            <div class="fc-value">{{ transferBudget | number }}</div>
+          </div>
+          <div class="finance-card card-wages">
+            <div class="fc-label">MONTHLY WAGES</div>
+            <div class="fc-value">{{ monthlyWages | number }}</div>
+          </div>
+          <div class="finance-card" [ngClass]="debt > 0 ? 'card-debt' : 'card-ok'">
+            <div class="fc-label">DEBT</div>
+            <div class="fc-value">{{ debt > 0 ? (debt | number) : 'None' }}</div>
+          </div>
+          <div class="finance-card card-confidence">
+            <div class="fc-label">BOARD CONFIDENCE</div>
+            <div class="fc-value">{{ boardConfidence }}%</div>
+            <div class="confidence-bar">
+              <div class="confidence-fill" [style.width.%]="boardConfidence"
+                   [style.background-color]="boardConfidence >= 70 ? '#2ecc71' : boardConfidence >= 40 ? '#f1c40f' : '#e74c3c'"></div>
+            </div>
+          </div>
+          <div class="finance-card card-stadium">
+            <div class="fc-label">STADIUM CAPACITY</div>
+            <div class="fc-value">{{ stadiumCapacity > 0 ? (stadiumCapacity | number) : 'N/A' }}</div>
+          </div>
+        </div>
+
+        <!-- Budget Allocation Info -->
+        <div class="budget-allocation-bar">
+          <span class="alloc-label">Transfer Budget Allocation:</span>
+          <span class="alloc-value">{{ transferBudgetPercentage }}% of income goes to transfers</span>
+          <div class="alloc-bar">
+            <div class="alloc-fill" [style.width.%]="transferBudgetPercentage"></div>
+          </div>
+        </div>
+
+        <!-- Season P&L Report -->
+        <div class="report-section">
+          <div class="report-header">
+            <h3 class="section-title" style="padding: 0;">PROFIT & LOSS - SEASON {{ reportSeason }}</h3>
+            <div class="report-season-nav">
+              <button class="season-btn" (click)="changeReportSeason(-1)" [disabled]="reportSeason <= 1">&lt;</button>
+              <span>Season {{ reportSeason }}</span>
+              <button class="season-btn" (click)="changeReportSeason(1)" [disabled]="reportSeason >= teamService.currentSeason">&gt;</button>
+            </div>
+          </div>
+
+          <div class="pnl-grid" *ngIf="financialReport">
+            <!-- Income -->
+            <div class="table-panel">
+              <h3 class="section-title income-title">INCOME</h3>
+              <table class="fm-table">
+                <tbody>
+                  <tr *ngFor="let item of getIncomeBreakdown()" class="main-row">
+                    <td class="text-left name-col">
+                      <span class="cat-icon">{{ getCategoryIcon(item.category) }}</span>
+                      {{ getCategoryLabel(item.category) }}
+                    </td>
+                    <td class="right" style="color: #2ecc71;">{{ item.amount | number }}</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td class="text-left name-col"><strong>TOTAL INCOME</strong></td>
+                    <td class="right" style="color: #2ecc71; font-weight: bold;">{{ financialReport.totalIncome | number }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Expenses -->
+            <div class="table-panel">
+              <h3 class="section-title expense-title">EXPENSES</h3>
+              <table class="fm-table">
+                <tbody>
+                  <tr *ngFor="let item of getExpenseBreakdown()" class="main-row">
+                    <td class="text-left name-col">
+                      <span class="cat-icon">{{ getCategoryIcon(item.category) }}</span>
+                      {{ getCategoryLabel(item.category) }}
+                    </td>
+                    <td class="right" style="color: #e74c3c;">{{ item.amount | number }}</td>
+                  </tr>
+                  <tr class="total-row">
+                    <td class="text-left name-col"><strong>TOTAL EXPENSES</strong></td>
+                    <td class="right" style="color: #e74c3c; font-weight: bold;">-{{ financialReport.totalExpenses | number }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Net Result -->
+          <div class="net-result" *ngIf="financialReport"
+               [ngClass]="financialReport.netProfit >= 0 ? 'net-positive' : 'net-negative'">
+            <span class="net-label">NET PROFIT/LOSS</span>
+            <span class="net-value">{{ financialReport.netProfit | number }}</span>
+          </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="table-panel" style="margin-top: 20px;" *ngIf="reportTransactions.length > 0">
+          <h3 class="section-title">RECENT TRANSACTIONS</h3>
+          <table class="fm-table">
+            <thead>
+              <tr>
+                <th class="text-left">Day</th>
+                <th class="text-left">Category</th>
+                <th class="text-left">Description</th>
+                <th class="right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let tx of reportTransactions | slice:0:20" class="main-row">
+                <td>D{{ tx.day }}</td>
+                <td>
+                  <span class="cat-icon">{{ getCategoryIcon(tx.category) }}</span>
+                  {{ getCategoryLabel(tx.category) }}
+                </td>
+                <td class="text-left" style="font-size: 0.85em; color: #aaa;">{{ tx.description }}</td>
+                <td class="right" [style.color]="tx.amount >= 0 ? '#2ecc71' : '#e74c3c'">
+                  {{ tx.amount >= 0 ? '+' : '' }}{{ tx.amount | number }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+
+      <!-- TRANSFERS TAB -->
+      <ng-container *ngIf="activeTab === 'Transfers'">
+
+        <!-- Transfer Summary -->
+        <div class="transfer-summary">
+          <div class="summary-card budget">
+            <div class="summary-label">TRANSFER BUDGET</div>
+            <div class="summary-value">{{ transferBudget | number }}</div>
+          </div>
+          <div class="summary-card received">
+            <div class="summary-label">TOTAL FINANCES</div>
+            <div class="summary-value">{{ totalFinances | number }}</div>
+          </div>
+          <div class="summary-card spent">
+            <div class="summary-label">MONTHLY WAGES</div>
+            <div class="summary-value">{{ monthlyWages | number }}</div>
+          </div>
+        </div>
+
+        <!-- Season Navigation -->
+        <div class="season-nav">
+          <button class="season-btn" (click)="changeSeason(-1)" [disabled]="viewSeason <= 1">&lt; Prev Season</button>
+          <span class="season-label">Season {{ viewSeason }}</span>
+          <button class="season-btn" (click)="changeSeason(1)" [disabled]="viewSeason >= teamService.currentSeason">Next Season &gt;</button>
+        </div>
+
+        <!-- Transfer Summary -->
+        <div class="transfer-summary">
+          <div class="summary-card spent">
+            <div class="summary-label">TOTAL SPENT</div>
+            <div class="summary-value">{{ totalSpent | number }}</div>
+          </div>
+          <div class="summary-card received">
+            <div class="summary-label">TOTAL RECEIVED</div>
+            <div class="summary-value">{{ totalReceived | number }}</div>
+          </div>
+          <div class="summary-card" [ngClass]="netTransfer >= 0 ? 'positive' : 'negative'">
+            <div class="summary-label">NET BALANCE</div>
+            <div class="summary-value">{{ netTransfer | number }}</div>
+          </div>
+        </div>
+
+        <!-- Bought Players -->
+        <div class="table-panel">
+          <h3 class="section-title">PLAYERS BOUGHT</h3>
+          <table class="fm-table" *ngIf="boughtPlayers.length > 0">
+            <thead>
+              <tr>
+                <th class="text-left">PLAYER</th>
+                <th class="right">VALUE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let player of boughtPlayers" class="main-row">
+                <td class="text-left name-col">{{ player.playerName || player.name || 'Unknown' }}</td>
+                <td class="right">{{ (player.playerTransferValue || 0) | number }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div *ngIf="boughtPlayers.length === 0" class="no-data">No players bought this season</div>
+        </div>
+
+        <!-- Sold Players -->
+        <div class="table-panel" style="margin-top: 20px;">
+          <h3 class="section-title">PLAYERS SOLD</h3>
+          <table class="fm-table" *ngIf="soldPlayers.length > 0">
+            <thead>
+              <tr>
+                <th class="text-left">PLAYER</th>
+                <th class="right">VALUE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let player of soldPlayers" class="main-row">
+                <td class="text-left name-col">{{ player.playerName || player.name || 'Unknown' }}</td>
+                <td class="right">{{ (player.playerTransferValue || 0) | number }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div *ngIf="soldPlayers.length === 0" class="no-data">No players sold this season</div>
+        </div>
+
+      </ng-container>
+
+      <!-- COMPETITION STATS TAB -->
+      <ng-container *ngIf="activeTab === 'Competition Stats'">
+        <div class="table-panel">
+          <h3 class="section-title">COMPETITION STANDINGS</h3>
+          <table class="fm-table" *ngIf="competitions.length > 0">
+            <thead>
+              <tr>
+                <th class="text-left">COMPETITION</th>
+                <th class="right">POS</th>
+                <th class="right">P</th>
+                <th class="right">W</th>
+                <th class="right">D</th>
+                <th class="right">L</th>
+                <th class="right">GF</th>
+                <th class="right">GA</th>
+                <th class="right">GD</th>
+                <th class="right">PTS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let comp of competitions" class="main-row">
+                <td class="text-left name-col">{{ comp.name }}</td>
+                <td class="right">{{ comp.position }}/{{ comp.totalTeams }}</td>
+                <td class="right">{{ comp.games }}</td>
+                <td class="right">{{ comp.wins }}</td>
+                <td class="right">{{ comp.draws }}</td>
+                <td class="right">{{ comp.loses }}</td>
+                <td class="right">{{ comp.goalsFor }}</td>
+                <td class="right">{{ comp.goalsAgainst }}</td>
+                <td class="right">{{ comp.goalDifference }}</td>
+                <td class="right">{{ comp.points }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div *ngIf="competitions.length === 0" class="no-data">No competition data available</div>
+        </div>
+      </ng-container>
+
+      <!-- SPONSORSHIPS TAB -->
+      <ng-container *ngIf="activeTab === 'Sponsorships'">
+
+        <div class="sponsor-message" *ngIf="sponsorMessage">{{ sponsorMessage }}</div>
+
+        <!-- Pending Offers (show first so user sees them) -->
+        <div class="table-panel" style="margin-bottom: 20px;" *ngIf="pendingOffers.length > 0">
+          <h3 class="section-title">PENDING OFFERS</h3>
+          <table class="fm-table">
+            <thead>
+              <tr>
+                <th class="text-left">SPONSOR</th>
+                <th>TYPE</th>
+                <th class="right">$/SEASON</th>
+                <th class="right">DURATION</th>
+                <th class="right">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let offer of pendingOffers" class="main-row">
+                <td class="text-left name-col">{{ offer.sponsorName }}</td>
+                <td>{{ offer.type || '-' }}</td>
+                <td class="right">{{ (offer.annualValue || 0) | number }}</td>
+                <td class="right">{{ offer.endSeason - offer.startSeason + 1 }} season(s)</td>
+                <td class="right actions-cell">
+                  <button class="action-btn accept" (click)="acceptSponsor(offer.id)">Accept</button>
+                  <button class="action-btn reject" (click)="rejectSponsor(offer.id)">Reject</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Active Sponsors -->
+        <div class="table-panel">
+          <h3 class="section-title">ACTIVE SPONSORS</h3>
+          <table class="fm-table" *ngIf="activeSponsors.length > 0">
+            <thead>
+              <tr>
+                <th class="text-left">SPONSOR</th>
+                <th>TYPE</th>
+                <th class="right">$/SEASON</th>
+                <th class="right">ENDS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let sponsor of activeSponsors" class="main-row">
+                <td class="text-left name-col">{{ sponsor.sponsorName }}</td>
+                <td>{{ sponsor.type || '-' }}</td>
+                <td class="right">{{ (sponsor.annualValue || 0) | number }}</td>
+                <td class="right">Season {{ sponsor.endSeason }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div *ngIf="activeSponsors.length === 0" class="no-data">No active sponsorships</div>
+        </div>
+
+      </ng-container>
+
+      <!-- FACILITIES TAB -->
+      <ng-container *ngIf="activeTab === 'Facilities'">
+
+        <div class="facility-message" *ngIf="facilityMessage">{{ facilityMessage }}</div>
+
+        <!-- Completed Upgrade Notifications -->
+        <div class="facility-completed-banner" *ngFor="let done of facilityCompleted">
+          <span class="fc-check">&#9989;</span>
+          <span><strong>{{ getFacilityName(done.facilityType) }}</strong> upgrade complete! Now at <strong>Level {{ done.targetLevel }}</strong>.</span>
+        </div>
+
+        <!-- Upgrades In Progress -->
+        <div *ngIf="facilityInProgress.length > 0" class="table-panel" style="margin-bottom: 20px;">
+          <h3 class="section-title" style="color: #e67e22;">CONSTRUCTION IN PROGRESS</h3>
+          <div *ngFor="let upgrade of facilityInProgress" class="construction-row">
+            <div class="construction-left">
+              <span class="facility-icon">{{ getFacilityIcon(upgrade.facilityType) }}</span>
+              <div>
+                <span class="facility-name">{{ getFacilityName(upgrade.facilityType) }}</span>
+                <span class="level-badge-inline">Lv {{ upgrade.currentLevel }} &rarr; {{ upgrade.targetLevel }}</span>
+              </div>
+            </div>
+            <div class="construction-right">
+              <div class="progress-bar-fin">
+                <div class="progress-fill-fin" [style.width.%]="getUpgradeProgress(upgrade)"></div>
+              </div>
+              <span class="days-remaining-fin">{{ getDaysRemaining(upgrade) }} days left</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- All Facilities -->
+        <div class="facilities-grid">
+          <div class="facility-card" *ngFor="let item of facilityUpgrades">
+            <div class="facility-icon">{{ getFacilityIcon(item.type) }}</div>
+            <div class="facility-info">
+              <span class="facility-name">{{ item.name }}</span>
+              <span class="facility-desc-text">{{ item.description }}</span>
+              <div class="facility-level">
+                <span class="level-label">Level</span>
+                <span class="level-value" [style.color]="getLevelColor(item.currentLevel)">
+                  {{ item.currentLevel }} / {{ item.maxLevel }}
+                </span>
+              </div>
+              <div class="level-bar">
+                <div class="level-fill"
+                     [style.width.%]="(item.currentLevel / item.maxLevel) * 100"
+                     [style.background-color]="getLevelColor(item.currentLevel)">
+                </div>
+              </div>
+              <!-- Upgrade cost/duration info -->
+              <div class="upgrade-info-row" *ngIf="item.canUpgrade && !item.upgrading">
+                <span class="upgrade-cost-text">Cost: {{ item.upgradeCost | number }}</span>
+                <span class="upgrade-dur-text">{{ item.upgradeDuration }} days</span>
+              </div>
+              <div class="upgrading-indicator" *ngIf="item.upgrading">
+                <span class="pulse-dot-fin"></span> Upgrading... {{ getDaysRemaining(getUpgradeInProgress(item.type)) }} days left
+              </div>
+            </div>
+            <button class="upgrade-btn"
+                    (click)="upgradeFacility(item.type)"
+                    [disabled]="!item.canUpgrade || item.upgrading">
+              {{ item.currentLevel >= item.maxLevel ? 'MAX' : item.upgrading ? 'IN PROGRESS' : 'Upgrade' }}
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="facilityUpgrades.length === 0" class="no-data">
+          No facility data available
+        </div>
+
+      </ng-container>
+
+    </div>
+  </div>

@@ -1,0 +1,202 @@
+<div class="ta-container">
+
+  <div class="panel-header">
+    <h2>Tactics Advisor</h2>
+  </div>
+
+  <!-- Shared controls -->
+  <div class="ta-controls">
+    <label>
+      Team id
+      <input type="number" min="1" [(ngModel)]="teamId" placeholder="e.g. 12" />
+    </label>
+    <label>
+      Formation
+      <select [(ngModel)]="formation">
+        <option *ngFor="let f of formations" [ngValue]="f">{{ f }}</option>
+      </select>
+    </label>
+    <label>
+      Seasons (5–15)
+      <input type="number" min="5" max="15" [(ngModel)]="seasons" />
+    </label>
+  </div>
+
+  <!-- Tabs -->
+  <div class="ta-tabs">
+    <button [class.active]="activeTab === 'analytical'" (click)="setTab('analytical')">Analytical</button>
+    <button [class.active]="activeTab === 'simulated'" (click)="setTab('simulated')">Simulated</button>
+  </div>
+
+  <!-- ===== Analytical tab ===== -->
+  <div *ngIf="activeTab === 'analytical'" class="ta-tab-body">
+    <p class="hint">
+      <strong>Analytical</strong> is an instant formula: for the selected <em>formation</em> it
+      enumerates fully-committed tactics (no default values on the 9 Strat-2 / Faza-2 axes — the
+      greedy style plus each axis's non-default alternative), ranks them on the team's current squad
+      values without playing any matches, and shows the top distinct results. Best for a quick recommendation.
+    </p>
+    <div class="ta-actions">
+      <button class="primary" (click)="runAnalytical()" [disabled]="analyticalLoading">
+        {{ analyticalLoading ? 'Computing...' : 'Compute analytical' }}
+      </button>
+    </div>
+
+    <div class="status error" *ngIf="analyticalError">{{ analyticalError }}</div>
+
+    <div class="ta-result" *ngIf="analytical">
+      <div class="ta-team">{{ analytical.teamName }} <span>(id {{ analytical.teamId }})</span>
+        <span class="muted"> — {{ analytical.rows.length }} distinct tactics</span>
+      </div>
+      <div class="ta-table-wrap" *ngIf="analytical.rows?.length">
+      <table class="ta-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Formation</th>
+            <th>Mentality</th>
+            <th>Tempo</th>
+            <th>Passing</th>
+            <th>In Possession</th>
+            <th>Time Wasting</th>
+            <th>Def Line</th>
+            <th>Pressing</th>
+            <th>Width</th>
+            <th>Dribbling</th>
+            <th>Fouls</th>
+            <th>Foul Hard.</th>
+            <th>Tempo Frag.</th>
+            <th>Wide Play</th>
+            <th>Transition</th>
+            <th class="num">Exp. Pts</th>
+            <th class="num" *ngIf="analytical.rows[0].winProbability != null">W/D/L</th>
+            <th class="num">Exp. GD</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of analytical.rows; let i = index" [class.ta-best-row]="i === 0">
+            <td>{{ i + 1 }}</td>
+            <td>{{ r.formation }}</td>
+            <td>{{ r.mentality }}</td>
+            <td>{{ r.tempo }}</td>
+            <td>{{ r.passingType }}</td>
+            <td>{{ r.inPossession }}</td>
+            <td>{{ r.timeWasting }}</td>
+            <td>{{ r.defensiveLine || '—' }}</td>
+            <td>{{ r.pressing || '—' }}</td>
+            <td>{{ r.width || '—' }}</td>
+            <td>{{ r.dribbling || '—' }}</td>
+            <td>{{ r.foulFrequency || '—' }}</td>
+            <td>{{ r.foulHardness || '—' }}</td>
+            <td>{{ r.tempoFragmentation || '—' }}</td>
+            <td>{{ r.widePlay || '—' }}</td>
+            <td>{{ r.transition || '—' }}</td>
+            <td class="num ta-pts-cell">{{ r.expectedPoints | number:'1.2-2' }}</td>
+            <td class="num" *ngIf="r.winProbability != null">
+              {{ (r.winProbability || 0) * 100 | number:'1.0-0' }}/{{ (r.drawProbability || 0) * 100 | number:'1.0-0' }}/{{ (r.lossProbability || 0) * 100 | number:'1.0-0' }}
+            </td>
+            <td class="num">{{ r.expectedGoalDifference | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Simulated tab ===== -->
+  <div *ngIf="activeTab === 'simulated'" class="ta-tab-body">
+    <p class="hint">
+      <strong>Simulated</strong> plays real matches with the chosen <em>formation</em> over
+      the selected number of seasons against the chosen opponents. Slower, but reflects
+      actual match outcomes. Leave opponents empty to use the team's own league.
+    </p>
+
+    <!-- Opponent picker -->
+    <div class="ta-opponents">
+      <h4>Opponents <span class="muted">(optional — defaults to own league)</span></h4>
+      <div class="ta-opp-add">
+        <select [(ngModel)]="pickLeagueId">
+          <option [ngValue]="null">— select league —</option>
+          <option *ngFor="let l of leagues" [ngValue]="l.competitionId">{{ l.competitionName }}</option>
+        </select>
+        <select [(ngModel)]="pickTeamId">
+          <option [ngValue]="null">— select team —</option>
+          <option *ngFor="let t of teamsForPickLeague" [ngValue]="t.teamId">{{ t.teamName }}</option>
+        </select>
+        <button class="secondary" (click)="addOpponent()">Add</button>
+        <button class="ghost" (click)="clearOpponents()" *ngIf="selectedOpponents.length">Clear</button>
+      </div>
+      <div class="ta-opp-chips" *ngIf="selectedOpponents.length">
+        <span class="ta-chip" *ngFor="let o of selectedOpponents">
+          {{ o.teamName }}
+          <a (click)="removeOpponent(o.teamId)">×</a>
+        </span>
+      </div>
+      <div class="muted" *ngIf="!selectedOpponents.length">No opponents added — backend will use own league.</div>
+    </div>
+
+    <div class="ta-actions">
+      <button class="primary" (click)="runSimulated()" [disabled]="simulatedLoading">
+        {{ simulatedLoading ? 'Simulating...' : 'Run simulation' }}
+      </button>
+    </div>
+
+    <div class="status error" *ngIf="simulatedError">{{ simulatedError }}</div>
+
+    <div class="ta-result" *ngIf="simulated">
+      <div class="ta-team">
+        {{ simulated.teamName }} <span>(id {{ simulated.teamId }})</span>
+        — {{ simulated.formation }} · {{ simulated.seasons }} seasons · {{ simulated.opponentCount }} opponents
+        <span class="muted"> — {{ simulated.rows.length }} distinct</span>
+      </div>
+      <div class="ta-table-wrap" *ngIf="simulated.rows?.length">
+      <table class="ta-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Mentality</th>
+            <th>Tempo</th>
+            <th>Passing</th>
+            <th>In Possession</th>
+            <th>Time Wasting</th>
+            <th>Def Line</th>
+            <th>Pressing</th>
+            <th>Width</th>
+            <th>Dribbling</th>
+            <th>Fouls</th>
+            <th>Foul Hard.</th>
+            <th>Tempo Frag.</th>
+            <th>Wide Play</th>
+            <th>Transition</th>
+            <th class="num">Avg Pts</th>
+            <th class="num">Min Pts</th>
+            <th class="num">Max Pts</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of simulated.rows; let i = index" [class.ta-best-row]="i === 0">
+            <td>{{ i + 1 }}</td>
+            <td>{{ r.mentality }}</td>
+            <td>{{ r.tempo }}</td>
+            <td>{{ r.passingType }}</td>
+            <td>{{ r.inPossession }}</td>
+            <td>{{ r.timeWasting }}</td>
+            <td>{{ r.defensiveLine || '—' }}</td>
+            <td>{{ r.pressing || '—' }}</td>
+            <td>{{ r.width || '—' }}</td>
+            <td>{{ r.dribbling || '—' }}</td>
+            <td>{{ r.foulFrequency || '—' }}</td>
+            <td>{{ r.foulHardness || '—' }}</td>
+            <td>{{ r.tempoFragmentation || '—' }}</td>
+            <td>{{ r.widePlay || '—' }}</td>
+            <td>{{ r.transition || '—' }}</td>
+            <td class="num ta-pts-cell">{{ r.avgPoints | number:'1.2-2' }}</td>
+            <td class="num">{{ r.minPoints | number:'1.2-2' }}</td>
+            <td class="num">{{ r.maxPoints | number:'1.2-2' }}</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+</div>

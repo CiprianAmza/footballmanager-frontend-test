@@ -1,0 +1,78 @@
+<div class="champions-container">
+  <div class="champions-header">
+    <h1>All-Time Champions</h1>
+    <p class="subtitle">Complete title history across all competitions</p>
+  </div>
+
+  <div *ngIf="loading" class="loading-msg">Loading records...</div>
+
+  <div *ngIf="!loading && champions.length === 0" class="empty-msg">No championship data available yet.</div>
+
+  <div class="champions-table-wrapper" *ngIf="!loading && champions.length > 0">
+    <table class="champions-table">
+      <thead>
+        <tr>
+          <th class="rank-col">#</th>
+          <th class="team-col">Team</th>
+          <th class="total-col">Total</th>
+          <th class="type-col">League</th>
+          <th class="type-col">Cup</th>
+          <th class="type-col">League 2</th>
+          <th class="type-col">LoC</th>
+          <th class="type-col">SC</th>
+          <th class="expand-col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let team of champions; let i = index">
+          <tr class="champion-row" [ngClass]="getMedalClass(i)" (click)="toggleExpand(team.teamId)">
+            <td class="rank-col">
+              <span class="rank-num" [ngClass]="getMedalClass(i)">{{ i + 1 }}</span>
+            </td>
+            <td class="team-col">
+              <a [routerLink]="['/team', team.teamId]" class="fm-link team-name-link" (click)="$event.stopPropagation()">{{ team.teamName }}</a>
+            </td>
+            <td class="total-col">
+              <span class="total-badge">{{ team.totalTitles }}</span>
+            </td>
+            <td class="type-col">
+              <span *ngIf="team.leagueTitles > 0" class="type-count type-league">{{ team.leagueTitles }}</span>
+              <span *ngIf="team.leagueTitles === 0" class="type-zero">-</span>
+            </td>
+            <td class="type-col">
+              <span *ngIf="team.cupTitles > 0" class="type-count type-cup">{{ team.cupTitles }}</span>
+              <span *ngIf="team.cupTitles === 0" class="type-zero">-</span>
+            </td>
+            <td class="type-col">
+              <span *ngIf="team.secondLeagueTitles > 0" class="type-count type-league2">{{ team.secondLeagueTitles }}</span>
+              <span *ngIf="team.secondLeagueTitles === 0" class="type-zero">-</span>
+            </td>
+            <td class="type-col">
+              <span *ngIf="team.locTitles > 0" class="type-count type-loc">{{ team.locTitles }}</span>
+              <span *ngIf="team.locTitles === 0" class="type-zero">-</span>
+            </td>
+            <td class="type-col">
+              <span *ngIf="team.starsCupTitles > 0" class="type-count type-sc">{{ team.starsCupTitles }}</span>
+              <span *ngIf="team.starsCupTitles === 0" class="type-zero">-</span>
+            </td>
+            <td class="expand-col">
+              <span class="expand-icon" [class.expanded]="expandedTeamId === team.teamId">&#x276F;</span>
+            </td>
+          </tr>
+          <!-- Expanded titles -->
+          <tr *ngIf="expandedTeamId === team.teamId" class="titles-detail-row">
+            <td colspan="9">
+              <div class="titles-detail">
+                <div class="title-chip" *ngFor="let title of team.titles" [ngClass]="getCompTypeClass(title.competitionTypeId)">
+                  <span class="chip-season">S{{ title.season }}</span>
+                  <span class="chip-comp">{{ title.competitionName }}</span>
+                </div>
+                <div *ngIf="!team.titles?.length" class="no-titles">No individual titles recorded.</div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</div>

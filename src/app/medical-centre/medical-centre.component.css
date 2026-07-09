@@ -1,0 +1,187 @@
+/* Container */
+.medical-container {
+    background-color: #1b1b1b;
+    min-height: 100vh;
+    color: #ecf0f1;
+    font-family: 'Segoe UI', 'Roboto Condensed', sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.page-header {
+    background-color: #252525;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.header-left { display: flex; gap: 15px; align-items: center; }
+.icon-circle { 
+    width: 40px; height: 40px; 
+    border: 2px solid #3498db; /* Albastru Medical */
+    border-radius: 50%; 
+    display: flex; justify-content: center; align-items: center; 
+    color: #3498db; font-size: 1.5em;
+}
+
+.titles h1 { margin: 0; font-size: 1.5em; font-weight: 900; letter-spacing: 0.5px; }
+.subtitle { color: #aaa; font-size: 0.9em; }
+
+/* Tabs */
+.nav-tabs { display: flex; gap: 5px; }
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    padding: 10px 20px;
+    font-size: 0.9em;
+    font-weight: bold;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    text-transform: uppercase;
+}
+.tab-btn:hover { color: white; }
+.tab-btn.active {
+    color: white;
+    border-bottom: 3px solid #f1c40f; /* Galben */
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px 4px 0 0;
+}
+
+.content-area { padding: 20px 30px; flex: 1; }
+
+/* ADVICE PANEL */
+.advice-panel {
+    background: linear-gradient(to right, #333, #2a2a2a);
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.staff-face { text-align: center; min-width: 120px; border-right: 1px solid #444; padding-right: 20px; }
+.face-placeholder { font-size: 2.5em; margin-bottom: 5px; }
+.s-name { display: block; font-weight: bold; color: white; font-size: 0.95em; }
+.s-role { font-size: 0.8em; color: #aaa; }
+
+.advice-text { font-size: 0.95em; color: #ddd; line-height: 1.5; font-style: italic; }
+
+/* TABLE CONTROLS */
+.table-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.section-title { color: #f1c40f; font-weight: bold; font-size: 0.9em; text-transform: uppercase; }
+.fm-btn {
+    background-color: #333; border: 1px solid #555; color: #ddd;
+    padding: 5px 15px; border-radius: 3px; cursor: pointer; font-size: 0.85em;
+}
+
+/* TABLE */
+.table-panel {
+    background-color: #252525;
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+.fm-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+
+.fm-table th {
+    text-align: left;
+    color: #aaa;
+    font-size: 0.7em;
+    font-weight: bold;
+    padding: 10px 15px;
+    border-bottom: 2px solid #444;
+    text-transform: uppercase;
+}
+
+.fm-table td {
+    padding: 10px 15px;
+    border-bottom: 1px solid #333;
+    vertical-align: middle;
+    color: #ddd;
+}
+
+.fm-table tr:hover { background-color: #2f2f2f; }
+
+/* Player Cell */
+.p-flex { display: flex; align-items: center; gap: 10px; }
+.mini-face { font-size: 1.5em; }
+.p-info { display: flex; flex-direction: column; }
+.p-name { font-weight: bold; color: white; font-size: 1em; }
+.p-role { font-size: 0.75em; color: #888; }
+
+/* Data Cells */
+.stat-cell { display: flex; flex-direction: column; }
+.stat-val { font-weight: bold; font-size: 1em; }
+.stat-sub { font-size: 0.75em; color: #888; margin-top: 2px; }
+
+/* Color Classes */
+.good { color: #2ecc71; }
+.medium { color: #f1c40f; }
+.bad { color: #e74c3c; }
+
+/* Body Icons */
+.body-icons { font-size: 1.5em; opacity: 0.7; }
+
+/* Risk Box (Big Colored) */
+.risk-col { padding: 5px; }
+.risk-box {
+    padding: 10px;
+    color: #1b1b1b; /* Text negru pt contrast */
+    border-radius: 3px;
+    display: flex;
+    flex-direction: column;
+}
+
+.risk-box.risk-high { background-color: #e74c3c; } /* Rosu */
+.risk-box.risk-increased { background-color: #f1c40f; } /* Galben */
+.risk-box.risk-low { background-color: #2ecc71; } /* Verde */
+
+.risk-title { font-weight: 900; font-size: 0.9em; text-transform: uppercase; }
+.risk-sub { font-size: 0.75em; opacity: 0.8; font-weight: bold; }
+
+/* FOOTER */
+.footer-bar {
+    margin-top: auto;
+    background-color: #202020;
+    border-top: 4px solid #333;
+    padding: 15px 30px;
+    display: flex;
+}
+
+.footer-section { padding-right: 40px; }
+.border-left { border-left: 1px solid #444; padding-left: 40px; }
+
+.footer-title { display: block; color: #aaa; font-size: 0.75em; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
+
+.injury-stats { display: flex; gap: 15px; font-weight: bold; font-size: 0.9em; }
+.inj-count.red { color: #e74c3c; }
+.inj-count.orange { color: #e67e22; }
+.inj-count.yellow { color: #f1c40f; }
+.inj-count.blue { color: #3498db; }
+
+.return-count { font-size: 1.5em; font-weight: bold; color: white; }
+
+.center { text-align: center; }
+
+/* Empty State */
+.empty-state {
+    background-color: #252525;
+    border-radius: 4px;
+    padding: 40px;
+    text-align: center;
+    color: #888;
+    font-size: 1em;
+}
+
+/* Days Remaining */
+.days-remaining {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #e74c3c;
+}

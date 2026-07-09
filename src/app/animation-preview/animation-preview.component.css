@@ -1,0 +1,309 @@
+.anim-preview-page {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  color: #e0e0e0;
+}
+
+.anim-preview-page h2 {
+  margin-bottom: 16px;
+  color: #fff;
+  font-size: 22px;
+}
+
+.anim-controls {
+  background: #1e1e2e;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.control-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.control-row select,
+.control-row input {
+  background: #2a2a3e;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.btn-swap {
+  background: none;
+  border: 1px solid #555;
+  color: #aaa;
+  font-size: 18px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-bottom: 1px;
+}
+
+.btn-swap:hover {
+  color: #fff;
+  border-color: #888;
+}
+
+.btn-generate {
+  background: #27ae60;
+  color: #fff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-generate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-generate:hover:not(:disabled) {
+  background: #2ecc71;
+}
+
+.anim-canvas-area {
+  background: #111;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.anim-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.anim-type-badge {
+  background: #e67e22;
+  color: #fff;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.anim-scorer {
+  color: #f1c40f;
+  font-weight: bold;
+}
+
+.anim-minute {
+  color: #aaa;
+}
+
+.anim-outcome-badge {
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.outcome-goal { background: #27ae60; color: #fff; }
+.outcome-save { background: #e74c3c; color: #fff; }
+.outcome-miss { background: #7f8c8d; color: #fff; }
+
+.preview-canvas {
+  border-radius: 6px;
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+.anim-buttons {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.anim-buttons button {
+  background: #2a2a3e;
+  color: #fff;
+  border: 1px solid #555;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.anim-buttons button:hover {
+  background: #3a3a4e;
+}
+
+.anim-buttons .anim-ratings-link {
+  background: #1f6f54;
+  color: #fff;
+  border: 1px solid #2a8a66;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.anim-buttons .anim-ratings-link:hover {
+  background: #2a8a66;
+}
+
+.anim-frame-info {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #666;
+}
+
+.anim-empty {
+  text-align: center;
+  color: #666;
+  padding: 60px 0;
+  font-size: 14px;
+}
+
+/* ===== Live match preview board ===== */
+.lmp-subtitle {
+  color: #888;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.lmp-board {
+  text-align: left;
+}
+
+.lmp-comp {
+  text-align: center;
+  color: #aaa;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.lmp-scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.lmp-team {
+  flex: 1;
+  min-width: 0;
+}
+
+.lmp-home { text-align: right; }
+.lmp-away { text-align: left; }
+
+.lmp-score {
+  background: #000;
+  color: #2ecc71;
+  padding: 4px 16px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lmp-minute {
+  text-align: center;
+  color: #aaa;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.lmp-ft {
+  background: #e74c3c;
+  color: #fff;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.lmp-progress {
+  height: 6px;
+  background: #2a2a3e;
+  border-radius: 3px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+
+.lmp-progress-fill {
+  height: 100%;
+  background: #2ecc71;
+  transition: width 0.2s linear;
+}
+
+.lmp-feed {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lmp-event {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #181824;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #ddd;
+}
+
+.lmp-event-minute {
+  color: #888;
+  font-size: 12px;
+  min-width: 42px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lmp-event-icon {
+  font-size: 14px;
+}
+
+.lmp-event-text {
+  flex: 1;
+}
+
+.lmp-event-goal {
+  background: #1d3a26;
+  border-left: 3px solid #2ecc71;
+}
+
+.lmp-event-card {
+  border-left: 3px solid #f1c40f;
+}
+
+.lmp-event-half {
+  background: #20202e;
+  font-style: italic;
+  color: #aaa;
+}

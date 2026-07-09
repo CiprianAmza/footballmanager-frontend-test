@@ -1,0 +1,245 @@
+.leaderboard-container {
+  max-width: 1200px;
+  margin: 20px auto;
+  background-color: #1a1a2e;
+  padding: 25px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #e0e0e0;
+}
+
+.header-section {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.header-section h1 {
+  color: #f0c040;
+  margin-bottom: 5px;
+  font-size: 1.8em;
+}
+
+.header-section p {
+  color: #8a8a9a;
+}
+
+.controls {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+}
+
+.filter-btn {
+  padding: 10px 20px;
+  border: 2px solid #4a9eff;
+  background-color: transparent;
+  color: #4a9eff;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+}
+
+.filter-btn.active {
+  background-color: #4a9eff;
+  color: #1a1a2e;
+}
+
+.filter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(74, 158, 255, 0.3);
+}
+
+.info-text {
+  color: #8a8a9a;
+  font-size: 0.9em;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.leaderboard-table th {
+  background-color: #16213e;
+  color: #b0b0c0;
+  padding: 12px 10px;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 2px solid #2a2a4a;
+  user-select: none;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.leaderboard-table th:hover {
+  background-color: #1f2f50;
+  color: #4a9eff;
+}
+
+.rank-col {
+  width: 40px;
+  text-align: center !important;
+}
+
+.leaderboard-table td {
+  padding: 10px;
+  border-bottom: 1px solid #2a2a3e;
+  color: #c0c0d0;
+  font-size: 0.9em;
+}
+
+.leaderboard-table tr:hover {
+  background-color: #1f2f4a;
+}
+
+tr.top3 td {
+  background-color: rgba(240, 192, 64, 0.05);
+}
+
+tr.top3:hover td {
+  background-color: rgba(240, 192, 64, 0.1);
+}
+
+.rank-cell {
+  text-align: center;
+}
+
+.rank-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 0.8em;
+  font-weight: bold;
+  color: #1a1a2e;
+}
+
+.rank-badge.gold {
+  background-color: #f0c040;
+}
+
+.rank-badge.silver {
+  background-color: #c0c0c0;
+}
+
+.rank-badge.bronze {
+  background-color: #cd7f32;
+}
+
+.manager-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.manager-link {
+  text-decoration: none;
+  color: #4a9eff;
+  font-weight: 600;
+}
+
+.manager-link:hover {
+  text-decoration: underline;
+  color: #6db3ff;
+}
+
+.highlight-wins {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.highlight-pct {
+  color: #ff9800;
+  font-weight: 600;
+}
+
+.highlight-trophies {
+  color: #f0c040;
+  font-weight: 600;
+}
+
+.score-cell {
+  font-weight: bold;
+  color: #e040e0;
+  font-size: 1em;
+}
+
+.rep-badge {
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 0.85em;
+  font-weight: bold;
+}
+
+.rep-elite {
+  background-color: rgba(240, 192, 64, 0.2);
+  color: #f0c040;
+}
+
+.rep-high {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.rep-medium {
+  background-color: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+
+.rep-low {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75em;
+  font-weight: bold;
+}
+
+.status-badge.retired {
+  background-color: rgba(150, 150, 150, 0.2);
+  color: #999;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 40px;
+  color: #8a8a9a;
+}
+
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #2a2a4a;
+  border-top: 3px solid #4a9eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 15px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #8a8a9a;
+  font-style: italic;
+}

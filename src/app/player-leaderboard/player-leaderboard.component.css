@@ -1,0 +1,168 @@
+.leaderboard-container {
+    max-width: 1200px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  
+  .header-section {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  
+  .header-section h1 {
+    color: #2c3e50;
+    margin-bottom: 5px;
+  }
+  
+  .header-section p {
+    color: #7f8c8d;
+  }
+  
+  /* Controls */
+  .controls {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .filter-btn {
+    padding: 10px 20px;
+    border: 2px solid #27ae60;
+    background-color: white;
+    color: #27ae60;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s;
+  }
+  
+  .filter-btn.active {
+    background-color: #27ae60;
+    color: white;
+  }
+  
+  .filter-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  
+  /* Table Styles */
+  .leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  
+  .leaderboard-table th {
+    background-color: #f8f9fa;
+    color: #2c3e50;
+    padding: 15px;
+    text-align: left;
+    cursor: pointer;
+    border-bottom: 2px solid #ddd;
+    user-select: none;
+  }
+  
+  .leaderboard-table th:hover {
+    background-color: #e9ecef;
+  }
+  
+  .leaderboard-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee;
+    color: #555;
+  }
+  
+  .leaderboard-table tr:hover {
+    background-color: #f1f8e9; /* Light green hover */
+  }
+  
+  /* Player Name Column */
+  .player-name-cell {
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .player-link {
+    text-decoration: none;
+    color: #2980b9;
+    font-weight: bold;
+  }
+  
+  .player-link:hover {
+    text-decoration: underline;
+    color: #1abc9c;
+  }
+  
+  /* Special Columns */
+  .points-cell {
+    font-weight: bold;
+    color: #d35400;
+    font-size: 1.1em;
+  }
+  
+  .highlight-league {
+    color: #27ae60;
+    font-weight: 600;
+  }
+  
+  .highlight-cup {
+    color: #8e44ad;
+    font-weight: 600;
+  }
+  
+  /* Top 3 Highlighting */
+  tr.top3 td {
+    background-color: #fffdf0; /* Very light gold */
+  }
+  
+  tr.top3:hover td {
+    background-color: #fff8e1;
+  }
+  
+  .rank-badge {
+    background-color: #f1c40f;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.8em;
+    font-weight: bold;
+  }
+  
+  /* Status Badges */
+  .status-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+  }
+  
+  .status-badge.active {
+    background-color: #d4edda;
+    color: #155724;
+  }
+  
+  .status-badge.retired {
+    background-color: #e2e3e5;
+    color: #383d41;
+  }
+  
+  /* Loading */
+  .loading-state {
+    text-align: center;
+    padding: 40px;
+    font-style: italic;
+    color: #777;
+  }

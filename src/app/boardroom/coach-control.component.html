@@ -1,0 +1,40 @@
+<div class="cc-wrap">
+  <h2 class="cc-title">Coach Control — Team #{{ teamId }}</h2>
+  <p class="cc-sub">The owner decides what the coach is allowed to do. OFF = restricted (the coach's
+    matching action is blocked server-side, and the AI respects the same limits).</p>
+
+  <div class="cc-row cc-pick" *ngIf="teamId <= 0">
+    <span class="cc-label">Team id</span>
+    <input type="number" class="cc-input" [(ngModel)]="teamId" placeholder="team id" />
+    <button class="fm-btn" (click)="load()">Load</button>
+  </div>
+
+  <div *ngIf="loading" class="cc-msg">Loading…</div>
+
+  <div class="fm-panel cc-panel" *ngIf="perms && !loading">
+    <div class="cc-toggle" *ngFor="let t of toggles">
+      <label class="cc-switch">
+        <input type="checkbox" [(ngModel)]="perms[t.key]" />
+        <span class="cc-slider"></span>
+      </label>
+      <span class="cc-label">{{ t.label }}</span>
+      <span class="cc-state" [class.on]="asBool(perms[t.key])">{{ asBool(perms[t.key]) ? 'ALLOWED' : 'RESTRICTED' }}</span>
+    </div>
+
+    <div class="cc-row cc-cap">
+      <span class="cc-label">Transfer budget cap</span>
+      <input type="number" class="cc-input" [(ngModel)]="perms.transferBudgetCap" />
+      <span class="cc-hint">(-1 = no cap)</span>
+    </div>
+
+    <div class="cc-row cc-owner">
+      <span class="cc-label">Owner human id</span>
+      <input type="number" class="cc-input" [(ngModel)]="ownerHumanId" placeholder="your owner id" />
+    </div>
+
+    <div class="cc-actions">
+      <button class="fm-btn" (click)="save()" [disabled]="saving">{{ saving ? 'Saving…' : 'Save permissions' }}</button>
+      <span class="cc-feedback" *ngIf="message">{{ message }}</span>
+    </div>
+  </div>
+</div>

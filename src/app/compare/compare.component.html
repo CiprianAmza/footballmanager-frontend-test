@@ -1,0 +1,337 @@
+<div class="compare-container">
+  <h1>Player Comparison</h1>
+
+  <!-- Player Selection -->
+  <div class="search-row">
+    <div class="search-box">
+      <label>Player 1</label>
+      <input type="text" [(ngModel)]="searchQuery1" (keyup)="searchPlayer1()" placeholder="Search player...">
+      <div class="search-dropdown" *ngIf="searchResults1.length > 0">
+        <div class="search-item" *ngFor="let p of searchResults1" (click)="selectPlayer1(p)">
+          {{ p.name }} ({{ p.position }}, {{ p.teamName }})
+        </div>
+      </div>
+    </div>
+    <div class="vs-label">VS</div>
+    <div class="search-box">
+      <label>Player 2</label>
+      <input type="text" [(ngModel)]="searchQuery2" (keyup)="searchPlayer2()" placeholder="Search player...">
+      <div class="search-dropdown" *ngIf="searchResults2.length > 0">
+        <div class="search-item" *ngFor="let p of searchResults2" (click)="selectPlayer2(p)">
+          {{ p.name }} ({{ p.position }}, {{ p.teamName }})
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-msg">Loading comparison...</div>
+
+  <!-- Enhanced Comparison -->
+  <div *ngIf="player1 && player2 && !loading" class="comparison-content">
+
+    <!-- Player Headers -->
+    <div class="comp-players-header">
+      <div class="comp-player-card left">
+        <a [routerLink]="['/player', player1.playerId]" class="comp-player-name fm-link">{{ player1.playerName }}</a>
+        <div class="comp-player-meta">{{ player1.position }} - {{ player1.teamName }}</div>
+        <div class="comp-player-info">
+          <span>Age {{ player1.age }}</span>
+          <span>Rating {{ player1.rating }}</span>
+        </div>
+      </div>
+      <div class="vs-badge">VS</div>
+      <div class="comp-player-card right">
+        <a [routerLink]="['/player', player2.playerId]" class="comp-player-name fm-link">{{ player2.playerName }}</a>
+        <div class="comp-player-meta">{{ player2.position }} - {{ player2.teamName }}</div>
+        <div class="comp-player-info">
+          <span>Age {{ player2.age }}</span>
+          <span>Rating {{ player2.rating }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compare Tabs -->
+    <div class="compare-tabs">
+      <button [class.active]="activeCompareTab === 'overview'" (click)="setCompareTab('overview')">Overview</button>
+      <button [class.active]="activeCompareTab === 'career'" (click)="setCompareTab('career')">Career Stats</button>
+      <button [class.active]="activeCompareTab === 'seasons'" (click)="setCompareTab('seasons')">Season by Season</button>
+      <button [class.active]="activeCompareTab === 'form'" (click)="setCompareTab('form')">Recent Form</button>
+    </div>
+
+    <!-- TAB: Overview -->
+    <div *ngIf="activeCompareTab === 'overview'" class="compare-tab-content">
+
+      <!-- Career Stats Bars -->
+      <div class="section-header">CAREER TOTALS</div>
+      <div class="bar-compare-section">
+        <div class="bar-compare-row">
+          <span class="bar-label-left">{{ player1.career?.matches }}</span>
+          <div class="bar-track">
+            <div class="bar-fill-left" [style.width.%]="getBarWidth(player1.career?.matches, Math.max(player1.career?.matches, player2.career?.matches))"></div>
+          </div>
+          <span class="bar-attr">Matches</span>
+          <div class="bar-track">
+            <div class="bar-fill-right" [style.width.%]="getBarWidth(player2.career?.matches, Math.max(player1.career?.matches, player2.career?.matches))"></div>
+          </div>
+          <span class="bar-label-right">{{ player2.career?.matches }}</span>
+        </div>
+        <div class="bar-compare-row">
+          <span class="bar-label-left">{{ player1.career?.goals }}</span>
+          <div class="bar-track">
+            <div class="bar-fill-left" [style.width.%]="getBarWidth(player1.career?.goals, Math.max(player1.career?.goals, player2.career?.goals))"></div>
+          </div>
+          <span class="bar-attr">Goals</span>
+          <div class="bar-track">
+            <div class="bar-fill-right" [style.width.%]="getBarWidth(player2.career?.goals, Math.max(player1.career?.goals, player2.career?.goals))"></div>
+          </div>
+          <span class="bar-label-right">{{ player2.career?.goals }}</span>
+        </div>
+        <div class="bar-compare-row">
+          <span class="bar-label-left">{{ player1.career?.assists }}</span>
+          <div class="bar-track">
+            <div class="bar-fill-left" [style.width.%]="getBarWidth(player1.career?.assists, Math.max(player1.career?.assists, player2.career?.assists))"></div>
+          </div>
+          <span class="bar-attr">Assists</span>
+          <div class="bar-track">
+            <div class="bar-fill-right" [style.width.%]="getBarWidth(player2.career?.assists, Math.max(player1.career?.assists, player2.career?.assists))"></div>
+          </div>
+          <span class="bar-label-right">{{ player2.career?.assists }}</span>
+        </div>
+        <div class="bar-compare-row">
+          <span class="bar-label-left">{{ player1.career?.avgRating }}</span>
+          <div class="bar-track">
+            <div class="bar-fill-left" [style.width.%]="getBarWidth(player1.career?.avgRating, 100)"></div>
+          </div>
+          <span class="bar-attr">Avg Rating</span>
+          <div class="bar-track">
+            <div class="bar-fill-right" [style.width.%]="getBarWidth(player2.career?.avgRating, 100)"></div>
+          </div>
+          <span class="bar-label-right">{{ player2.career?.avgRating }}</span>
+        </div>
+        <div class="bar-compare-row">
+          <span class="bar-label-left">{{ player1.career?.goalsPerGame }}</span>
+          <div class="bar-track">
+            <div class="bar-fill-left" [style.width.%]="getBarWidth(player1.career?.goalsPerGame, Math.max(player1.career?.goalsPerGame, player2.career?.goalsPerGame))"></div>
+          </div>
+          <span class="bar-attr">Goals/Game</span>
+          <div class="bar-track">
+            <div class="bar-fill-right" [style.width.%]="getBarWidth(player2.career?.goalsPerGame, Math.max(player1.career?.goalsPerGame, player2.career?.goalsPerGame))"></div>
+          </div>
+          <span class="bar-label-right">{{ player2.career?.goalsPerGame }}</span>
+        </div>
+      </div>
+
+      <!-- Current Season -->
+      <div class="section-header">CURRENT SEASON (S{{ player1.currentSeason?.season || player2.currentSeason?.season }})</div>
+      <div class="bar-compare-section">
+        <div class="bar-compare-row">
+          <span class="bar-label-left">{{ player1.currentSeason?.matches }}</span>
+          <div class="bar-track">
+            <div class="bar-fill-left" [style.width.%]="getBarWidth(player1.currentSeason?.matches, Math.max(player1.currentSeason?.matches, player2.currentSeason?.matches))"></div>
+          </div>
+          <span class="bar-attr">Matches</span>
+          <div class="bar-track">
+            <div class="bar-fill-right" [style.width.%]="getBarWidth(player2.currentSeason?.matches, Math.max(player1.currentSeason?.matches, player2.currentSeason?.matches))"></div>
+          </div>
+          <span class="bar-label-right">{{ player2.currentSeason?.matches }}</span>
+        </div>
+        <div class="bar-compare-row">
+          <span class="bar-label-left">{{ player1.currentSeason?.goals }}</span>
+          <div class="bar-track">
+            <div class="bar-fill-left" [style.width.%]="getBarWidth(player1.currentSeason?.goals, Math.max(player1.currentSeason?.goals, player2.currentSeason?.goals))"></div>
+          </div>
+          <span class="bar-attr">Goals</span>
+          <div class="bar-track">
+            <div class="bar-fill-right" [style.width.%]="getBarWidth(player2.currentSeason?.goals, Math.max(player1.currentSeason?.goals, player2.currentSeason?.goals))"></div>
+          </div>
+          <span class="bar-label-right">{{ player2.currentSeason?.goals }}</span>
+        </div>
+        <div class="bar-compare-row">
+          <span class="bar-label-left">{{ player1.currentSeason?.assists }}</span>
+          <div class="bar-track">
+            <div class="bar-fill-left" [style.width.%]="getBarWidth(player1.currentSeason?.assists, Math.max(player1.currentSeason?.assists, player2.currentSeason?.assists))"></div>
+          </div>
+          <span class="bar-attr">Assists</span>
+          <div class="bar-track">
+            <div class="bar-fill-right" [style.width.%]="getBarWidth(player2.currentSeason?.assists, Math.max(player1.currentSeason?.assists, player2.currentSeason?.assists))"></div>
+          </div>
+          <span class="bar-label-right">{{ player2.currentSeason?.assists }}</span>
+        </div>
+        <div class="bar-compare-row">
+          <span class="bar-label-left">{{ player1.currentSeason?.avgRating }}</span>
+          <div class="bar-track">
+            <div class="bar-fill-left" [style.width.%]="getBarWidth(player1.currentSeason?.avgRating, 100)"></div>
+          </div>
+          <span class="bar-attr">Avg Rating</span>
+          <div class="bar-track">
+            <div class="bar-fill-right" [style.width.%]="getBarWidth(player2.currentSeason?.avgRating, 100)"></div>
+          </div>
+          <span class="bar-label-right">{{ player2.currentSeason?.avgRating }}</span>
+        </div>
+      </div>
+
+      <!-- By Competition Type -->
+      <div class="section-header">BY COMPETITION TYPE</div>
+      <div class="comp-type-grid">
+        <div class="comp-type-card" *ngFor="let type of getCompetitionTypes()">
+          <div class="comp-type-title">{{ type }}</div>
+          <div class="comp-type-row">
+            <span class="ct-val" [class]="getStatComparison(getCompTypeStat(player1, type, 'goals'), getCompTypeStat(player2, type, 'goals'))">{{ getCompTypeStat(player1, type, 'goals') }}</span>
+            <span class="ct-label">Goals</span>
+            <span class="ct-val" [class]="getStatComparison(getCompTypeStat(player2, type, 'goals'), getCompTypeStat(player1, type, 'goals'))">{{ getCompTypeStat(player2, type, 'goals') }}</span>
+          </div>
+          <div class="comp-type-row">
+            <span class="ct-val" [class]="getStatComparison(getCompTypeStat(player1, type, 'matches'), getCompTypeStat(player2, type, 'matches'))">{{ getCompTypeStat(player1, type, 'matches') }}</span>
+            <span class="ct-label">Matches</span>
+            <span class="ct-val" [class]="getStatComparison(getCompTypeStat(player2, type, 'matches'), getCompTypeStat(player1, type, 'matches'))">{{ getCompTypeStat(player2, type, 'matches') }}</span>
+          </div>
+          <div class="comp-type-row">
+            <span class="ct-val" [class]="getStatComparison(getCompTypeStat(player1, type, 'avgRating'), getCompTypeStat(player2, type, 'avgRating'))">{{ getCompTypeStat(player1, type, 'avgRating') }}</span>
+            <span class="ct-label">Rating</span>
+            <span class="ct-val" [class]="getStatComparison(getCompTypeStat(player2, type, 'avgRating'), getCompTypeStat(player1, type, 'avgRating'))">{{ getCompTypeStat(player2, type, 'avgRating') }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Career Stats -->
+    <div *ngIf="activeCompareTab === 'career'" class="compare-tab-content">
+      <div class="section-header">GENERAL</div>
+      <div class="comparison-grid">
+        <div class="comp-row">
+          <div class="val-col left" [class]="getInverseComparison(player1.age, player2.age)">{{ player1.age }}</div>
+          <div class="attr-col">Age</div>
+          <div class="val-col right" [class]="getInverseComparison(player2.age, player1.age)">{{ player2.age }}</div>
+        </div>
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.rating, player2.rating)">{{ player1.rating }}</div>
+          <div class="attr-col">Rating</div>
+          <div class="val-col right" [class]="getStatComparison(player2.rating, player1.rating)">{{ player2.rating }}</div>
+        </div>
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.fitness, player2.fitness)">{{ player1.fitness }}%</div>
+          <div class="attr-col">Fitness</div>
+          <div class="val-col right" [class]="getStatComparison(player2.fitness, player1.fitness)">{{ player2.fitness }}%</div>
+        </div>
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.morale, player2.morale)">{{ player1.morale }}</div>
+          <div class="attr-col">Morale</div>
+          <div class="val-col right" [class]="getStatComparison(player2.morale, player1.morale)">{{ player2.morale }}</div>
+        </div>
+      </div>
+
+      <div class="section-header">CAREER STATS</div>
+      <div class="comparison-grid">
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.career?.matches, player2.career?.matches)">{{ player1.career?.matches }}</div>
+          <div class="attr-col">Matches</div>
+          <div class="val-col right" [class]="getStatComparison(player2.career?.matches, player1.career?.matches)">{{ player2.career?.matches }}</div>
+        </div>
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.career?.goals, player2.career?.goals)">{{ player1.career?.goals }}</div>
+          <div class="attr-col">Goals</div>
+          <div class="val-col right" [class]="getStatComparison(player2.career?.goals, player1.career?.goals)">{{ player2.career?.goals }}</div>
+        </div>
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.career?.assists, player2.career?.assists)">{{ player1.career?.assists }}</div>
+          <div class="attr-col">Assists</div>
+          <div class="val-col right" [class]="getStatComparison(player2.career?.assists, player1.career?.assists)">{{ player2.career?.assists }}</div>
+        </div>
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.career?.avgRating, player2.career?.avgRating)">{{ player1.career?.avgRating }}</div>
+          <div class="attr-col">Avg Rating</div>
+          <div class="val-col right" [class]="getStatComparison(player2.career?.avgRating, player1.career?.avgRating)">{{ player2.career?.avgRating }}</div>
+        </div>
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.career?.goalsPerGame, player2.career?.goalsPerGame)">{{ player1.career?.goalsPerGame }}</div>
+          <div class="attr-col">Goals/Game</div>
+          <div class="val-col right" [class]="getStatComparison(player2.career?.goalsPerGame, player1.career?.goalsPerGame)">{{ player2.career?.goalsPerGame }}</div>
+        </div>
+      </div>
+
+      <div class="section-header">CURRENT SEASON</div>
+      <div class="comparison-grid">
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.currentSeason?.matches, player2.currentSeason?.matches)">{{ player1.currentSeason?.matches }}</div>
+          <div class="attr-col">Matches</div>
+          <div class="val-col right" [class]="getStatComparison(player2.currentSeason?.matches, player1.currentSeason?.matches)">{{ player2.currentSeason?.matches }}</div>
+        </div>
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.currentSeason?.goals, player2.currentSeason?.goals)">{{ player1.currentSeason?.goals }}</div>
+          <div class="attr-col">Goals</div>
+          <div class="val-col right" [class]="getStatComparison(player2.currentSeason?.goals, player1.currentSeason?.goals)">{{ player2.currentSeason?.goals }}</div>
+        </div>
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.currentSeason?.assists, player2.currentSeason?.assists)">{{ player1.currentSeason?.assists }}</div>
+          <div class="attr-col">Assists</div>
+          <div class="val-col right" [class]="getStatComparison(player2.currentSeason?.assists, player1.currentSeason?.assists)">{{ player2.currentSeason?.assists }}</div>
+        </div>
+        <div class="comp-row">
+          <div class="val-col left" [class]="getStatComparison(player1.currentSeason?.avgRating, player2.currentSeason?.avgRating)">{{ player1.currentSeason?.avgRating }}</div>
+          <div class="attr-col">Avg Rating</div>
+          <div class="val-col right" [class]="getStatComparison(player2.currentSeason?.avgRating, player1.currentSeason?.avgRating)">{{ player2.currentSeason?.avgRating }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Season by Season -->
+    <div *ngIf="activeCompareTab === 'seasons'" class="compare-tab-content">
+      <div class="section-header">SEASON BY SEASON COMPARISON</div>
+      <div class="seasons-table-wrapper">
+        <table class="seasons-compare-table">
+          <thead>
+            <tr>
+              <th class="center" colspan="4">{{ player1.playerName }}</th>
+              <th class="season-col">Season</th>
+              <th class="center" colspan="4">{{ player2.playerName }}</th>
+            </tr>
+            <tr class="sub-header">
+              <th>M</th><th>G</th><th>A</th><th>Rtg</th>
+              <th></th>
+              <th>M</th><th>G</th><th>A</th><th>Rtg</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let season of getAllSeasons()">
+              <td [class]="getStatComparison(getSeasonStat(player1, season, 'matches'), getSeasonStat(player2, season, 'matches'))">{{ getSeasonStat(player1, season, 'matches') || '-' }}</td>
+              <td [class]="getStatComparison(getSeasonStat(player1, season, 'goals'), getSeasonStat(player2, season, 'goals'))">{{ getSeasonStat(player1, season, 'goals') || '-' }}</td>
+              <td [class]="getStatComparison(getSeasonStat(player1, season, 'assists'), getSeasonStat(player2, season, 'assists'))">{{ getSeasonStat(player1, season, 'assists') || '-' }}</td>
+              <td [class]="getStatComparison(getSeasonStat(player1, season, 'avgRating'), getSeasonStat(player2, season, 'avgRating'))">{{ getSeasonStat(player1, season, 'avgRating') || '-' }}</td>
+              <td class="season-col">S{{ season }}</td>
+              <td [class]="getStatComparison(getSeasonStat(player2, season, 'matches'), getSeasonStat(player1, season, 'matches'))">{{ getSeasonStat(player2, season, 'matches') || '-' }}</td>
+              <td [class]="getStatComparison(getSeasonStat(player2, season, 'goals'), getSeasonStat(player1, season, 'goals'))">{{ getSeasonStat(player2, season, 'goals') || '-' }}</td>
+              <td [class]="getStatComparison(getSeasonStat(player2, season, 'assists'), getSeasonStat(player1, season, 'assists'))">{{ getSeasonStat(player2, season, 'assists') || '-' }}</td>
+              <td [class]="getStatComparison(getSeasonStat(player2, season, 'avgRating'), getSeasonStat(player1, season, 'avgRating'))">{{ getSeasonStat(player2, season, 'avgRating') || '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: Recent Form -->
+    <div *ngIf="activeCompareTab === 'form'" class="compare-tab-content">
+      <div class="section-header">RECENT MATCH RATINGS (LAST 5)</div>
+      <div class="form-chart-row">
+        <div class="form-chart-side">
+          <div class="form-chart-name">{{ player1.playerName }}</div>
+          <div class="form-rating-dots">
+            <div *ngFor="let r of player1.recentRatings; let i = index" class="form-rating-dot">
+              <div class="form-dot-bar" [style.height.%]="r" [style.background-color]="getRatingColor(r)"></div>
+              <span class="form-dot-val" [style.color]="getRatingColor(r)">{{ r }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-chart-side">
+          <div class="form-chart-name">{{ player2.playerName }}</div>
+          <div class="form-rating-dots">
+            <div *ngFor="let r of player2.recentRatings; let i = index" class="form-rating-dot">
+              <div class="form-dot-bar" [style.height.%]="r" [style.background-color]="getRatingColor(r)"></div>
+              <span class="form-dot-val" [style.color]="getRatingColor(r)">{{ r }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

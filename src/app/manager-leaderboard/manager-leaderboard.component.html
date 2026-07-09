@@ -1,0 +1,69 @@
+<div class="leaderboard-container">
+  <div class="header-section">
+    <h1>Manager Hall of Fame</h1>
+    <p>The greatest managers in history ranked by career performance.</p>
+
+    <div class="controls">
+      <button class="filter-btn" [class.active]="showOnlyActive" (click)="toggleActiveFilter()">
+        {{ showOnlyActive ? 'Showing: Active Managers' : 'Showing: All Time' }}
+      </button>
+      <span class="info-text">Total Managers: {{ displayedManagers.length }}</span>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <p>Loading manager data...</p>
+    <div class="spinner"></div>
+  </div>
+
+  <div class="table-responsive" *ngIf="!loading">
+    <table class="leaderboard-table">
+      <thead>
+        <tr>
+          <th class="rank-col">#</th>
+          <th (click)="sort('managerName')">Name{{ getSortIcon('managerName') }}</th>
+          <th (click)="sort('currentTeamName')">Current Club{{ getSortIcon('currentTeamName') }}</th>
+          <th (click)="sort('totalGames')">G{{ getSortIcon('totalGames') }}</th>
+          <th (click)="sort('totalWins')">W{{ getSortIcon('totalWins') }}</th>
+          <th (click)="sort('totalDraws')">D{{ getSortIcon('totalDraws') }}</th>
+          <th (click)="sort('totalLosses')">L{{ getSortIcon('totalLosses') }}</th>
+          <th (click)="sort('winPercentage')">Win%{{ getSortIcon('winPercentage') }}</th>
+          <th (click)="sort('totalTrophies')">Trophies{{ getSortIcon('totalTrophies') }}</th>
+          <th (click)="sort('reputation')">Rep{{ getSortIcon('reputation') }}</th>
+          <th (click)="sort('compositeScore')">Score{{ getSortIcon('compositeScore') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let manager of displayedManagers; let i = index" [class.top3]="i < 3">
+          <td class="rank-cell">
+            <span class="rank-badge" *ngIf="i < 3" [class.gold]="i === 0" [class.silver]="i === 1" [class.bronze]="i === 2">{{ i + 1 }}</span>
+            <span *ngIf="i >= 3">{{ i + 1 }}</span>
+          </td>
+          <td class="manager-name-cell">
+            <a [routerLink]="['/manager-profile', manager.managerId]" class="manager-link">
+              {{ manager.managerName }}
+            </a>
+            <span class="status-badge retired" *ngIf="manager.retired">Retired</span>
+          </td>
+          <td>{{ manager.currentTeamName }}</td>
+          <td>{{ manager.totalGames }}</td>
+          <td class="highlight-wins">{{ manager.totalWins }}</td>
+          <td>{{ manager.totalDraws }}</td>
+          <td>{{ manager.totalLosses }}</td>
+          <td class="highlight-pct">{{ manager.winPercentage }}%</td>
+          <td class="highlight-trophies">{{ manager.totalTrophies }}</td>
+          <td>
+            <span class="rep-badge" [ngClass]="getReputationClass(manager.reputation)">
+              {{ manager.reputation }}
+            </span>
+          </td>
+          <td class="score-cell">{{ manager.compositeScore }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="displayedManagers.length === 0" class="empty-state">
+      <p>No manager history recorded yet. Complete a season to see the leaderboard.</p>
+    </div>
+  </div>
+</div>

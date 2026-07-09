@@ -1,0 +1,148 @@
+.job-search-container {
+  padding: 30px;
+  background: #1b1b1b;
+  min-height: 100vh;
+  color: #e0e0e0;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.page-header {
+  margin-bottom: 30px;
+}
+
+.page-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #e74c3c;
+  margin: 0 0 8px 0;
+}
+
+.subtitle {
+  color: #888;
+  font-size: 14px;
+  margin: 0;
+}
+
+.success-message {
+  background: #1a3a2a;
+  border: 1px solid #2ecc71;
+  color: #2ecc71;
+  padding: 15px 20px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.loading, .no-jobs {
+  text-align: center;
+  color: #888;
+  padding: 40px;
+  font-size: 14px;
+}
+
+.jobs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.job-card {
+  background: #242424;
+  border: 1px solid #333;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.job-card:hover {
+  border-color: #3498db;
+}
+
+.job-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 18px;
+  border-bottom: 1px solid #333;
+}
+
+.team-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.job-badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-vacant {
+  background: #27ae60;
+  color: #fff;
+}
+
+.badge-replaceable {
+  background: #e67e22;
+  color: #fff;
+}
+
+.job-card-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.job-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-label {
+  color: #888;
+  font-size: 13px;
+}
+
+.stat-value {
+  color: #ccc;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.text-green { color: #2ecc71; }
+.text-orange { color: #e67e22; }
+
+.job-card-footer {
+  padding: 12px 18px;
+  border-top: 1px solid #333;
+}
+
+.accept-btn {
+  width: 100%;
+  padding: 10px;
+  background: #3498db;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.accept-btn:hover:not(:disabled) {
+  background: #2980b9;
+}
+
+.accept-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

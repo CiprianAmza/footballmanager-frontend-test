@@ -1,0 +1,181 @@
+body {
+    margin-left: 5%;
+}
+td, th {
+    padding: 8px;
+    border: 1px solid black;
+    text-align: left;
+}
+
+h1 {
+    color: #24223c;
+    font-size: 2rem;
+    text-align: center;
+    margin: 20px 0;
+  }
+  
+  table {
+    border-collapse: separate;
+    border-spacing: 0px;
+    width: 30%;
+    margin: 0 auto;
+    margin-left: 8%;
+    margin-top: 0.5%;
+    float: left;
+    box-shadow: 5px 5px 6px 5px rgba(0.1, 0.1, 0.1, 0.1);
+    border-radius: 5px;
+    border: 2.2px solid #013511;
+  }
+  
+  th {
+    text-align: center;
+    padding: 10px;
+    border: none;
+    border-radius: 6%;
+  }
+  
+  td {
+    text-align: center;
+    padding: 6px;
+    border: none;
+  }
+  
+  th {
+    background-color: #dbb1a9;
+    color: #3f3d56;
+    font-size: 1.5rem;
+    font-weight: bold;
+    border-bottom: 2px solid #3f3d56;
+    border-right: 2px solid #3f3d56;
+    cursor: pointer;
+  }
+  
+  th:hover {
+    background-color: #555;
+  }
+  
+  th:focus {
+    outline: none;
+  }
+  
+  tr:nth-child(even) {
+    background-color: #e2d2c5;
+  }
+
+  tr:nth-child(odd) {
+    background-color: #f1eeeb;
+  }
+  
+  
+  tr:hover {
+    background-color: #ffd5c8;
+  }
+  
+  td:first-child {
+    font-weight: bold;
+    font-size: 18px;
+  }
+  
+  td:nth-child(n+3):nth-child(-n+7) {
+    font-weight: bold;
+    font-size: 18px;
+  }
+  
+  td:nth-child(n+8):nth-child(n+8) {
+    font-size: 18px;
+  }
+  
+  td:last-child {
+    font-weight: bold;
+    font-size: 1.2rem;
+    font-size: 18.5px;
+    color: rgb(50, 21, 1)
+  }
+  
+  @media (max-width: 768px) {
+    th {
+      font-size: 1rem;
+    }
+  
+    td {
+      font-size: 0.9rem;
+      padding: 8px;
+      border: none;
+      border-bottom: 1px solid #3f3d56;
+    }
+  }
+  
+  #teamName {
+    color: rgb(74, 6, 84);
+    font-weight: bolder;
+    font-size: 17px;
+  }
+  
+  
+  .logo {
+    display: inline-block;
+    background-color: white;
+    padding: 3px;
+    width: 80px;
+    border-radius: 20%;
+    border: 1px solid #3f3d56;
+  }
+  
+  .currentTeam {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    font-weight: bolder;
+  }
+  
+  .currentTeam span {
+    font-size: 10px;
+    font-weight: bolder;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-family: Arial, sans-serif;
+    margin: 2px;
+    text-shadow: 1px 1px darkblack;
+  }
+  
+  .results {
+    display: inline-block;
+  }
+  
+  .result-box {
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    font-size: 20px;
+    text-align: center;
+    line-height: 30px;
+    margin-right: 5px;
+    border: 2px solid #663300;
+    background-color: #f3e0b7;
+    border-radius: 5px;
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+    color: #663300;
+    text-shadow: 1px 1px 0px #fff;
+  }
+
+
+
+
+  .competitionTitle {
+    width: 100%;
+    background-color: #f2f2f2;
+    padding: 1px;
+    border-radius: 5px;
+    text-align: center;
+  }
+  .competitionTitle a {
+    color: #000;
+    text-decoration: none;
+  }
+  .competitionTitle:hover {
+    background-color: #ddd;
+  }
+  

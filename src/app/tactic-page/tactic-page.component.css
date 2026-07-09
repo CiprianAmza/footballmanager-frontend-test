@@ -1,0 +1,109 @@
+body {
+    cursor: grab;
+    background-color: #365a4d;
+}
+.tactic {
+    background: #004200;
+    margin-left: 550px;
+    margin-right: 550px;
+    border: solid 5px #a3c7ba;
+}
+
+.attack .midlefield .defensive .goalkeeper{
+    margin-left: 20%;
+    margin-right: 20%;
+}
+
+.row5 {
+      display: flex;
+      column-gap: 4rem;
+      padding: 1rem;
+      background: green;
+      justify-content: center;
+      max-width: 100%;
+
+}
+.row2 {
+cursor: grab;
+display: flex;
+column-gap: 4rem;
+padding: 1rem;
+background: green;
+justify-content: center;
+max-width: 100%;
+
+}
+
+.row {
+  cursor: grab;
+  display: flex;
+  column-gap: 4rem;
+  padding: 0rem;
+  border: solid 20px #830924;
+  background: #c2c799;
+
+}
+
+.container {
+cursor: grab;
+width: 100px;
+height: 150px;
+padding: 1rem;
+border: solid 2px #20dad8;
+background: #001745;
+border-radius: 10%;
+}
+
+.hidden {
+cursor: grab;
+display: none;
+}
+
+p {
+cursor: grab;
+font-family: "Roboto Slab", serif;
+color: #132505;
+}
+
+.column {
+cursor: grab;
+width: 8.4rem;
+margin: 0 0.9rem;
+background: #00c7ff;
+border: #000013 0.2rem solid;
+border-radius: 0.5rem;
+max-height: 180px;
+color: #c2bb99;
+}
+
+.column-header {
+display: flex;
+padding: 0.1rem;
+}
+
+.orange .column-header {
+background: #132505;
+max-height: 60px;
+}
+
+ul {
+list-style-type: none;
+margin: 0;
+padding: 0;
+}
+
+.mydivheader {
+background-color: white;
+border-radius: 25px;
+}
+
+.rowexample {
+display: flex;
+justify-content: left;
+margin-bottom: -25px;
+}
+
+.space {
+cursor: grab;
+margin-bottom: 10px;
+}

@@ -1,0 +1,259 @@
+.setup-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  background: #0a1628;
+  padding: 40px 20px;
+}
+
+.setup-card {
+  background: #111d2e;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 900px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.setup-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.setup-header .fm-logo {
+  display: inline-block;
+  background: #1a8fc4;
+  color: #fff;
+  font-weight: 700;
+  font-size: 24px;
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.setup-header h1 {
+  color: #e0e6ed;
+  font-size: 28px;
+  margin: 8px 0 4px;
+}
+
+.setup-subtitle {
+  color: #7a8ba3;
+  font-size: 16px;
+  margin: 0;
+}
+
+.loading-state {
+  text-align: center;
+  color: #7a8ba3;
+  padding: 40px;
+  font-size: 16px;
+}
+
+.setup-section {
+  margin-bottom: 28px;
+}
+
+.setup-section h2 {
+  color: #c8d6e5;
+  font-size: 18px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #1e2d44;
+  padding-bottom: 8px;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.form-row label {
+  color: #8899aa;
+  width: 60px;
+  font-size: 14px;
+}
+
+.form-row input {
+  flex: 1;
+  max-width: 300px;
+  padding: 8px 12px;
+  background: #0d1926;
+  border: 1px solid #1e2d44;
+  border-radius: 6px;
+  color: #e0e6ed;
+  font-size: 14px;
+  outline: none;
+}
+
+.form-row input:focus {
+  border-color: #1a8fc4;
+}
+
+.form-row input[type="number"] {
+  max-width: 80px;
+}
+
+.leagues-container {
+  max-height: 450px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.league-group {
+  margin-bottom: 20px;
+}
+
+.league-name {
+  color: #1a8fc4;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.teams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.team-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #0d1926;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.team-card:hover {
+  border-color: #1e2d44;
+  background: #142236;
+}
+
+.team-card.selected {
+  border-color: #1a8fc4;
+  background: #0f2a3d;
+}
+
+.team-colors {
+  display: flex;
+  gap: 2px;
+}
+
+.color-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.team-name {
+  flex: 1;
+  color: #c8d6e5;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.team-rep {
+  color: #7a8ba3;
+  font-size: 11px;
+  min-width: 20px;
+  text-align: right;
+}
+
+.error-message {
+  background: #3d1515;
+  color: #f87171;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.setup-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #1e2d44;
+}
+
+.setup-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.free-agent-hint {
+  color: #7a8ba3;
+  font-size: 12px;
+  font-style: italic;
+  text-align: right;
+}
+
+.selected-summary {
+  color: #7a8ba3;
+  font-size: 14px;
+}
+
+.selected-summary strong {
+  color: #e0e6ed;
+}
+
+.start-btn {
+  background: #1a8fc4;
+  color: #fff;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.start-btn:hover:not(:disabled) {
+  background: #1578a7;
+}
+
+.start-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.start-btn.secondary {
+  background: transparent;
+  color: #e0e6ed;
+  border: 1px solid #2c3e5a;
+}
+
+.start-btn.secondary:hover:not(:disabled) {
+  background: #1e2d44;
+  border-color: #3d5273;
+}
+
+/* Scrollbar styling */
+.leagues-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.leagues-container::-webkit-scrollbar-track {
+  background: #0d1926;
+}
+
+.leagues-container::-webkit-scrollbar-thumb {
+  background: #1e2d44;
+  border-radius: 3px;
+}

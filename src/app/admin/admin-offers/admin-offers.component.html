@@ -1,0 +1,60 @@
+<div class="admin-container">
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Job Offers</h2>
+      <div class="header-actions">
+        <a class="secondary" routerLink="/admin" style="text-decoration:none;padding:6px 12px;border-radius:4px;">← Hub</a>
+      </div>
+    </div>
+
+    <div class="job-offers-panel">
+      <div class="panel-header inner">
+        <h3>Job Offers</h3>
+        <span class="status-pill" [class.on]="jobOffersEnabled" [class.off]="!jobOffersEnabled">
+          {{ jobOffersEnabled ? 'Auto-offers ON' : 'Auto-offers OFF' }}
+        </span>
+      </div>
+
+      <p class="hint">
+        When auto-offers are OFF, the random periodic generator never spawns a job offer for users.
+        Use <em>Force next advance</em> to trigger one offer to every active user on the next CONTINUE press,
+        or <em>Generate now</em> to send a specific user an offer from a specific team.
+      </p>
+
+      <div class="job-offer-actions">
+        <button class="primary" (click)="toggleJobOffersEnabled()">
+          {{ jobOffersEnabled ? 'Disable auto-offers' : 'Enable auto-offers' }}
+        </button>
+        <button class="secondary" (click)="armForceOffer()" [disabled]="forceJobOfferArmed">
+          {{ forceJobOfferArmed ? 'Armed for next advance' : 'Force on next advance' }}
+        </button>
+        <span class="save-msg ok" *ngIf="jobOfferStateMessage">{{ jobOfferStateMessage }}</span>
+      </div>
+
+      <div class="manual-offer">
+        <h4>Manual offer</h4>
+        <div class="manual-offer-row">
+          <label>
+            User
+            <select [(ngModel)]="selectedUserId">
+              <option [ngValue]="null">— select user —</option>
+              <option *ngFor="let u of jobOfferUsers" [ngValue]="u.id">
+                {{ u.username }} (id {{ u.id }}, team {{ u.teamId || 'none' }})
+              </option>
+            </select>
+          </label>
+          <label>
+            Offering team id
+            <input type="number" min="1" [(ngModel)]="manualOfferTeamId" placeholder="e.g. 12" />
+          </label>
+          <button class="primary" (click)="generateManualOffer()">Generate now</button>
+        </div>
+        <div class="save-msg" *ngIf="manualOfferResult"
+             [class.ok]="manualOfferResult.startsWith('Created')"
+             [class.err]="!manualOfferResult.startsWith('Created')">
+          {{ manualOfferResult }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

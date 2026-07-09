@@ -1,0 +1,148 @@
+<div class="planner-container">
+  
+    <!-- HEADER & TABS -->
+    <div class="planner-header">
+      <div class="header-title">
+        <h1>🛡️ SQUAD PLANNER</h1>
+        <span class="subtitle">Squad Depth & Recruitment Focus</span>
+      </div>
+      
+      <div class="season-tabs">
+        <button class="tab-btn" [class.active]="activeTab === 'current'" (click)="setTab('current')">Current Season</button>
+        <button class="tab-btn" [class.active]="activeTab === 'next'" (click)="setTab('next')">Next Season</button>
+        <button class="tab-btn" [class.active]="activeTab === 'after'" (click)="setTab('after')">Season After</button>
+      </div>
+    </div>
+  
+    <div class="planner-content">
+      
+      <!-- LEFT: PITCH VIEW -->
+      <div class="pitch-panel">
+        <div class="tactic-selector">
+          <span>4-2-3-1 Wide - Control Possession</span>
+          <button class="icon-btn">⛶</button>
+        </div>
+  
+        <div class="football-pitch">
+          <!-- Liniile terenului (decorativ) -->
+          <div class="pitch-line outline"></div>
+          <div class="pitch-line half-line"></div>
+          <div class="pitch-line center-circle"></div>
+          <div class="pitch-line box-top"></div>
+          <div class="pitch-line box-bottom"></div>
+  
+          <!-- Pozițiile Interactive -->
+          <div *ngFor="let pos of formation" 
+               class="pos-circle" 
+               [class.selected]="selectedPosCode === pos.code"
+               [style.top]="pos.top" 
+               [style.left]="pos.left"
+               (click)="selectPosition(pos)">
+            
+            <span class="pos-code">{{ pos.code }}</span>
+            <span class="pos-role">Role</span> <!-- Placeholder -->
+          </div>
+        </div>
+        
+        <div class="checkbox-row">
+          <input type="checkbox" id="allPos"> <label for="allPos">All Positions</label>
+        </div>
+      </div>
+  
+      <!-- RIGHT: DEPTH CHART LIST -->
+      <div class="list-panel">
+        
+        <!-- List Header (Contextual) -->
+        <div class="list-header-bar">
+          <div class="position-title">
+              <span class="code">{{ selectedPosCode }}</span> - {{ selectedPosName | uppercase }}
+          </div>
+          <div class="list-actions">
+              <button class="fm-btn small">Ask Assistant</button>
+              <button class="fm-btn small">Add ▼</button>
+              <button class="fm-btn small">Filter ▼</button>
+          </div>
+        </div>
+  
+        <!-- TABLE -->
+        <div class="table-responsive">
+          <table class="planner-table">
+              <thead>
+                  <tr>
+                      <th class="choice-col">CHOICE</th>
+                      <th class="name-col">NAME</th>
+                      <th class="center">INF</th>
+                      <th>AGREED PLAYING TIME</th>
+                      <th>EXPIRES</th>
+                      <th>TRANSFER VALUE</th>
+                      <th class="center">ABILITY</th>
+                      <th class="center">REM</th>
+                  </tr>
+              </thead>
+              <tbody>
+                  <tr *ngFor="let player of displayList; let i = index">
+                      
+                      <!-- Choice Rank (1st, 2nd...) -->
+                      <td class="choice-col">
+                          <div class="rank-badge" [class.first]="i === 0" [class.backup]="i > 0">
+                              <span *ngIf="i === 0">1st</span>
+                              <span *ngIf="i === 1">2nd</span>
+                              <span *ngIf="i === 2">3rd</span>
+                              <span *ngIf="i === 3">4th</span>
+                              <span *ngIf="i > 3">{{ i + 1 }}th</span>
+                              <span class="arrow">▼</span>
+                          </div>
+                      </td>
+  
+                      <!-- Name & Info -->
+                      <td class="name-col">
+                          <div class="player-info">
+                              <a [routerLink]="['/player', player.id]" class="fm-link"><span class="p-name">{{ player.name }}</span></a>
+                              <div class="p-sub">{{ player.age }} year-old {{ player.role | lowercase }}</div>
+                          </div>
+                      </td>
+  
+                      <!-- Inf Tags -->
+                      <td class="center">
+                          <div class="tags-container">
+                              <span *ngFor="let note of player.notes" class="inf-tag">{{ note }}</span>
+                          </div>
+                      </td>
+  
+                      <!-- Playing Time -->
+                      <td class="time-col">{{ player.playingTime }}</td>
+  
+                      <!-- Expires -->
+                      <td class="expires-col">{{ player.contractExpires }}</td>
+  
+                      <!-- Value -->
+                      <td class="value-col">{{ player.transferValue }}</td>
+  
+                      <!-- Ability Stars -->
+                      <td class="center">
+                          <div class="stars">
+                              <span *ngFor="let s of getStars(player.ability)" class="star" [class.half]="s === 'half'">★</span>
+                          </div>
+                      </td>
+  
+                      <!-- Remove Btn -->
+                      <td class="center">
+                          <button class="remove-btn">⛔</button>
+                      </td>
+                  </tr>
+  
+                  <!-- Empty State -->
+                  <tr *ngIf="displayList.length === 0">
+                      <td colspan="8" class="no-data">
+                          No players found suitable for this position. 
+                          <a href="#">Create New Recruitment Focus</a>
+                      </td>
+                  </tr>
+              </tbody>
+          </table>
+        </div>
+  
+      </div>
+  
+    </div>
+  </div>

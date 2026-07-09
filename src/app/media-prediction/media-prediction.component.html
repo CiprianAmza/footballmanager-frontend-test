@@ -1,0 +1,122 @@
+<div class="media-container">
+  
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="header-left">
+        <div class="icon-circle">🔮</div>
+        <div class="titles">
+            <h1>MEDIA PREDICTION</h1>
+            <span class="subtitle">Season Preview & Tactical Analysis</span>
+        </div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+    
+    <!-- LEFT: PREDICTION TABLE -->
+    <div class="list-panel fm-panel">
+        <div class="panel-header">PREDICTED FINISH</div>
+        <div class="table-scroll">
+            <table class="fm-table">
+                <thead>
+                    <tr>
+                        <th class="center">POS</th>
+                        <th>TEAM</th>
+                        <th class="center">RATING</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let entry of mediaPredictions; let i = index" 
+                        (click)="selectTeam(entry)" 
+                        [class.selected]="selectedTeam === entry">
+                        
+                        <td class="center pos-col">
+                            <span class="pos-badge" [class.top]="i < 4">{{ i + 1 }}</span>
+                        </td>
+                        <td class="team-name">{{ entry.managerTeamTacticView.teamName }}</td>
+                        <td class="center rating-val">{{ entry.managerTeamTacticView.tacticRating | number:'1.0-0' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- RIGHT: TACTICAL BOARD -->
+    <div class="pitch-panel fm-panel" *ngIf="selectedTeam">
+        <div class="panel-header">
+            <span>SQUAD DEPTH & TACTIC</span>
+            <span class="tactic-name">
+                {{ formatTacticName(selectedTeam.managerTeamTacticView.tactic) }} • 
+                {{ selectedTeam.managerTeamTacticView.managerName }}
+            </span>
+        </div>
+        
+        <div class="pitch-wrapper">
+            
+            <!-- The Football Pitch (VERTICAL) -->
+            <div class="football-pitch">
+                <!-- Markings -->
+                <div class="pitch-line outline"></div>
+                <div class="pitch-line half-line"></div>
+                <div class="pitch-line center-circle"></div>
+                <div class="pitch-line box-top"></div>
+                <div class="pitch-line box-bottom"></div>
+
+                <!-- Player Grid (5x6) -->
+                <div class="pitch-grid">
+                    <div *ngFor="let player of cells" class="grid-cell">
+                        
+                        <!-- Player Node -->
+                        <div *ngIf="player" 
+                             class="player-node" 
+                             [class.active]="selectedPlayer === player"
+                             (click)="selectPlayer(player)">
+                            
+                            <div class="shirt-icon"
+                                 [style.background-color]="player.rating | ratingColor">
+                                {{ player.rating | number:'1.0-0' }}
+                            </div>
+                            <div class="player-name-tag">{{ player.name }}</div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🔹 PLAYER ANALYSIS CARD (Popup over Pitch) -->
+            <div class="player-card-overlay" *ngIf="selectedPlayer">
+                <div class="card-header">
+                    <span class="p-name">{{ selectedPlayer.name }}</span>
+                    <button class="close-btn" (click)="selectPlayer(null)">✕</button>
+                </div>
+                <div class="card-body">
+                    <div class="card-row">
+                        <span class="label">Position</span>
+                        <span class="val">{{ selectedPlayer.position }}</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="label">Age</span>
+                        <span class="val">{{ selectedPlayer.age }} years</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="label">Fitness</span>
+                        <div class="fitness-bar">
+                            <div class="fill" [style.width.%]="selectedPlayer.fitness"></div>
+                        </div>
+                    </div>
+                    <div class="card-row">
+                        <span class="label">Morale</span>
+                        <span class="val morale">{{ selectedPlayer.morale }}</span>
+                    </div>
+                    <div class="card-row">
+                        <span class="label">Value</span>
+                        <span class="val money">€{{ selectedPlayer.wealth | number }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+  </div>
+</div>

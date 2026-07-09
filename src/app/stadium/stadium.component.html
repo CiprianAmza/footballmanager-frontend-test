@@ -1,0 +1,262 @@
+<div class="stadium-page">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="header-left">
+      <span class="header-icon">&#127967;</span>
+      <div class="header-titles">
+        <h1>STADIUM & FACILITIES</h1>
+        <span class="header-sub">{{ teamName }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="upgradeMessage" class="upgrade-toast">{{ upgradeMessage }}</div>
+
+  <!-- Completed Upgrade Notifications -->
+  <div class="completed-banner" *ngFor="let done of completedUpgrades">
+    <div class="completed-icon">&#9989;</div>
+    <div class="completed-text">
+      <strong>{{ getFacilityLabel(done.facilityType) }}</strong> upgrade complete!
+      Now at <strong>Level {{ done.targetLevel }}</strong>.
+    </div>
+  </div>
+
+  <div class="stadium-content" *ngIf="!loading">
+
+    <!-- STADIUM OVERVIEW -->
+    <div class="stadium-overview">
+      <div class="stadium-visual">
+        <div class="stadium-svg">
+          <div class="svg-field">
+            <div class="svg-pitch">
+              <div class="pitch-markings">
+                <div class="center-line"></div>
+                <div class="center-circle"></div>
+                <div class="penalty-box left-box"></div>
+                <div class="penalty-box right-box"></div>
+                <div class="goal-box left-goal"></div>
+                <div class="goal-box right-goal"></div>
+              </div>
+            </div>
+            <div class="svg-stand stand-top"></div>
+            <div class="svg-stand stand-bottom"></div>
+            <div class="svg-stand stand-left"></div>
+            <div class="svg-stand stand-right"></div>
+          </div>
+        </div>
+        <div class="stadium-name-plate">
+          {{ stadium?.stadiumName || teamName + ' Stadium' }}
+        </div>
+      </div>
+
+      <div class="stadium-stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">&#127967;</div>
+          <div class="stat-info">
+            <span class="stat-label">BASE CAPACITY</span>
+            <span class="stat-value">{{ (stadium?.capacity || 0) | number }}</span>
+          </div>
+        </div>
+        <div class="stat-card highlight">
+          <div class="stat-icon">&#128101;</div>
+          <div class="stat-info">
+            <span class="stat-label">EFFECTIVE CAPACITY</span>
+            <span class="stat-value">{{ effectiveCapacity | number }}</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">&#127941;</div>
+          <div class="stat-info">
+            <span class="stat-label">EXPANSION LEVEL</span>
+            <span class="stat-value">{{ stadium?.expansionLevel || 0 }} / 10</span>
+          </div>
+        </div>
+        <div class="stat-card accent">
+          <div class="stat-icon">&#128200;</div>
+          <div class="stat-info">
+            <span class="stat-label">REVENUE MULTIPLIER</span>
+            <span class="stat-value">x{{ revenueMultiplier.toFixed(2) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UPGRADES IN PROGRESS -->
+    <div class="section" *ngIf="upgradesInProgress.length > 0">
+      <div class="section-header construction-header">
+        <span class="section-icon">&#128679;</span>
+        CONSTRUCTION IN PROGRESS
+      </div>
+      <div class="construction-list">
+        <div class="construction-item" *ngFor="let upgrade of upgradesInProgress">
+          <div class="construction-icon">{{ getFacilityIcon(upgrade.facilityType) }}</div>
+          <div class="construction-info">
+            <div class="construction-name">
+              {{ getFacilityLabel(upgrade.facilityType) }}
+              <span class="level-badge">Lv {{ upgrade.currentLevel }} &rarr; {{ upgrade.targetLevel }}</span>
+            </div>
+            <div class="progress-bar-container">
+              <div class="progress-bar-fill" [style.width.%]="getUpgradeProgress(upgrade)"></div>
+            </div>
+            <div class="construction-meta">
+              <span>Cost: {{ upgrade.cost | number }}</span>
+              <span class="days-remaining">{{ getDaysRemaining(upgrade) }} days remaining</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STADIUM FACILITIES -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">&#127967;</span>
+        STADIUM FACILITIES
+      </div>
+      <div class="facilities-grid">
+        <div class="facility-card" *ngFor="let item of getStadiumUpgrades()">
+          <div class="facility-top">
+            <div class="facility-icon-box">{{ getFacilityIcon(item.type) }}</div>
+            <div class="facility-header-info">
+              <span class="facility-name">{{ item.name }}</span>
+              <span class="facility-desc">{{ item.description }}</span>
+            </div>
+          </div>
+
+          <div class="facility-level-section">
+            <div class="level-info">
+              <span class="level-text">Level</span>
+              <span class="level-number" [style.color]="getLevelColor(item.currentLevel)">
+                {{ item.currentLevel }}
+              </span>
+              <span class="level-max">/ {{ item.maxLevel }}</span>
+            </div>
+            <div class="level-bar">
+              <div class="level-bar-fill"
+                   [style.width.%]="(item.currentLevel / item.maxLevel) * 100"
+                   [style.background-color]="getLevelColor(item.currentLevel)">
+              </div>
+            </div>
+          </div>
+
+          <!-- In Progress -->
+          <div class="facility-upgrading" *ngIf="item.upgrading">
+            <div class="upgrading-badge">
+              <span class="pulse-dot"></span> UPGRADING
+            </div>
+            <div class="progress-bar-container small">
+              <div class="progress-bar-fill"
+                   [style.width.%]="getUpgradeProgress(getUpgradeInProgress(item.type))">
+              </div>
+            </div>
+            <span class="days-text" *ngIf="getUpgradeInProgress(item.type)">
+              {{ getDaysRemaining(getUpgradeInProgress(item.type)) }} days left
+            </span>
+          </div>
+
+          <!-- Upgrade Available -->
+          <div class="facility-upgrade-action" *ngIf="item.canUpgrade && !item.upgrading">
+            <div class="upgrade-details">
+              <div class="upgrade-cost">
+                <span class="cost-label">Cost</span>
+                <span class="cost-value">{{ item.upgradeCost | number }}</span>
+              </div>
+              <div class="upgrade-duration">
+                <span class="dur-label">Duration</span>
+                <span class="dur-value">{{ item.upgradeDuration }} days</span>
+              </div>
+            </div>
+            <button class="upgrade-btn" (click)="startUpgrade(item.type)">
+              UPGRADE TO LV {{ item.currentLevel + 1 }}
+            </button>
+          </div>
+
+          <!-- Max Level -->
+          <div class="facility-maxed" *ngIf="item.currentLevel >= item.maxLevel && !item.upgrading">
+            <span class="max-badge">MAX LEVEL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLUB FACILITIES -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-icon">&#127970;</span>
+        CLUB FACILITIES
+      </div>
+      <div class="facilities-grid">
+        <div class="facility-card" *ngFor="let item of getClubUpgrades()">
+          <div class="facility-top">
+            <div class="facility-icon-box">{{ getFacilityIcon(item.type) }}</div>
+            <div class="facility-header-info">
+              <span class="facility-name">{{ item.name }}</span>
+              <span class="facility-desc">{{ item.description }}</span>
+            </div>
+          </div>
+
+          <div class="facility-level-section">
+            <div class="level-info">
+              <span class="level-text">Level</span>
+              <span class="level-number" [style.color]="getLevelColor(item.currentLevel)">
+                {{ item.currentLevel }}
+              </span>
+              <span class="level-max">/ {{ item.maxLevel }}</span>
+            </div>
+            <div class="level-bar">
+              <div class="level-bar-fill"
+                   [style.width.%]="(item.currentLevel / item.maxLevel) * 100"
+                   [style.background-color]="getLevelColor(item.currentLevel)">
+              </div>
+            </div>
+          </div>
+
+          <!-- In Progress -->
+          <div class="facility-upgrading" *ngIf="item.upgrading">
+            <div class="upgrading-badge">
+              <span class="pulse-dot"></span> UPGRADING
+            </div>
+            <div class="progress-bar-container small">
+              <div class="progress-bar-fill"
+                   [style.width.%]="getUpgradeProgress(getUpgradeInProgress(item.type))">
+              </div>
+            </div>
+            <span class="days-text" *ngIf="getUpgradeInProgress(item.type)">
+              {{ getDaysRemaining(getUpgradeInProgress(item.type)) }} days left
+            </span>
+          </div>
+
+          <!-- Upgrade Available -->
+          <div class="facility-upgrade-action" *ngIf="item.canUpgrade && !item.upgrading">
+            <div class="upgrade-details">
+              <div class="upgrade-cost">
+                <span class="cost-label">Cost</span>
+                <span class="cost-value">{{ item.upgradeCost | number }}</span>
+              </div>
+              <div class="upgrade-duration">
+                <span class="dur-label">Duration</span>
+                <span class="dur-value">{{ item.upgradeDuration }} days</span>
+              </div>
+            </div>
+            <button class="upgrade-btn" (click)="startUpgrade(item.type)">
+              UPGRADE TO LV {{ item.currentLevel + 1 }}
+            </button>
+          </div>
+
+          <!-- Max Level -->
+          <div class="facility-maxed" *ngIf="item.currentLevel >= item.maxLevel && !item.upgrading">
+            <span class="max-badge">MAX LEVEL</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+  </div>
+
+</div>

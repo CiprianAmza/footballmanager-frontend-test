@@ -1,0 +1,52 @@
+<div class="leaderboard-container">
+    <div class="header-section">
+      <h1>🏆 Hall of Fame - Player Leaderboard</h1>
+      <p>The most decorated players in history based on competition wins.</p>
+      
+      <div class="controls">
+        <button class="filter-btn" [class.active]="showOnlyActive" (click)="toggleActiveFilter()">
+          {{ showOnlyActive ? 'Showing: Active Players' : 'Showing: All Time' }}
+        </button>
+        <span class="info-text">Total Players: {{ displayedPlayers.length }}</span>
+      </div>
+    </div>
+  
+    <div *ngIf="loading" class="loading-state">
+      <p>Calculating legacy points...</p>
+      <div class="spinner"></div>
+    </div>
+  
+    <div class="table-responsive" *ngIf="!loading">
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th (click)="sort('playerName')">Player Name {{ getSortIcon('playerName') }}</th>
+            <th (click)="sort('competitionWins')" title="Total Trophies">Total Wins {{ getSortIcon('competitionWins') }}</th>
+            <th (click)="sort('championships')" title="League Titles">Leagues 🥇 {{ getSortIcon('championships') }}</th>
+            <th (click)="sort('cups')" title="Cup Titles">Cups 🏆 {{ getSortIcon('cups') }}</th>
+            <th (click)="sort('totalPoints')" title="Weighted Score">Legacy Points ⭐ {{ getSortIcon('totalPoints') }}</th>
+            <th (click)="sort('isActive')">Status {{ getSortIcon('isActive') }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let player of displayedPlayers; let i = index" [class.top3]="i < 3">
+            <td class="player-name-cell">
+              <span class="rank-badge" *ngIf="i < 3">{{ i + 1 }}</span>
+              <a [routerLink]="['/player', player.playerId]" class="fm-link">
+                {{ player.playerName || 'Unknown Player (' + player.playerId + ')' }}
+              </a>
+            </td>
+            <td>{{ player.competitionWins }}</td>
+            <td class="highlight-league">{{ player.championships }}</td>
+            <td class="highlight-cup">{{ player.cups }}</td>
+            <td class="points-cell">{{ player.totalPoints }}</td>
+            <td>
+              <span class="status-badge" [class.active]="player.isActive" [class.retired]="!player.isActive">
+                {{ player.isActive ? 'Active' : 'Retired' }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>

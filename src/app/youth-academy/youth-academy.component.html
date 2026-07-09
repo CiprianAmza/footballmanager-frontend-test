@@ -1,0 +1,72 @@
+<div class="youth-container">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="header-left">
+      <div class="icon-circle">&#x1F331;</div>
+      <div class="titles">
+        <h1>YOUTH ACADEMY</h1>
+        <span class="subtitle">{{ youthPlayers.length }} youth prospects</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MESSAGE -->
+  <div class="message-bar" *ngIf="message"
+       [class.success]="messageType === 'success'"
+       [class.error]="messageType === 'error'"
+       [class.info]="messageType === 'info'">
+    {{ message }}
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading-state" *ngIf="loading">Loading youth players...</div>
+
+  <!-- EMPTY STATE -->
+  <div class="empty-state" *ngIf="!loading && youthPlayers.length === 0">
+    <p>No youth players in the academy.</p>
+  </div>
+
+  <!-- YOUTH PLAYER CARDS -->
+  <div class="players-grid" *ngIf="!loading && youthPlayers.length > 0">
+
+    <div class="youth-card" *ngFor="let player of youthPlayers">
+
+      <div class="card-header">
+        <div class="player-position" [style.background-color]="getPositionColor(player.position)">
+          {{ player.position }}
+        </div>
+        <div class="player-age">Age {{ player.age }}</div>
+      </div>
+
+      <div class="card-body">
+        <div class="player-name"><a [routerLink]="['/player', player.id]" class="fm-link">{{ player.name }}</a></div>
+
+        <div class="stat-row">
+          <span class="stat-label">Current Ability</span>
+          <span class="stat-value ability">{{ player.currentAbility }}</span>
+        </div>
+
+        <div class="stat-row">
+          <span class="stat-label">Potential</span>
+          <div class="stars-container">
+            <span *ngFor="let star of getStarsArray(player.potentialStars)"
+                  class="star"
+                  [class.filled]="star === 1"
+                  [class.empty]="star === 0">
+              &#x2605;
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="promote-btn" (click)="promotePlayer(player.id)">Promote to First Team</button>
+        <button class="release-btn" (click)="releasePlayer(player.id)">Release</button>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

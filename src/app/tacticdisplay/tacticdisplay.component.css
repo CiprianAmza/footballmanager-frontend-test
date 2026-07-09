@@ -1,0 +1,84 @@
+.point {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #000;
+    color: #fff;
+    text-align: center;
+    line-height: 40px;
+    font-weight: bold;
+  }
+  
+  .p1 {
+    top: 40%;
+    left: 0%;
+  }
+  
+  .p2 {
+    top: 0%;
+    left: 30%;
+  }
+  
+  .p3 {
+    top: 20%;
+    left: 20%;
+  }
+  
+  .p4 {
+    top: 60%;
+    left: 20%;
+  }
+  
+  .p5 {
+    top: 80%;
+    left: 30%;
+  }
+  
+  .p6 {
+    top: 30%;
+    left: 50%;
+  }
+  
+  .p7 {
+    top: 60%;
+    left: 50%;
+  }
+  
+  .p8 {
+    top: 0%;
+    left: 70%;
+  }
+  
+  .p9 {
+    top: 80%;
+    left: 70%;
+  }
+  
+  .p10 {
+    top: 40%;
+    left: 70%;
+  }
+  
+  .p11 {
+    top: 40%;
+    left: 90%;
+  }
+  
+  .player-name {
+    content: "FS";
+    font-size: 9px;
+    color: darkblue;
+    font-style: bolder;
+  }
+
+  
+.formation-container {
+    position: relative;
+    width: 600px;
+    height: 250px;
+    margin: 20px auto;
+    border: 2px solid #000;
+    border-radius: 10px;
+    background-color: #fff;
+  }

@@ -1,0 +1,203 @@
+/* CONTAINER GENERAL */
+.club-container {
+    background-color: #1b1b1b;
+    min-height: 100vh;
+    color: #ecf0f1;
+    font-family: 'Segoe UI', 'Roboto Condensed', sans-serif;
+    /* Scoatem padding-bottom pentru ca avem content dinamic */
+}
+
+/* HEADER STYLE - Adjusted for Nav */
+.club-header {
+    background-color: #252525;
+    padding: 20px 30px 0 30px; /* Padding jos 0 pentru tab-uri */
+    height: 120px; /* Inaltime fixa */
+    border-bottom: 1px solid #3a3a3a;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    border-top: 4px solid #3498db;
+    position: relative;
+}
+
+/* NAVBAR STYLE (Football Manager Tabs) */
+.club-navbar {
+    display: flex;
+    gap: 2px;
+    margin-left: 40px; 
+    height: 100%;
+    align-items: flex-end; /* Butoanele stau lipite de jos */
+}
+
+.nav-btn {
+    background-color: transparent;
+    border: none;
+    color: #999;
+    padding: 0 25px;
+    height: 50px; /* Inaltimea tab-ului */
+    font-weight: bold;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: -1px; /* Sa se suprapuna peste border-ul headerului */
+    border-top: 2px solid transparent;
+}
+
+.nav-btn:hover {
+    color: white;
+    background-color: rgba(255,255,255,0.05);
+}
+
+.nav-btn.active {
+    color: #3498db; 
+    background-color: #1b1b1b; /* Aceeasi culoare ca pagina */
+    border-radius: 4px 4px 0 0;
+    border-top: 2px solid #3498db;
+    border-left: 1px solid #3a3a3a;
+    border-right: 1px solid #3a3a3a;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
+}
+
+/* LOGO & TITLE */
+.logo-section {
+    margin-bottom: 20px; /* Aliniere verticala vizuala */
+}
+
+.club-logo {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 2.5em; font-weight: 900;
+    border: 3px solid rgba(255,255,255,0.2);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.title-section {
+    margin-bottom: 20px;
+}
+
+.title-section h1 { margin: 0; font-size: 2.2em; font-weight: 900; letter-spacing: 1px; }
+.subtitle { color: #aaa; font-size: 1em; text-transform: uppercase; font-weight: bold; }
+.id-tag { font-size: 0.8em; color: #666; margin-left: 10px; font-weight: normal; }
+
+.reputation-section { 
+    position: absolute;
+    top: 20px; right: 30px;
+    text-align: right; 
+}
+.reputation-section .label { display: block; font-size: 0.7em; color: #888; text-transform: uppercase; }
+.stars { color: #f1c40f; font-size: 1.2em; }
+
+/* CONTENT WRAPPER */
+.content-wrapper {
+    background-color: #1b1b1b;
+    /* Animatie fade-in la schimbarea tab-urilor */
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* GRID LAYOUT (PENTRU OVERVIEW) */
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 20px 30px;
+}
+
+.column { display: flex; flex-direction: column; gap: 20px; }
+
+/* PANEL STYLES */
+.fm-panel {
+    background-color: #252525;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.panel-header {
+    background-color: #2e2e2e;
+    padding: 10px 15px;
+    font-weight: bold;
+    color: #3498db;
+    font-size: 0.85em;
+    border-bottom: 1px solid #444;
+}
+
+/* FINANCE */
+.finance-summary {
+    padding: 15px;
+    background: linear-gradient(to bottom, #252525, #222);
+}
+.fin-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9em; }
+.money { font-family: monospace; font-weight: bold; color: #2ecc71; }
+.panel-actions { padding: 10px 15px; border-top: 1px solid #333; background-color: #2a2a2a; }
+.action-btn {
+    background-color: #2980b9; color: white; border: none; padding: 8px 15px;
+    border-radius: 3px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 0.8em;
+}
+.action-btn:hover { background-color: #3498db; }
+.full-width { width: 100%; }
+
+/* OTHER DETAILS */
+.details-grid { padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.detail-item { display: flex; flex-direction: column; }
+.label { font-size: 0.7em; color: #888; text-transform: uppercase; font-weight: bold; }
+.val { font-size: 1em; font-weight: 600; color: white; }
+
+.people-list { padding: 15px; }
+.person-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #333; }
+.face-icon { background-color: #444; width: 30px; height: 30px; border-radius: 50%; display: flex; justify-content: center; align-items: center; margin-right: 10px;}
+.person-info { display: flex; align-items: center; }
+.p-name { font-weight: bold; color: #3498db; }
+
+/* TROPHIES */
+.trophy-cabinet { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; }
+.trophy-item { display: flex; align-items: center; gap: 10px; background-color: #303030; padding: 8px; border-radius: 4px; border: 1px solid #444; }
+.cup-icon { font-size: 1.5em; }
+.cup-icon.gold { filter: drop-shadow(0 0 2px #f1c40f); }
+.t-name { font-weight: bold; font-size: 0.9em; color: #ecf0f1; }
+.badge { background: #d35400; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em; }
+.clickable-header { cursor: pointer; display: flex; justify-content: space-between; }
+.clickable-item { cursor: pointer; transition: transform 0.2s; }
+.clickable-item:hover { transform: translateY(-2px); background-color: #383838; }
+
+/* KITS */
+.kits-container { display: flex; justify-content: space-around; padding: 30px 15px; background: linear-gradient(to bottom, #252525, #202020); }
+.kit-box { text-align: center; }
+.t-shirt { width: 100px; height: 110px; position: relative; margin-bottom: 10px; filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5)); }
+.body { width: 100%; height: 100%; border-radius: 10px 10px 0 0; position: relative; z-index: 2; display: flex; justify-content: center; align-items: center; border-top: 2px solid rgba(255,255,255,0.1); }
+.body.striped { background-image: repeating-linear-gradient(90deg, transparent, transparent 10px, rgba(0,0,0,0.2) 10px, rgba(0,0,0,0.2) 20px); }
+.sponsor { font-size: 0.7em; font-weight: 900; color: rgba(255,255,255,0.7); }
+.sleeves { position: absolute; top: 0; left: -15px; width: 130px; height: 40px; border-radius: 10px; z-index: 1; }
+.kit-label { font-size: 0.8em; font-weight: bold; background-color: #333; padding: 2px 8px; border-radius: 4px; }
+
+/* STADIUM & HISTORY */
+.stadium-content { padding: 20px; text-align: center; }
+.stadium-name { font-size: 1.4em; font-weight: 900; margin-bottom: 20px; color: white; }
+.stadium-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align: left; }
+.s-item { display: flex; flex-direction: column; background-color: #333; padding: 8px; border-radius: 4px; }
+.history-text { padding: 15px; color: #ccc; font-size: 0.9em; line-height: 1.5; border-bottom: 1px solid #333; }
+.legends-list { padding: 15px; display: flex; flex-wrap: wrap; gap: 8px; }
+.legend-tag, .icon-tag { background-color: #333; padding: 3px 8px; border-radius: 3px; font-size: 0.85em; color: #f1c40f; border: 1px solid #444; }
+.icon-tag { color: #3498db; }
+
+/* PER-COMPETITION BREAKDOWN */
+.comp-breakdown-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+.comp-breakdown-table th { background-color: #2e2e2e; color: #aaa; text-align: center; padding: 8px 6px; border-bottom: 1px solid #444; font-weight: 600; }
+.comp-breakdown-table td { text-align: center; padding: 7px 6px; border-bottom: 1px solid #333; color: #ddd; }
+.comp-breakdown-table tr:hover td { background-color: #2a2a2a; }
+.comp-breakdown-table .comp-name-cell { text-align: left; font-weight: 600; color: #fff; }
+.comp-breakdown-table .position-cell .position-badge { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 3px; background-color: #3a3a3a; }
+.comp-breakdown-table .position-cell .position-badge.pos-1 { background-color: #f1c40f; color: #222; font-weight: bold; }
+.empty-state { padding: 20px; color: #888; text-align: center; }
+
+/* LOADING */
+.loading-screen { display: flex; justify-content: center; padding: 50px; }
+.spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.2); border-top-color: #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

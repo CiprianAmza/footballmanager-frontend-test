@@ -1,0 +1,414 @@
+<div class="t1-container">
+
+    <!-- 1. LEFT SIDEBAR: Controls -->
+    <aside class="t1-sidebar glass">
+
+      <div class="t1-brand">
+        <span class="t1-brand-dot"></span>
+        <span class="t1-brand-text">TACTICS BOARD</span>
+      </div>
+
+      <!-- Formation Selector -->
+      <div class="t1-control hero clickable" (click)="openModal('formation')">
+        <div class="t1-label">FORMATION</div>
+        <div class="t1-value highlight">{{ formationLabel(selectedTactic) }}</div>
+        <div class="t1-arrow">›</div>
+      </div>
+
+      <!-- Mentality Selector -->
+      <div class="t1-control hero clickable" (click)="openModal('mentality')">
+        <div class="t1-label">MENTALITY</div>
+        <div class="t1-value mentality-val">{{ selectedOptions.mentality }}</div>
+        <div class="t1-arrow">›</div>
+      </div>
+
+      <!-- INSTRUCTIONS GROUP -->
+      <div class="t1-group">
+        <div class="t1-group-title">TEAM INSTRUCTIONS</div>
+
+        <div class="t1-grid-controls">
+          <!-- Possession Style -->
+          <div class="t1-control clickable" (click)="openModal('possession')">
+            <div class="t1-label">PASSING DIRECTNESS</div>
+            <div class="t1-value small">{{ selectedOptions.possession }}</div>
+          </div>
+
+          <!-- Passing Length -->
+          <div class="t1-control clickable" (click)="openModal('passing')">
+            <div class="t1-label">PASSING LENGTH</div>
+            <div class="t1-value small">{{ selectedOptions.passing }}</div>
+          </div>
+
+          <!-- Tempo -->
+          <div class="t1-control clickable" (click)="openModal('tempo')">
+            <div class="t1-label">TEMPO</div>
+            <div class="t1-value small">{{ selectedOptions.tempo }}</div>
+          </div>
+
+          <!-- Time Wasting -->
+          <div class="t1-control clickable" (click)="openModal('timeWasting')">
+            <div class="t1-label">TIME WASTING</div>
+            <div class="t1-value small">{{ selectedOptions.timeWasting }}</div>
+          </div>
+
+          <!-- Defensive Line -->
+          <div class="t1-control clickable" (click)="openModal('defensiveLine')">
+            <div class="t1-label">DEFENSIVE LINE</div>
+            <div class="t1-value small">{{ selectedOptions.defensiveLine }}</div>
+          </div>
+
+          <!-- Pressing -->
+          <div class="t1-control clickable" (click)="openModal('pressing')">
+            <div class="t1-label">PRESSING</div>
+            <div class="t1-value small">{{ selectedOptions.pressing }}</div>
+          </div>
+
+          <!-- Width -->
+          <div class="t1-control clickable" (click)="openModal('width')">
+            <div class="t1-label">WIDTH</div>
+            <div class="t1-value small">{{ selectedOptions.width }}</div>
+          </div>
+
+          <!-- Dribbling -->
+          <div class="t1-control clickable" (click)="openModal('dribbling')">
+            <div class="t1-label">DRIBBLING</div>
+            <div class="t1-value small">{{ selectedOptions.dribbling }}</div>
+          </div>
+
+          <!-- Foul Frequency -->
+          <div class="t1-control clickable" (click)="openModal('foulFrequency')">
+            <div class="t1-label">FOUL FREQUENCY</div>
+            <div class="t1-value small">{{ selectedOptions.foulFrequency }}</div>
+          </div>
+
+          <!-- Foul Hardness -->
+          <div class="t1-control clickable" (click)="openModal('foulHardness')">
+            <div class="t1-label">FOUL HARDNESS</div>
+            <div class="t1-value small">{{ selectedOptions.foulHardness }}</div>
+          </div>
+
+          <!-- Tempo Fragmentation -->
+          <div class="t1-control clickable" (click)="openModal('tempoFragmentation')">
+            <div class="t1-label">FRAGMENTATION</div>
+            <div class="t1-value small">{{ selectedOptions.tempoFragmentation }}</div>
+          </div>
+
+          <!-- Wide Play -->
+          <div class="t1-control clickable" (click)="openModal('widePlay')">
+            <div class="t1-label">WIDE PLAY</div>
+            <div class="t1-value small">{{ selectedOptions.widePlay }}</div>
+          </div>
+
+          <!-- Transition -->
+          <div class="t1-control clickable" (click)="openModal('transition')">
+            <div class="t1-label">TRANSITION</div>
+            <div class="t1-value small">{{ selectedOptions.transition }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SET PIECES GROUP -->
+      <div class="t1-group">
+        <div class="t1-group-title">SET PIECE TAKERS</div>
+
+        <div class="t1-control sp-suggest clickable" (click)="suggestSetPieceTakers()">
+          <div class="t1-label">AUTO-SUGGEST</div>
+          <div class="t1-value small">Pick best takers ›</div>
+        </div>
+
+        <div class="sp-grid">
+          <!-- Penalty -->
+          <div class="sp-slot">
+            <div class="t1-label">PENALTY</div>
+            <select class="sp-select" [(ngModel)]="penaltyTakerId">
+              <option [ngValue]="null">— Select —</option>
+              <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} ({{ p.position }})</option>
+            </select>
+            <div class="sp-hint" *ngIf="suggestedSetPieces?.penaltyTakerName">Suggested: {{ suggestedSetPieces.penaltyTakerName }}</div>
+          </div>
+
+          <!-- Free Kick -->
+          <div class="sp-slot">
+            <div class="t1-label">FREE KICK</div>
+            <select class="sp-select" [(ngModel)]="freeKickTakerId">
+              <option [ngValue]="null">— Select —</option>
+              <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} ({{ p.position }})</option>
+            </select>
+            <div class="sp-hint" *ngIf="suggestedSetPieces?.freeKickTakerName">Suggested: {{ suggestedSetPieces.freeKickTakerName }}</div>
+          </div>
+
+          <!-- Corner Left -->
+          <div class="sp-slot">
+            <div class="t1-label">CORNER LEFT</div>
+            <select class="sp-select" [(ngModel)]="cornerTakerLeftId">
+              <option [ngValue]="null">— Select —</option>
+              <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} ({{ p.position }})</option>
+            </select>
+            <div class="sp-hint" *ngIf="suggestedSetPieces?.cornerTakerLeftName">Suggested: {{ suggestedSetPieces.cornerTakerLeftName }}</div>
+          </div>
+
+          <!-- Corner Right -->
+          <div class="sp-slot">
+            <div class="t1-label">CORNER RIGHT</div>
+            <select class="sp-select" [(ngModel)]="cornerTakerRightId">
+              <option [ngValue]="null">— Select —</option>
+              <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} ({{ p.position }})</option>
+            </select>
+            <div class="sp-hint" *ngIf="suggestedSetPieces?.cornerTakerRightName">Suggested: {{ suggestedSetPieces.cornerTakerRightName }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="t1-actions">
+        <button class="t1-btn assistant-btn" (click)="askAssistant()">ASK ASSISTANT</button>
+        <button class="t1-btn save-btn" (click)="saveData()">SAVE TACTICS</button>
+      </div>
+    </aside>
+
+    <!-- 2. CENTER: The Pitch (Grid System) -->
+    <section class="t1-pitch-wrap">
+      <div class="football-pitch">
+        <!-- Liniile decorative -->
+        <div class="pitch-line outline"></div>
+        <div class="pitch-line half-line"></div>
+        <div class="pitch-line center-circle"></div>
+        <div class="pitch-line box-top"></div>
+        <div class="pitch-line box-bottom"></div>
+
+        <!-- DEFENSIVE LINE indicator (visual only; reflects selectedOptions.defensiveLine) -->
+        <div class="def-line" [style.top.%]="defLineTopPercent">
+          <span class="def-line-tag">DEF LINE: {{ selectedOptions.defensiveLine }}</span>
+        </div>
+
+        <!-- GRIDUL DE 30 DE CELULE (5x6) -->
+        <div class="pitch-grid">
+          <div *ngFor="let cell of fieldPositions"
+               class="grid-cell"
+               [class.allowed]="allowedIndexes.includes(cell.positionIndex)"
+               [style.transform]="'translate(' + cellWidthShift(cell.positionIndex) + '%, ' + cellDefLineShift(cell.positionIndex) + '%)'"
+               (dragover)="allowDrop($event)"
+               (drop)="drop($event, cell.positionIndex)"
+               (contextmenu)="onRightClick(cell.positionIndex, $event)">
+
+               <!-- Daca avem jucator pe pozitie -->
+               <div *ngIf="cell.player" class="pitch-player"
+                    [class.locked-slot]="isSlotLocked(cell.positionIndex, cell.player.position)"
+                    [attr.draggable]="isSlotLocked(cell.positionIndex, cell.player.position) ? null : 'true'"
+                    (dragstart)="drag($event, cell.player)">
+
+                  <!-- Owner-locked slot: read-only, show a lock badge. -->
+                  <span class="lock-badge" *ngIf="isSlotLocked(cell.positionIndex, cell.player.position)"
+                        title="Locked by the owner">&#128274;</span>
+
+                  <!-- Per-player Roles + Instructions opener -->
+                  <button class="pp-plus" title="Roles & Instructions"
+                          (click)="openRoleSelector(cell); $event.stopPropagation()">+</button>
+
+                  <div class="shirt-icon"
+                       [style.background-color]="teamColor1"
+                       [style.border-color]="ratingTiers.tierColor(cell.player.rating)"
+                       (click)="openPlayerCard(cell.player.id); $event.stopPropagation()">
+                      <!-- Number colored by global percentile tier, not by team color,
+                           so you instantly see who your best players are. -->
+                      <span class="shirt-num"
+                            [style.color]="ratingTiers.tierColor(cell.player.rating)">{{ cell.player.rating | number:'1.0-0' }}</span>
+                  </div>
+                  <div class="player-tag">
+                      <div class="tag-name">{{ cell.player.name }}</div>
+                      <div class="tag-pos">{{ cell.player.position }}</div>
+                      <div class="tag-role" *ngIf="cell.duty || (cell.instructions && cell.instructions.length)">{{ playerShortLabel(cell) }}</div>
+                  </div>
+
+               </div>
+
+               <!-- Daca nu e jucator, dar e pozitie permisa (Slot gol) -->
+               <div *ngIf="!cell.player && allowedIndexes.includes(cell.positionIndex)" class="empty-slot">
+                  +
+               </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Banca de rezerve sub teren -->
+      <div class="subs-bench glass">
+          <div class="subs-label">SUBSTITUTES</div>
+          <div class="subs-row">
+              <div *ngFor="let sub of substitutes; let i = index"
+                   class="sub-slot"
+                   (dragover)="allowDrop($event)"
+                   (drop)="dropSubstitute($event, i)">
+
+                   <div *ngIf="sub.player" class="pitch-player mini" draggable="true" (dragstart)="drag($event, sub.player)">
+                      <div class="shirt-icon gray"></div>
+                      <div class="player-tag small">{{ sub.player.name }}</div>
+                   </div>
+                   <div *ngIf="!sub.player" class="empty-sub">S{{i+1}}</div>
+              </div>
+          </div>
+      </div>
+    </section>
+
+    <!-- 3. RIGHT SIDEBAR: Squad List -->
+    <aside class="t1-list glass">
+      <div class="list-header">SQUAD LIST</div>
+      <div class="table-scroll">
+        <table class="tactic-table">
+          <thead>
+            <tr>
+              <th>Info</th>
+              <th>Name</th>
+              <th>Pos</th>
+              <th>Rat</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let player of players"
+                draggable="true"
+                (dragstart)="drag($event, player)"
+                [class.picked]="isPlayerSelected(player.id)">
+
+              <td class="status-col">
+                  <span *ngIf="isPlayerSelected(player.id)" class="picked-dot">✔</span>
+              </td>
+              <td class="name-cell" (click)="openPlayerCard(player.id)">{{ player.name }}</td>
+              <td class="pos-cell">{{ player.position }}</td>
+
+              <!-- Rating colored by global percentile tier — see ratingColor pipe -->
+              <td class="rating-cell"
+                  [style.color]="player.rating | ratingColor"
+                  [style.font-weight]="700">
+                {{ player.rating | number:'1.2-2' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </aside>
+
+    <!-- Per-player Roles popup — fixed, centered modal (lifted out of the transformed pitch cell so
+         it stops drifting and is always clickable). Backdrop click or × closes it. -->
+    <div class="pp-modal-overlay" *ngIf="activeRoleSlot" (click)="closeRoleSelector()">
+      <div class="pp-popup" (click)="$event.stopPropagation()">
+          <div class="pp-popup-head">
+              <span>{{ activeRoleSlot.player?.name }} · Roles</span>
+              <div class="pp-tabs">
+                  <button class="pp-tab active">Roles</button>
+                  <button class="pp-tab" (click)="openInstructionsPanel(activeRoleSlot)">Instructions</button>
+              </div>
+              <button class="pp-close" (click)="closeRoleSelector()">×</button>
+          </div>
+          <div *ngIf="loadingRoles" class="pp-loading">Loading roles…</div>
+          <div *ngIf="!loadingRoles && availableRoles.length === 0" class="pp-loading">No roles available</div>
+          <div class="pp-role-list" *ngIf="!loadingRoles">
+              <div class="pp-role-item" *ngFor="let role of availableRoles">
+                  <div class="pp-role-head">
+                      <span class="pp-role-name">{{ role.name }}</span>
+                      <span class="pp-role-suit" [ngClass]="getSuitabilityClass(role.suitability || 0)">{{ role.suitability }}%</span>
+                  </div>
+                  <div class="pp-duties">
+                      <button class="pp-duty" *ngFor="let d of role.duties"
+                              [class.active]="activeRoleSlot.role === role.name && activeRoleSlot.duty === d"
+                              (click)="selectRole(activeRoleSlot, role, d)">{{ d }}</button>
+                  </div>
+              </div>
+          </div>
+          <button class="pp-clear" *ngIf="activeRoleSlot.role" (click)="clearRole(activeRoleSlot)">Clear Role</button>
+      </div>
+    </div>
+
+    <!-- Per-player Instructions popup — fixed, centered modal. -->
+    <div class="pp-modal-overlay" *ngIf="activeInstructionsSlot" (click)="closeInstructionsPanel()">
+      <div class="pp-popup" (click)="$event.stopPropagation()">
+          <div class="pp-popup-head">
+              <span>{{ activeInstructionsSlot.player?.name }} · Instructions</span>
+              <div class="pp-tabs">
+                  <button class="pp-tab" (click)="openRoleSelector(activeInstructionsSlot)">Roles</button>
+                  <button class="pp-tab active">Instructions</button>
+              </div>
+              <button class="pp-close" (click)="closeInstructionsPanel()">×</button>
+          </div>
+          <div *ngIf="loadingInstructions" class="pp-loading">Loading…</div>
+          <div *ngIf="!loadingInstructions" class="pp-instr-list">
+              <div class="pp-instr-cat" *ngFor="let cat of getInstructionCategories()">
+                  <div class="pp-cat-title">{{ cat }}</div>
+                  <div class="pp-instr-item" *ngFor="let instr of getInstructionsByCategory(cat)"
+                       [class.active]="hasInstruction(activeInstructionsSlot, instr.name)"
+                       (click)="toggleInstruction(activeInstructionsSlot, instr.name)"
+                       [title]="instr.description">
+                      <span class="pp-check">{{ hasInstruction(activeInstructionsSlot, instr.name) ? '☑' : '☐' }}</span>
+                      <span class="pp-instr-name">{{ instr.name }}</span>
+                  </div>
+              </div>
+          </div>
+      </div>
+    </div>
+
+    <!-- 4. MODAL OVERLAY (Pop-up) -->
+    <div class="modal-overlay" *ngIf="activeModal" (click)="closeModal()">
+      <div class="modal-content glass" (click)="$event.stopPropagation()">
+          <div class="modal-header">{{ activeModal | uppercase }}</div>
+          <div class="modal-options">
+
+              <div *ngFor="let opt of currentOptions"
+                   class="modal-option"
+                   (click)="selectOption(opt)">
+                   {{ activeModal === 'formation' ? formationLabel(opt) : opt }}
+              </div>
+
+          </div>
+      </div>
+    </div>
+
+  <!-- FIFA-style Player Card Modal -->
+  <div class="player-card-backdrop" *ngIf="selectedCard || cardLoading" (click)="closePlayerCard()">
+    <div class="player-card" (click)="$event.stopPropagation()" *ngIf="selectedCard"
+         [style.--tier-color]="selectedCard.tierColor"
+         [class.tier-legendary]="selectedCard.tier === 'LEGENDARY'">
+      <button class="card-close" (click)="closePlayerCard()">×</button>
+
+      <!-- Header with tier-colored gradient -->
+      <div class="card-header" [style.background]="'linear-gradient(135deg, ' + selectedCard.tierColor + ' 0%, ' + selectedCard.tierColor + '88 100%)'">
+        <div class="card-tier">{{ selectedCard.tier }}</div>
+        <div class="card-overall">{{ selectedCard.rating | number:'1.0-0' }}</div>
+        <div class="card-position">{{ selectedCard.position }}</div>
+      </div>
+
+      <!-- Identity -->
+      <div class="card-identity">
+        <h2 class="card-name">{{ selectedCard.name }}</h2>
+        <div class="card-meta">
+          <span>Age {{ selectedCard.age }}</span>
+          <span *ngIf="selectedCard.preferredFoot">{{ selectedCard.preferredFoot }} foot</span>
+          <span *ngIf="selectedCard.heightCm">{{ selectedCard.heightCm }}cm</span>
+        </div>
+        <div class="card-team" *ngIf="selectedCard.teamName"
+             [style.color]="selectedCard.teamColor1 || '#aaa'">
+          {{ selectedCard.teamName }}
+        </div>
+      </div>
+
+      <!-- Attributes -->
+      <div class="card-attrs">
+        <div *ngFor="let attr of selectedCard.topAttributes" class="card-attr">
+          <span class="attr-label">{{ attr.label }}</span>
+          <span class="attr-value">{{ attr.value }}</span>
+          <div class="attr-bar">
+            <div class="attr-bar-fill"
+                 [style.width.%]="attr.value * 5"
+                 [style.background-color]="attr.value >= 17 ? '#2ecc71' : attr.value >= 14 ? '#3498db' : attr.value >= 10 ? '#f39c12' : '#7f8c8d'"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Percentile footer -->
+      <div class="card-footer">
+        <span class="footer-label">Global percentile</span>
+        <span class="footer-value">{{ selectedCard.percentile }}%</span>
+      </div>
+    </div>
+
+    <div class="card-loading" *ngIf="cardLoading && !selectedCard">Loading…</div>
+  </div>
+
+  </div>

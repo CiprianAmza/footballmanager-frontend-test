@@ -1,0 +1,191 @@
+<div class="profile-container" *ngIf="!loading && profile">
+  <div class="profile-header">
+    <div class="header-info">
+      <h1>{{ profile.managerName }}</h1>
+      <div class="header-meta">
+        <span class="team-name">{{ profile.currentTeamName }}</span>
+        <span class="rep-badge" [ngClass]="getReputationClass(profile.reputation)">
+          Rep: {{ profile.reputation }}
+        </span>
+        <span class="status-badge" [class.active]="!profile.retired" [class.retired]="profile.retired">
+          {{ profile.retired ? 'Retired' : 'Active' }}
+        </span>
+      </div>
+    </div>
+    <div class="header-actions" *ngIf="isOwnManager && profile.currentTeamId > 0 && !profile.retired">
+      <button class="resign-btn" (click)="confirmResign()" [disabled]="resigning">
+        Resign from {{ profile.currentTeamName }}
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="resignMessage" class="resign-status">{{ resignMessage }}</div>
+
+  <div class="modal-overlay" *ngIf="showResignConfirm">
+    <div class="resign-modal">
+      <h3>Submit resignation?</h3>
+      <p>
+        You're about to leave <strong>{{ profile.currentTeamName }}</strong>. You'll become a free agent
+        and need to find a new club via Job Search (or wait for an offer to come in).
+      </p>
+      <div class="resign-modal-actions">
+        <button class="btn-secondary" (click)="cancelResign()" [disabled]="resigning">Cancel</button>
+        <button class="btn-danger" (click)="doResign()" [disabled]="resigning">
+          {{ resigning ? 'Resigning...' : 'Yes, resign' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">{{ profile.totalGames }}</div>
+      <div class="stat-label">Games</div>
+    </div>
+    <div class="stat-card wins">
+      <div class="stat-value">{{ profile.totalWins }}</div>
+      <div class="stat-label">Wins</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ profile.totalDraws }}</div>
+      <div class="stat-label">Draws</div>
+    </div>
+    <div class="stat-card losses">
+      <div class="stat-value">{{ profile.totalLosses }}</div>
+      <div class="stat-label">Losses</div>
+    </div>
+    <div class="stat-card pct">
+      <div class="stat-value">{{ profile.winPercentage }}%</div>
+      <div class="stat-label">Win Rate</div>
+    </div>
+    <div class="stat-card trophies">
+      <div class="stat-value">{{ profile.totalTrophies }}</div>
+      <div class="stat-label">Trophies</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ profile.teamsManaged }}</div>
+      <div class="stat-label">Teams</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ profile.seasonsManaged }}</div>
+      <div class="stat-label">Seasons</div>
+    </div>
+    <div class="stat-card salary" *ngIf="profile.monthlySalary != null">
+      <div class="stat-value">{{ formatMoney(profile.monthlySalary) }}</div>
+      <div class="stat-label">Monthly Salary</div>
+    </div>
+    <div class="stat-card earnings" *ngIf="profile.careerEarnings != null">
+      <div class="stat-value">{{ formatMoney(profile.careerEarnings) }}</div>
+      <div class="stat-label">Career Earnings</div>
+    </div>
+  </div>
+
+  <!-- CURRENT-SEASON PER-COMPETITION BREAKDOWN -->
+  <div class="comp-breakdown" *ngIf="competitionBreakdown && competitionBreakdown.length > 0">
+    <h2>This Season by Competition</h2>
+    <table class="timeline-table">
+      <thead>
+        <tr>
+          <th>Competition</th>
+          <th>Type</th>
+          <th>Pos</th>
+          <th>P</th>
+          <th>W</th>
+          <th>D</th>
+          <th>L</th>
+          <th>GF</th>
+          <th>GA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let line of competitionBreakdown">
+          <td class="comp-name-cell">{{ line.competitionName }}</td>
+          <td>{{ competitionTypeLabel(line.competitionTypeId) }}</td>
+          <td class="position-cell">
+            <!-- League position is meaningful ONLY on league rows (type 1/3). -->
+            <span *ngIf="line.leaguePosition != null" class="position-badge"
+                  [class.pos-1]="line.leaguePosition === 1"
+                  [class.pos-top3]="line.leaguePosition > 1 && line.leaguePosition <= 3">
+              {{ line.leaguePosition }}
+            </span>
+            <span *ngIf="line.leaguePosition == null" class="no-trophy">-</span>
+          </td>
+          <td>{{ line.matches }}</td>
+          <td class="highlight-wins">{{ line.wins }}</td>
+          <td>{{ line.draws }}</td>
+          <td>{{ line.losses }}</td>
+          <td>{{ line.goalsFor }}</td>
+          <td>{{ line.goalsAgainst }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="career-timeline">
+    <h2>Career Timeline</h2>
+    <table class="timeline-table">
+      <thead>
+        <tr>
+          <th>Season</th>
+          <th>Team</th>
+          <th>Pos</th>
+          <th>G</th>
+          <th>W</th>
+          <th>D</th>
+          <th>L</th>
+          <th>GF</th>
+          <th>GA</th>
+          <th>Trophies</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let entry of profile.history"
+            [hidden]="entry.inProgress && competitionBreakdown.length > 0"
+            [class.trophy-season]="entry.trophiesWon && entry.trophiesWon.length > 0"
+            [class.promoted]="entry.promoted"
+            [class.relegated]="entry.relegated"
+            [class.in-progress]="entry.inProgress">
+          <td>
+            {{ entry.seasonNumber }}
+            <span *ngIf="entry.inProgress" class="live-badge" title="Season in progress">LIVE</span>
+          </td>
+          <td>
+            <a [routerLink]="['/team', entry.teamId]" class="fm-link">{{ entry.teamName }}</a>
+          </td>
+          <td class="position-cell">
+            <span class="position-badge" [class.pos-1]="entry.leaguePosition === 1"
+                  [class.pos-top3]="entry.leaguePosition > 1 && entry.leaguePosition <= 3">
+              {{ entry.leaguePosition }}
+            </span>
+          </td>
+          <td>{{ entry.gamesPlayed }}</td>
+          <td class="highlight-wins">{{ entry.wins }}</td>
+          <td>{{ entry.draws }}</td>
+          <td>{{ entry.losses }}</td>
+          <td>{{ entry.goalsFor }}</td>
+          <td>{{ entry.goalsAgainst }}</td>
+          <td>
+            <span *ngFor="let trophy of getTrophiesList(entry.trophiesWon)" class="trophy-tag">
+              {{ trophy }}
+            </span>
+            <span *ngIf="!entry.trophiesWon || entry.trophiesWon.length === 0" class="no-trophy">-</span>
+          </td>
+          <td>
+            <span *ngIf="entry.promoted" class="note-badge promoted-badge">Promoted</span>
+            <span *ngIf="entry.relegated" class="note-badge relegated-badge">Relegated</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div *ngIf="loading" class="loading-state">
+  <p>Loading manager profile...</p>
+  <div class="spinner"></div>
+</div>
+
+<div *ngIf="!loading && !profile" class="error-state">
+  <p>Manager not found.</p>
+</div>

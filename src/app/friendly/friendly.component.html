@@ -1,0 +1,152 @@
+<div class="friendly-container">
+
+  <!-- Header -->
+  <div class="friendly-header">
+    <h1>FRIENDLY MATCHES</h1>
+    <div class="header-stats">
+      <span class="stat-badge">Scheduled: {{ getScheduledCount() }}</span>
+      <span class="stat-badge">Completed: {{ getCompletedCount() }}</span>
+    </div>
+    <button class="schedule-btn" (click)="openScheduleForm()" *ngIf="!showScheduleForm">
+      + Schedule Friendly
+    </button>
+  </div>
+
+  <!-- Schedule Form -->
+  <div class="schedule-form" *ngIf="showScheduleForm">
+    <div class="sf-header">
+      <span>SCHEDULE A FRIENDLY</span>
+      <button class="sf-close" (click)="closeScheduleForm()">&times;</button>
+    </div>
+
+    <div class="sf-body">
+      <!-- Opponent Selection -->
+      <div class="sf-field">
+        <label>Opponent</label>
+        <div class="sf-search-wrapper">
+          <input type="text"
+                 [(ngModel)]="opponentSearch"
+                 (input)="filterOpponents()"
+                 placeholder="Search for a team..."
+                 class="sf-input" />
+          <div class="sf-dropdown" *ngIf="filteredOpponents.length > 0 && !selectedOpponentId">
+            <div class="sf-dropdown-item" *ngFor="let opp of filteredOpponents" (click)="selectOpponent(opp)">
+              <span class="opp-name">{{ opp.name }}</span>
+              <span class="opp-rep">{{ opp.reputation }}</span>
+              <span class="opp-league-badge" *ngIf="opp.sameLeague">Same League</span>
+            </div>
+          </div>
+        </div>
+        <div class="sf-selected" *ngIf="selectedOpponentId">
+          {{ selectedOpponentName }}
+          <button class="sf-clear" (click)="selectedOpponentId = null; selectedOpponentName = ''; opponentSearch = ''">&times;</button>
+        </div>
+        <div *ngIf="loadingOpponents" class="sf-loading">Loading opponents...</div>
+      </div>
+
+      <!-- Day Selection -->
+      <div class="sf-field">
+        <label>Match Day</label>
+        <div *ngIf="loadingDays" class="sf-loading">Loading available days...</div>
+        <div class="sf-days" *ngIf="!loadingDays">
+          <div class="sf-day-group" *ngIf="getPreSeasonDays().length > 0">
+            <div class="sf-day-group-title">Pre-Season</div>
+            <div class="sf-day-options">
+              <button class="sf-day-btn"
+                      *ngFor="let d of getPreSeasonDays()"
+                      [class.selected]="selectedDay === d.day"
+                      (click)="selectedDay = d.day">
+                Day {{ d.day }}
+              </button>
+            </div>
+          </div>
+          <div class="sf-day-group" *ngIf="getWinterBreakDays().length > 0">
+            <div class="sf-day-group-title">Winter Break</div>
+            <div class="sf-day-options">
+              <button class="sf-day-btn"
+                      *ngFor="let d of getWinterBreakDays()"
+                      [class.selected]="selectedDay === d.day"
+                      (click)="selectedDay = d.day">
+                Day {{ d.day - 200 }}
+              </button>
+            </div>
+          </div>
+          <div *ngIf="availableDays.length === 0" class="sf-no-days">
+            No available days for scheduling.
+          </div>
+        </div>
+      </div>
+
+      <!-- Message -->
+      <div class="sf-message" *ngIf="scheduleMessage"
+           [class.success]="scheduleSuccess"
+           [class.error]="!scheduleSuccess">
+        {{ scheduleMessage }}
+      </div>
+
+      <!-- Actions -->
+      <div class="sf-actions">
+        <button class="sf-schedule-btn"
+                [disabled]="!selectedOpponentId || !selectedDay || scheduling"
+                (click)="scheduleFriendly()">
+          {{ scheduling ? 'Scheduling...' : 'Confirm' }}
+        </button>
+        <button class="sf-cancel-btn" (click)="closeScheduleForm()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Matches List -->
+  <div class="matches-section">
+    <div *ngIf="loadingMatches" class="loading-msg">Loading matches...</div>
+    <div *ngIf="!loadingMatches && matches.length === 0" class="empty-msg">
+      No friendly matches scheduled this season.
+    </div>
+
+    <div class="match-card" *ngFor="let match of matches"
+         [ngClass]="getStatusClass(match.status)">
+      <div class="match-row" (click)="toggleMatchDetails(match.matchId)">
+        <div class="match-day">
+          <span class="day-num">{{ getDayLabel(match.day) }}</span>
+        </div>
+        <div class="match-teams" [ngClass]="getResultClass(match)">
+          <span class="team-home" [class.our-team]="match.homeTeamId === teamId">{{ match.homeTeamName }}</span>
+          <span class="match-score" *ngIf="match.status === 'COMPLETED'">{{ match.homeGoals }} - {{ match.awayGoals }}</span>
+          <span class="match-vs" *ngIf="match.status !== 'COMPLETED'">vs</span>
+          <span class="team-away" [class.our-team]="match.awayTeamId === teamId">{{ match.awayTeamName }}</span>
+        </div>
+        <div class="match-venue">{{ getVenue(match) }}</div>
+        <div class="match-status">
+          <span class="status-label" [ngClass]="getStatusClass(match.status)">{{ match.status }}</span>
+        </div>
+        <div class="match-actions">
+          <button class="cancel-btn" *ngIf="match.status === 'SCHEDULED'" (click)="cancelFriendly(match.matchId); $event.stopPropagation()">
+            Cancel
+          </button>
+        </div>
+      </div>
+
+      <!-- Expanded Stats -->
+      <div class="match-details" *ngIf="expandedMatchId === match.matchId && match.status === 'COMPLETED'">
+        <div class="stats-grid">
+          <div class="stat-row">
+            <span class="stat-home">{{ match.homePossession }}%</span>
+            <span class="stat-label">Possession</span>
+            <span class="stat-away">{{ match.awayPossession }}%</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-home">{{ match.homeShots }}</span>
+            <span class="stat-label">Shots</span>
+            <span class="stat-away">{{ match.awayShots }}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-home">{{ match.homeShotsOnTarget }}</span>
+            <span class="stat-label">On Target</span>
+            <span class="stat-away">{{ match.awayShotsOnTarget }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

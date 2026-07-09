@@ -1,0 +1,355 @@
+/* Layout */
+.fm-competition-view {
+  background-color: #1b1b1b;
+  min-height: 100vh;
+  color: #ecf0f1;
+  font-family: 'Segoe UI', 'Roboto Condensed', sans-serif;
+  padding-bottom: 50px;
+}
+
+/* --- HEADER --- */
+.comp-header {
+  background-color: #fff; /* Header alb ca în poză, sau închis dacă preferi */
+  color: #333;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 4px solid #38003c; /* Premier League Purple */
+}
+
+.header-left { display: flex; align-items: center; gap: 20px; }
+
+.comp-logo-wrapper {
+  width: 60px; height: 60px;
+  background-color: #38003c;
+  border-radius: 5px;
+  padding: 5px;
+  display: flex; justify-content: center; align-items: center;
+}
+.comp-logo { max-width: 100%; max-height: 100%; }
+
+.header-titles { display: flex; flex-direction: column; }
+.subtitle { font-size: 0.8em; color: #777; font-weight: bold; letter-spacing: 1px; }
+.title { margin: 0; font-size: 2em; font-weight: 900; text-transform: uppercase; color: #38003c; }
+
+.season-selector { display: flex; flex-direction: column; align-items: flex-end; }
+.fm-select {
+  padding: 5px 10px;
+  font-weight: bold;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+/* --- GRID --- */
+.competition-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* Tabelul ocupa 2/3 */
+  gap: 20px;
+  padding: 20px;
+}
+
+@media (max-width: 1000px) {
+  .competition-grid { grid-template-columns: 1fr; } /* Mobile stack */
+}
+
+/* --- PANELS --- */
+.fm-panel {
+  background-color: #252525;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+.panel-header {
+  background: linear-gradient(to right, #2e2e2e, #252525);
+  padding: 8px 15px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #444;
+  border-left: 4px solid #3498db; /* Default accent */
+}
+
+.panel-header.red-accent { border-left-color: #e74c3c; }
+.panel-header.blue-accent { border-left-color: #f1c40f; } /* Player Stats -> Yellow/Gold */
+.panel-header.yellow-accent { border-left-color: #f1c40f; }
+
+.panel-title {
+  font-weight: bold; font-size: 0.9em; color: #f1c40f; text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.panel-link { color: #aaa; font-size: 0.8em; text-decoration: none; }
+.panel-link:hover { color: white; }
+
+/* --- LEAGUE TABLE --- */
+.table-responsive { overflow-x: auto; }
+
+.fm-table { width: 100%; border-collapse: collapse; font-size: 0.9em; }
+
+.fm-table th {
+  background-color: #303030;
+  color: #aaa;
+  text-align: center;
+  padding: 8px 5px;
+  font-size: 0.8em;
+  font-weight: bold;
+  border-bottom: 2px solid #444;
+  cursor: pointer;
+}
+.fm-table th:hover { color: white; background-color: #383838; }
+.fm-table th.team-col { text-align: left; padding-left: 10px; }
+
+.fm-table td {
+  padding: 6px 5px;
+  border-bottom: 1px solid #333;
+  text-align: center;
+  color: #ddd;
+}
+
+.fm-table tr:hover { background-color: #3a3a3a; }
+.fm-table tr.my-team { background-color: #3e2723; } /* Highlight echipa mea */
+
+/* Columns Specifics */
+.pos-col { width: 50px; }
+.pos-wrapper { display: flex; align-items: center; gap: 5px; justify-content: center; }
+.pos-bar { width: 4px; height: 16px; background-color: transparent; border-radius: 2px; }
+.pos-bar.ucl { background-color: #2ecc71; } /* Champions League Green */
+.pos-bar.uel { background-color: #3498db; } /* Europa League Blue */
+.pos-bar.rel { background-color: #e74c3c; } /* Relegation Red */
+.pos-num { font-weight: bold; }
+
+.inf-col { width: 30px; font-size: 0.75em; font-weight: bold; }
+.status-dot { background-color: #2ecc71; color: black; padding: 1px 4px; border-radius: 3px; }
+.status-dot.rel { background-color: #e74c3c; color: white; }
+
+.team-col { text-align: left; }
+.team-flex { display: flex; align-items: center; gap: 8px; }
+.mini-logo { width: 16px; height: 16px; border-radius: 50%; border: 1px solid #555; }
+.team-link { color: white; font-weight: 600; text-decoration: none; font-size: 1.05em; }
+.team-link:hover { text-decoration: underline; }
+
+.stat-col { color: #aaa; }
+.points-col { color: #f1c40f; font-weight: bold; font-size: 1.1em; background-color: rgba(255,255,255,0.05); }
+
+/* Form Dots */
+.form-col { width: 120px; }
+.form-dots { display: flex; justify-content: center; gap: 3px; }
+.dot {
+  width: 18px; height: 18px;
+  display: flex; justify-content: center; align-items: center;
+  border-radius: 3px;
+  font-size: 0.7em; font-weight: bold;
+  color: white;
+}
+.dot.win { background-color: #2ecc71; }
+.dot.draw { background-color: #95a5a6; }
+.dot.loss { background-color: #e74c3c; }
+
+/* --- SIDE COLUMNS --- */
+.panel-content { padding: 15px; }
+
+/* Fixtures */
+.fixture-row {
+  background-color: #202020;
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
+  border: 1px solid #333;
+}
+.date-label { color: #f1c40f; font-size: 0.8em; font-weight: bold; margin-bottom: 5px; }
+.match-display { font-size: 1.2em; font-weight: bold; margin-bottom: 5px; }
+.score-vs { color: #777; margin: 0 10px; font-size: 0.8em; }
+.match-meta { font-size: 0.8em; color: #888; }
+
+/* Player Stats */
+.stat-category { margin-bottom: 15px; }
+.cat-header { font-size: 0.75em; color: #f1c40f; font-weight: bold; border-bottom: 1px solid #444; margin-bottom: 5px; }
+.top-player-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #333; font-size: 0.9em; }
+.p-rank { color: #777; width: 20px; }
+.p-name { font-weight: bold; color: white; flex: 1; }
+.p-team { color: #aaa; margin-right: 10px; font-size: 0.85em; }
+.p-val { font-weight: bold; color: #2ecc71; }
+
+/* Reputation */
+.rep-row { display: flex; align-items: center; padding: 8px; border-bottom: 1px solid #333; }
+.rep-row.active { background-color: rgba(255,255,255,0.05); border-left: 3px solid white; }
+.rep-rank { font-weight: bold; width: 30px; color: #aaa; }
+.rep-name { flex: 1; font-weight: bold; }
+.rep-stars { font-size: 0.8em; }
+
+/* --- ZONE LEGEND --- */
+.zone-legend {
+  display: flex;
+  gap: 20px;
+  padding: 12px 15px;
+  border-top: 1px solid #333;
+  background-color: rgba(0,0,0,0.2);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-bar {
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+}
+
+.legend-bar.ucl { background-color: #2ecc71; }
+.legend-bar.uel { background-color: #3498db; }
+.legend-bar.rel { background-color: #e74c3c; }
+
+.legend-text {
+  font-size: 0.75em;
+  color: #aaa;
+  font-weight: 600;
+}
+
+/* --- COMPETITION STATS --- */
+.stats-tabs {
+  display: flex;
+  background: #1a1a1a;
+  border-bottom: 1px solid #444;
+}
+.stats-tabs button {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #888;
+  padding: 8px 5px;
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+.stats-tabs button:hover { color: #ccc; }
+.stats-tabs button.active { color: #f1c40f; border-bottom-color: #f1c40f; }
+
+.stats-list { max-height: 500px; overflow-y: auto; }
+
+.stats-list-header {
+  display: flex;
+  padding: 6px 10px;
+  background: #303030;
+  border-bottom: 1px solid #444;
+  font-size: 0.7em;
+  font-weight: bold;
+  color: #aaa;
+  text-transform: uppercase;
+}
+
+.stats-list-row {
+  display: flex;
+  padding: 5px 10px;
+  border-bottom: 1px solid #2a2a2a;
+  font-size: 0.8em;
+  align-items: center;
+}
+.stats-list-row:hover { background: #2e2e2e; }
+
+.sl-rank { width: 25px; color: #666; font-weight: bold; flex-shrink: 0; }
+.sl-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sl-team { width: 80px; color: #888; font-size: 0.85em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+.sl-val { width: 35px; text-align: center; color: #ccc; flex-shrink: 0; }
+.sl-val.goals-val { color: #f1c40f; font-weight: bold; }
+.sl-val.assists-val { color: #3498db; font-weight: bold; }
+.sl-val.rating-val { color: #2ecc71; font-weight: bold; }
+.sl-val.cs-val { color: #2ecc71; font-weight: bold; }
+.sl-val.yc { color: #f1c40f; font-weight: bold; }
+.sl-val.rc { color: #e74c3c; font-weight: bold; }
+
+.stats-empty { padding: 20px; text-align: center; color: #666; font-style: italic; }
+
+.hide-mobile {
+  @media (max-width: 600px) { display: none; }
+}
+
+/* Header right area: Media Prediction link sits next to the season selector */
+.header-right { display: flex; align-items: center; gap: 14px; }
+.fm-action-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #2a2a2a; color: #f1c40f; text-decoration: none;
+  padding: 7px 14px; border-radius: 4px; font-weight: 600; font-size: 0.9em;
+  border: 1px solid #3a3a3a; transition: all 0.15s;
+}
+.fm-action-link:hover { background: #f1c40f; color: #1a1a1a; border-color: #f1c40f; }
+
+/* ===== Championship Team Stats section ===== */
+.champ-stats-section {
+  margin-top: 24px; padding: 20px;
+  background: #1f1f1f; border-radius: 6px;
+}
+.champ-stats-header {
+  display: flex; align-items: baseline; gap: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #333; padding-bottom: 10px;
+}
+.champ-stats-header h2 { margin: 0; color: #ecf0f1; font-size: 1.2em; }
+.champ-meta { color: #888; font-size: 0.85em; }
+
+/* Grid of accordion cards — 2 columns on desktop, 1 on mobile */
+.champ-categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 8px;
+}
+
+/* New: grouped view (Performance / Discipline / Defensive / Finances) */
+.champ-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 8px;
+}
+.champ-group-title {
+  grid-column: 1 / -1;
+  margin: 14px 0 4px;
+  font-size: 0.78em; font-weight: 800; letter-spacing: 2px;
+  text-transform: uppercase; color: #f1c40f;
+  border-bottom: 1px solid #444; padding-bottom: 4px;
+}
+.champ-group-title:first-child { margin-top: 0; }
+.champ-category {
+  background: #2a2a2a; border-radius: 4px; overflow: hidden;
+  transition: background 0.15s;
+}
+.champ-category.open { background: #2f2f2f; box-shadow: 0 0 0 1px #444; }
+
+.champ-cat-head {
+  width: 100%;
+  display: flex; align-items: center; gap: 10px;
+  background: transparent; border: none; color: #ecf0f1; cursor: pointer;
+  padding: 10px 14px;
+  font-size: 0.9em; font-weight: 600; text-align: left;
+}
+.champ-cat-head:hover { background: rgba(255,255,255,0.04); }
+.cat-icon { font-size: 1.1em; }
+.cat-label { flex: 1; }
+.cat-chev { color: #888; font-size: 0.85em; }
+
+.champ-cat-body { padding: 4px 14px 12px; }
+
+.champ-table { width: 100%; border-collapse: collapse; }
+.champ-table td {
+  padding: 6px 4px; border-top: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.88em;
+}
+.champ-table td.rank { width: 24px; color: #888; font-weight: 700; text-align: center; }
+.champ-table td.team-name { color: #ddd; }
+.champ-table td.team-name .team-dot {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; margin-right: 6px;
+  vertical-align: middle; border: 1px solid rgba(255,255,255,0.2);
+}
+.champ-table td.value { text-align: right; color: #f1c40f; font-weight: 700; }
+.champ-table td.value .unit { color: #888; font-weight: 400; margin-left: 4px; font-size: 0.85em; }
+.champ-table td.empty { text-align: center; color: #666; font-style: italic; padding: 12px; }
+
+.champ-loading {
+  text-align: center; color: #888; font-style: italic; padding: 20px;
+}

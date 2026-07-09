@@ -1,0 +1,190 @@
+<div class="squad-container">
+
+  <!-- Expiring Contracts Notification -->
+  <div class="expiring-contracts-banner" *ngIf="expiringContracts.length > 0">
+    <div class="banner-icon">&#9888;</div>
+    <div class="banner-content">
+      <strong>Expiring Contracts:</strong>
+      {{ expiringContracts.length }} player(s) have contracts expiring soon:
+      <span *ngFor="let p of expiringContracts; let last = last">
+        <a [routerLink]="['/player', p.id]" class="fm-link">{{ p.name }}</a><span *ngIf="!last">, </span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Unhappy Players (morale < 60 or wants transfer) -->
+  <div class="unhappy-panel" *ngIf="unhappyPlayers.length > 0">
+    <div class="unhappy-header">&#9762; Unhappy Players ({{ unhappyPlayers.length }})</div>
+    <table class="fm-table unhappy-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th class="center">Pos</th>
+          <th class="center">Age</th>
+          <th class="center">Morale</th>
+          <th>Reason</th>
+          <th class="center" *ngIf="isOwnTeam">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of unhappyPlayers">
+          <td><a [routerLink]="['/player', p.id]" class="fm-link">{{ p.name }}</a></td>
+          <td class="center"><span class="pos-badge">{{ p.position }}</span></td>
+          <td class="center">{{ p.age }}</td>
+          <td class="center">
+            <span class="morale-indicator" [ngClass]="getMoraleClass(p.morale)">{{ p.morale }}</span>
+          </td>
+          <td>{{ p.reason }}</td>
+          <td class="center" *ngIf="isOwnTeam">
+            <button class="promise-btn" (click)="promisePlayingTime(p)" [disabled]="promiseLoading[p.id]">
+              {{ promiseLoading[p.id] ? '...' : 'Promise Playing Time' }}
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="promise-result" *ngIf="promiseMessage"
+         [ngClass]="promiseSuccess ? 'promise-ok' : 'promise-fail'">
+      {{ promiseMessage }}
+    </div>
+  </div>
+
+  <div class="view-controls">
+    <span class="view-label">Current View:</span>
+    <select [(ngModel)]="selectedOption" (change)="updateContent()" class="fm-dropdown">
+        <option value="General Info">General Info</option>
+        <option value="Contract Info">Contract Info</option>
+    </select>
+  </div>
+    
+  <div class="table-responsive">
+    <table class="fm-table">
+        <thead>
+          <tr>
+            <th class="face-col"></th>
+            <th class="pos-col" (click)="sort('position')">PKD {{ getSortIcon('position') }}</th>
+            <th (click)="sort('nationality')">Nat {{ getSortIcon('nationality') }}</th>
+            <th (click)="sort('name')">Name {{ getSortIcon('name') }}</th>
+            <th class="center" (click)="sort('age')">Age {{ getSortIcon('age') }}</th>
+            <th class="center" (click)="sort('position')">Best Pos {{ getSortIcon('position') }}</th>
+            
+            <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'agent' : 'morale')">
+                {{ selectedOption === 'Contract Info' ? 'Agent' : 'Morale' }} 
+                {{ getSortIcon(selectedOption === 'Contract Info' ? 'agent' : 'morale') }}
+            </th>
+
+            <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'APT' : 'fitness')">
+                {{ selectedOption === 'Contract Info' ? 'Agreed Time' : 'Fitness' }}
+                {{ getSortIcon(selectedOption === 'Contract Info' ? 'APT' : 'fitness') }}
+            </th>
+
+            <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'salary' : 'CA')">
+                {{ selectedOption === 'Contract Info' ? 'Salary' : 'Cur. Ability' }}
+                {{ getSortIcon(selectedOption === 'Contract Info' ? 'salary' : 'CA') }}
+            </th>
+
+            <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'contractEnd' : 'PA')">
+                {{ selectedOption === 'Contract Info' ? 'Expires' : 'Pot. Ability' }}
+                {{ getSortIcon(selectedOption === 'Contract Info' ? 'contractEnd' : 'PA') }}
+            </th>
+
+            <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'transferValue' : 'rating')">
+                {{ selectedOption === 'Contract Info' ? 'Value' : 'Rating' }}
+                {{ getSortIcon(selectedOption === 'Contract Info' ? 'transferValue' : 'rating') }}
+            </th>
+          </tr>
+        </thead>
+        
+        <tbody>
+          <tr *ngFor="let player of players; let index = index">
+
+            <td class="face-col">
+              <app-player-face [size]="54"
+                [baseFaceId]="player.baseFaceId || 0"
+                [skinTone]="player.skinTone || 0"
+                [hairStyle]="player.hairStyle || 0"
+                [hairColor]="player.hairColor || 0"
+                [eyeColor]="player.eyeColor || 0"
+                [faceShape]="player.faceShape || 0"
+                [noseShape]="player.noseShape || 0"
+                [eyeShape]="player.eyeShape || 0"
+                [mouthShape]="player.mouthShape || 0"
+                [browShape]="player.browShape || 0"
+                [nationId]="player.nationId || 0"
+                [species]="player.species || 'human'"></app-player-face>
+            </td>
+
+            <td class="pos-col">
+              <select class="tactic-select" [ngClass]="player.position">
+                <option value="GK">GK</option>
+                <option value="DR">DR</option>
+                <option value="DL">DL</option>
+                <option value="DC">DC</option>
+                <option value="DM">DM</option>
+                <option value="MC">MC</option>
+                <option value="MR">MR</option>
+                <option value="ML">ML</option>
+                <option value="AMR">AMR</option>
+                <option value="AML">AML</option>
+                <option value="AMC">AMC</option>
+                <option value="ST">ST</option>
+              </select>
+            </td>
+
+            <td><span class="nat-flag">{{ player.nationality }}</span></td>
+
+            <td class="name-cell"> 
+                <div class="name-wrapper" (contextmenu)="onRightClick($event, index)">
+                    <a [routerLink]="['/player', player.id]" class="fm-link">{{ player.name }}</a>
+                    
+                    <div class="context-menu" *ngIf="showOptions && activeIndex === index">
+                        <ul>
+                            <li><a href="#">View Profile</a></li>
+                            <li><a href="#">Offer New Contract</a></li>
+                            <li><a href="#">Transfer List</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </td>
+
+            <td class="center">{{ player.age }}</td>
+            <td class="center">
+                <span class="pos-badge">{{ player.position }}</span>
+            </td>
+
+            <td class="center">
+                <span *ngIf="selectedOption === 'General Info'"
+                      class="morale-indicator"
+                      [ngClass]="getMoraleClass(player.morale)"
+                      [title]="getMoraleLabel(player.morale)">
+                  {{ player.morale | number:'1.0-0' }}
+                </span>
+                <span *ngIf="selectedOption === 'Contract Info'">{{ player.agent }}</span>
+            </td>
+            
+            <td class="center"> 
+                <span *ngIf="selectedOption === 'General Info'">{{ player.fitness }}%</span>
+                <span *ngIf="selectedOption === 'Contract Info'">{{ player.APT }}</span> 
+            </td>
+            
+            <td class="center money-col"> 
+                <span *ngIf="selectedOption === 'General Info'" class="rating-stars">{{ player.CA }}</span>
+                <span *ngIf="selectedOption === 'Contract Info'">{{ player.wage | currency:'EUR':'symbol':'1.0-0' }}</span>
+            </td>
+
+            <td class="center">
+                <span *ngIf="selectedOption === 'General Info'" class="rating-stars">{{ player.PA }}</span>
+                <span *ngIf="selectedOption === 'Contract Info'">Season {{ player.contractEndSeason }}</span>  
+            </td>
+            
+            <td class="center"> 
+                <span *ngIf="selectedOption === 'General Info'" class="rating-val"
+                      [style.color]="player.rating | ratingColor"
+                      [style.font-weight]="700">{{ player.rating | number:'1.2-2' }}</span>
+                <span *ngIf="selectedOption === 'Contract Info'" class="money-val">{{ player.transferValue | currency:'EUR':'symbol':'1.0-0' }}</span> 
+            </td>
+          </tr>
+        </tbody>
+    </table>
+  </div>
+</div>

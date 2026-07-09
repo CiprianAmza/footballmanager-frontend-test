@@ -1,0 +1,50 @@
+<div class="admin-container">
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Generate Player</h2>
+      <div class="header-actions">
+        <a class="secondary" routerLink="/admin" style="text-decoration:none;padding:6px 12px;border-radius:4px;">← Hub</a>
+      </div>
+    </div>
+
+    <div class="best-tactic-panel">
+      <p class="hint">
+        Create a new player. Provide an optional team id to assign the player directly to a squad;
+        leave fields blank to let the backend pick sensible defaults.
+      </p>
+
+      <div class="best-tactic-controls">
+        <label>
+          Team id (optional)
+          <input type="number" min="1" [(ngModel)]="teamId" placeholder="e.g. 12" />
+        </label>
+        <label>
+          Name (optional)
+          <input type="text" [(ngModel)]="name" placeholder="Auto if blank" />
+        </label>
+        <label>
+          Position
+          <select [(ngModel)]="position">
+            <option *ngFor="let p of positions" [ngValue]="p">{{ p }}</option>
+          </select>
+        </label>
+        <label>
+          Age
+          <input type="number" min="15" max="40" [(ngModel)]="age" />
+        </label>
+        <label>
+          Overall
+          <input type="number" min="1" max="99" [(ngModel)]="overall" />
+        </label>
+        <button class="primary" (click)="generate()" [disabled]="loading">
+          {{ loading ? 'Generating...' : 'Generate player' }}
+        </button>
+      </div>
+
+      <div class="save-msg" *ngIf="resultMessage" [class.ok]="resultOk" [class.err]="!resultOk"
+           style="margin-top:12px;font-size:0.9em;">
+        {{ resultMessage }}
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,311 @@
+<div class="fm-competition-view">
+  
+  <!-- 1. HEADER COMUN (Sezon + Titlu) -->
+  <div class="comp-header">
+    <div class="header-left">
+      <div class="comp-logo-wrapper">
+        <img src="assets/logos/competition_default.png" class="comp-logo" alt="Logo">
+      </div>
+      <div class="header-titles">
+        <span class="subtitle">COMPETITION</span>
+        <h1 class="title">{{ competitionName }}</h1>
+      </div>
+    </div>
+    
+    <div class="header-right">
+      <a class="fm-action-link"
+         *ngIf="competitionType === 'League'"
+         [routerLink]="['/mediaPrediction', parameterCompetitionId]"
+         title="See the media's pre-season predicted finishing order">
+        📊 Media Prediction
+      </a>
+      <div class="season-selector">
+        <span class="label">SEASON</span>
+        <!-- 🔹 Folosim ngModel pentru a lega variabila 'selectedSeason' -->
+        <select class="fm-select" [(ngModel)]="selectedSeason" (change)="onSeasonChange()">
+            <option *ngFor="let season of seasons" [value]="season">
+                {{ season }}/{{ +season + 1 }}
+            </option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. CONTENT SWITCHER -->
+
+  <!-- A. CUP VIEW (Se activează dacă typeId == 2) -->
+  <div class="cup-wrapper" *ngIf="competitionType === 'Cup'">
+      <!-- Pasăm ID-ul și Sezonul selectat către componenta copil -->
+      <app-cup-overview 
+          [competitionId]="parameterCompetitionId" 
+          [season]="selectedSeason">
+      </app-cup-overview>
+  </div>
+
+  <!-- B. LEAGUE VIEW (Se activează dacă typeId == 1 sau default) -->
+  <div class="competition-grid" *ngIf="competitionType === 'League'">
+    
+    <!-- LEFT: TABLE -->
+    <div class="grid-column main-col">
+      <div class="fm-panel">
+        <div class="panel-header">
+            <span class="panel-title">LEAGUE TABLE</span>
+            <div class="panel-controls">
+                <button class="btn-icon">⚙</button>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="fm-table league-table">
+                <thead>
+                    <tr>
+                        <th class="pos-col" (click)="sortBy('position')">POS</th>
+                        <th class="inf-col">INF</th>
+                        <th class="team-col" (click)="sortBy('name')">TEAM</th>
+                        <th class="stat-col" (click)="sortBy('games')">P</th>
+                        <th class="stat-col hide-mobile" (click)="sortBy('wins')">W</th>
+                        <th class="stat-col hide-mobile" (click)="sortBy('draws')">D</th>
+                        <th class="stat-col hide-mobile" (click)="sortBy('loses')">L</th>
+                        <th class="stat-col" (click)="sortBy('goalDifference')">GD</th>
+                        <th class="stat-col points-col" (click)="sortBy('points')">PTS</th>
+                        <th class="form-col">FORM</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let team of _teams; let i = index" [class.my-team]="team.name === currentTeam">
+                        <td class="pos-col">
+                            <div class="pos-wrapper">
+                                <span class="pos-bar"
+                                      [class.ucl]="team.position <= locSpots"
+                                      [class.uel]="team.position > locSpots && team.position <= locSpots + starsCupSpots"
+                                      [class.rel]="team.position >= relegationFrom">
+                                </span>
+                                <span class="pos-num">{{ team.position }}</span>
+                            </div>
+                        </td>
+                        <td class="inf-col">
+                            <span class="status-dot" *ngIf="i === 0">C</span>
+                            <span class="status-dot rel" *ngIf="team.position >= relegationFrom">R</span>
+                        </td>
+                        <td class="team-col">
+                            <div class="team-flex">
+                                <div class="mini-logo" [style.background-color]="team.color1 || '#333'"></div>
+                                <a [routerLink]="['/team', team.teamId]" class="fm-link">
+                                    {{ team.name }}
+                                </a>
+                            </div>
+                        </td>
+                        <td class="stat-col">{{ team.games }}</td>
+                        <td class="stat-col hide-mobile">{{ team.wins }}</td>
+                        <td class="stat-col hide-mobile">{{ team.draws }}</td>
+                        <td class="stat-col hide-mobile">{{ team.loses }}</td>
+                        <td class="stat-col">{{ team.goalDifference }}</td>
+                        <td class="stat-col points-col">{{ team.points }}</td>
+                        <td class="form-col">
+                            <div class="form-dots">
+                                <span *ngFor="let res of getFormArray(team.form)" 
+                                      class="dot" 
+                                      [ngClass]="{'win': res === 'W', 'draw': res === 'D', 'loss': res === 'L'}">
+                                    {{ res }}
+                                </span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Qualification Zone Legend -->
+        <div class="zone-legend" *ngIf="locSpots > 0 || starsCupSpots > 0">
+          <div class="legend-item" *ngIf="locSpots > 0">
+            <span class="legend-bar ucl"></span>
+            <span class="legend-text">League of Champions (1-{{ locSpots }})</span>
+          </div>
+          <div class="legend-item" *ngIf="starsCupSpots > 0">
+            <span class="legend-bar uel"></span>
+            <span class="legend-text">Stars Cup ({{ locSpots + 1 }}-{{ locSpots + starsCupSpots }})</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-bar rel"></span>
+            <span class="legend-text">Relegation ({{ relegationFrom }}+)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: SIDEBAR INFO (Competition Stats) -->
+    <div class="grid-column side-col">
+
+        <!-- Stats Tabs -->
+        <div class="fm-panel comp-stats-panel" *ngIf="compStats">
+            <div class="panel-header blue-accent">
+                <span class="panel-title">COMPETITION STATISTICS</span>
+            </div>
+
+            <div class="stats-tabs">
+                <button [class.active]="activeStatsTab === 'scorers'" (click)="setStatsTab('scorers')">Scorers</button>
+                <button [class.active]="activeStatsTab === 'assisters'" (click)="setStatsTab('assisters')">Assists</button>
+                <button [class.active]="activeStatsTab === 'rated'" (click)="setStatsTab('rated')">Rating</button>
+                <button [class.active]="activeStatsTab === 'cleansheets'" (click)="setStatsTab('cleansheets')">CS</button>
+                <button [class.active]="activeStatsTab === 'cards'" (click)="setStatsTab('cards')">Cards</button>
+            </div>
+
+            <!-- Top Scorers -->
+            <div class="stats-list" *ngIf="activeStatsTab === 'scorers'">
+                <div class="stats-list-header">
+                    <span class="sl-rank">#</span>
+                    <span class="sl-name">Player</span>
+                    <span class="sl-team">Team</span>
+                    <span class="sl-val">G</span>
+                    <span class="sl-val">A</span>
+                    <span class="sl-val">M</span>
+                </div>
+                <div class="stats-list-row" *ngFor="let p of compStats.topScorers; let i = index">
+                    <span class="sl-rank">{{ i + 1 }}</span>
+                    <span class="sl-name"><a [routerLink]="['/player', p.playerId]" class="fm-link">{{ p.playerName }}</a></span>
+                    <span class="sl-team"><a [routerLink]="['/team', p.teamId]" class="fm-link">{{ p.teamName }}</a></span>
+                    <span class="sl-val goals-val">{{ p.goals }}</span>
+                    <span class="sl-val">{{ p.assists }}</span>
+                    <span class="sl-val">{{ p.matches }}</span>
+                </div>
+                <div class="stats-empty" *ngIf="!compStats.topScorers?.length">No data available.</div>
+            </div>
+
+            <!-- Top Assisters -->
+            <div class="stats-list" *ngIf="activeStatsTab === 'assisters'">
+                <div class="stats-list-header">
+                    <span class="sl-rank">#</span>
+                    <span class="sl-name">Player</span>
+                    <span class="sl-team">Team</span>
+                    <span class="sl-val">A</span>
+                    <span class="sl-val">G</span>
+                    <span class="sl-val">M</span>
+                </div>
+                <div class="stats-list-row" *ngFor="let p of compStats.topAssisters; let i = index">
+                    <span class="sl-rank">{{ i + 1 }}</span>
+                    <span class="sl-name"><a [routerLink]="['/player', p.playerId]" class="fm-link">{{ p.playerName }}</a></span>
+                    <span class="sl-team"><a [routerLink]="['/team', p.teamId]" class="fm-link">{{ p.teamName }}</a></span>
+                    <span class="sl-val assists-val">{{ p.assists }}</span>
+                    <span class="sl-val">{{ p.goals }}</span>
+                    <span class="sl-val">{{ p.matches }}</span>
+                </div>
+                <div class="stats-empty" *ngIf="!compStats.topAssisters?.length">No data available.</div>
+            </div>
+
+            <!-- Top Rated -->
+            <div class="stats-list" *ngIf="activeStatsTab === 'rated'">
+                <div class="stats-list-header">
+                    <span class="sl-rank">#</span>
+                    <span class="sl-name">Player</span>
+                    <span class="sl-team">Team</span>
+                    <span class="sl-val">Rtg</span>
+                    <span class="sl-val">M</span>
+                </div>
+                <div class="stats-list-row" *ngFor="let p of compStats.topRated; let i = index">
+                    <span class="sl-rank">{{ i + 1 }}</span>
+                    <span class="sl-name"><a [routerLink]="['/player', p.playerId]" class="fm-link">{{ p.playerName }}</a></span>
+                    <span class="sl-team"><a [routerLink]="['/team', p.teamId]" class="fm-link">{{ p.teamName }}</a></span>
+                    <span class="sl-val rating-val">{{ p.avgRating }}</span>
+                    <span class="sl-val">{{ p.matches }}</span>
+                </div>
+                <div class="stats-empty" *ngIf="!compStats.topRated?.length">No data available.</div>
+            </div>
+
+            <!-- Clean Sheets -->
+            <div class="stats-list" *ngIf="activeStatsTab === 'cleansheets'">
+                <div class="stats-list-header">
+                    <span class="sl-rank">#</span>
+                    <span class="sl-name">Team</span>
+                    <span class="sl-val">CS</span>
+                    <span class="sl-val">M</span>
+                    <span class="sl-val">%</span>
+                </div>
+                <div class="stats-list-row" *ngFor="let t of compStats.cleanSheets; let i = index">
+                    <span class="sl-rank">{{ i + 1 }}</span>
+                    <span class="sl-name"><a [routerLink]="['/team', t.teamId]" class="fm-link">{{ t.teamName }}</a></span>
+                    <span class="sl-val cs-val">{{ t.cleanSheets }}</span>
+                    <span class="sl-val">{{ t.matches }}</span>
+                    <span class="sl-val">{{ (t.percentage * 100) | number:'1.0-0' }}%</span>
+                </div>
+                <div class="stats-empty" *ngIf="!compStats.cleanSheets?.length">No data available.</div>
+            </div>
+
+            <!-- Disciplinary -->
+            <div class="stats-list" *ngIf="activeStatsTab === 'cards'">
+                <div class="stats-list-header">
+                    <span class="sl-rank">#</span>
+                    <span class="sl-name">Player</span>
+                    <span class="sl-team">Team</span>
+                    <span class="sl-val yc">Y</span>
+                    <span class="sl-val rc">R</span>
+                </div>
+                <div class="stats-list-row" *ngFor="let p of compStats.disciplinary; let i = index">
+                    <span class="sl-rank">{{ i + 1 }}</span>
+                    <span class="sl-name"><a [routerLink]="['/player', p.playerId]" class="fm-link">{{ p.playerName }}</a></span>
+                    <span class="sl-team"><a [routerLink]="['/team', p.teamId]" class="fm-link">{{ p.teamName }}</a></span>
+                    <span class="sl-val yc">{{ p.yellowCards }}</span>
+                    <span class="sl-val rc">{{ p.redCards }}</span>
+                </div>
+                <div class="stats-empty" *ngIf="!compStats.disciplinary?.length">No data available.</div>
+            </div>
+        </div>
+
+        <div class="fm-panel" *ngIf="compStatsLoading">
+            <div class="panel-content" style="text-align: center; color: #888; padding: 20px;">Loading stats...</div>
+        </div>
+
+    </div>
+
+    <!-- ===== CHAMPIONSHIP TEAM STATS — aggregated leaderboards ===== -->
+    <div class="champ-stats-section" *ngIf="competitionType === 'League' && champStats">
+        <div class="champ-stats-header">
+            <h2>📊 Championship Team Stats</h2>
+            <span class="champ-meta">{{ champStats.matchesPlayed }} matches played · {{ champStats.teamsTracked }} teams</span>
+        </div>
+
+        <div class="champ-groups">
+            <ng-container *ngFor="let cat of statCategories; let i = index">
+                <!-- Group header appears once per group, just before its first category -->
+                <h3 class="champ-group-title"
+                    *ngIf="i === 0 || statCategories[i-1].group !== cat.group">
+                    {{ cat.group }}
+                </h3>
+                <div class="champ-category"
+                     [class.open]="expandedCategory === cat.key">
+                    <button class="champ-cat-head" (click)="toggleCategory(cat.key)">
+                        <span class="cat-icon">{{ cat.icon }}</span>
+                        <span class="cat-label">{{ cat.label }}</span>
+                        <span class="cat-chev">{{ expandedCategory === cat.key ? '▾' : '▸' }}</span>
+                    </button>
+                    <div class="champ-cat-body" *ngIf="expandedCategory === cat.key">
+                        <table class="champ-table">
+                            <tbody>
+                                <tr *ngFor="let row of topForCategory(cat.key, 5); let i = index">
+                                    <td class="rank">{{ i + 1 }}</td>
+                                    <td class="team-name">
+                                        <span class="team-dot" *ngIf="row.teamColor1"
+                                              [style.background-color]="row.teamColor1"></span>
+                                        <a [routerLink]="['/team', row.teamId]" class="fm-link">{{ row.teamName }}</a>
+                                    </td>
+                                    <td class="value">
+                                        <ng-container *ngIf="cat.money">{{ formatMoney(row.value) }}</ng-container>
+                                        <ng-container *ngIf="!cat.money">{{ row.value }}<span class="unit"> {{ row.unit }}</span></ng-container>
+                                    </td>
+                                </tr>
+                                <tr *ngIf="!topForCategory(cat.key, 5).length">
+                                    <td colspan="3" class="empty">No data yet.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </ng-container>
+        </div>
+    </div>
+
+    <div *ngIf="competitionType === 'League' && champStatsLoading && !champStats" class="champ-loading">
+        Loading championship stats…
+    </div>
+
+  </div>
+</div>

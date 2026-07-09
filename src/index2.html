@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RPG 3D - Mouse Camera</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: black; font-family: sans-serif; }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #00ff00; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px;
+            text-align: center; pointer-events: none;
+        }
+        #ui {
+            position: absolute; bottom: 20px; left: 20px; color: white;
+            background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading">Se încarcă lumea...</div>
+    <div id="ui" style="display:none;">
+        <strong>CONTROALE:</strong><br>
+        🖱️ <strong>Mouse Stânga:</strong> Rotește Camera<br>
+        🖱️ <strong>Scroll:</strong> Zoom<br>
+        ⌨️ <strong>W / S:</strong> Înainte / Înapoi<br>
+        ⌨️ <strong>A / D:</strong> Rotește Caracterul<br>
+        ⌨️ <strong>E:</strong> Urcă / Coboară<br>
+        <span id="status" style="color: yellow; display:block; margin-top:5px;">Status: Pe jos</span>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        // Importăm controlul pentru Mouse
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- SETUP ---
+        const clock = new THREE.Clock();
+        let scene, camera, renderer, controls;
+        let player, horse;
+        let mixers = [];
+        let actions = {};
+        
+        let isMounted = false;
+        const keys = { w: false, a: false, s: false, d: false };
+
+        // Configurare
+        const SPEED_WALK = 5;
+        const SPEED_HORSE = 12;
+        const ROTATE_SPEED = 2.0;
+
+        init();
+        animate();
+
+        function init() {
+            // SCENA
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 20, 150);
+
+            // CAMERA
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+            camera.position.set(0, 5, -10); // Poziția inițială
+
+            // RENDERER
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            // CONTROLS (MOUSE)
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true; // Mișcare fină (inerție)
+            controls.dampingFactor = 0.05;
+            controls.enablePan = false; // Nu lăsăm jucătorul să mute camera aiurea stânga-dreapta
+            controls.minDistance = 5;   // Zoom maxim
+            controls.maxDistance = 20;  // Zoom minim
+            controls.maxPolarAngle = Math.PI / 2 - 0.05; // Nu lăsăm camera să intre sub pământ
+
+            // LUMINI
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+            hemiLight.position.set(0, 20, 0);
+            scene.add(hemiLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            dirLight.position.set(50, 100, 50);
+            dirLight.castShadow = true;
+            dirLight.shadow.camera.left = -50; dirLight.shadow.camera.right = 50;
+            dirLight.shadow.camera.top = 50; dirLight.shadow.camera.bottom = -50;
+            scene.add(dirLight);
+
+            // TEREN
+            const texLoader = new THREE.TextureLoader();
+            const grassTex = texLoader.load('https://threejs.org/examples/textures/terrain/grasslight-big.jpg');
+            grassTex.wrapS = THREE.RepeatWrapping;
+            grassTex.wrapT = THREE.RepeatWrapping;
+            grassTex.repeat.set(50, 50);
+            
+            const ground = new THREE.Mesh(
+                new THREE.PlaneGeometry(500, 500),
+                new THREE.MeshStandardMaterial({ map: grassTex })
+            );
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            // INPUT
+            document.addEventListener('keydown', (e) => {
+                if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true;
+                if(e.key.toLowerCase() === 'e') toggleMount();
+            });
+            document.addEventListener('keyup', (e) => {
+                if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false;
+            });
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            loadAssets();
+        }
+
+        function loadAssets() {
+            const loader = new GLTFLoader();
+            let loaded = 0;
+            const check = () => {
+                loaded++;
+                if(loaded === 2) {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('ui').style.display = 'block';
+                }
+            }
+
+            // Soldat
+            loader.load('https://raw.githack.com/mrdoob/three.js/master/examples/models/gltf/Soldier.glb', (gltf) => {
+                player = gltf.scene;
+                player.traverse(o => { if(o.isMesh) o.castShadow = true; });
+                player.rotation.y = Math.PI; 
+                player.scale.set(2, 2, 2);
+                scene.add(player);
+
+                const mixer = new THREE.AnimationMixer(player);
+                mixers.push(mixer);
+                actions['idle'] = mixer.clipAction(gltf.animations[0]);
+                actions['run'] = mixer.clipAction(gltf.animations[1]);
+                actions['tpose'] = mixer.clipAction(gltf.animations[2]);
+                actions['idle'].play();
+                check();
+            });
+
+            // Cal
+            loader.load('https://raw.githack.com/mrdoob/three.js/master/examples/models/gltf/Horse.glb', (gltf) => {
+                horse = gltf.scene;
+                horse.scale.set(0.03, 0.03, 0.03);
+                horse.position.set(5, 0, 0);
+                horse.traverse(o => { if(o.isMesh) { o.castShadow = true; o.material = new THREE.MeshStandardMaterial({ color: 0x5D4037 }); } });
+                scene.add(horse);
+
+                const mixer = new THREE.AnimationMixer(horse);
+                mixers.push(mixer);
+                actions['gallop'] = mixer.clipAction(gltf.animations[0]);
+                check();
+            });
+        }
+
+        function toggleMount() {
+            if (!player || !horse) return;
+            const dist = player.position.distanceTo(horse.position);
+
+            if (!isMounted && dist < 4) {
+                isMounted = true;
+                document.getElementById('status').innerText = "Status: 🏇 Călare";
+                actions['run'].stop();
+                actions['idle'].stop();
+                actions['tpose'].play();
+            } else if (isMounted) {
+                isMounted = false;
+                document.getElementById('status').innerText = "Status: 🚶 Pe jos";
+                
+                // Coborâm lângă cal
+                const offset = new THREE.Vector3(2, 0, 0).applyQuaternion(horse.quaternion);
+                player.position.copy(horse.position).add(offset);
+                player.position.y = 0;
+                player.rotation.copy(horse.rotation);
+
+                actions['tpose'].stop();
+                actions['idle'].play();
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            mixers.forEach(m => m.update(delta));
+
+            if (!player || !horse) return;
+
+            const activeObject = isMounted ? horse : player;
+            const speed = isMounted ? SPEED_HORSE : SPEED_WALK;
+            let moving = false;
+            let movingBack = false;
+
+            // MIȘCARE
+            if (keys.w) { activeObject.translateZ(speed * delta); moving = true; }
+            if (keys.s) { activeObject.translateZ(-speed * delta); moving = true; movingBack = true; }
+            if (keys.a) activeObject.rotation.y += ROTATE_SPEED * delta;
+            if (keys.d) activeObject.rotation.y -= ROTATE_SPEED * delta;
+
+            // SINCRONIZARE CĂLARE
+            if (isMounted) {
+                player.position.copy(horse.position);
+                player.rotation.copy(horse.rotation);
+                player.translateY(1.7);
+                player.translateZ(-0.2);
+
+                if (moving) {
+                    actions['gallop'].timeScale = movingBack ? -1 : 1.5;
+                    if(!actions['gallop'].isRunning()) actions['gallop'].play();
+                } else {
+                    actions['gallop'].stop();
+                }
+            } else {
+                // ANIMAȚIE OM
+                if (moving) {
+                    actions['idle'].stop();
+                    if(!actions['run'].isRunning()) actions['run'].play();
+                } else {
+                    actions['run'].stop();
+                    if(!actions['idle'].isRunning()) actions['idle'].play();
+                }
+            }
+
+            // --- LOGICA CAMEREI CU ORBIT CONTROLS ---
+            
+            // 1. Salvăm distanța curentă a camerei față de țintă (ca să o menținem când se mișcă jucătorul)
+            // Calculăm vectorul de la țintă la cameră
+            const relativeCameraOffset = camera.position.clone().sub(controls.target);
+
+            // 2. Setăm noua țintă (Unde să se uite camera)
+            // Ne uităm la obiectul activ, dar mai sus cu 2 metri (la cap, nu la picioare)
+            const targetHeight = isMounted ? 2.5 : 1.5; // Mai sus când e pe cal
+            const newTargetPos = activeObject.position.clone();
+            newTargetPos.y += targetHeight;
+            
+            controls.target.copy(newTargetPos);
+
+            // 3. Mutăm fizic camera după jucător
+            // Adăugăm la noua poziție a țintei offset-ul vechi. 
+            // Astfel camera "vine după tine" dar păstrează rotația mouse-ului.
+            camera.position.copy(newTargetPos).add(relativeCameraOffset);
+
+            // 4. Actualizăm controalele
+            controls.update();
+
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>

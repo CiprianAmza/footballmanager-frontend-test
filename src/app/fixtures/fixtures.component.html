@@ -1,0 +1,301 @@
+<div class="fixtures-container">
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <h1>FIXTURES & RESULTS</h1>
+    <div class="tab-buttons">
+        <button class="tab-btn" [class.active]="activeTab === 'fixtures'" (click)="switchTab('fixtures')">Fixtures</button>
+        <button class="tab-btn" [class.active]="activeTab === 'calendar'" (click)="switchTab('calendar')">Calendar</button>
+    </div>
+  </div>
+
+  <!-- CALENDAR VIEW -->
+  <div class="calendar-view" *ngIf="activeTab === 'calendar'">
+    <div class="calendar-scroll">
+      <table class="calendar-table">
+        <thead>
+          <tr>
+            <th class="cal-round">Date</th>
+            <th class="cal-comp">Competition</th>
+            <th class="cal-venue">Match</th>
+            <th class="cal-opponent">Opponent</th>
+            <th class="cal-result">Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let entry of calendarEntries; trackBy: trackByFixture"
+              [class.current-round]="entry.roundNumber === currentRound"
+              [class.played-row]="entry.status === 'played'"
+              [class.upcoming-row]="entry.status === 'upcoming'">
+
+            <td class="cal-round">{{ entry.dateDisplay || 'Rd ' + entry.roundNumber }}</td>
+
+            <td class="cal-comp">
+              <span class="comp-type-badge" [ngClass]="getCompTypeClass(entry.competitionType)">
+                {{ entry.competitionName | slice:0:3 | uppercase }}
+              </span>
+              <span class="comp-full-name">{{ entry.competitionName }}</span>
+            </td>
+
+            <td class="cal-venue">
+              <span class="venue-badge" [ngClass]="{'venue-home': entry.homeOrAway === 'H', 'venue-away': entry.homeOrAway === 'A'}">
+                {{ entry.homeTeamAbbr || entry.homeOrAway }} v {{ entry.awayTeamAbbr || '' }}
+              </span>
+            </td>
+
+            <td class="cal-opponent"><a [routerLink]="['/team', entry.opponentTeamId]" class="fm-link">{{ entry.opponentTeamName }}</a></td>
+
+            <td class="cal-result">
+              <span *ngIf="entry.status === 'played'" class="cal-score-badge"
+                    [ngClass]="{
+                      'cal-win': entry.resultOutcome === 'W',
+                      'cal-draw': entry.resultOutcome === 'D',
+                      'cal-loss': entry.resultOutcome === 'L'
+                    }">
+                {{ entry.resultOutcome }} {{ entry.score }}
+              </span>
+              <span *ngIf="entry.status === 'upcoming'" class="cal-upcoming">Upcoming</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="content-grid" *ngIf="activeTab === 'fixtures'">
+
+    <!-- LEFT: SCHEDULE LIST -->
+    <div class="list-panel">
+        <div class="table-responsive">
+            <table class="fm-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th class="center">Comp</th>
+                        <th class="center">Venue</th>
+                        <th class="text-right">Opponent</th>
+                        <th class="center">Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let match of fixtures; trackBy: trackByFixture"
+                        (click)="selectMatch(match)"
+                        [class.selected]="selectedMatch === match">
+
+                        <!-- Date -->
+                        <td class="date-col">{{ match.date }}</td>
+
+                        <!-- Competition (Short) -->
+                        <td class="center comp-col">
+                            <span class="comp-badge" [title]="match.competitionName">
+                                {{ match.competitionName | slice:0:3 | uppercase }}
+                            </span>
+                        </td>
+
+                        <!-- Home/Away -->
+                        <td class="center venue-col">{{ match.homeTeamAbbr }} v {{ match.awayTeamAbbr }}</td>
+
+                        <!-- Opponent -->
+                        <td class="text-right opponent-col">
+                            <a [routerLink]="['/team', match.homeOrAway === 'H' ? match.teamId2 : match.teamId1]" class="fm-link" (click)="$event.stopPropagation()">
+                                {{ match.opponentTeam }}
+                            </a>
+                        </td>
+
+                        <!-- Result Score -->
+                        <td class="center result-col">
+                            <div class="score-badge" [ngClass]="{
+                                'win': match.resultType === 'W',
+                                'draw': match.resultType === 'D',
+                                'loss': match.resultType === 'L',
+                                'pending': match.resultType === 'Pending'
+                            }">
+                                {{ match.score }}
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- RIGHT: MATCH PREVIEW / DETAILS -->
+    <div class="details-panel">
+        <div class="panel-header">MATCH DETAILS</div>
+
+        <div *ngIf="selectedMatch && selectedOpponentInfo; else noSelection" class="details-content">
+
+            <!-- Match Header -->
+            <div class="match-card">
+                <div class="team-display home">
+                    <span class="big-name">{{ selectedMatch.homeOrAway === 'H' ? 'My Team' : selectedMatch.opponentTeam }}</span>
+                </div>
+
+                <div class="score-display">
+                    <div class="final-score">{{ selectedMatch.score }}</div>
+                    <div class="match-status">{{ selectedMatch.resultType === 'Pending' ? 'UPCOMING' : 'FULL TIME' }}</div>
+                </div>
+
+                <div class="team-display away">
+                    <span class="big-name">{{ selectedMatch.homeOrAway === 'H' ? selectedMatch.opponentTeam : 'My Team' }}</span>
+                </div>
+            </div>
+
+            <!-- Post-Match Summary Header -->
+            <div class="info-box summary-box" *ngIf="selectedMatch.resultType !== 'Pending' && matchSummary">
+                <div class="box-title">POST-MATCH SUMMARY</div>
+
+                <!-- Man of the Match -->
+                <div class="motm-section" *ngIf="matchSummary.manOfTheMatchName">
+                    <div class="motm-label">MAN OF THE MATCH</div>
+                    <div class="motm-player">
+                        <span class="motm-name"><a *ngIf="matchSummary.manOfTheMatchPlayerId" [routerLink]="['/player', matchSummary.manOfTheMatchPlayerId]" class="fm-link">{{ matchSummary.manOfTheMatchName }}</a><ng-container *ngIf="!matchSummary.manOfTheMatchPlayerId">{{ matchSummary.manOfTheMatchName }}</ng-container></span>
+                        <span class="motm-rating">{{ matchSummary.manOfTheMatchRating | number:'1.1-1' }}</span>
+                    </div>
+                </div>
+
+                <!-- Key Stats -->
+                <div class="key-stats">
+                    <div class="stat-row">
+                        <span class="stat-home">{{ matchSummary.homePossession }}%</span>
+                        <span class="stat-label-center">POSSESSION</span>
+                        <span class="stat-away">{{ matchSummary.awayPossession }}%</span>
+                    </div>
+                    <div class="possession-bar">
+                        <div class="poss-home" [style.width.%]="matchSummary.homePossession"></div>
+                        <div class="poss-away" [style.width.%]="matchSummary.awayPossession"></div>
+                    </div>
+                </div>
+
+                <!-- Goal Scorers Summary -->
+                <div class="goals-summary" *ngIf="matchSummary.goals && matchSummary.goals.length > 0">
+                    <div class="goal-item" *ngFor="let goal of matchSummary.goals">
+                        <span class="goal-minute">{{ goal.minute }}'</span>
+                        <span class="goal-player"><a *ngIf="goal.playerId" [routerLink]="['/player', goal.playerId]" class="fm-link">{{ goal.playerName }}</a><ng-container *ngIf="!goal.playerId">{{ goal.playerName }}</ng-container></span>
+                        <span class="goal-team-badge"
+                              [ngClass]="{'goal-home': goal.teamId === matchSummary.homeTeamId, 'goal-away': goal.teamId === matchSummary.awayTeamId}">
+                            {{ goal.teamName?.slice(0,3)?.toUpperCase() }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Top Ratings -->
+                <div class="top-ratings" *ngIf="matchSummary.homePlayerRatings?.length > 0 || matchSummary.awayPlayerRatings?.length > 0">
+                    <div class="ratings-header">TOP PERFORMERS</div>
+                    <div class="ratings-columns">
+                        <div class="ratings-col">
+                            <div class="ratings-team-name">{{ matchSummary.homeTeamName }}</div>
+                            <div class="rating-item" *ngFor="let pr of $any(matchSummary.homePlayerRatings)?.slice(0,3)">
+                                <span class="rating-player-name">{{ $any(pr).playerName }}</span>
+                                <span class="rating-value" [ngClass]="{'rating-high': $any(pr).rating >= 8, 'rating-mid': $any(pr).rating >= 6.5 && $any(pr).rating < 8, 'rating-low': $any(pr).rating < 6.5}">
+                                    {{ $any(pr).rating | number:'1.1-1' }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="ratings-col">
+                            <div class="ratings-team-name">{{ matchSummary.awayTeamName }}</div>
+                            <div class="rating-item" *ngFor="let pr of $any(matchSummary.awayPlayerRatings)?.slice(0,3)">
+                                <span class="rating-player-name">{{ $any(pr).playerName }}</span>
+                                <span class="rating-value" [ngClass]="{'rating-high': $any(pr).rating >= 8, 'rating-mid': $any(pr).rating >= 6.5 && $any(pr).rating < 8, 'rating-low': $any(pr).rating < 6.5}">
+                                    {{ $any(pr).rating | number:'1.1-1' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Match Events Timeline -->
+            <div class="info-box" *ngIf="selectedMatch.resultType !== 'Pending'">
+                <div class="box-title">MATCH EVENTS</div>
+
+                <div *ngIf="loadingEvents" class="loading-events">Loading events...</div>
+
+                <div *ngIf="!loadingEvents && matchEvents.length === 0" class="no-events">
+                    No detailed events available for this match.
+                </div>
+
+                <div *ngIf="!loadingEvents && matchEvents.length > 0" class="events-timeline">
+                    <div *ngFor="let event of matchEvents"
+                         class="event-row"
+                         [ngClass]="getEventClass(event.eventType)">
+
+                        <div class="event-minute">{{ event.minute }}'</div>
+                        <div class="event-icon">{{ getEventIcon(event.eventType) }}</div>
+                        <div class="event-details">
+                            <span class="event-player"><a *ngIf="event.playerId" [routerLink]="['/player', event.playerId]" class="fm-link">{{ event.playerName }}</a><ng-container *ngIf="!event.playerId">{{ event.playerName }}</ng-container></span>
+                            <span class="event-description" *ngIf="event.details && event.eventType === 'goal'">
+                                ({{ event.details }})
+                            </span>
+                            <span class="event-team-indicator"
+                                  [ngClass]="{'home-event': isHomeTeamEvent(event), 'away-event': !isHomeTeamEvent(event)}">
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Match Statistics -->
+            <div class="info-box stats-box" *ngIf="selectedMatch.resultType !== 'Pending' && matchStats">
+                <div class="box-title">MATCH STATISTICS</div>
+
+                <div *ngIf="loadingStats" class="loading-events">Loading stats...</div>
+
+                <div *ngIf="!loadingStats && matchStats" class="stats-panel">
+                    <div class="stats-team-header">
+                        <span class="stats-team-name home">{{ matchStats.homeTeamName }}</span>
+                        <span class="stats-team-name away">{{ matchStats.awayTeamName }}</span>
+                    </div>
+
+                    <div class="stat-item" *ngFor="let stat of matchStats.stats">
+                        <div class="stat-values-row">
+                            <span class="stat-val home" [class.stat-higher]="(stat.home + '') > (stat.away + '')">{{ stat.home }}</span>
+                            <span class="stat-name">{{ stat.label }}</span>
+                            <span class="stat-val away" [class.stat-higher]="(stat.away + '') > (stat.home + '')">{{ stat.away }}</span>
+                        </div>
+                        <div class="stat-bar-container">
+                            <div class="stat-bar-home" [style.width]="getStatBarWidth(stat.home, stat.away).homeWidth"></div>
+                            <div class="stat-bar-away" [style.width]="getStatBarWidth(stat.home, stat.away).awayWidth"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Opponent Info Card -->
+            <div class="info-box">
+                <div class="box-title">OPPONENT REPORT</div>
+                <div class="info-row">
+                    <span class="label">Opponent</span>
+                    <span class="value"><a *ngIf="selectedMatch" [routerLink]="['/team', selectedMatch.homeOrAway === 'H' ? selectedMatch.teamId2 : selectedMatch.teamId1]" class="fm-link">{{ selectedOpponentInfo.name }}</a></span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Stadium</span>
+                    <span class="value">{{ selectedOpponentInfo.stadium }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Manager</span>
+                    <span class="value">{{ selectedOpponentInfo.manager }}</span>
+                </div>
+            </div>
+
+            <!-- Recent Form -->
+            <div class="info-box">
+                <div class="box-title">OPPONENT FORM</div>
+                <div class="form-dots">
+                    <span *ngFor="let f of selectedOpponentInfo.form"
+                          class="dot"
+                          [ngClass]="{'w': f === 'W', 'd': f === 'D', 'l': f === 'L'}">
+                        {{ f }}
+                    </span>
+                </div>
+            </div>
+
+        </div>
+
+        <ng-template #noSelection>
+            <div class="empty-state">Select a match to view details</div>
+        </ng-template>
+    </div>
+
+  </div>
+</div>

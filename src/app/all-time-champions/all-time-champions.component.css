@@ -1,0 +1,179 @@
+.champions-container {
+  padding: 20px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.champions-header h1 {
+  color: #f1c40f;
+  font-size: 1.6rem;
+  margin: 0 0 5px 0;
+}
+
+.champions-header .subtitle {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 0 0 25px 0;
+}
+
+.loading-msg, .empty-msg {
+  text-align: center;
+  color: #888;
+  padding: 40px;
+  font-style: italic;
+}
+
+.champions-table-wrapper {
+  overflow-x: auto;
+}
+
+.champions-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1a1a2e;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+
+.champions-table thead tr {
+  background: #252540;
+}
+
+.champions-table th {
+  color: #aaa;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 8px;
+  border-bottom: 2px solid #333;
+  text-align: center;
+}
+
+.champions-table th.team-col { text-align: left; }
+
+.champion-row {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.champion-row:hover { background: #222240; }
+
+.champion-row td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #222;
+  text-align: center;
+  color: #ccc;
+  font-size: 0.9rem;
+}
+
+.champion-row td.team-col { text-align: left; }
+
+.rank-col { width: 40px; }
+.team-col { min-width: 150px; }
+.total-col { width: 60px; }
+.type-col { width: 65px; }
+.expand-col { width: 30px; }
+
+/* Rank styling */
+.rank-num {
+  font-weight: bold;
+  font-size: 1rem;
+}
+.rank-num.gold { color: #f1c40f; }
+.rank-num.silver { color: #bdc3c7; }
+.rank-num.bronze { color: #cd7f32; }
+
+/* Medal rows */
+.champion-row.gold { border-left: 3px solid #f1c40f; }
+.champion-row.silver { border-left: 3px solid #bdc3c7; }
+.champion-row.bronze { border-left: 3px solid #cd7f32; }
+
+.team-name-link {
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.total-badge {
+  display: inline-block;
+  background: rgba(241, 196, 15, 0.15);
+  color: #f1c40f;
+  font-weight: 900;
+  font-size: 1.1rem;
+  padding: 3px 10px;
+  border-radius: 4px;
+  min-width: 28px;
+}
+
+/* Type counts */
+.type-count {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: bold;
+  font-size: 0.85rem;
+}
+
+.type-league { background: rgba(46, 204, 113, 0.15); color: #2ecc71; }
+.type-cup { background: rgba(52, 152, 219, 0.15); color: #3498db; }
+.type-league2 { background: rgba(155, 89, 182, 0.15); color: #9b59b6; }
+.type-loc { background: rgba(241, 196, 15, 0.15); color: #f1c40f; }
+.type-sc { background: rgba(231, 76, 60, 0.15); color: #e74c3c; }
+
+.type-zero { color: #444; }
+
+/* Expand icon */
+.expand-icon {
+  display: inline-block;
+  color: #555;
+  font-size: 0.8rem;
+  transition: transform 0.2s;
+}
+.expand-icon.expanded { transform: rotate(90deg); color: #f1c40f; }
+
+/* Expanded detail row */
+.titles-detail-row td {
+  background: #151528;
+  padding: 0 !important;
+  border-bottom: 2px solid #333;
+}
+
+.titles-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 15px 20px;
+}
+
+.title-chip {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  border: 1px solid #333;
+  background: #1a1a2e;
+}
+
+.title-chip.type-league { border-color: rgba(46, 204, 113, 0.3); }
+.title-chip.type-cup { border-color: rgba(52, 152, 219, 0.3); }
+.title-chip.type-league2 { border-color: rgba(155, 89, 182, 0.3); }
+.title-chip.type-loc { border-color: rgba(241, 196, 15, 0.3); }
+.title-chip.type-sc { border-color: rgba(231, 76, 60, 0.3); }
+
+.chip-season {
+  color: #f1c40f;
+  font-weight: bold;
+  font-size: 0.75rem;
+}
+
+.chip-comp {
+  color: #ccc;
+}
+
+.no-titles {
+  color: #666;
+  font-style: italic;
+  padding: 10px;
+}

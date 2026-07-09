@@ -1,0 +1,549 @@
+/* Container */
+.staff-container {
+    background-color: #1b1b1b;
+    min-height: 100vh;
+    color: #ecf0f1;
+    font-family: 'Segoe UI', 'Roboto Condensed', sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header */
+.page-header {
+    background-color: #252525;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #3a3a3a;
+}
+
+.header-left { display: flex; gap: 15px; align-items: center; }
+.icon-circle { 
+    width: 40px; height: 40px; 
+    border: 2px solid #9b59b6; /* Mov Staff */
+    border-radius: 50%; 
+    display: flex; justify-content: center; align-items: center; 
+    color: #9b59b6; font-size: 1.5em;
+}
+
+.titles h1 { margin: 0; font-size: 1.5em; font-weight: 900; letter-spacing: 0.5px; }
+.subtitle { color: #aaa; font-size: 0.9em; }
+
+/* Tabs */
+.nav-tabs { display: flex; gap: 5px; }
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    padding: 10px 20px;
+    font-size: 0.9em;
+    font-weight: bold;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    text-transform: uppercase;
+}
+.tab-btn:hover { color: white; }
+.tab-btn.active {
+    color: white;
+    border-bottom: 3px solid #9b59b6;
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px 4px 0 0;
+}
+
+/* CONTENT GRID */
+.content-area { padding: 20px 30px; flex: 1; }
+
+.staff-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 Coloane */
+    gap: 20px;
+    height: 100%;
+}
+
+@media (max-width: 1100px) {
+    .staff-grid { grid-template-columns: 1fr; } /* Stack pe mobil */
+}
+
+.category-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* PANELS */
+.fm-panel {
+    background-color: #252525;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.info-panel { flex: 1; } /* Sus */
+.chart-panel { height: 300px; } /* Jos */
+
+.panel-header {
+    background-color: #2e2e2e;
+    padding: 10px 15px;
+    font-weight: bold;
+    color: #9b59b6;
+    font-size: 0.85em;
+    border-bottom: 1px solid #444;
+    text-transform: uppercase;
+}
+.panel-header.small { color: #ddd; font-size: 0.8em; }
+
+.panel-body { padding: 20px; }
+
+/* Info Section */
+.total-count { font-size: 1.2em; font-weight: bold; color: white; margin-bottom: 5px; }
+.big-num { font-size: 1.5em; }
+.board-opinion { font-size: 0.9em; color: #aaa; font-style: italic; margin-bottom: 15px; line-height: 1.4; }
+
+.staff-icons { margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 2px; }
+.tiny-person { font-size: 0.8em; color: #555; }
+
+/* Roles List */
+.roles-list { display: flex; flex-direction: column; gap: 8px; }
+.role-row { display: flex; justify-content: space-between; font-size: 0.9em; border-bottom: 1px solid #333; padding-bottom: 2px; }
+.r-name { color: #3498db; font-weight: 600; }
+.r-count { color: #ddd; font-family: monospace; }
+
+.vacancy .r-name { color: #e74c3c; } /* Rosu daca avem loc liber */
+.red-text { color: #e74c3c; font-weight: bold; }
+
+/* CHART STYLES */
+.chart-container {
+    padding: 20px;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.chart-area {
+    height: 220px;
+    display: flex;
+    align-items: flex-end; /* Barele pornesc de jos */
+    justify-content: space-around; /* Distribuite egal */
+    position: relative;
+    border-bottom: 1px solid #666;
+    padding-bottom: 20px; /* Spatiu pt labels */
+}
+
+.bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    justify-content: flex-end;
+    width: 30px;
+    position: relative;
+}
+
+.bar-wrapper {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    position: relative;
+}
+
+.the-bar {
+    width: 12px;
+    transition: height 0.5s ease-out;
+    position: relative;
+    min-height: 2px;
+}
+
+.bar-val {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7em;
+    color: #fff;
+    opacity: 0; /* Ascuns default, apare la hover */
+    transition: opacity 0.2s;
+}
+
+.bar-group:hover .bar-val { opacity: 1; }
+
+.bar-label {
+    position: absolute;
+    bottom: -25px;
+    font-size: 0.7em;
+    color: #aaa;
+    text-transform: uppercase;
+}
+
+/* Linii de referinta */
+.avg-line-global {
+    position: absolute;
+    left: 0; right: 0;
+    border-top: 1px dashed rgba(255,255,255,0.3);
+    z-index: 0;
+}
+.line-label {
+    font-size: 0.6em; color: #777; position: absolute; right: 0; top: -12px;
+}
+
+.avg-marker {
+    position: absolute;
+    width: 20px;
+    height: 2px;
+    background-color: #fff; /* Linia alba mica pe fiecare bara */
+    z-index: 2;
+    opacity: 0.7;
+}
+
+.placeholder-content { padding: 50px; text-align: center; color: #777; font-style: italic; }
+
+/* ==========================================
+   COACHING STAFF STYLES
+   ========================================== */
+
+.coaching-header-row {
+  display: flex; gap: 20px; align-items: center;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+
+.coaching-stat {
+  background: #252525; border: 1px solid #3a3a3a;
+  border-radius: 6px; padding: 12px 18px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+.stat-label { font-size: 0.75em; color: #aaa; text-transform: uppercase; }
+.stat-value { font-size: 1.3em; font-weight: bold; }
+
+.btn-hire-coach {
+  padding: 10px 20px; background: #27ae60; color: white;
+  border: none; border-radius: 4px; font-weight: bold;
+  cursor: pointer; font-size: 0.85em; margin-left: auto;
+}
+.btn-hire-coach:hover { background: #2ecc71; }
+
+.coach-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 15px;
+}
+
+.coach-card {
+  background: #252525; border: 1px solid #3a3a3a;
+  border-radius: 6px; overflow: hidden;
+  border-left: 3px solid #2ecc71;
+}
+.coach-card.hire-card { border-left: 3px solid #3498db; }
+
+.coach-card-header {
+  background: #2e2e2e; padding: 10px 15px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #444;
+}
+.coach-name { font-weight: bold; color: #fff; font-size: 0.95em; }
+.coach-role { color: #3498db; font-size: 0.8em; font-weight: 600; }
+
+.coach-card-body { padding: 12px 15px; }
+
+.coach-meta {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  font-size: 0.8em; color: #aaa; margin-bottom: 10px;
+}
+
+.coach-attrs {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
+}
+
+.coach-attr {
+  display: flex; flex-direction: column; align-items: center;
+  background: #1b1b1b; border-radius: 4px; padding: 4px 8px;
+  min-width: 32px;
+}
+
+.ca-label { font-size: 0.65em; color: #888; text-transform: uppercase; }
+.ca-value { font-size: 0.9em; font-weight: bold; font-family: monospace; }
+
+.coach-actions-row { display: flex; gap: 8px; margin-top: 4px; }
+
+/* Responsibilities */
+.responsibilities-grid { padding: 20px 30px; max-width: 700px; }
+.responsibilities-panel .panel-body { padding: 20px; }
+.resp-intro { color: #999; font-size: 0.85em; margin-bottom: 20px; line-height: 1.5; }
+.resp-list { display: flex; flex-direction: column; gap: 12px; }
+.resp-item {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #2a2a2a; border-radius: 6px; padding: 15px 18px;
+  border-left: 3px solid #3498db;
+}
+.resp-info { flex: 1; margin-right: 20px; }
+.resp-name { display: block; font-weight: 600; font-size: 0.95em; margin-bottom: 4px; }
+.resp-desc { display: block; color: #888; font-size: 0.8em; line-height: 1.4; }
+.resp-toggle { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.toggle-label { font-size: 0.8em; color: #aaa; min-width: 60px; }
+
+/* Toggle switch */
+.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #555; border-radius: 24px; transition: 0.3s;
+}
+.toggle-slider:before {
+  position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+  background-color: #fff; border-radius: 50%; transition: 0.3s;
+}
+.toggle-switch input:checked + .toggle-slider { background-color: #2ecc71; }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+.toggle-switch input:disabled + .toggle-slider { opacity: 0.4; cursor: not-allowed; }
+.resp-disabled { opacity: 0.5; }
+
+/* Match-highlights segmented control (None / Goals only / Key moments) */
+.highlights-radio-group {
+  display: inline-flex;
+  background: #1f1f2e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 0;
+}
+.highlights-radio-group .radio-pill {
+  position: relative;
+  cursor: pointer;
+}
+.highlights-radio-group .radio-pill input {
+  position: absolute; opacity: 0; pointer-events: none;
+}
+.highlights-radio-group .radio-pill span {
+  display: block;
+  padding: 6px 12px;
+  font-size: 0.8em;
+  color: #aaa;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+  user-select: none;
+}
+.highlights-radio-group .radio-pill input:checked + span {
+  background: #2ecc71;
+  color: #fff;
+  font-weight: 600;
+}
+.highlights-radio-group .radio-pill:hover input:not(:disabled):not(:checked) + span {
+  background: #2a2a3a;
+  color: #ddd;
+}
+.highlights-radio-group .radio-pill input:disabled + span {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ==========================================
+   SCOUTING SYSTEM STYLES
+   ========================================== */
+
+/* Scout Sub-tabs */
+.scout-sub-tabs {
+  display: flex; gap: 5px; margin-bottom: 20px;
+  border-bottom: 1px solid #3a3a3a; padding-bottom: 10px;
+}
+.sub-tab {
+  background: transparent; border: none; color: #aaa;
+  padding: 8px 16px; font-size: 0.85em; font-weight: bold;
+  cursor: pointer; border-bottom: 2px solid transparent;
+}
+.sub-tab:hover { color: white; }
+.sub-tab.active { color: white; border-bottom: 2px solid #3498db; }
+
+/* Empty state */
+.empty-state {
+  text-align: center; color: #777; font-style: italic;
+  padding: 40px; font-size: 0.95em;
+}
+
+/* Section title */
+.section-title {
+  font-size: 1.1em; font-weight: bold; color: #3498db;
+  margin-bottom: 15px; text-transform: uppercase;
+}
+
+/* Scout Cards */
+.scout-cards {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 15px;
+}
+
+.scout-card {
+  background: #252525; border: 1px solid #3a3a3a;
+  border-radius: 6px; overflow: hidden;
+}
+.scout-card.expiring { border-left: 3px solid #e67e22; }
+.scout-card.hire-card { border-left: 3px solid #3498db; }
+
+.scout-card-header {
+  background: #2e2e2e; padding: 10px 15px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #444;
+}
+.scout-name { font-weight: bold; color: #fff; font-size: 0.95em; }
+.scout-contract { color: #aaa; font-size: 0.8em; }
+.scout-overall { color: #f1c40f; font-weight: bold; font-size: 0.85em; }
+.expiring-label { color: #e67e22; }
+
+.scout-card-body { padding: 12px 15px; }
+
+.scout-attrs { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.attr-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 0.85em; padding: 2px 0;
+}
+.attr-label { color: #aaa; }
+.attr-value { font-weight: bold; font-family: monospace; font-size: 1em; }
+.attr-value.wage { color: #f1c40f; font-family: inherit; }
+.attr-value.demand { color: #e67e22; }
+.attr-value.leagues { color: #3498db; font-family: inherit; font-size: 0.85em; }
+
+/* Scout status */
+.scout-status { margin-bottom: 10px; }
+.status-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 3px;
+  font-size: 0.75em; font-weight: bold; text-transform: uppercase;
+}
+.status-badge.available { background: #27ae60; color: white; }
+.status-badge.on-assignment { background: #2980b9; color: white; }
+
+/* Scout actions */
+.scout-actions { display: flex; gap: 8px; margin-top: 8px; }
+
+.btn-assign, .btn-hire, .btn-renew {
+  flex: 1; padding: 8px 12px; border: none; border-radius: 4px;
+  font-size: 0.8em; font-weight: bold; cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-assign { background: #2980b9; color: white; }
+.btn-assign:hover:not(:disabled) { background: #3498db; }
+.btn-assign:disabled { background: #555; color: #888; cursor: not-allowed; }
+.btn-hire { background: #27ae60; color: white; }
+.btn-hire:hover { background: #2ecc71; }
+.btn-renew { background: #e67e22; color: white; }
+.btn-renew:hover { background: #f39c12; }
+
+.btn-fire {
+  padding: 8px 12px; border: 1px solid #e74c3c; border-radius: 4px;
+  background: transparent; color: #e74c3c; font-size: 0.8em;
+  font-weight: bold; cursor: pointer;
+}
+.btn-fire:hover { background: #e74c3c; color: white; }
+
+/* Scout Table */
+.scout-table {
+  width: 100%; border-collapse: collapse;
+  background: #252525; border-radius: 6px; overflow: hidden;
+}
+.scout-table th {
+  background: #2e2e2e; padding: 10px 12px; text-align: left;
+  font-size: 0.8em; color: #aaa; text-transform: uppercase;
+  border-bottom: 1px solid #444;
+}
+.scout-table td {
+  padding: 10px 12px; font-size: 0.85em;
+  border-bottom: 1px solid #333;
+}
+.scout-table tr:hover td { background: rgba(255,255,255,0.03); }
+.player-name { color: #3498db; font-weight: 600; }
+.scout-by { color: #aaa; font-style: italic; }
+
+/* Badges */
+.days-badge {
+  background: #2c3e50; padding: 3px 8px; border-radius: 3px;
+  font-size: 0.85em; color: #f1c40f;
+}
+.league-badge {
+  padding: 2px 8px; border-radius: 3px; font-size: 0.8em; font-weight: bold;
+}
+.league-badge.same { background: #27ae60; color: white; }
+.league-badge.foreign { background: #8e44ad; color: white; }
+
+.rating-badge {
+  background: #27ae60; padding: 3px 8px; border-radius: 3px;
+  font-weight: bold; color: white;
+}
+.potential-badge {
+  background: #2980b9; padding: 3px 8px; border-radius: 3px;
+  font-weight: bold; color: white;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7); display: flex;
+  justify-content: center; align-items: center; z-index: 1000;
+}
+.modal-content {
+  background: #252525; border: 1px solid #3a3a3a;
+  border-radius: 8px; min-width: 400px; max-width: 500px;
+  max-height: 80vh; overflow-y: auto;
+}
+.modal-content.assign-modal {
+  min-width: 550px; max-width: 650px; max-height: 85vh;
+}
+.modal-header {
+  background: #2e2e2e; padding: 15px 20px;
+  font-weight: bold; font-size: 1em;
+  border-bottom: 1px solid #444; color: #3498db;
+}
+.modal-body { padding: 20px; }
+.modal-footer {
+  padding: 15px 20px; display: flex; gap: 10px;
+  justify-content: flex-end; border-top: 1px solid #333;
+}
+.modal-stats {
+  display: flex; gap: 15px; margin-bottom: 15px;
+  font-size: 0.9em; color: #aaa;
+}
+.modal-field { margin-bottom: 12px; }
+.modal-field label { display: block; font-size: 0.85em; color: #aaa; margin-bottom: 5px; }
+.modal-input {
+  width: 100%; padding: 8px 12px; background: #1b1b1b;
+  border: 1px solid #444; border-radius: 4px; color: white;
+  font-size: 0.9em; box-sizing: border-box;
+}
+.modal-input:focus { border-color: #3498db; outline: none; }
+.search-input { margin-bottom: 10px; }
+
+.modal-result {
+  padding: 10px; border-radius: 4px; font-size: 0.85em;
+  margin-top: 10px;
+}
+.modal-result.success { background: rgba(39,174,96,0.2); color: #2ecc71; border: 1px solid #27ae60; }
+.modal-result.failure { background: rgba(231,76,60,0.2); color: #e74c3c; border: 1px solid #e74c3c; }
+
+.btn-submit {
+  padding: 8px 20px; background: #27ae60; color: white;
+  border: none; border-radius: 4px; font-weight: bold;
+  cursor: pointer; font-size: 0.85em;
+}
+.btn-submit:hover:not(:disabled) { background: #2ecc71; }
+.btn-submit:disabled { background: #555; cursor: not-allowed; }
+.btn-cancel {
+  padding: 8px 20px; background: transparent; color: #aaa;
+  border: 1px solid #555; border-radius: 4px;
+  cursor: pointer; font-size: 0.85em;
+}
+.btn-cancel:hover { color: white; border-color: #888; }
+
+/* Player list in assign modal */
+.player-list {
+  max-height: 350px; overflow-y: auto;
+  border: 1px solid #333; border-radius: 4px;
+}
+.player-row {
+  display: flex; gap: 10px; padding: 8px 12px;
+  border-bottom: 1px solid #2a2a2a; cursor: pointer;
+  font-size: 0.85em; align-items: center;
+}
+.player-row:hover { background: rgba(52,152,219,0.15); }
+.p-name { flex: 2; color: #3498db; font-weight: 600; }
+.p-pos { flex: 0.5; color: #aaa; }
+.p-team { flex: 1.5; color: #ccc; }
+.p-rating { flex: 0.5; color: #f1c40f; font-weight: bold; text-align: center; }
+.p-value { flex: 1; color: #2ecc71; text-align: right; }

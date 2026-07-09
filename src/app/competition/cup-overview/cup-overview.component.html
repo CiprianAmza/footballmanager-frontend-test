@@ -1,0 +1,63 @@
+<div class="cup-container">
+  
+    <!-- ROUND NAVIGATOR -->
+    <div class="round-header">
+      <button class="nav-btn" (click)="prevRound()" [disabled]="currentRoundIndex === 0">❮</button>
+      
+      <div class="round-title-box">
+          <span class="round-name">{{ currentRoundName }}</span>
+          <!-- Afișăm numărul de meciuri doar dacă nu se încarcă -->
+          <span class="match-count" *ngIf="!loading">{{ matches.length }} Fixtures</span>
+          <span class="match-count" *ngIf="loading">Loading...</span>
+      </div>
+      
+      <button class="nav-btn" (click)="nextRound()" [disabled]="currentRoundIndex === roundNames.length - 1">❯</button>
+    </div>
+  
+    <!-- LOADING SPINNER -->
+    <div *ngIf="loading" class="loading-state">
+        <div class="spinner"></div>
+    </div>
+  
+    <!-- MATCHES GRID -->
+    <div class="matches-grid" *ngIf="!loading">
+      
+      <div class="match-card" *ngFor="let match of matches">
+
+          <!-- Home Team -->
+          <div class="team home"
+               [class.winner]="match.winner === 'home'"
+               [class.loser]="match.winner === 'away'"
+               [class.placeholder]="match.isPlaceholderHome">
+              <span class="t-name">{{ match.homeTeam }}</span>
+          </div>
+
+          <!-- Score / VS -->
+          <div class="score-badge">
+              <span *ngIf="match.score !== '-'" class="score">{{ match.score }}</span>
+              <span *ngIf="match.score === '-'" class="vs">V</span>
+          </div>
+
+          <!-- Away Team -->
+          <div class="team away"
+               [class.winner]="match.winner === 'away'"
+               [class.loser]="match.winner === 'home'"
+               [class.placeholder]="match.isPlaceholderAway">
+              <span class="t-name">{{ match.awayTeam }}</span>
+          </div>
+
+      </div>
+  
+      <!-- Empty State -->
+      <div *ngIf="matches.length === 0 && !loading" class="no-matches">
+          No fixtures scheduled for {{ currentRoundName }}.
+      </div>
+  
+    </div>
+  
+    <!-- INFO FOOTER -->
+    <div class="round-footer" *ngIf="matches.length > 0">
+        <div class="info-text">{{ currentRoundName }}</div>
+    </div>
+  
+  </div>

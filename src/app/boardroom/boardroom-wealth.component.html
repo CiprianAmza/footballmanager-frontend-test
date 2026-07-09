@@ -1,0 +1,48 @@
+<div class="container py-4">
+  <div class="d-flex align-items-center mb-3">
+    <a routerLink="/boardroom" class="btn btn-sm btn-outline-secondary me-3"><i class="bi bi-arrow-left"></i></a>
+    <h3 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Manager Wealth</h3>
+  </div>
+
+  <div class="row g-2 mb-3">
+    <div class="col-md-6">
+      <input type="text" class="form-control" placeholder="Search by name..." [(ngModel)]="filterText">
+    </div>
+    <div class="col-md-6 d-flex align-items-center">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="humansOnly" [(ngModel)]="humansOnly" (change)="load()">
+        <label class="form-check-label" for="humansOnly">Humans only</label>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="text-muted">Loading...</div>
+  <div *ngIf="error" class="alert alert-danger">{{ error }}</div>
+
+  <div class="table-responsive" *ngIf="!loading && !error">
+    <table class="table table-hover align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Name</th>
+          <th class="text-end">Wealth</th>
+          <th class="text-end">Reputation</th>
+          <th>Owned Clubs</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let h of filtered">
+          <td>
+            <a [routerLink]="['/boardroom/assets', h.humanId]" class="text-decoration-none">{{ h.name }}</a>
+          </td>
+          <td class="text-end wealth-positive">{{ money(h.wealth) }}</td>
+          <td class="text-end">{{ h.managerReputation }}</td>
+          <td>
+            <span *ngIf="!h.ownedClubs?.length" class="text-muted small">—</span>
+            <span *ngFor="let c of h.ownedClubs" class="badge bg-success owner-badge me-1">{{ c.teamName }}</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div *ngIf="!filtered.length" class="text-muted">No managers found.</div>
+  </div>
+</div>

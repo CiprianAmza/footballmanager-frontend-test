@@ -1,0 +1,384 @@
+<div class="hub-container">
+
+    <!-- HEADER -->
+    <div class="hub-header">
+      <h1>DATA HUB</h1>
+      <div class="hub-tabs">
+          <button *ngFor="let tab of tabs"
+                  class="tab-btn"
+                  [class.active]="activeTab === tab"
+                  (click)="setTab(tab)">
+              {{ tab }}
+          </button>
+      </div>
+    </div>
+
+    <!-- LOADING STATE -->
+    <div class="loading-state" *ngIf="loading">
+      <div class="loading-spinner"></div>
+      <p>Loading analytics...</p>
+    </div>
+
+    <div class="hub-grid" *ngIf="activeTab === 'Overview' && !loading">
+
+      <!-- COLUMN 1: MAIN ANALYSIS -->
+      <div class="grid-col main-col">
+
+          <!-- 1. GENERAL PERFORMANCE POLYGON -->
+          <div class="fm-panel radar-panel clickable" (click)="openChartDetails('GENERAL PERFORMANCE')">
+              <div class="panel-header">
+                  <span>GENERAL PERFORMANCE</span>
+                  <span class="icon-expand">&#x26F6;</span>
+              </div>
+              <div class="radar-container" *ngIf="generalStats.length > 0">
+                  <svg viewBox="0 0 200 200" class="radar-svg">
+                      <!-- Grid Circles (Background) -->
+                      <circle cx="100" cy="100" r="80" class="grid-circle" />
+                      <circle cx="100" cy="100" r="60" class="grid-circle" />
+                      <circle cx="100" cy="100" r="40" class="grid-circle" />
+                      <circle cx="100" cy="100" r="20" class="grid-circle" />
+
+                      <!-- Axis Lines -->
+                      <line x1="100" y1="20" x2="100" y2="180" class="grid-line" />
+                      <line x1="20" y1="100" x2="180" y2="100" class="grid-line" />
+                      <line x1="43" y1="43" x2="157" y2="157" class="grid-line" />
+                      <line x1="157" y1="43" x2="43" y2="157" class="grid-line" />
+
+                      <!-- Data Polygons -->
+                      <polygon [attr.points]="generalLeaguePath" class="poly-league" />
+                      <polygon [attr.points]="generalTeamPath" class="poly-team" />
+
+                      <!-- Labels -->
+                      <text *ngFor="let stat of generalStats; let i = index"
+                            [attr.x]="getLabelX(i, 110)"
+                            [attr.y]="getLabelY(i, 110)"
+                            class="chart-label"
+                            text-anchor="middle"
+                            dominant-baseline="middle">
+                          {{ stat.label }}
+                      </text>
+                  </svg>
+
+                  <div class="legend">
+                      <span class="dot team"></span> {{ teamName }}
+                      <span class="dot league"></span> League Avg
+                  </div>
+              </div>
+              <div class="panel-desc" *ngIf="hubStats">
+                  Season overview across {{ generalStats.length }} key metrics compared to the league average.
+              </div>
+          </div>
+
+          <!-- 2. KEY FINDINGS LIST -->
+          <div class="findings-list">
+              <div class="list-header-text">KEY FINDINGS</div>
+
+              <div class="finding-card clickable" *ngFor="let find of keyFindings" (click)="openFindingDetails(find)">
+                  <div class="find-idx">{{ find.id }}</div>
+                  <div class="find-icon-box" [ngClass]="find.type">
+                      <span class="f-icon">{{ find.icon }}</span>
+                  </div>
+                  <div class="find-content">
+                      <div class="find-title">{{ find.title }}</div>
+                      <div class="find-desc">{{ find.description }}</div>
+                  </div>
+                  <div class="find-arrow">&#x26F6;</div>
+              </div>
+          </div>
+
+      </div>
+
+      <!-- COLUMN 2: SPECIFIC PERFORMANCE (Mini Radars) -->
+      <div class="grid-col mid-col">
+
+          <div class="fm-panel mini-radar clickable" (click)="openChartDetails('ATTACKING PERFORMANCE')">
+              <div class="panel-header">TEAM ATTACKING ></div>
+              <div class="mini-svg-box">
+                  <svg viewBox="0 0 200 200" class="radar-svg">
+                      <polygon [attr.points]="generalTeamPath" class="poly-team" transform="scale(0.8) translate(20,20)" />
+                  </svg>
+              </div>
+              <div class="mini-desc">{{ attackingSummary }}</div>
+          </div>
+
+          <div class="fm-panel mini-radar clickable" (click)="openChartDetails('DEFENSIVE PERFORMANCE')">
+              <div class="panel-header">TEAM DEFENDING ></div>
+              <div class="mini-svg-box">
+                  <svg viewBox="0 0 200 200" class="radar-svg">
+                      <polygon [attr.points]="generalLeaguePath" class="poly-team def" transform="scale(0.9) translate(10,10)" />
+                  </svg>
+              </div>
+              <div class="mini-desc">{{ defendingSummary }}</div>
+          </div>
+
+      </div>
+
+      <!-- COLUMN 3: SIDEBAR REPORTS -->
+      <div class="grid-col side-col">
+          <div class="side-header">
+              <span>REPORTS & VISUALS</span>
+          </div>
+
+          <div class="reports-list">
+              <div class="report-item clickable" *ngFor="let rep of recentReports">
+                  <div class="rep-date">{{ rep.date }}</div>
+                  <div class="rep-card">
+                      <div class="rep-img">{{ rep.img }}</div>
+                      <div class="rep-info">
+                          <div class="rep-title">{{ rep.title }}</div>
+                          <div class="rep-sub">{{ rep.subtitle }}</div>
+                      </div>
+                      <div class="rep-arrow">&#x276F;</div>
+                  </div>
+              </div>
+          </div>
+      </div>
+
+    </div>
+
+    <!-- MATCH STATS TAB -->
+    <div class="match-stats-tab" *ngIf="activeTab === 'Match Stats' && !loading">
+
+      <div class="loading-state" *ngIf="loadingSeasonStats">
+        <div class="loading-spinner"></div>
+        <p>Loading match statistics...</p>
+      </div>
+
+      <div *ngIf="!loadingSeasonStats && !seasonStats" class="empty-state-msg">
+        No match statistics available yet. Stats are generated after matches are played.
+      </div>
+
+      <div *ngIf="!loadingSeasonStats && seasonStats" class="season-stats-content">
+
+        <!-- Top Summary Cards -->
+        <div class="ss-summary-row">
+          <div class="ss-card">
+            <div class="ss-card-value">{{ seasonStats.totalMatches }}</div>
+            <div class="ss-card-label">Matches Played</div>
+          </div>
+          <div class="ss-card">
+            <div class="ss-card-value">{{ seasonStats.totalGoals }}</div>
+            <div class="ss-card-label">Goals Scored</div>
+          </div>
+          <div class="ss-card">
+            <div class="ss-card-value">{{ seasonStats.avgPossession | number:'1.1-1' }}%</div>
+            <div class="ss-card-label">Avg Possession</div>
+          </div>
+          <div class="ss-card">
+            <div class="ss-card-value">{{ seasonStats.totalXg | number:'1.1-1' }}</div>
+            <div class="ss-card-label">Total xG</div>
+          </div>
+        </div>
+
+        <!-- Stats Sections -->
+        <div class="ss-sections-grid">
+
+          <!-- Shooting -->
+          <div class="ss-section">
+            <div class="ss-section-title">SHOOTING</div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Shots</span>
+              <span class="ss-value">{{ seasonStats.totalShots }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Avg Shots / Game</span>
+              <span class="ss-value">{{ seasonStats.avgShots | number:'1.1-1' }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Avg Shots on Target / Game</span>
+              <span class="ss-value">{{ seasonStats.avgShotsOnTarget | number:'1.1-1' }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Shot Accuracy</span>
+              <span class="ss-value">{{ seasonStats.shotAccuracy | number:'1.1-1' }}%</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total xG</span>
+              <span class="ss-value">{{ seasonStats.totalXg | number:'1.2-2' }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total xG Against</span>
+              <span class="ss-value">{{ seasonStats.totalXgAgainst | number:'1.2-2' }}</span>
+            </div>
+          </div>
+
+          <!-- Passing -->
+          <div class="ss-section">
+            <div class="ss-section-title">PASSING</div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Avg Pass Accuracy</span>
+              <span class="ss-value">{{ seasonStats.avgPassAccuracy | number:'1.1-1' }}%</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Corners</span>
+              <span class="ss-value">{{ seasonStats.totalCorners }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Avg Possession</span>
+              <span class="ss-value">{{ seasonStats.avgPossession | number:'1.1-1' }}%</span>
+            </div>
+          </div>
+
+          <!-- Defending -->
+          <div class="ss-section">
+            <div class="ss-section-title">DEFENDING</div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Tackles</span>
+              <span class="ss-value">{{ seasonStats.totalTackles }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Interceptions</span>
+              <span class="ss-value">{{ seasonStats.totalInterceptions }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Saves</span>
+              <span class="ss-value">{{ seasonStats.totalSaves }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Clearances</span>
+              <span class="ss-value">{{ seasonStats.totalClearances }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Blocks</span>
+              <span class="ss-value">{{ seasonStats.totalBlocks }}</span>
+            </div>
+          </div>
+
+          <!-- Discipline -->
+          <div class="ss-section">
+            <div class="ss-section-title">DISCIPLINE</div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Yellow Cards</span>
+              <span class="ss-value ss-yellow">{{ seasonStats.totalYellowCards }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Red Cards</span>
+              <span class="ss-value ss-red">{{ seasonStats.totalRedCards }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Fouls</span>
+              <span class="ss-value">{{ seasonStats.totalFouls }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Offsides</span>
+              <span class="ss-value">{{ seasonStats.totalOffsides }}</span>
+            </div>
+          </div>
+
+          <!-- Set Pieces & Physical -->
+          <div class="ss-section">
+            <div class="ss-section-title">SET PIECES & PHYSICAL</div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Corners</span>
+              <span class="ss-value">{{ seasonStats.totalCorners }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Free Kicks</span>
+              <span class="ss-value">{{ seasonStats.totalFreeKicks }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Avg Distance Covered (km)</span>
+              <span class="ss-value">{{ seasonStats.avgDistanceCovered | number:'1.1-1' }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Total Aerial Duels Won</span>
+              <span class="ss-value">{{ seasonStats.totalAerialDuelsWon }}</span>
+            </div>
+          </div>
+
+          <!-- Efficiency -->
+          <div class="ss-section">
+            <div class="ss-section-title">EFFICIENCY</div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Goals per Game</span>
+              <span class="ss-value">{{ seasonStats.totalMatches > 0 ? (seasonStats.totalGoals / seasonStats.totalMatches | number:'1.2-2') : '-' }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">xG per Game</span>
+              <span class="ss-value">{{ seasonStats.totalMatches > 0 ? (seasonStats.totalXg / seasonStats.totalMatches | number:'1.2-2') : '-' }}</span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Goals vs xG Diff</span>
+              <span class="ss-value" [ngClass]="{'ss-positive': seasonStats.totalGoals - seasonStats.totalXg > 0, 'ss-negative': seasonStats.totalGoals - seasonStats.totalXg < 0}">
+                {{ (seasonStats.totalGoals - seasonStats.totalXg) > 0 ? '+' : '' }}{{ seasonStats.totalGoals - seasonStats.totalXg | number:'1.2-2' }}
+              </span>
+            </div>
+            <div class="ss-stat-row">
+              <span class="ss-label">Avg Shots per Goal</span>
+              <span class="ss-value">{{ seasonStats.totalGoals > 0 ? (seasonStats.totalShots / seasonStats.totalGoals | number:'1.1-1') : '-' }}</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- MODAL OVERLAY (POP-UP) -->
+    <div class="modal-overlay" *ngIf="modalOpen" (click)="closeModal()">
+        <div class="modal-box" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+                <h2>{{ activeModalContent?.title }}</h2>
+                <button class="close-btn" (click)="closeModal()">&#x2715;</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Finding detail -->
+                <div *ngIf="activeModalContent?.type === 'finding'">
+                    <p class="modal-desc">{{ activeModalContent.data.description }}</p>
+
+                    <div class="modal-stats-grid" *ngIf="activeModalContent.stats">
+                        <div class="modal-stat-item">
+                            <div class="modal-stat-value">{{ activeModalContent.stats.totalMatches }}</div>
+                            <div class="modal-stat-label">Matches</div>
+                        </div>
+                        <div class="modal-stat-item">
+                            <div class="modal-stat-value">{{ activeModalContent.stats.goalsScored }}</div>
+                            <div class="modal-stat-label">Goals</div>
+                        </div>
+                        <div class="modal-stat-item">
+                            <div class="modal-stat-value">{{ activeModalContent.stats.goalsConceded }}</div>
+                            <div class="modal-stat-label">Conceded</div>
+                        </div>
+                        <div class="modal-stat-item">
+                            <div class="modal-stat-value">{{ activeModalContent.stats.avgTeamRating }}</div>
+                            <div class="modal-stat-label">Avg Rating</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart detail -->
+                <div *ngIf="activeModalContent?.type === 'chart'">
+                    <p>{{ activeModalContent.description }}</p>
+                    <div class="modal-stats-grid" *ngIf="activeModalContent.stats">
+                        <div class="modal-stat-item">
+                            <div class="modal-stat-value">{{ activeModalContent.stats.wins }}W {{ activeModalContent.stats.draws }}D {{ activeModalContent.stats.losses }}L</div>
+                            <div class="modal-stat-label">Record</div>
+                        </div>
+                        <div class="modal-stat-item">
+                            <div class="modal-stat-value">{{ activeModalContent.stats.goalsPerGame }}</div>
+                            <div class="modal-stat-label">Goals/Game</div>
+                        </div>
+                        <div class="modal-stat-item">
+                            <div class="modal-stat-value">{{ activeModalContent.stats.concededPerGame }}</div>
+                            <div class="modal-stat-label">Conc/Game</div>
+                        </div>
+                        <div class="modal-stat-item">
+                            <div class="modal-stat-value">{{ activeModalContent.stats.cleanSheets }}</div>
+                            <div class="modal-stat-label">Clean Sheets</div>
+                        </div>
+                        <div class="modal-stat-item" *ngIf="activeModalContent.stats.topScorer">
+                            <div class="modal-stat-value">{{ activeModalContent.stats.topScorer }} ({{ activeModalContent.stats.topScorerGoals }})</div>
+                            <div class="modal-stat-label">Top Scorer</div>
+                        </div>
+                        <div class="modal-stat-item" *ngIf="activeModalContent.stats.topAssister">
+                            <div class="modal-stat-value">{{ activeModalContent.stats.topAssister }} ({{ activeModalContent.stats.topAssisterAssists }})</div>
+                            <div class="modal-stat-label">Top Assister</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  </div>

@@ -1,0 +1,148 @@
+<div class="overview-container">
+
+  <!-- Header / Controls -->
+  <div class="overview-header">
+    <div class="header-left">
+      <h1>Overview</h1>
+      <div class="view-tabs">
+        <button class="tab-btn" [class.active]="view === 'leagues'" (click)="setView('leagues')">Leagues</button>
+        <button class="tab-btn" [class.active]="view === 'cups'" (click)="setView('cups')">Cups</button>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="control-group" *ngIf="view === 'leagues'">
+        <span class="control-label">Top</span>
+        <button *ngFor="let n of topNOptions"
+                class="top-n-btn"
+                [class.active]="topN === n"
+                (click)="setTopN(n)">{{ n }}</button>
+      </div>
+      <button class="filter-btn" (click)="filterOpen = !filterOpen">
+        Filter {{ filterOpen ? '▲' : '▼' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Panel -->
+  <div class="filter-panel" *ngIf="filterOpen">
+    <div *ngIf="view === 'leagues'">
+      <div class="filter-row">
+        <span class="filter-label">Show leagues:</span>
+        <button class="bulk-btn" (click)="selectAllLeagues(true)">All</button>
+        <button class="bulk-btn" (click)="selectAllLeagues(false)">None</button>
+      </div>
+      <div class="filter-chips">
+        <label *ngFor="let l of leagues" class="filter-chip">
+          <input type="checkbox"
+                 [checked]="visibleLeagues[l.competitionId] !== false"
+                 (change)="toggleLeagueVisibility(l.competitionId)">
+          <span class="chip-rank">#{{ l.rank }}</span>
+          <span>{{ l.name }}</span>
+        </label>
+      </div>
+    </div>
+    <div *ngIf="view === 'cups'">
+      <div class="filter-row">
+        <span class="filter-label">Show cups:</span>
+        <button class="bulk-btn" (click)="selectAllCups(true)">All</button>
+        <button class="bulk-btn" (click)="selectAllCups(false)">None</button>
+      </div>
+      <div class="filter-chips">
+        <label *ngFor="let c of cups" class="filter-chip">
+          <input type="checkbox"
+                 [checked]="visibleCups[c.competitionId] !== false"
+                 (change)="toggleCupVisibility(c.competitionId)">
+          <span class="chip-rank">#{{ c.rank }}</span>
+          <span>{{ c.name }}</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend (leagues view) -->
+  <div class="legend" *ngIf="view === 'leagues' && visibleLeagueList.length > 0">
+    <span class="legend-item"><span class="legend-swatch zone-loc-group"></span>LoC Group</span>
+    <span class="legend-item"><span class="legend-swatch zone-loc-qual"></span>LoC Qualifying</span>
+    <span class="legend-item"><span class="legend-swatch zone-loc-prelim"></span>LoC Preliminary</span>
+    <span class="legend-item"><span class="legend-swatch zone-stars-cup"></span>Stars Cup</span>
+    <span class="legend-item"><span class="legend-swatch zone-relegation"></span>Relegation</span>
+  </div>
+
+  <!-- LEAGUES VIEW -->
+  <div *ngIf="view === 'leagues'" class="leagues-stack">
+    <div *ngFor="let l of visibleLeagueList" class="league-card">
+      <div class="league-card-header">
+        <span class="rank-badge">#{{ l.rank }}</span>
+        <h2 class="league-name">{{ l.name }}</h2>
+        <span class="meta">{{ l.totalTeams }} teams</span>
+      </div>
+
+      <table class="standings">
+        <thead>
+          <tr>
+            <th class="pos-col">#</th>
+            <th class="team-col">Team</th>
+            <th class="num-col">P</th>
+            <th class="num-col">W</th>
+            <th class="num-col">D</th>
+            <th class="num-col">L</th>
+            <th class="num-col">GF</th>
+            <th class="num-col">GA</th>
+            <th class="num-col">GD</th>
+            <th class="num-col pts-col">Pts</th>
+            <th class="tag-col"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let t of l.topTeams" [ngClass]="zoneFor(l.qualificationZones, t.position, l.totalTeams)">
+            <td class="pos-col">{{ t.position }}</td>
+            <td class="team-col">{{ t.teamName }}</td>
+            <td class="num-col">{{ t.played }}</td>
+            <td class="num-col">{{ t.wins }}</td>
+            <td class="num-col">{{ t.draws }}</td>
+            <td class="num-col">{{ t.losses }}</td>
+            <td class="num-col">{{ t.goalsFor }}</td>
+            <td class="num-col">{{ t.goalsAgainst }}</td>
+            <td class="num-col">{{ t.goalDifference > 0 ? '+' + t.goalDifference : t.goalDifference }}</td>
+            <td class="num-col pts-col">{{ t.points }}</td>
+            <td class="tag-col">
+              <span class="zone-tag" *ngIf="zoneTag(l.qualificationZones, t.position, l.totalTeams)">
+                {{ zoneTag(l.qualificationZones, t.position, l.totalTeams) }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div *ngIf="visibleLeagueList.length === 0" class="empty-state">
+      No leagues selected. Open the Filter panel to enable some.
+    </div>
+  </div>
+
+  <!-- CUPS VIEW -->
+  <div *ngIf="view === 'cups'" class="leagues-stack">
+    <div *ngFor="let c of visibleCupList" class="league-card">
+      <div class="league-card-header">
+        <span class="rank-badge">#{{ c.rank }}</span>
+        <h2 class="league-name">{{ c.name }}</h2>
+        <span class="meta">{{ c.currentRoundName }}</span>
+      </div>
+
+      <div class="cup-round-grid">
+        <div *ngFor="let m of c.focusRoundMatches" class="cup-mini-match">
+          <span class="cup-team home" [class.placeholder]="!m.team1Name">{{ m.team1Name || 'TBD' }}</span>
+          <span class="cup-score">{{ m.score || 'v' }}</span>
+          <span class="cup-team away" [class.placeholder]="!m.team2Name">{{ m.team2Name || 'TBD' }}</span>
+        </div>
+        <div *ngIf="c.focusRoundMatches.length === 0" class="empty-state">
+          No fixtures yet.
+        </div>
+      </div>
+    </div>
+    <div *ngIf="visibleCupList.length === 0" class="empty-state">
+      No cups selected. Open the Filter panel to enable some.
+    </div>
+  </div>
+
+</div>

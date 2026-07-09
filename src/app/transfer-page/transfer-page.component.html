@@ -1,0 +1,943 @@
+<div class="transfers-container">
+
+  <div class="page-header">
+    <h1>{{ teamName }}</h1>
+    <p class="subtitle">Transfer Negotiation Centre</p>
+    <p class="transfer-status" *ngIf="!transferWindowOpen" style="color: #e74c3c; margin-top: 4px;">Transfer window is closed</p>
+    <p class="transfer-status" *ngIf="transferWindowOpen" style="color: #2ecc71; margin-top: 4px;">Transfer window is open</p>
+  </div>
+
+  <div class="error-banner" *ngIf="errorMessage" style="background: #e74c3c; color: white; padding: 10px 16px; border-radius: 6px; margin-bottom: 12px;">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tab-bar">
+    <button class="tab-btn" [class.active]="activeTab === 'market'" (click)="switchTab('market')">Transfer Market</button>
+    <button class="tab-btn" [class.active]="activeTab === 'incoming'" (click)="switchTab('incoming')">
+      Incoming Offers
+      <span class="badge" *ngIf="incomingOffers.length > 0">{{ incomingOffers.length }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'outgoing'" (click)="switchTab('outgoing')">Outgoing Offers</button>
+    <button class="tab-btn" [class.active]="activeTab === 'history'" (click)="switchTab('history')">Transfer History</button>
+    <button class="tab-btn" [class.active]="activeTab === 'loans'" (click)="switchTab('loans')">
+      Loans
+      <span class="badge" *ngIf="loansIn.length + loansOut.length > 0" style="background: #8e44ad;">{{ loansIn.length + loansOut.length }}</span>
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'loanHistory'" (click)="switchTab('loanHistory')">Loan History</button>
+    <button class="tab-btn" [class.active]="activeTab === 'freeAgents'" (click)="switchTab('freeAgents')">Free Agents</button>
+    <button class="tab-btn" [class.active]="activeTab === 'preContract'" (click)="switchTab('preContract')">Pre-Contract</button>
+  </div>
+
+  <!-- ======================== TAB 1: TRANSFER MARKET ======================== -->
+  <div class="tab-content" *ngIf="activeTab === 'market'">
+
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Position:</label>
+        <select [(ngModel)]="positionFilter" (ngModelChange)="onFilterChange()" class="filter-select">
+          <option *ngFor="let pos of positions" [value]="pos">{{ pos }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Sort by:</label>
+        <button class="sort-btn" (click)="toggleSort('estimatedRating')">Rating{{ getSortIcon('estimatedRating') }}</button>
+        <button class="sort-btn" (click)="toggleSort('age')">Age{{ getSortIcon('age') }}</button>
+        <button class="sort-btn" (click)="toggleSort('transferValue')">Price{{ getSortIcon('transferValue') }}</button>
+        <button class="sort-btn" (click)="toggleSort('name')">Name{{ getSortIcon('name') }}</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="table-responsive">
+        <table class="transfer-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Position</th>
+              <th>Age</th>
+              <th>Est. Rating</th>
+              <th>Club</th>
+              <th class="text-right">Asking Price</th>
+              <th class="text-center">Action</th>
+              <th class="text-center">Scout</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let player of filteredPlayers">
+              <td class="player-cell">
+                <a [routerLink]="['/player', player.id]" class="fm-link">{{ player.name }}</a>
+              </td>
+              <td><span class="position-badge">{{ player.position }}</span></td>
+              <td>{{ player.age }}</td>
+              <td>
+                <span class="rating-badge">~{{ player.estimatedRating }}</span>
+                <span class="accuracy-indicator" style="font-size: 11px; color: #888; margin-left: 4px;">{{ player.scoutingAccuracy }}%</span>
+              </td>
+              <td><a *ngIf="player.teamId" [routerLink]="['/team', player.teamId]" class="fm-link">{{ player.teamName }}</a><ng-container *ngIf="!player.teamId">{{ player.teamName }}</ng-container></td>
+              <td class="money-cell text-right">{{ formatCurrency(player.transferValue) }}</td>
+              <td class="text-center" style="display: flex; gap: 4px; justify-content: center;">
+                <button class="action-btn offer-btn" (click)="openOfferModal(player)">Make Offer</button>
+                <button class="action-btn loan-btn" (click)="openLoanModal(player)">Loan</button>
+              </td>
+              <td class="text-center">
+                <button class="action-btn" (click)="requestScoutReport(player)" [disabled]="scoutReportLoading[player.id]"
+                  style="background: #2980b9; color: white; padding: 4px 10px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px;">
+                  {{ scoutReportLoading[player.id] ? 'Scouting...' : 'Scout' }}
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredPlayers.length === 0">
+              <td colspan="8" class="no-data">No players available matching your criteria.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== TAB 2: INCOMING OFFERS ======================== -->
+  <div class="tab-content" *ngIf="activeTab === 'incoming'">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="indicator in">IN</span>
+        OFFERS FROM OTHER CLUBS
+      </div>
+      <div class="table-responsive">
+        <table class="transfer-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>From Club</th>
+              <th class="text-right">Offer Amount</th>
+              <th class="text-right">Asking Price</th>
+              <th class="text-center">Status</th>
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let offer of incomingOffers">
+              <td class="player-cell">
+                <a [routerLink]="['/player', offer.playerId]" class="fm-link">{{ offer.playerName }}</a>
+              </td>
+              <td><a [routerLink]="['/team', offer.fromTeamId]" class="fm-link">{{ offer.fromTeamName }}</a></td>
+              <td class="money-cell text-right">{{ formatCurrency(offer.offerAmount) }}</td>
+              <td class="money-cell text-right">{{ formatCurrency(offer.askingPrice) }}</td>
+              <td class="text-center">
+                <span class="status-badge" [ngClass]="getStatusClass(offer.status)">{{ offer.status }}</span>
+              </td>
+              <td class="text-center actions-cell">
+                <ng-container *ngIf="offer.status?.toLowerCase() === 'pending'">
+                  <button class="action-btn accept-btn" (click)="respondToOffer(offer.id, 'accept')" [disabled]="respondLoading">Accept</button>
+                  <button class="action-btn reject-btn" (click)="respondToOffer(offer.id, 'reject')" [disabled]="respondLoading">Reject</button>
+                  <button class="action-btn counter-btn" (click)="respondToOffer(offer.id, 'counter')" [disabled]="respondLoading">Counter</button>
+                </ng-container>
+
+                <!-- Counter Input -->
+                <div class="counter-input-row" *ngIf="counterOfferId === offer.id">
+                  <input type="number" [(ngModel)]="counterAmount" class="counter-input" placeholder="Counter amount" />
+                  <button class="action-btn accept-btn" (click)="submitCounter(offer.id)" [disabled]="respondLoading">Send</button>
+                  <button class="action-btn reject-btn" (click)="cancelCounter()">Cancel</button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="incomingOffers.length === 0">
+              <td colspan="6" class="no-data">No incoming offers at this time.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== TAB 3: OUTGOING OFFERS ======================== -->
+  <div class="tab-content" *ngIf="activeTab === 'outgoing'">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="indicator out">OUT</span>
+        YOUR SENT OFFERS
+      </div>
+      <div class="table-responsive">
+        <table class="transfer-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>To Club</th>
+              <th class="text-right">My Offer</th>
+              <th class="text-right">Their Ask</th>
+              <th class="text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let offer of outgoingOffers">
+              <td class="player-cell">
+                <a [routerLink]="['/player', offer.playerId]" class="fm-link">{{ offer.playerName }}</a>
+              </td>
+              <td><a [routerLink]="['/team', offer.toTeamId]" class="fm-link">{{ offer.toTeamName }}</a></td>
+              <td class="money-cell text-right">{{ formatCurrency(offer.offerAmount) }}</td>
+              <td class="money-cell text-right">{{ formatCurrency(offer.askingPrice) }}</td>
+              <td class="text-center">
+                <span class="status-badge" [ngClass]="getStatusClass(offer.status)">{{ offer.status }}</span>
+              </td>
+            </tr>
+            <tr *ngIf="outgoingOffers.length === 0">
+              <td colspan="5" class="no-data">You have not made any offers yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== TAB 4: TRANSFER HISTORY ======================== -->
+  <div class="tab-content" *ngIf="activeTab === 'history'">
+
+    <div class="season-navigation">
+      <button class="nav-arrow" (click)="prevSeason()">&lt;</button>
+      <span class="season-label">SEASON {{ currentSeason }}</span>
+      <button class="nav-arrow" (click)="nextSeason()">&gt;</button>
+    </div>
+
+    <div class="transfer-grid">
+
+      <div class="panel in-panel">
+        <div class="panel-header">
+          <span class="indicator in">IN</span>
+          PLAYERS BOUGHT
+        </div>
+        <div class="table-responsive">
+          <table class="transfer-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>From (Team)</th>
+                <th class="text-right">Fee</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let player of boughtPlayers">
+                <td class="player-cell">
+                  <a [routerLink]="['/player', player.playerId]" class="fm-link">{{ player.playerName }}</a>
+                </td>
+                <td>
+                  <a [routerLink]="['/team', player.sellTeamId]" class="fm-link">{{ player.sellTeamName }}</a>
+                </td>
+                <td class="money-cell text-right">{{ player.playerTransferValue }}</td>
+              </tr>
+              <tr *ngIf="boughtPlayers.length === 0">
+                <td colspan="3" class="no-data">No players bought this season.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel out-panel">
+        <div class="panel-header">
+          <span class="indicator out">OUT</span>
+          PLAYERS SOLD
+        </div>
+        <div class="table-responsive">
+          <table class="transfer-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>To (Team)</th>
+                <th class="text-right">Fee</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let player of soldPlayers">
+                <td class="player-cell">
+                  <a [routerLink]="['/player', player.playerId]" class="fm-link">{{ player.playerName }}</a>
+                </td>
+                <td>
+                  <a [routerLink]="['/team', player.buyTeamId]" class="fm-link">{{ player.buyTeamName }}</a>
+                </td>
+                <td class="money-cell text-right">{{ player.playerTransferValue }}</td>
+              </tr>
+              <tr *ngIf="soldPlayers.length === 0">
+                <td colspan="3" class="no-data">No players sold this season.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================== TAB 5: LOANS ======================== -->
+  <div class="tab-content" *ngIf="activeTab === 'loans'">
+
+    <div class="transfer-grid">
+
+      <div class="panel in-panel">
+        <div class="panel-header">
+          <span class="indicator in">IN</span>
+          PLAYERS ON LOAN (BORROWED)
+        </div>
+        <div class="table-responsive">
+          <table class="transfer-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>From Club</th>
+                <th>Season</th>
+                <th class="text-right">Loan Fee</th>
+                <th class="text-right">Buy Option</th>
+                <th class="text-center">Wage Contrib.</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let loan of loansIn">
+                <td class="player-cell">
+                  <a [routerLink]="['/player', loan.playerId]" class="fm-link">{{ loan.playerName }}</a>
+                </td>
+                <td><a [routerLink]="['/team', loan.parentTeamId]" class="fm-link">{{ loan.parentTeamName }}</a></td>
+                <td>Season {{ loan.seasonNumber }}</td>
+                <td class="money-cell text-right">{{ formatCurrency(loan.loanFee) }}</td>
+                <td class="text-right">
+                  <span *ngIf="loan.buyOptionFee > 0" class="money-cell">{{ formatCurrency(loan.buyOptionFee) }}</span>
+                  <span *ngIf="loan.buyOptionFee > 0 && loan.buyObligatory" class="obligation-badge">OBL</span>
+                  <span *ngIf="!loan.buyOptionFee || loan.buyOptionFee === 0">-</span>
+                </td>
+                <td class="text-center">
+                  <span *ngIf="loan.parentWageContribution > 0">{{ loan.parentWageContribution }}%</span>
+                  <span *ngIf="!loan.parentWageContribution || loan.parentWageContribution === 0">-</span>
+                </td>
+                <td class="text-center">
+                  <span class="status-badge" [ngClass]="loan.status === 'active' ? 'status-active' : 'status-completed'">{{ loan.status }}</span>
+                </td>
+                <td class="text-center">
+                  <button *ngIf="loan.status === 'active' && loan.buyOptionFee > 0 && !loan.buyObligatory"
+                          class="action-btn accept-btn" (click)="exerciseBuyOption(loan)"
+                          [disabled]="buyOptionLoading[loan.id]">
+                    {{ buyOptionLoading[loan.id] ? 'Processing...' : 'Buy Now' }}
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="loansIn.length === 0">
+                <td colspan="8" class="no-data">No players currently on loan.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel out-panel">
+        <div class="panel-header">
+          <span class="indicator out">OUT</span>
+          PLAYERS LOANED OUT
+        </div>
+        <div class="table-responsive">
+          <table class="transfer-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>To Club</th>
+                <th>Season</th>
+                <th class="text-right">Loan Fee</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let loan of loansOut">
+                <td class="player-cell">
+                  <a [routerLink]="['/player', loan.playerId]" class="fm-link">{{ loan.playerName }}</a>
+                </td>
+                <td><a [routerLink]="['/team', loan.loanTeamId]" class="fm-link">{{ loan.loanTeamName }}</a></td>
+                <td>Season {{ loan.seasonNumber }}</td>
+                <td class="money-cell text-right">{{ formatCurrency(loan.loanFee) }}</td>
+                <td class="text-center">
+                  <span class="status-badge" [ngClass]="loan.status === 'active' ? 'status-active' : 'status-completed'">{{ loan.status }}</span>
+                </td>
+                <td class="text-center">
+                  <button *ngIf="loan.status === 'active'"
+                          class="action-btn reject-btn" (click)="recallLoan(loan)"
+                          [disabled]="recallLoading[loan.id]">
+                    {{ recallLoading[loan.id] ? 'Processing...' : 'Recall' }}
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="loansOut.length === 0">
+                <td colspan="6" class="no-data">No players loaned out.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================== TAB: LOAN HISTORY ======================== -->
+  <div class="tab-content" *ngIf="activeTab === 'loanHistory'">
+
+    <div class="season-selector" style="margin-bottom: 12px;">
+      <button class="tab-btn" (click)="loanHistorySeason(-1)">&laquo; Prev</button>
+      <span style="margin: 0 10px;">Season {{ currentSeason }}</span>
+      <button class="tab-btn" (click)="loanHistorySeason(1)">Next &raquo;</button>
+    </div>
+
+    <div class="transfer-grid">
+
+      <div class="panel in-panel">
+        <div class="panel-header">
+          <span class="indicator in">IN</span>
+          LOANS IN (SEASON {{ currentSeason }})
+        </div>
+        <div class="table-responsive">
+          <table class="transfer-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>From Club</th>
+                <th class="text-right">Loan Fee</th>
+                <th class="text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let loan of loanHistoryIn">
+                <td class="player-cell">
+                  <a [routerLink]="['/player', loan.playerId]" class="fm-link">{{ loan.playerName }}</a>
+                </td>
+                <td><a [routerLink]="['/team', loan.parentTeamId]" class="fm-link">{{ loan.parentTeamName }}</a></td>
+                <td class="money-cell text-right">{{ formatCurrency(loan.loanFee) }}</td>
+                <td class="text-center">
+                  <span class="status-badge" [ngClass]="loan.status === 'active' ? 'status-active' : 'status-completed'">{{ loan.status }}</span>
+                </td>
+              </tr>
+              <tr *ngIf="loanHistoryIn.length === 0">
+                <td colspan="4" class="no-data">No loans in this season.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel out-panel">
+        <div class="panel-header">
+          <span class="indicator out">OUT</span>
+          LOANS OUT (SEASON {{ currentSeason }})
+        </div>
+        <div class="table-responsive">
+          <table class="transfer-table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>To Club</th>
+                <th class="text-right">Loan Fee</th>
+                <th class="text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let loan of loanHistoryOut">
+                <td class="player-cell">
+                  <a [routerLink]="['/player', loan.playerId]" class="fm-link">{{ loan.playerName }}</a>
+                </td>
+                <td><a [routerLink]="['/team', loan.loanTeamId]" class="fm-link">{{ loan.loanTeamName }}</a></td>
+                <td class="money-cell text-right">{{ formatCurrency(loan.loanFee) }}</td>
+                <td class="text-center">
+                  <span class="status-badge" [ngClass]="loan.status === 'active' ? 'status-active' : 'status-completed'">{{ loan.status }}</span>
+                </td>
+              </tr>
+              <tr *ngIf="loanHistoryOut.length === 0">
+                <td colspan="4" class="no-data">No loans out this season.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================== TAB 6: FREE AGENTS ======================== -->
+  <div class="tab-content" *ngIf="activeTab === 'freeAgents'">
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Position:</label>
+        <select [(ngModel)]="freeAgentPositionFilter" (ngModelChange)="applyFreeAgentFilters()" class="filter-select">
+          <option *ngFor="let pos of positions" [value]="pos">{{ pos }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="indicator" style="background: #27ae60;">FA</span>
+        FREE AGENTS
+      </div>
+      <div class="table-responsive">
+        <table class="transfer-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Position</th>
+              <th>Age</th>
+              <th>Rating</th>
+              <th class="text-right">Wage</th>
+              <th class="text-right">Est. Value</th>
+              <th class="text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let agent of filteredFreeAgents">
+              <td class="player-cell">
+                <a [routerLink]="['/player', agent.id]" class="fm-link">{{ agent.name }}</a>
+              </td>
+              <td><span class="position-badge">{{ agent.position }}</span></td>
+              <td>{{ agent.age }}</td>
+              <td><span class="rating-badge" [style.color]="agent.rating | ratingColor">{{ agent.rating }}</span></td>
+              <td class="money-cell text-right">{{ formatCurrency(agent.wage) }}/w</td>
+              <td class="money-cell text-right">{{ formatCurrency(agent.transferValue) }}</td>
+              <td class="text-center">
+                <button class="action-btn accept-btn" (click)="openFreeAgentModal(agent)">Sign</button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredFreeAgents.length === 0">
+              <td colspan="7" class="no-data">No free agents available.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== TAB 7: PRE-CONTRACT ======================== -->
+  <div class="tab-content" *ngIf="activeTab === 'preContract'">
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label>Position:</label>
+        <select [(ngModel)]="preContractPositionFilter" (ngModelChange)="applyPreContractFilters()" class="filter-select">
+          <option *ngFor="let pos of positions" [value]="pos">{{ pos }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="indicator" style="background: #e67e22;">PC</span>
+        PLAYERS AVAILABLE FOR PRE-CONTRACT
+      </div>
+      <p style="padding: 10px 15px; font-size: 12px; color: #888; margin: 0;">
+        Sign players whose contract expires at the end of this season. They will join your club for free when their contract runs out.
+      </p>
+      <div class="table-responsive">
+        <table class="transfer-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Position</th>
+              <th>Age</th>
+              <th>Rating</th>
+              <th>Current Club</th>
+              <th class="text-right">Wage Demand</th>
+              <th class="text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let player of filteredPreContractPlayers">
+              <td class="player-cell">
+                <a [routerLink]="['/player', player.id]" class="fm-link">{{ player.name }}</a>
+              </td>
+              <td><span class="position-badge">{{ player.position }}</span></td>
+              <td>{{ player.age }}</td>
+              <td><span class="rating-badge" [style.color]="player.rating | ratingColor">{{ player.rating }}</span></td>
+              <td><a [routerLink]="['/team', player.currentTeamId]" class="fm-link">{{ player.currentTeamName }}</a></td>
+              <td class="money-cell text-right">{{ formatCurrency(player.wageDemand) }}/w</td>
+              <td class="text-center">
+                <button class="action-btn counter-btn" (click)="openPreContractModal(player)">Pre-Contract</button>
+              </td>
+            </tr>
+            <tr *ngIf="filteredPreContractPlayers.length === 0">
+              <td colspan="7" class="no-data">No players available for pre-contract.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ======================== SCOUT REPORT MODAL ======================== -->
+<div class="modal-overlay" *ngIf="scoutReport" (click)="closeScoutReport()">
+  <div class="modal-content" (click)="$event.stopPropagation()" style="max-width: 420px;">
+    <div class="modal-header">
+      <h2>Scout Report</h2>
+      <button class="modal-close" (click)="closeScoutReport()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="player-info-card">
+        <div class="info-row">
+          <span class="info-label">Player</span>
+          <span class="info-value player-name">{{ scoutReport.playerName }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Position</span>
+          <span class="info-value"><span class="position-badge">{{ scoutReport.position }}</span></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Age</span>
+          <span class="info-value">{{ scoutReport.age }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Club</span>
+          <span class="info-value">{{ scoutReport.teamName }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Est. Rating</span>
+          <span class="info-value"><span class="rating-badge">~{{ scoutReport.estimatedRating }}</span></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Accuracy</span>
+          <span class="info-value">{{ scoutReport.scoutingAccuracy }}%</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Est. Value</span>
+          <span class="info-value money-cell">{{ formatCurrency(scoutReport.estimatedTransferValue) }}</span>
+        </div>
+      </div>
+      <p style="font-size: 12px; color: #888; margin-top: 12px; text-align: center;">
+        Each scouting visit produces a fresh estimate. Higher scouting facilities improve accuracy.
+      </p>
+      <button class="action-btn close-result-btn" (click)="closeScoutReport()" style="margin-top: 12px; width: 100%;">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== MAKE OFFER MODAL ======================== -->
+<div class="modal-overlay" *ngIf="showOfferModal" (click)="closeOfferModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h2>Make Transfer Offer</h2>
+      <button class="modal-close" (click)="closeOfferModal()">&times;</button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedPlayer && !showOfferResult">
+      <div class="player-info-card">
+        <div class="info-row">
+          <span class="info-label">Player</span>
+          <span class="info-value player-name">{{ selectedPlayer.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Position</span>
+          <span class="info-value"><span class="position-badge">{{ selectedPlayer.position }}</span></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Age</span>
+          <span class="info-value">{{ selectedPlayer.age }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Est. Rating</span>
+          <span class="info-value"><span class="rating-badge">~{{ selectedPlayer.estimatedRating }}</span> <span style="font-size: 12px; color: #888;">{{ selectedPlayer.scoutingAccuracy }}% accuracy</span></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Club</span>
+          <span class="info-value">{{ selectedPlayer.teamName }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Asking Price</span>
+          <span class="info-value money-cell">{{ formatCurrency(selectedPlayer.transferValue) }}</span>
+        </div>
+      </div>
+
+      <div class="offer-form">
+        <label class="offer-label">Your Offer Amount</label>
+        <div class="offer-input-row">
+          <span class="currency-symbol">&#8364;</span>
+          <input type="number" [(ngModel)]="offerAmount" class="offer-input" [min]="0" />
+        </div>
+        <button class="action-btn offer-btn submit-offer-btn" (click)="submitOffer()" [disabled]="offerLoading || offerAmount <= 0">
+          {{ offerLoading ? 'Submitting...' : 'Submit Offer' }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Offer Result -->
+    <div class="modal-body" *ngIf="showOfferResult && offerResult">
+      <div class="offer-result">
+        <div class="result-icon" [ngClass]="getStatusClass(offerResult.status)">
+          <span *ngIf="offerResult.status?.toLowerCase() === 'accepted'">&#10003;</span>
+          <span *ngIf="offerResult.status?.toLowerCase() === 'rejected'">&#10007;</span>
+          <span *ngIf="offerResult.status?.toLowerCase() === 'counter'">&#8644;</span>
+        </div>
+
+        <h3 class="result-title" [ngClass]="getStatusClass(offerResult.status)">
+          <span *ngIf="offerResult.status?.toLowerCase() === 'accepted'">Offer Accepted!</span>
+          <span *ngIf="offerResult.status?.toLowerCase() === 'rejected'">Offer Rejected</span>
+          <span *ngIf="offerResult.status?.toLowerCase() === 'counter'">Counter Offer Received</span>
+        </h3>
+
+        <div *ngIf="offerResult.status?.toLowerCase() === 'accepted'" class="result-details">
+          <p>{{ offerResult.playerName }} will join your squad!</p>
+          <p class="money-cell">Transfer Fee: {{ formatCurrency(offerResult.offerAmount) }}</p>
+        </div>
+
+        <div *ngIf="offerResult.status?.toLowerCase() === 'rejected'" class="result-details">
+          <p>{{ offerResult.toTeamName }} has rejected your offer of {{ formatCurrency(offerResult.offerAmount) }}.</p>
+        </div>
+
+        <div *ngIf="offerResult.status?.toLowerCase() === 'counter'" class="result-details">
+          <p>{{ offerResult.toTeamName }} wants {{ formatCurrency(offerResult.askingPrice) }} for {{ offerResult.playerName }}.</p>
+          <div class="counter-actions">
+            <button class="action-btn accept-btn" (click)="acceptCounter()" [disabled]="offerLoading">Accept Counter</button>
+            <button class="action-btn reject-btn" (click)="closeOfferModal()">Walk Away</button>
+          </div>
+        </div>
+
+        <button class="action-btn close-result-btn" (click)="closeOfferModal()"
+          *ngIf="offerResult.status?.toLowerCase() !== 'counter'">Close</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================== LOAN OFFER MODAL ======================== -->
+<div class="modal-overlay" *ngIf="showLoanModal" (click)="closeLoanModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h2>Make Loan Offer</h2>
+      <button class="modal-close" (click)="closeLoanModal()">&times;</button>
+    </div>
+
+    <div class="modal-body" *ngIf="loanPlayer && !loanResultMessage">
+      <div class="player-info-card">
+        <div class="info-row">
+          <span class="info-label">Player</span>
+          <span class="info-value player-name">{{ loanPlayer.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Position</span>
+          <span class="info-value"><span class="position-badge">{{ loanPlayer.position }}</span></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Age</span>
+          <span class="info-value">{{ loanPlayer.age }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Club</span>
+          <span class="info-value">{{ loanPlayer.teamName }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Transfer Value</span>
+          <span class="info-value money-cell">{{ formatCurrency(loanPlayer.transferValue) }}</span>
+        </div>
+      </div>
+
+      <div class="offer-form">
+        <label class="offer-label">Loan Fee (for one season)</label>
+        <div class="offer-input-row">
+          <span class="currency-symbol">&#8364;</span>
+          <input type="number" [(ngModel)]="loanFeeAmount" class="offer-input" [min]="0" />
+        </div>
+        <p style="font-size: 12px; color: #888; margin-top: 4px;">Minimum: ~5% of transfer value ({{ formatCurrency(loanPlayer.transferValue * 0.05) }})</p>
+
+        <label class="offer-label" style="margin-top: 12px;">Buy Option Fee (optional)</label>
+        <div class="offer-input-row">
+          <span class="currency-symbol">&#8364;</span>
+          <input type="number" [(ngModel)]="loanBuyOptionFee" class="offer-input" [min]="0" />
+        </div>
+        <p style="font-size: 12px; color: #888; margin-top: 4px;">Set a price to buy the player permanently at end of loan. 0 = no option.</p>
+
+        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
+          <input type="checkbox" [(ngModel)]="loanBuyObligatory" id="buyObligatory" />
+          <label for="buyObligatory" style="font-size: 13px; color: #bdc3c7; cursor: pointer;">Obligation to buy (must purchase at end of loan)</label>
+        </div>
+
+        <label class="offer-label" style="margin-top: 12px;">Parent Wage Contribution (%)</label>
+        <input type="number" [(ngModel)]="loanParentWageContribution" class="offer-input" style="border-radius: 4px;" [min]="0" [max]="100" />
+        <p style="font-size: 12px; color: #888; margin-top: 4px;">% of wages the parent club continues to pay (0-100).</p>
+
+        <button class="action-btn loan-btn submit-offer-btn" (click)="submitLoanOffer()" [disabled]="loanLoading || loanFeeAmount <= 0">
+          {{ loanLoading ? 'Submitting...' : 'Submit Loan Offer' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-body" *ngIf="loanResultMessage">
+      <div class="offer-result">
+        <div class="result-icon" [ngClass]="loanResultSuccess ? 'status-accepted' : 'status-rejected'">
+          <span *ngIf="loanResultSuccess">&#10003;</span>
+          <span *ngIf="!loanResultSuccess">&#10007;</span>
+        </div>
+        <h3 class="result-title" [ngClass]="loanResultSuccess ? 'status-accepted' : 'status-rejected'">
+          {{ loanResultSuccess ? 'Loan Approved!' : 'Loan Rejected' }}
+        </h3>
+        <div class="result-details">
+          <p>{{ loanResultMessage }}</p>
+        </div>
+        <button class="action-btn close-result-btn" (click)="closeLoanModal()">Close</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================== FREE AGENT SIGN MODAL ======================== -->
+<div class="modal-overlay" *ngIf="showFreeAgentModal" (click)="closeFreeAgentModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h2>Sign Free Agent</h2>
+      <button class="modal-close" (click)="closeFreeAgentModal()">&times;</button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedFreeAgent && !freeAgentResultMessage">
+      <div class="player-info-card">
+        <div class="info-row">
+          <span class="info-label">Player</span>
+          <span class="info-value player-name">{{ selectedFreeAgent.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Position</span>
+          <span class="info-value"><span class="position-badge">{{ selectedFreeAgent.position }}</span></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Age</span>
+          <span class="info-value">{{ selectedFreeAgent.age }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Rating</span>
+          <span class="info-value"><span class="rating-badge" [style.color]="selectedFreeAgent.rating | ratingColor">{{ selectedFreeAgent.rating }}</span></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Current Wage</span>
+          <span class="info-value money-cell">{{ formatCurrency(selectedFreeAgent.wage) }}/w</span>
+        </div>
+      </div>
+
+      <div class="offer-form">
+        <label class="offer-label">Offered Weekly Wage</label>
+        <div class="offer-input-row">
+          <span class="currency-symbol">&#8364;</span>
+          <input type="number" [(ngModel)]="freeAgentWageOffer" class="offer-input" [min]="0" />
+        </div>
+
+        <label class="offer-label" style="margin-top: 12px;">Contract Length</label>
+        <select [(ngModel)]="freeAgentContractYears" class="offer-input" style="border-radius: 4px;">
+          <option [value]="1">1 year</option>
+          <option [value]="2">2 years</option>
+          <option [value]="3">3 years</option>
+          <option [value]="4">4 years</option>
+          <option [value]="5">5 years</option>
+        </select>
+
+        <p style="font-size: 12px; color: #888; margin-top: 8px;">No transfer fee required. Only wage negotiation.</p>
+
+        <button class="action-btn accept-btn submit-offer-btn" (click)="submitFreeAgentOffer()" [disabled]="freeAgentLoading || freeAgentWageOffer <= 0">
+          {{ freeAgentLoading ? 'Negotiating...' : 'Sign Player' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-body" *ngIf="freeAgentResultMessage">
+      <div class="offer-result">
+        <div class="result-icon" [ngClass]="freeAgentResultSuccess ? 'status-accepted' : 'status-rejected'">
+          <span *ngIf="freeAgentResultSuccess">&#10003;</span>
+          <span *ngIf="!freeAgentResultSuccess">&#10007;</span>
+        </div>
+        <h3 class="result-title" [ngClass]="freeAgentResultSuccess ? 'status-accepted' : 'status-rejected'">
+          {{ freeAgentResultSuccess ? 'Player Signed!' : 'Offer Rejected' }}
+        </h3>
+        <div class="result-details">
+          <p>{{ freeAgentResultMessage }}</p>
+        </div>
+        <button class="action-btn close-result-btn" (click)="closeFreeAgentModal()">Close</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ======================== PRE-CONTRACT MODAL ======================== -->
+<div class="modal-overlay" *ngIf="showPreContractModal" (click)="closePreContractModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h2>Sign Pre-Contract</h2>
+      <button class="modal-close" (click)="closePreContractModal()">&times;</button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedPreContractPlayer && !preContractResultMessage">
+      <div class="player-info-card">
+        <div class="info-row">
+          <span class="info-label">Player</span>
+          <span class="info-value player-name">{{ selectedPreContractPlayer.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Position</span>
+          <span class="info-value"><span class="position-badge">{{ selectedPreContractPlayer.position }}</span></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Age</span>
+          <span class="info-value">{{ selectedPreContractPlayer.age }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Rating</span>
+          <span class="info-value"><span class="rating-badge" [style.color]="selectedPreContractPlayer.rating | ratingColor">{{ selectedPreContractPlayer.rating }}</span></span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Current Club</span>
+          <span class="info-value">{{ selectedPreContractPlayer.currentTeamName }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Contract Expires</span>
+          <span class="info-value" style="color: #e67e22;">End of Season {{ selectedPreContractPlayer.contractEndSeason }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Wage Demand</span>
+          <span class="info-value money-cell">{{ formatCurrency(selectedPreContractPlayer.wageDemand) }}/w</span>
+        </div>
+      </div>
+
+      <div class="offer-form">
+        <label class="offer-label">Offered Weekly Wage</label>
+        <div class="offer-input-row">
+          <span class="currency-symbol">&#8364;</span>
+          <input type="number" [(ngModel)]="preContractWageOffer" class="offer-input" [min]="0" />
+        </div>
+
+        <label class="offer-label" style="margin-top: 12px;">Contract Length</label>
+        <select [(ngModel)]="preContractContractYears" class="offer-input" style="border-radius: 4px;">
+          <option [value]="1">1 year</option>
+          <option [value]="2">2 years</option>
+          <option [value]="3">3 years</option>
+          <option [value]="4">4 years</option>
+          <option [value]="5">5 years</option>
+        </select>
+
+        <p style="font-size: 12px; color: #888; margin-top: 8px;">No transfer fee. Player joins at end of season when their contract expires.</p>
+
+        <button class="action-btn counter-btn submit-offer-btn" (click)="submitPreContractOffer()" [disabled]="preContractLoading || preContractWageOffer <= 0">
+          {{ preContractLoading ? 'Negotiating...' : 'Sign Pre-Contract' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-body" *ngIf="preContractResultMessage">
+      <div class="offer-result">
+        <div class="result-icon" [ngClass]="preContractResultSuccess ? 'status-accepted' : 'status-rejected'">
+          <span *ngIf="preContractResultSuccess">&#10003;</span>
+          <span *ngIf="!preContractResultSuccess">&#10007;</span>
+        </div>
+        <h3 class="result-title" [ngClass]="preContractResultSuccess ? 'status-accepted' : 'status-rejected'">
+          {{ preContractResultSuccess ? 'Pre-Contract Signed!' : 'Offer Rejected' }}
+        </h3>
+        <div class="result-details">
+          <p>{{ preContractResultMessage }}</p>
+        </div>
+        <button class="action-btn close-result-btn" (click)="closePreContractModal()">Close</button>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,80 @@
+<div class="dynamics-container">
+  
+    <!-- Header / Tabs -->
+    <div class="dynamics-header">
+      <h1>🤝 TEAM DYNAMICS</h1>
+      <div class="sub-text">Dressing Room Atmosphere: <span class="excellent">Excellent</span></div>
+      
+      <div class="tabs">
+        <button class="tab-btn">Overview</button>
+        <button class="tab-btn active">Hierarchy</button>
+        <button class="tab-btn">Social Groups</button>
+        <button class="tab-btn">Happiness</button>
+      </div>
+    </div>
+  
+    <div class="dynamics-content">
+      
+      <!-- MANAGER CARD (Top) -->
+      <div class="section manager-section">
+          <div class="section-title">👤 MANAGER</div>
+          <div class="manager-card">
+              <div class="avatar-placeholder manager">👔</div>
+              <div class="p-name">{{ managerName }}</div>
+          </div>
+      </div>
+  
+      <!-- HIERARCHY PYRAMID -->
+      <div class="hierarchy-pyramid">
+          
+          <!-- TIER 1: TEAM LEADERS -->
+          <div class="pyramid-tier tier-1">
+              <div class="tier-label">TEAM LEADERS</div>
+              <div class="tier-content">
+                  <div class="player-card leader" *ngFor="let p of teamLeaders">
+                      <div class="shirt-icon">{{ p.id }}</div>
+                      <div class="p-name"><a [routerLink]="['/player', p.id]" class="fm-link">{{ p.name }}</a></div>
+                      <div class="p-pers">{{ p.personality }}</div>
+                  </div>
+              </div>
+          </div>
+  
+          <!-- TIER 2: HIGHLY INFLUENTIAL -->
+          <div class="pyramid-tier tier-2">
+              <div class="tier-label">HIGHLY INFLUENTIAL PLAYERS</div>
+              <div class="tier-content">
+                  <div class="player-card highly" *ngFor="let p of highlyInfluential">
+                      <div class="shirt-icon">{{ p.id }}</div>
+                      <div class="p-name"><a [routerLink]="['/player', p.id]" class="fm-link">{{ p.name }}</a></div>
+                      <div class="p-pers">{{ p.personality }}</div>
+                  </div>
+              </div>
+          </div>
+  
+          <!-- TIER 3: INFLUENTIAL -->
+          <div class="pyramid-tier tier-3">
+              <div class="tier-label">INFLUENTIAL PLAYERS</div>
+              <div class="tier-content">
+                  <div class="player-card influential" *ngFor="let p of influential">
+                      <div class="shirt-icon">{{ p.id }}</div>
+                      <div class="p-name"><a [routerLink]="['/player', p.id]" class="fm-link">{{ p.name }}</a></div>
+                      <div class="p-pers">{{ p.personality }}</div>
+                  </div>
+              </div>
+          </div>
+  
+          <!-- TIER 4: OTHER PLAYERS -->
+          <div class="pyramid-tier tier-4">
+              <div class="tier-label">OTHER PLAYERS</div>
+              <div class="tier-content wrap-content">
+                  <div class="player-card other" *ngFor="let p of otherPlayers">
+                      <div class="shirt-icon small">{{ p.id }}</div>
+                      <div class="p-name small"><a [routerLink]="['/player', p.id]" class="fm-link">{{ p.name }}</a></div>
+                  </div>
+              </div>
+          </div>
+  
+      </div>
+  
+    </div>
+  </div>

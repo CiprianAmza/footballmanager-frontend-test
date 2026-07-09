@@ -1,0 +1,25 @@
+.cc-wrap { max-width: 640px; margin: 0 auto; padding: 20px 14px; }
+.cc-title { margin: 0 0 4px; }
+.cc-sub { color: #666; font-size: .9rem; margin: 0 0 16px; }
+.cc-msg { color: #666; }
+.cc-panel { padding: 14px 16px; }
+
+.cc-toggle { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #eee; }
+.cc-label { flex: 1; font-weight: 600; }
+.cc-state { font-size: .75rem; font-weight: 700; letter-spacing: .5px; color: #c0392b; }
+.cc-state.on { color: #2e7d32; }
+
+.cc-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+.cc-switch input { opacity: 0; width: 0; height: 0; }
+.cc-slider { position: absolute; cursor: pointer; inset: 0; background: #bbb; border-radius: 24px; transition: .2s; }
+.cc-slider::before { content: ""; position: absolute; height: 18px; width: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+.cc-switch input:checked + .cc-slider { background: #2e7d32; }
+.cc-switch input:checked + .cc-slider::before { transform: translateX(20px); }
+
+.cc-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+.cc-input { width: 160px; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; }
+.cc-hint { color: #888; font-size: .8rem; }
+.cc-actions { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+.fm-btn { background: #2e7d32; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+.fm-btn:disabled { opacity: .6; cursor: default; }
+.cc-feedback { font-size: .9rem; color: #444; }
