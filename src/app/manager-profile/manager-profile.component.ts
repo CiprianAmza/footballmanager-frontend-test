@@ -32,6 +32,8 @@ interface ManagerHistoryEntry {
 // One row of the current-season per-competition breakdown.
 // leaguePosition is non-null ONLY on league lines (competitionTypeId 1 or 3).
 interface CompetitionStatLine {
+  teamId: number;
+  teamName: string;
   competitionId: number;
   competitionTypeId: number;
   competitionName: string;
@@ -43,6 +45,55 @@ interface CompetitionStatLine {
   goalsFor: number;
   goalsAgainst: number;
   leaguePosition: number | null;
+  entryStage?: string;
+  currentStage?: string;
+  stageReached?: string;
+  status?: string;
+  statusLabel?: string;
+  eliminatedByTeamId?: number | null;
+  eliminatedByTeamName?: string | null;
+}
+
+interface CompetitionFilterOption {
+  competitionId: number;
+  competitionName: string;
+}
+
+interface CompetitionCareerTotal {
+  competitionId: number;
+  competitionTypeId: number;
+  competitionName: string;
+  seasons: number;
+  matches: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  bestResult: string;
+  bestSeason: number | null;
+}
+
+interface ManagerTrophySummary {
+  name: string;
+  count: number;
+  seasons: number[];
+  lastWonSeason: number | null;
+}
+
+interface ManagerClubSummary {
+  teamId: number;
+  teamName: string;
+  current: boolean;
+  firstSeason: number;
+  lastSeason: number;
+  seasons: number;
+  games: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  trophies: number;
+  trophyNames: string[];
 }
 
 interface ManagerProfile {
@@ -61,6 +112,8 @@ interface ManagerProfile {
   teamsManaged: number;
   seasonsManaged: number;
   history: ManagerHistoryEntry[];
+  trophies?: ManagerTrophySummary[];
+  clubs?: ManagerClubSummary[];
   // New financial fields (longs from the backend).
   monthlySalary?: number;
   careerEarnings?: number;
@@ -80,6 +133,10 @@ export class ManagerProfileComponent implements OnInit, OnDestroy {
   profile: ManagerProfile | null = null;
   // Current-season per-competition breakdown (one row per competition the team plays in).
   competitionBreakdown: CompetitionStatLine[] = [];
+  filteredCompetitionBreakdown: CompetitionStatLine[] = [];
+  competitionOptions: CompetitionFilterOption[] = [];
+  competitionCareerTotals: CompetitionCareerTotal[] = [];
+  selectedCompetitionId: number | null = null;
   loading: boolean = true;
   managerId: number = 0;
   // True when the profile being viewed belongs to the logged-in user — unlocks the Resign button.
@@ -153,11 +210,11 @@ export class ManagerProfileComponent implements OnInit, OnDestroy {
           // Prefer the breakdown embedded on the snapshot; fall back to the
           // dedicated endpoint when the manager currently has a team.
           if (data.competitionBreakdown && data.competitionBreakdown.length > 0) {
-            this.competitionBreakdown = data.competitionBreakdown;
+            this.setCompetitionBreakdown(data.competitionBreakdown);
           } else if (data.currentTeamId && data.currentTeamId > 0) {
             this.fetchCompetitionBreakdown(data.currentTeamId);
           } else {
-            this.competitionBreakdown = [];
+            this.setCompetitionBreakdown([]);
           }
           this.loading = false;
         },
@@ -172,9 +229,125 @@ export class ManagerProfileComponent implements OnInit, OnDestroy {
   fetchCompetitionBreakdown(teamId: number): void {
     this.http.get<CompetitionStatLine[]>(`${urlApp}/stats/team/${teamId}/competitionBreakdown`)
       .subscribe({
-        next: (lines) => { this.competitionBreakdown = lines || []; },
-        error: () => { this.competitionBreakdown = []; }
+        next: (lines) => { this.setCompetitionBreakdown(lines || []); },
+        error: () => { this.setCompetitionBreakdown([]); }
       });
+  }
+
+  selectCompetition(competitionId: number | null): void {
+    this.selectedCompetitionId = competitionId;
+    this.applyCompetitionFilter();
+  }
+
+  get visibleCompetitionTotals(): CompetitionCareerTotal[] {
+    if (this.selectedCompetitionId == null) return this.competitionCareerTotals;
+    return this.competitionCareerTotals.filter(total => total.competitionId === this.selectedCompetitionId);
+  }
+
+  private setCompetitionBreakdown(lines: CompetitionStatLine[]): void {
+    // Older profile responses could contain the completed season twice: once
+    // from ManagerHistory and once from the synthetic live snapshot. Keep one
+    // canonical row per team/competition/season.
+    const unique = new Map<string, CompetitionStatLine>();
+    for (const line of lines || []) {
+      const key = `${line.teamId}|${line.competitionId}|${line.seasonNumber}`;
+      if (!unique.has(key)) unique.set(key, line);
+    }
+
+    this.competitionBreakdown = Array.from(unique.values()).sort((left, right) =>
+      right.seasonNumber - left.seasonNumber || left.competitionName.localeCompare(right.competitionName));
+    this.competitionOptions = Array.from(new Map(
+      this.competitionBreakdown.map(line => [line.competitionId, {
+        competitionId: line.competitionId,
+        competitionName: line.competitionName
+      }])
+    ).values()).sort((left, right) => left.competitionName.localeCompare(right.competitionName));
+
+    if (this.selectedCompetitionId != null
+        && !this.competitionOptions.some(option => option.competitionId === this.selectedCompetitionId)) {
+      this.selectedCompetitionId = null;
+    }
+    this.competitionCareerTotals = this.buildCompetitionCareerTotals(this.competitionBreakdown);
+    this.applyCompetitionFilter();
+  }
+
+  private applyCompetitionFilter(): void {
+    this.filteredCompetitionBreakdown = this.selectedCompetitionId == null
+      ? [...this.competitionBreakdown]
+      : this.competitionBreakdown.filter(line => line.competitionId === this.selectedCompetitionId);
+  }
+
+  private buildCompetitionCareerTotals(lines: CompetitionStatLine[]): CompetitionCareerTotal[] {
+    const grouped = new Map<number, CompetitionStatLine[]>();
+    for (const line of lines) {
+      const competitionLines = grouped.get(line.competitionId) || [];
+      competitionLines.push(line);
+      grouped.set(line.competitionId, competitionLines);
+    }
+
+    return Array.from(grouped.values()).map(competitionLines => {
+      const first = competitionLines[0];
+      const best = this.bestCompetitionResult(competitionLines);
+      return {
+        competitionId: first.competitionId,
+        competitionTypeId: first.competitionTypeId,
+        competitionName: first.competitionName,
+        seasons: new Set(competitionLines.map(line => line.seasonNumber)).size,
+        matches: competitionLines.reduce((total, line) => total + line.matches, 0),
+        wins: competitionLines.reduce((total, line) => total + line.wins, 0),
+        draws: competitionLines.reduce((total, line) => total + line.draws, 0),
+        losses: competitionLines.reduce((total, line) => total + line.losses, 0),
+        goalsFor: competitionLines.reduce((total, line) => total + line.goalsFor, 0),
+        goalsAgainst: competitionLines.reduce((total, line) => total + line.goalsAgainst, 0),
+        bestResult: best.label,
+        bestSeason: best.season
+      };
+    }).sort((left, right) => left.competitionName.localeCompare(right.competitionName));
+  }
+
+  private bestCompetitionResult(lines: CompetitionStatLine[]): { label: string; season: number | null } {
+    const isLeague = lines[0]?.competitionTypeId === 1 || lines[0]?.competitionTypeId === 3;
+    if (isLeague) {
+      const positions = lines.filter(line => line.leaguePosition != null && line.leaguePosition > 0)
+        .sort((left, right) => (left.leaguePosition as number) - (right.leaguePosition as number)
+          || right.seasonNumber - left.seasonNumber);
+      if (positions.length === 0) return { label: '-', season: null };
+      const best = positions[0];
+      return {
+        label: best.leaguePosition === 1 ? 'Champion' : `Position ${best.leaguePosition}`,
+        season: best.seasonNumber
+      };
+    }
+
+    const ranked = [...lines].sort((left, right) => this.resultRank(right) - this.resultRank(left)
+      || right.seasonNumber - left.seasonNumber);
+    if (ranked.length === 0) return { label: '-', season: null };
+    const best = ranked[0];
+    let label = best.status === 'WINNER' ? 'Winner'
+      : best.status === 'RUNNER_UP' ? 'Runner-up'
+      : best.stageReached || best.currentStage || best.statusLabel || '-';
+    if (label.toLowerCase().startsWith('eliminated in ')) {
+      label = label.substring('eliminated in '.length).split(' by ')[0];
+    }
+    return { label, season: best.seasonNumber };
+  }
+
+  private resultRank(line: CompetitionStatLine): number {
+    if (line.status === 'WINNER') return 10000;
+    if (line.status === 'RUNNER_UP') return 9000;
+    const stage = `${line.stageReached || ''} ${line.currentStage || ''} ${line.statusLabel || ''}`.toLowerCase();
+    if (stage.includes('final') && !stage.includes('semi')) return 8500;
+    if (stage.includes('semi-final') || stage.includes('semi final')) return 8000;
+    if (stage.includes('quarter-final') || stage.includes('quarter final')) return 7000;
+    if (stage.includes('round of 16')) return 6000;
+    if (stage.includes('knockout playoff')) return 5500;
+    if (stage.includes('group stage') || stage.includes('matchday')) return 5000;
+    if (stage.includes('round of 32')) return 4500;
+    const qualifyingRound = stage.match(/qualifying round\s*(\d+)/);
+    if (qualifyingRound) return 3000 + Number(qualifyingRound[1]);
+    if (stage.includes('qualifying')) return 3000;
+    if (stage.includes('preliminary')) return 2000;
+    return 1000;
   }
 
   /** Human-readable label for a competition type id. */
@@ -185,6 +358,7 @@ export class ManagerProfileComponent implements OnInit, OnDestroy {
       case 3: return 'Second League';
       case 4: return 'League of Champions';
       case 5: return 'Stars Cup';
+      case 6: return 'Super Cup';
       default: return 'Competition';
     }
   }

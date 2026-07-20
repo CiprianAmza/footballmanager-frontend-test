@@ -579,6 +579,7 @@ export class StaffComponent implements OnInit, OnDestroy {
           this.viewFullMatch = data.viewFullMatch ?? false;
           this.watchGoalHighlights = data.watchGoalHighlights ?? true;
           this.matchHighlightsLevel = (data.matchHighlightsLevel as any) || 'GOALS_ONLY';
+          this.teamService.setAlwaysContinue(data.alwaysContinue === true);
           // Mirror to localStorage so app.component can read the setting cheaply
           // without an HTTP round-trip every match (refreshed on Staff page load).
           localStorage.setItem('fm_matchHighlightsLevel', this.matchHighlightsLevel);
@@ -588,6 +589,7 @@ export class StaffComponent implements OnInit, OnDestroy {
   }
 
   toggleAutoContinue(): void {
+    if (this.teamService.alwaysContinue) return;
     this.teamService.autoContinue = !this.teamService.autoContinue;
     if (!this.teamService.autoContinue) {
       this.teamService.autoContinueMatchReport = false;
@@ -595,10 +597,23 @@ export class StaffComponent implements OnInit, OnDestroy {
   }
 
   toggleAutoContinueMatchReport(): void {
+    if (this.teamService.alwaysContinue) return;
     this.teamService.autoContinueMatchReport = !this.teamService.autoContinueMatchReport;
   }
 
+  toggleAlwaysContinue(): void {
+    const teamId = this.teamService.teamId;
+    const enabled = !this.teamService.alwaysContinue;
+    this.http.post<any>(urlApp + `/managers/responsibilities/${teamId}`, {
+      alwaysContinue: enabled
+    }).subscribe({
+      next: (data) => this.teamService.setAlwaysContinue(data.alwaysContinue === true),
+      error: (err) => console.error('Error updating Always Continue:', err)
+    });
+  }
+
   toggleViewFullMatch(): void {
+    if (this.teamService.alwaysContinue) return;
     this.viewFullMatch = !this.viewFullMatch;
     const teamId = this.teamService.teamId;
     this.http.post<any>(urlApp + `/managers/responsibilities/${teamId}`, {
@@ -626,6 +641,7 @@ export class StaffComponent implements OnInit, OnDestroy {
 
   /** Drive the radio group in the template — fires on every level change. */
   setMatchHighlightsLevel(level: 'NONE' | 'GOALS_ONLY' | 'KEY_MOMENTS'): void {
+    if (this.teamService.alwaysContinue) return;
     if (this.matchHighlightsLevel === level) return;
     this.matchHighlightsLevel = level;
     localStorage.setItem('fm_matchHighlightsLevel', level);
@@ -645,6 +661,7 @@ export class StaffComponent implements OnInit, OnDestroy {
   }
 
   togglePressConferences(): void {
+    if (this.teamService.alwaysContinue) return;
     this.attendPressConferences = !this.attendPressConferences;
     const teamId = this.teamService.teamId;
     this.http.post<any>(urlApp + `/managers/responsibilities/${teamId}`, {

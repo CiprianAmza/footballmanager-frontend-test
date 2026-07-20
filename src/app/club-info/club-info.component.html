@@ -2,9 +2,13 @@
   
     <div class="club-header">
       <div class="logo-section">
-        <div class="club-logo" [style.background-color]="club.kits[0].primaryColor">
-          {{ club.name | slice:0:1 }}
-        </div>
+        <app-team-crest
+          [teamId]="club.id"
+          [teamName]="club.name"
+          [color1]="club.color1"
+          [color2]="club.color2"
+          [size]="82">
+        </app-team-crest>
       </div>
       
       <div class="title-section">
@@ -35,6 +39,11 @@
                   [class.active]="activeTab === 'stats'"
                   (click)="switchTab('stats')">
               Stats
+          </button>
+          <button class="nav-btn"
+                  [class.active]="activeTab === 'matches'"
+                  (click)="switchTab('matches')">
+              Matches
           </button>
           <button class="nav-btn" (click)="goToTransfers()">
               Transfers <span style="font-size: 0.8em; opacity: 0.7;">↗</span>
@@ -101,7 +110,15 @@
                         <span class="role">Manager</span>
                         <div class="person-info">
                             <div class="face-icon">👔</div>
-                            <span class="p-name">{{ club.managerName }}</span>
+                            <a *ngIf="currentManager?.managerId; else vacantManager"
+                               class="p-name manager-link"
+                               [routerLink]="['/manager-profile', currentManager?.managerId]"
+                               [attr.aria-label]="'Open manager profile for ' + club.managerName">
+                                {{ club.managerName }}
+                            </a>
+                            <ng-template #vacantManager>
+                                <span class="p-name vacant-role">Vacant</span>
+                            </ng-template>
                         </div>
                     </div>
                     <div class="person-row">
@@ -224,6 +241,10 @@
 
         <div class="tab-content" *ngIf="activeTab === 'tactics'">
             <app-tactics [teamId]="teamId"></app-tactics>
+        </div>
+
+        <div class="tab-content" *ngIf="activeTab === 'matches'">
+            <app-fixtures [teamIdInput]="teamId"></app-fixtures>
         </div>
 
         <div class="tab-content" *ngIf="activeTab === 'stats'">

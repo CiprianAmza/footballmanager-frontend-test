@@ -16,7 +16,8 @@
     <button class="tab-btn" [class.active]="activeTab === 'market'" (click)="switchTab('market')">Transfer Market</button>
     <button class="tab-btn" [class.active]="activeTab === 'incoming'" (click)="switchTab('incoming')">
       Incoming Offers
-      <span class="badge" *ngIf="incomingOffers.length > 0">{{ incomingOffers.length }}</span>
+      <span class="badge" *ngIf="incomingOfferGroups.length > 0"
+            [title]="incomingOffers.length + ' active offer(s)'">{{ incomingOfferGroups.length }}</span>
     </button>
     <button class="tab-btn" [class.active]="activeTab === 'outgoing'" (click)="switchTab('outgoing')">Outgoing Offers</button>
     <button class="tab-btn" [class.active]="activeTab === 'history'" (click)="switchTab('history')">Transfer History</button>
@@ -49,6 +50,10 @@
     </div>
 
     <div class="panel">
+      <div class="market-summary">
+        <span>{{ marketTotalElements }} players</span>
+        <span *ngIf="marketTotalPages > 0">Page {{ marketPage + 1 }} of {{ marketTotalPages }}</span>
+      </div>
       <div class="table-responsive">
         <table class="transfer-table">
           <thead>
@@ -87,18 +92,28 @@
                 </button>
               </td>
             </tr>
-            <tr *ngIf="filteredPlayers.length === 0">
+            <tr *ngIf="marketLoading">
+              <td colspan="8" class="no-data">Loading transfer market...</td>
+            </tr>
+            <tr *ngIf="!marketLoading && filteredPlayers.length === 0">
               <td colspan="8" class="no-data">No players available matching your criteria.</td>
             </tr>
           </tbody>
         </table>
+      </div>
+      <div class="market-pagination" *ngIf="marketTotalPages > 1">
+        <button class="sort-btn" (click)="changeMarketPage(-1)"
+                [disabled]="marketPage === 0 || marketLoading">Previous</button>
+        <span>{{ marketPage + 1 }} / {{ marketTotalPages }}</span>
+        <button class="sort-btn" (click)="changeMarketPage(1)"
+                [disabled]="marketPage + 1 >= marketTotalPages || marketLoading">Next</button>
       </div>
     </div>
   </div>
 
   <!-- ======================== TAB 2: INCOMING OFFERS ======================== -->
   <div class="tab-content" *ngIf="activeTab === 'incoming'">
-    <div class="panel">
+    <div class="panel incoming-offers-panel">
       <div class="panel-header">
         <span class="indicator in">IN</span>
         OFFERS FROM OTHER CLUBS
@@ -116,9 +131,33 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let offer of incomingOffers">
-              <td class="player-cell">
-                <a [routerLink]="['/player', offer.playerId]" class="fm-link">{{ offer.playerName }}</a>
+            <ng-container *ngFor="let group of incomingOfferGroups">
+            <tr *ngFor="let offer of group.offers; let first = first; let last = last"
+                class="grouped-offer-row" [class.offer-group-start]="first" [class.offer-group-end]="last">
+              <td class="player-cell grouped-player-cell" *ngIf="first" [attr.rowspan]="group.offers.length">
+                <span class="player-hover-card">
+                  <a [routerLink]="['/player', group.player.playerId]" class="fm-link player-hover-link">
+                    {{ group.player.playerName }} <span class="player-info-icon" aria-hidden="true">i</span>
+                  </a>
+                  <small class="offer-count-label">
+                    {{ group.offers.length }} active offer{{ group.offers.length === 1 ? '' : 's' }}
+                  </small>
+                  <span class="player-mini-card" role="tooltip">
+                    <span class="mini-card-header">
+                      <span>
+                        <strong>{{ group.player.playerName }}</strong>
+                        <small>{{ group.player.position || 'Player' }}</small>
+                      </span>
+                      <b>{{ group.player.rating == null ? '–' : (group.player.rating | number:'1.1-2') }}</b>
+                    </span>
+                    <span class="mini-card-grid">
+                      <span><small>Age</small><strong>{{ group.player.age ?? '–' }}</strong></span>
+                      <span><small>Apps this season</small><strong>{{ group.player.seasonMatchesPlayed ?? 0 }}</strong></span>
+                      <span class="wide"><small>Contract</small><strong>{{ contractSummary(group.player) }}</strong></span>
+                      <span class="wide"><small>Current wage</small><strong>{{ formatCurrency(group.player.currentWage || 0) }} / month</strong></span>
+                    </span>
+                  </span>
+                </span>
               </td>
               <td><a [routerLink]="['/team', offer.fromTeamId]" class="fm-link">{{ offer.fromTeamName }}</a></td>
               <td class="money-cell text-right">{{ formatCurrency(offer.offerAmount) }}</td>
@@ -141,7 +180,8 @@
                 </div>
               </td>
             </tr>
-            <tr *ngIf="incomingOffers.length === 0">
+            </ng-container>
+            <tr *ngIf="incomingOfferGroups.length === 0">
               <td colspan="6" class="no-data">No incoming offers at this time.</td>
             </tr>
           </tbody>

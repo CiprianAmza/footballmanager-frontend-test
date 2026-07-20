@@ -1,0 +1,26 @@
+:host {
+  display: inline-flex;
+  flex: 0 0 auto;
+  line-height: 0;
+}
+
+.team-crest {
+  display: block;
+  overflow: visible;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .34));
+}
+
+.team-crest > g:first-of-type {
+  stroke: rgba(7, 10, 18, .75);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.crest-initials {
+  fill: #fff;
+  stroke: rgba(0, 0, 0, .62);
+  stroke-width: 3px;
+  paint-order: stroke fill;
+  font: 900 25px/1 'Segoe UI', sans-serif;
+  letter-spacing: -1px;
+}

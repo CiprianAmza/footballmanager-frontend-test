@@ -4,6 +4,23 @@ import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { urlApp } from '../app.component';
 import { AuthService } from './auth.service';
 
+export interface FastForwardStatus {
+  jobId: string | null;
+  status: 'IDLE' | 'RUNNING' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
+  seasonsRequested: number;
+  startSeason: number;
+  targetSeason: number;
+  currentSeason: number;
+  currentDay: number;
+  currentPhase: string;
+  completedSeasons: number;
+  processedDays: number;
+  percent: number;
+  elapsedMs: number;
+  message: string;
+  cancellable: boolean;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -40,6 +57,15 @@ export class TeamService {
   // Auto-continue settings
   autoContinue = false;
   autoContinueMatchReport = false;
+  alwaysContinue = false;
+
+  get autoContinueEnabled(): boolean {
+    return this.alwaysContinue || this.autoContinue;
+  }
+
+  get autoDismissMatchReport(): boolean {
+    return this.alwaysContinue || (this.autoContinue && this.autoContinueMatchReport);
+  }
 
   currentDay$ = this.currentDaySubject.asObservable();
   currentPhase$ = this.currentPhaseSubject.asObservable();
@@ -94,6 +120,7 @@ export class TeamService {
           this.teamIdSubject.next(result.humanTeamId);
           this.setupCompleteSubject.next(true);
           // Now load game data
+          this.loadManagerResponsibilities(result.humanTeamId);
           this.loadCurrentSeason();
           this.checkManagerFired();
           this.loadGameState();
@@ -124,6 +151,7 @@ export class TeamService {
       // race where the FE momentarily renders the team-side UI.
       this.managerFiredSubject.next(true);
     } else {
+      this.loadManagerResponsibilities(teamId);
       this.checkManagerFired();
     }
     this.loadGameState();
@@ -184,6 +212,18 @@ export class TeamService {
     return this.http.post<any>(urlApp + '/game/advance', {});
   }
 
+  startFastForward(seasons: number, chunkDays: number): Observable<FastForwardStatus> {
+    return this.http.post<FastForwardStatus>(urlApp + '/game/fast-forward', { seasons, chunkDays });
+  }
+
+  getFastForwardStatus(): Observable<FastForwardStatus> {
+    return this.http.get<FastForwardStatus>(urlApp + '/game/fast-forward');
+  }
+
+  cancelFastForward(jobId: string): Observable<FastForwardStatus> {
+    return this.http.delete<FastForwardStatus>(urlApp + `/game/fast-forward/${jobId}`);
+  }
+
   // Update state from response
   updateFromState(state: any): void {
     if (state.day) this.currentDaySubject.next(state.day);
@@ -195,6 +235,7 @@ export class TeamService {
     if (state.paused !== undefined) this.gamePausedSubject.next(state.paused);
     if (state.transferWindowOpen !== undefined) this.transferWindowOpenSubject.next(state.transferWindowOpen);
     if (state.managerFired !== undefined) this.managerFiredSubject.next(state.managerFired);
+    if (state.alwaysContinue !== undefined) this.setAlwaysContinue(state.alwaysContinue === true);
     if (state.eventsProcessed) this.lastEventsSubject.next(state.eventsProcessed);
     this.refreshSubject.next();
   }
@@ -228,6 +269,29 @@ export class TeamService {
 
   setManagerFired(fired: boolean): void {
     this.managerFiredSubject.next(fired);
+  }
+
+  setAlwaysContinue(enabled: boolean): void {
+    const wasEnabled = this.alwaysContinue;
+    this.alwaysContinue = enabled;
+    if (enabled) {
+      // The persistent mode includes both transient automation preferences.
+      this.autoContinue = true;
+      this.autoContinueMatchReport = true;
+    } else if (wasEnabled) {
+      // Do not leave automation running under a stale client-only flag when the
+      // backend reports that persistent unattended mode is no longer effective.
+      this.autoContinue = false;
+      this.autoContinueMatchReport = false;
+    }
+  }
+
+  private loadManagerResponsibilities(teamId: number): void {
+    if (!teamId) return;
+    this.http.get<any>(urlApp + `/managers/responsibilities/${teamId}`).subscribe({
+      next: (data) => this.setAlwaysContinue(data.alwaysContinue === true),
+      error: (err) => console.error('Error loading manager responsibilities:', err)
+    });
   }
 
   getTeamCompetitions(teamId: number): Observable<any[]> {

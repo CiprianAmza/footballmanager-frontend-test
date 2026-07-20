@@ -81,8 +81,9 @@
 
 .score-badge {
     margin: 0 15px;
-    width: 40px; height: 30px;
-    display: flex; justify-content: center; align-items: center;
+    min-width: 74px; min-height: 34px;
+    padding: 3px 7px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
     background-color: #1b1b1b;
     border-radius: 4px;
     font-weight: 900;
@@ -92,6 +93,7 @@
 
 .score { color: #fff; font-size: 1.2em; }
 .vs { color: #777; font-size: 0.9em; }
+.decision { color: #f1c40f; font-family: 'Segoe UI', sans-serif; font-size: 9px; line-height: 1.1; }
 
 /* Footer */
 .round-footer { text-align: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }

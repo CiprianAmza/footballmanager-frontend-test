@@ -105,6 +105,117 @@
     text-transform: uppercase;
 }
 
+/* Player stats */
+.player-stats-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.player-stats-scope {
+    color: #777;
+    font-size: 0.72em;
+    letter-spacing: 0.45px;
+}
+
+.player-stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.player-stat-row {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-height: 58px;
+    padding: 9px 10px;
+    background: #202020;
+    border: 1px solid #323232;
+    border-radius: 6px;
+}
+
+.player-stat-rank {
+    color: #ff6b6b;
+    font-size: 1.05em;
+    font-weight: 800;
+    text-align: center;
+}
+
+.player-stat-identity {
+    min-width: 0;
+}
+
+.player-stat-name {
+    display: block;
+    overflow: hidden;
+    color: #f2f2f2;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.player-stat-meta {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 4px;
+    color: #888;
+    font-size: 0.72em;
+}
+
+.player-stat-position {
+    padding: 2px 5px;
+    color: #d4d4d4;
+    background: #393939;
+    border-radius: 3px;
+    font-weight: 700;
+}
+
+.player-stat-metrics {
+    display: flex;
+    align-items: stretch;
+    gap: 5px;
+}
+
+.player-stat-metric {
+    min-width: 30px;
+    padding: 5px 4px;
+    text-align: center;
+    background: #2b2b2b;
+    border-radius: 4px;
+}
+
+.player-stat-metric strong,
+.player-stat-metric small {
+    display: block;
+}
+
+.player-stat-metric strong {
+    color: #f4f4f4;
+    font-size: 0.88em;
+}
+
+.player-stat-metric small {
+    margin-top: 1px;
+    color: #888;
+    font-size: 0.56em;
+    font-weight: 800;
+}
+
+.player-stat-metric.rating {
+    min-width: 42px;
+    background: rgba(241, 196, 15, 0.12);
+}
+
+.player-stat-metric.rating strong,
+.player-stat-metric.rating small {
+    color: #f1c40f;
+}
+
 .red-text { color: #ff6b6b; }
 .blue-text { color: #6bb4ff; }
 

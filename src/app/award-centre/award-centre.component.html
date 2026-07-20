@@ -1,0 +1,82 @@
+<div class="awards-page">
+  <div class="awards-nav">
+    <a routerLink="/overview" [queryParams]="{view: 'statistics'}">← Overview</a>
+    <a routerLink="/awards/global" routerLinkActive="active">Global awards</a>
+    <a routerLink="/awards/golden-boot">Golden Boot history</a>
+    <a routerLink="/awards/ballon-dor">Ballon d'Or history</a>
+  </div>
+
+  <div class="award-state" *ngIf="loading">Loading the honours archive...</div>
+  <div class="award-state error" *ngIf="!loading && error">{{ error }} <button (click)="load()">Try again</button></div>
+
+  <ng-container *ngIf="!loading && !error && data as centre">
+    <header class="centre-hero">
+      <div class="hero-mark">🏆</div>
+      <div>
+        <span>{{ centre.scopeType === 'GLOBAL' ? 'WORLD FOOTBALL' : 'COMPETITION HONOURS' }}</span>
+        <h1>{{ centre.scopeType === 'GLOBAL' ? 'Global Awards' : centre.scopeName + ' Awards' }}</h1>
+        <p>Official end-of-season winners, permanently recorded when the awards ceremony is played.</p>
+      </div>
+      <label class="season-picker" *ngIf="centre.seasons.length">
+        <span>Season</span>
+        <select [(ngModel)]="selectedSeason">
+          <option *ngFor="let season of centre.seasons" [ngValue]="season.season">Season {{ season.season }}</option>
+        </select>
+      </label>
+    </header>
+
+    <div class="award-state empty" *ngIf="!centre.seasons.length">
+      No ceremony has been completed yet. Awards will appear here at the end of the season.
+    </div>
+
+    <section class="award-grid" *ngIf="visibleSeason as season">
+      <ng-container *ngFor="let award of season.awards">
+        <article class="toty-card" *ngIf="isTeamOfYear(award); else singleAward">
+          <div class="card-heading">
+            <span class="award-icon">{{ icon(award.awardType) }}</span>
+            <div><h2>{{ award.title }}</h2><p>{{ award.description }}</p></div>
+          </div>
+          <div class="award-pitch">
+            <div class="half-line"></div><div class="centre-circle"></div>
+            <a *ngFor="let winner of award.winners" class="xi-player"
+               [ngStyle]="position(winner.selectionSlot)" [routerLink]="['/player', winner.playerId]">
+              <app-player-face [size]="48" [baseFaceId]="winner.baseFaceId" [skinTone]="winner.skinTone"
+                               [hairStyle]="winner.hairStyle" [hairColor]="winner.hairColor"
+                               [eyeColor]="winner.eyeColor" [faceShape]="winner.faceShape"
+                               [noseShape]="winner.noseShape" [eyeShape]="winner.eyeShape"
+                               [mouthShape]="winner.mouthShape" [browShape]="winner.browShape"
+                               [species]="winner.species || 'human'"></app-player-face>
+              <strong>{{ winner.selectionSlot }} · {{ winner.playerName }}</strong>
+              <small>{{ winner.teamName }}</small>
+            </a>
+          </div>
+        </article>
+
+        <ng-template #singleAward>
+          <article class="award-card" *ngIf="award.winners[0] as winner">
+            <div class="card-heading">
+              <span class="award-icon">{{ icon(award.awardType) }}</span>
+              <div><h2>{{ award.title }}</h2><p>{{ award.description }}</p></div>
+            </div>
+            <div class="winner-body">
+              <app-player-face [size]="78" [baseFaceId]="winner.baseFaceId" [skinTone]="winner.skinTone"
+                               [hairStyle]="winner.hairStyle" [hairColor]="winner.hairColor"
+                               [eyeColor]="winner.eyeColor" [faceShape]="winner.faceShape"
+                               [noseShape]="winner.noseShape" [eyeShape]="winner.eyeShape"
+                               [mouthShape]="winner.mouthShape" [browShape]="winner.browShape"
+                               [species]="winner.species || 'human'"></app-player-face>
+              <div class="winner-identity">
+                <a *ngIf="!isManager(award)" [routerLink]="['/player', winner.playerId]">{{ winner.playerName }}</a>
+                <a *ngIf="isManager(award)" [routerLink]="['/manager-profile', winner.playerId]">{{ winner.playerName }}</a>
+                <span><app-team-crest [teamId]="winner.teamId" [teamName]="winner.teamName"
+                                      [color1]="winner.teamColor1" [color2]="winner.teamColor2"
+                                      [size]="28"></app-team-crest>{{ winner.teamName }}</span>
+              </div>
+            </div>
+            <div class="winning-value">{{ winner.value }}</div>
+          </article>
+        </ng-template>
+      </ng-container>
+    </section>
+  </ng-container>
+</div>

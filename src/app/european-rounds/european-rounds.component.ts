@@ -30,6 +30,48 @@ interface GroupStanding {
   points: number;
 }
 
+interface DrawTeam {
+  teamId: number;
+  teamName: string;
+  coefficient: number;
+  reputation: number;
+}
+
+interface DrawPot {
+  potNumber: number;
+  label: string;
+  teams: DrawTeam[];
+}
+
+interface DrawPairing {
+  team1: DrawTeam;
+  team2: DrawTeam;
+  twoLeg: boolean;
+}
+
+interface DrawGroup {
+  groupNumber: number;
+  teams: DrawTeam[];
+}
+
+interface EuropeanDraw {
+  matchday: number;
+  round: number;
+  stageLabel: string;
+  drawDay: number;
+  drawDate: string;
+  matchDay: number;
+  matchDate: string;
+  daysUntilDraw: number;
+  status: 'POTS_PUBLISHED' | 'WAITING_FOR_TEAMS' | 'DRAW_COMPLETED';
+  statusLabel: string;
+  knownTeams: number;
+  expectedTeams: number;
+  pots: DrawPot[];
+  pairings: DrawPairing[];
+  groups: DrawGroup[];
+}
+
 @Component({
   selector: 'app-european-rounds',
   templateUrl: './european-rounds.component.html',
@@ -55,6 +97,9 @@ export class EuropeanRoundsComponent implements OnInit {
   roundNumbers: number[] = [];
 
   selectedRound: number = 1;
+  stageLabels: Map<number, string> = new Map();
+  draws: EuropeanDraw[] = [];
+  selectedDrawMatchday: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -84,6 +129,15 @@ export class EuropeanRoundsComponent implements OnInit {
         this.totalRounds = info.totalRounds || 0;
         this.groupRounds = info.groupRounds || 0;
         this.qualifyingRounds = info.qualifyingRounds || 0;
+        this.stageLabels = new Map((info.stages || []).map((stage: any) => [Number(stage.round), stage.label]));
+      });
+
+    this.http.get<EuropeanDraw[]>(urlApp + `/competition/europeanDraws/${this.competitionId}/${this.season}`)
+      .subscribe(data => {
+        this.draws = data || [];
+        const nextDraw = this.draws.find(draw => draw.status !== 'DRAW_COMPLETED');
+        const fallback = this.draws.length > 0 ? this.draws[this.draws.length - 1] : null;
+        this.selectedDrawMatchday = (nextDraw || fallback)?.matchday ?? null;
       });
 
     // Load group standings (only relevant for LoC, but safe to call for any)
@@ -128,38 +182,7 @@ export class EuropeanRoundsComponent implements OnInit {
   }
 
   getRoundLabel(r: number): string {
-    // LoC (typeId 4)
-    if (this.typeId === 4) {
-      if (r === 0) return 'Preliminary Round';
-      if (r === 1) return 'Qualifying Round';
-      if (r >= 2 && r <= 7) return 'Matchday ' + (r - 1);
-      if (r === 8) return 'Quarter-Final';
-      if (r === 9) return 'Semi-Final';
-      if (r === 10) return 'Final';
-      return 'Round ' + r;
-    }
-
-    // Stars Cup (typeId 5) - group stage + knockout
-    if (this.typeId === 5) {
-      if (r >= 1 && r <= 6) return 'Matchday ' + r;
-      if (r === 7) return 'Playoff Round';
-      if (r === 8) return 'Quarter-Final';
-      if (r === 9) return 'Semi-Final';
-      if (r === 10) return 'Final';
-      return 'Round ' + r;
-    }
-
-    // Generic knockout
-    if (this.totalRounds > 0) {
-      const fromEnd = this.totalRounds - r + 1;
-      if (fromEnd === 1) return 'Final';
-      if (fromEnd === 2) return 'Semi-Final';
-      if (fromEnd === 3) return 'Quarter-Final';
-      if (fromEnd === 4) return 'Round of 16';
-      return 'Round ' + r;
-    }
-
-    return 'Round ' + r;
+    return this.stageLabels.get(r) || `Round ${r}`;
   }
 
   changeSeason(delta: number): void {
@@ -178,4 +201,17 @@ export class EuropeanRoundsComponent implements OnInit {
     if (potNumber > 0) return 'P' + potNumber;
     return '';
   }
+
+  get selectedDraw(): EuropeanDraw | null {
+    return this.draws.find(draw => draw.matchday === this.selectedDrawMatchday) || null;
+  }
+
+  selectDraw(matchday: number): void {
+    this.selectedDrawMatchday = Number(matchday);
+  }
+
+  drawStatusClass(status: EuropeanDraw['status']): string {
+    return status.toLowerCase().replace(/_/g, '-');
+  }
+
 }

@@ -1,0 +1,39 @@
+.comparison-table th.active-sort {
+  color: #f1c40f;
+}
+
+.sort-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-weight: 800;
+  text-transform: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sort-header span {
+  min-width: 11px;
+  color: #626882;
+  font-size: 9px;
+}
+
+.active-sort .sort-header span {
+  color: #f1c40f;
+}
+
+.sort-header:hover,
+.sort-header:focus-visible {
+  color: #fff;
+}
+
+.sort-header:focus-visible {
+  outline: 2px solid #47b8f5;
+  outline-offset: 4px;
+  border-radius: 2px;
+}

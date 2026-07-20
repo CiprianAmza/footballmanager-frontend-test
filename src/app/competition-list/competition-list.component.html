@@ -52,22 +52,46 @@
         </div>
       </div>
 
-      <!-- CUP INFO (typeId 2) -->
-      <div class="card-section" *ngIf="isCup(comp)">
-        <div class="info-block">
-          <span class="label">CURRENT ROUND</span>
-          <div class="position-box">
-            <span class="pos-val">{{ getCupRoundLabel(comp.cupRound) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- EUROPEAN COMPETITION INFO (typeId 4 or 5) -->
-      <div class="card-section" *ngIf="isEuropean(comp)">
+      <!-- Cup / European lifecycle is fully described by the backend. -->
+      <div class="card-section lifecycle" *ngIf="isCup(comp) || isEuropean(comp)">
         <div class="info-block">
           <span class="label">STATUS</span>
           <div class="position-box">
-            <span class="pos-val">Qualified</span>
+            <span class="pos-val lifecycle-status">{{ comp.statusLabel || comp.currentStage }}</span>
+          </div>
+        </div>
+
+        <div class="journey-grid">
+          <div class="journey-row">
+            <span>ENTRY</span>
+            <strong>{{ comp.entryStage || comp.start?.stage }}</strong>
+          </div>
+
+          <div class="journey-row next" *ngIf="comp.nextMatch as match">
+            <span>NEXT MATCH</span>
+            <strong>vs {{ match.opponentTeamName }}</strong>
+            <small>
+              {{ match.stage }} · {{ match.venue === 'HOME' ? 'Home' : 'Away' }}
+              <ng-container *ngIf="match.date"> · {{ match.date }}</ng-container>
+              <ng-container *ngIf="match.legNumber"> · Leg {{ match.legNumber }}</ng-container>
+            </small>
+          </div>
+
+          <div class="journey-row eliminated" *ngIf="comp.elimination as elimination">
+            <span>ELIMINATED</span>
+            <strong *ngIf="elimination.byTeamName">by {{ elimination.byTeamName }}</strong>
+            <strong *ngIf="!elimination.byTeamName">via group table</strong>
+            <small>
+              {{ elimination.stage }}
+              <ng-container *ngIf="elimination.score"> · {{ elimination.score }}</ng-container>
+              <ng-container *ngIf="elimination.date"> · {{ elimination.date }}</ng-container>
+            </small>
+          </div>
+
+          <div class="journey-row pending"
+               *ngIf="!comp.nextMatch && !comp.elimination && (comp.status === 'NOT_STARTED' || comp.status === 'QUALIFIED_FOR_STAGE' || comp.status === 'QUALIFIED')">
+            <span>NEXT</span>
+            <strong>Draw / fixture pending</strong>
           </div>
         </div>
       </div>

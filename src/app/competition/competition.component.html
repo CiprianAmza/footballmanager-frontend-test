@@ -4,7 +4,7 @@
   <div class="comp-header">
     <div class="header-left">
       <div class="comp-logo-wrapper">
-        <img src="assets/logos/competition_default.png" class="comp-logo" alt="Logo">
+        <span class="comp-logo" aria-hidden="true">FM</span>
       </div>
       <div class="header-titles">
         <span class="subtitle">COMPETITION</span>
@@ -19,6 +19,9 @@
          title="See the media's pre-season predicted finishing order">
         📊 Media Prediction
       </a>
+      <a class="fm-action-link" [routerLink]="['/awards/competition', parameterCompetitionId]">
+        🏆 Awards
+      </a>
       <div class="season-selector">
         <span class="label">SEASON</span>
         <!-- 🔹 Folosim ngModel pentru a lega variabila 'selectedSeason' -->
@@ -30,6 +33,11 @@
       </div>
     </div>
   </div>
+
+  <app-competition-insights
+      [competitionId]="parameterCompetitionId"
+      [season]="selectedSeason">
+  </app-competition-insights>
 
   <!-- 2. CONTENT SWITCHER -->
 
@@ -89,7 +97,9 @@
                         </td>
                         <td class="team-col">
                             <div class="team-flex">
-                                <div class="mini-logo" [style.background-color]="team.color1 || '#333'"></div>
+                                <app-team-crest [teamId]="team.teamId" [teamName]="team.name"
+                                                [color1]="team.color1" [color2]="team.color2"
+                                                [size]="24"></app-team-crest>
                                 <a [routerLink]="['/team', team.teamId]" class="fm-link">
                                     {{ team.name }}
                                 </a>

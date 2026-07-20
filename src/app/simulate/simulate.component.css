@@ -64,6 +64,46 @@
 .status { padding: 12px; text-align: center; color: #888; background: #12122a; border-radius: 4px; }
 .status.error { color: #ff6b6b; }
 
+.sim-loading-card {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 15px;
+  align-items: start;
+  margin-bottom: 14px;
+  padding: 18px;
+  background: #151b29;
+  border: 1px solid #2b3850;
+  border-radius: 8px;
+}
+.sim-loading-card strong { color: #fff; }
+.sim-loading-card p { margin: 5px 0 13px; color: #8e9aae; font-size: 12px; line-height: 1.45; }
+.sim-loading-spinner {
+  width: 34px;
+  height: 34px;
+  border: 4px solid #2b3850;
+  border-top-color: #2ecc71;
+  border-radius: 50%;
+  animation: simSpin .8s linear infinite;
+}
+.sim-loading-track {
+  height: 5px;
+  overflow: hidden;
+  background: #293246;
+  border-radius: 999px;
+}
+.sim-loading-track span {
+  display: block;
+  width: 35%;
+  height: 100%;
+  background: linear-gradient(90deg, #27ae60, #6ce49b);
+  animation: simLoading 1.25s ease-in-out infinite;
+}
+@keyframes simSpin { to { transform: rotate(360deg); } }
+@keyframes simLoading {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(300%); }
+}
+
 .sim-table { width: 100%; border-collapse: collapse; font-size: 0.9em; background: #1a1a2e; }
 .sim-table th, .sim-table td {
   padding: 8px 10px; text-align: left; border-bottom: 1px solid #2a2a4a;

@@ -1,24 +1,71 @@
 <div class="mr-wrap">
-  <div *ngIf="loading" class="mr-msg">Loading player ratings…</div>
-  <div *ngIf="error && !loading" class="mr-msg">No player ratings stored for this match yet.</div>
+  <div *ngIf="loading" class="mr-msg">Loading lineups…</div>
+  <div *ngIf="error && !loading" class="mr-msg">The lineups could not be loaded.</div>
 
-  <div class="mr-grid" *ngIf="data && !loading">
-    <div class="mr-team" *ngFor="let side of [{name: data.homeTeamName, lineup: data.homeLineup}, {name: data.awayTeamName, lineup: data.awayLineup}]">
+  <div class="formation-heading" *ngIf="data && !loading && hasLineups()">
+    <span>{{ formatFormation(data.homeFormation) }}</span>
+    <strong>FORMATIONS</strong>
+    <span>{{ formatFormation(data.awayFormation) }}</span>
+  </div>
+
+  <div class="mr-grid" *ngIf="data && !loading && hasLineups()">
+    <section class="mr-team" *ngFor="let side of sides" [class.away-side]="side.side === 'away'">
       <h3 class="mr-team-name">{{ side.name }}</h3>
-      <table class="fm-table mr-table">
-        <thead>
-          <tr><th>Player</th><th>Pos</th><th>Age</th><th>Nation</th><th>Rating</th></tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let p of sorted(side.lineup)">
-            <td class="mr-name"><a class="fm-link" [routerLink]="['/player', p.playerId]">{{ p.playerName }}</a></td>
-            <td>{{ p.position }}</td>
-            <td>{{ p.age }}</td>
-            <td>{{ p.nationName }}</td>
-            <td><span class="mr-rating" [ngClass]="ratingClass(p.rating)">{{ p.rating | number:'1.0-0' }}</span></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+
+      <div class="team-pitch">
+        <div class="pitch-halfway"></div>
+        <div class="pitch-circle"></div>
+        <div class="pitch-box top"></div>
+        <div class="pitch-box bottom"></div>
+
+        <div class="pitch-player"
+             *ngFor="let p of starters(side.lineup); trackBy: trackByPlayer"
+             [style.grid-column]="gridColumn(p.positionIndex)"
+             [style.grid-row]="gridRow(p.positionIndex)"
+             [title]="p.role ? p.role + (p.duty ? ' · ' + p.duty : '') : p.position">
+          <div class="face-wrap">
+            <app-player-face
+              [baseFaceId]="p.baseFaceId" [skinTone]="p.skinTone"
+              [hairStyle]="p.hairStyle" [hairColor]="p.hairColor" [eyeColor]="p.eyeColor"
+              [faceShape]="p.faceShape" [noseShape]="p.noseShape" [eyeShape]="p.eyeShape"
+              [mouthShape]="p.mouthShape" [browShape]="p.browShape"
+              [species]="p.species || 'human'" [size]="58">
+            </app-player-face>
+            <span class="mr-rating" [ngClass]="ratingClass(p.performanceRating)"
+                  *ngIf="p.performanceRating > 0">{{ p.performanceRating | number:'1.1-1' }}</span>
+          </div>
+          <a class="player-label" [routerLink]="['/player', p.playerId]">
+            <span class="shirt-number">{{ p.position }}</span>{{ p.playerName }}
+          </a>
+          <span class="player-contribution" *ngIf="p.goals || p.assists">
+            <ng-container *ngIf="p.goals">⚽ {{ p.goals }}</ng-container>
+            <ng-container *ngIf="p.assists"> · A {{ p.assists }}</ng-container>
+          </span>
+        </div>
+      </div>
+
+      <div class="bench" *ngIf="bench(side.lineup).length">
+        <div class="bench-title">SUBSTITUTES</div>
+        <a class="bench-player" *ngFor="let p of bench(side.lineup); trackBy: trackByPlayer"
+           [routerLink]="['/player', p.playerId]">
+          <app-player-face
+            [baseFaceId]="p.baseFaceId" [skinTone]="p.skinTone"
+            [hairStyle]="p.hairStyle" [hairColor]="p.hairColor" [eyeColor]="p.eyeColor"
+            [faceShape]="p.faceShape" [noseShape]="p.noseShape" [eyeShape]="p.eyeShape"
+            [mouthShape]="p.mouthShape" [browShape]="p.browShape"
+            [species]="p.species || 'human'" [size]="38">
+          </app-player-face>
+          <span class="bench-name">{{ p.playerName }}<small>{{ p.position }}</small></span>
+          <span class="mr-rating small" [ngClass]="ratingClass(p.performanceRating)"
+                *ngIf="p.performanceRating > 0">{{ p.performanceRating | number:'1.1-1' }}</span>
+          <span class="did-not-play" *ngIf="!p.performanceRating">DNP</span>
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <div *ngIf="data && !loading && !hasLineups()" class="mr-msg empty-lineup">
+    No historical lineup was stored for this match. New matches will include the exact formation,
+    player faces and match ratings.
   </div>
 </div>

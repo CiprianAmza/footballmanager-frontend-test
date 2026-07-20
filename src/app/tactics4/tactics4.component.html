@@ -34,6 +34,12 @@
     </div>
     <div class="lab-actions">
       <button class="lab-btn ghost" (click)="askAssistant()">ASK ASSISTANT</button>
+      <button class="lab-btn danger"
+              (click)="removeAll()"
+              [disabled]="startersPicked === 0 && subsPicked === 0"
+              title="Remove every player from the starting XI and bench">
+        CLEAR LINEUP
+      </button>
       <button class="lab-btn solid" (click)="saveData()">SAVE</button>
     </div>
   </div>

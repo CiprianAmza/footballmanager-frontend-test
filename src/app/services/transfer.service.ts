@@ -17,6 +17,13 @@ export interface TransferOffer {
   seasonNumber: number;
   direction: string;
   createdAt: string;
+  position?: string;
+  rating?: number;
+  age?: number;
+  contractEndSeason?: number;
+  contractSeasonsRemaining?: number;
+  currentWage?: number;
+  seasonMatchesPlayed?: number;
 }
 
 export interface AvailablePlayer {
@@ -29,6 +36,14 @@ export interface AvailablePlayer {
   teamName: string;
   teamId: number;
   transferValue: number;
+}
+
+export interface AvailablePlayersPage {
+  content: AvailablePlayer[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
 }
 
 export interface ScoutReport {
@@ -114,6 +129,26 @@ export class TransferService {
 
   getAvailablePlayers(teamId: number): Observable<AvailablePlayer[]> {
     return this.http.get<AvailablePlayer[]>(urlApp + `/transferOffer/availablePlayers/${teamId}`);
+  }
+
+  getAvailablePlayersPage(
+    teamId: number,
+    page: number,
+    size: number,
+    position: string,
+    sort: string,
+    direction: 'asc' | 'desc'
+  ): Observable<AvailablePlayersPage> {
+    const params = new URLSearchParams({
+      page: String(page),
+      size: String(size),
+      position,
+      sort,
+      direction
+    });
+    return this.http.get<AvailablePlayersPage>(
+      `${urlApp}/transferOffer/availablePlayersPage/${teamId}?${params.toString()}`
+    );
   }
 
   getScoutReport(playerId: number, teamId: number): Observable<ScoutReport> {

@@ -253,59 +253,72 @@
           <div class="panel-body">
             <p class="resp-intro">Delegate responsibilities to your assistant manager.</p>
             <div class="resp-list">
-              <div class="resp-item">
+              <div class="resp-item always-continue-item" [class.always-continue-active]="teamService.alwaysContinue">
+                <div class="resp-info">
+                  <span class="resp-name">Always Continue</span>
+                  <span class="resp-desc">Unattended multi-season simulation. Never pauses for reports, press conferences, transfer windows, live matches, job offers or season transitions. The board will not dismiss you. Enable it, then press Continue once.</span>
+                </div>
+                <div class="resp-toggle">
+                  <label class="toggle-switch">
+                    <input type="checkbox" [checked]="teamService.alwaysContinue" (change)="toggleAlwaysContinue()">
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-label">{{ teamService.alwaysContinue ? 'Always' : 'Off' }}</span>
+                </div>
+              </div>
+              <div class="resp-item" [class.resp-disabled]="teamService.alwaysContinue">
                 <div class="resp-info">
                   <span class="resp-name">Press Conferences</span>
                   <span class="resp-desc">Attend pre-match press conferences.</span>
                 </div>
                 <div class="resp-toggle">
                   <label class="toggle-switch">
-                    <input type="checkbox" [checked]="attendPressConferences" (change)="togglePressConferences()">
+                    <input type="checkbox" [checked]="attendPressConferences" (change)="togglePressConferences()" [disabled]="teamService.alwaysContinue">
                     <span class="toggle-slider"></span>
                   </label>
                   <span class="toggle-label">{{ attendPressConferences ? 'Manager' : 'Assistant' }}</span>
                 </div>
               </div>
-              <div class="resp-item">
+              <div class="resp-item" [class.resp-disabled]="teamService.alwaysContinue">
                 <div class="resp-info">
                   <span class="resp-name">Auto-Continue</span>
                   <span class="resp-desc">Automatically advance the game day by day.</span>
                 </div>
                 <div class="resp-toggle">
                   <label class="toggle-switch">
-                    <input type="checkbox" [checked]="teamService.autoContinue" (change)="toggleAutoContinue()">
+                    <input type="checkbox" [checked]="teamService.autoContinueEnabled" (change)="toggleAutoContinue()" [disabled]="teamService.alwaysContinue">
                     <span class="toggle-slider"></span>
                   </label>
-                  <span class="toggle-label">{{ teamService.autoContinue ? 'On' : 'Off' }}</span>
+                  <span class="toggle-label">{{ teamService.alwaysContinue ? 'Always' : (teamService.autoContinue ? 'On' : 'Off') }}</span>
                 </div>
               </div>
-              <div class="resp-item" [class.resp-disabled]="!teamService.autoContinue">
+              <div class="resp-item" [class.resp-disabled]="!teamService.autoContinue || teamService.alwaysContinue">
                 <div class="resp-info">
                   <span class="resp-name">Auto-Continue Match Report</span>
                   <span class="resp-desc">Automatically dismiss match result screens.</span>
                 </div>
                 <div class="resp-toggle">
                   <label class="toggle-switch">
-                    <input type="checkbox" [checked]="teamService.autoContinueMatchReport" (change)="toggleAutoContinueMatchReport()" [disabled]="!teamService.autoContinue">
+                    <input type="checkbox" [checked]="teamService.autoDismissMatchReport" (change)="toggleAutoContinueMatchReport()" [disabled]="!teamService.autoContinue || teamService.alwaysContinue">
                     <span class="toggle-slider"></span>
                   </label>
-                  <span class="toggle-label">{{ teamService.autoContinueMatchReport ? 'On' : 'Off' }}</span>
+                  <span class="toggle-label">{{ teamService.alwaysContinue ? 'Always' : (teamService.autoContinueMatchReport ? 'On' : 'Off') }}</span>
                 </div>
               </div>
-              <div class="resp-item">
+              <div class="resp-item" [class.resp-disabled]="teamService.alwaysContinue">
                 <div class="resp-info">
                   <span class="resp-name">View Full Match</span>
                   <span class="resp-desc">Watch a live minute-by-minute simulation of your matches.</span>
                 </div>
                 <div class="resp-toggle">
                   <label class="toggle-switch">
-                    <input type="checkbox" [checked]="viewFullMatch" (change)="toggleViewFullMatch()">
+                    <input type="checkbox" [checked]="viewFullMatch" (change)="toggleViewFullMatch()" [disabled]="teamService.alwaysContinue">
                     <span class="toggle-slider"></span>
                   </label>
                   <span class="toggle-label">{{ viewFullMatch ? 'On' : 'Off' }}</span>
                 </div>
               </div>
-              <div class="resp-item" [class.resp-disabled]="!viewFullMatch">
+              <div class="resp-item" [class.resp-disabled]="!viewFullMatch || teamService.alwaysContinue">
                 <div class="resp-info">
                   <span class="resp-name">Match Highlights</span>
                   <span class="resp-desc">How much of each match you want to see animated.</span>
@@ -315,21 +328,21 @@
                     <input type="radio" name="matchHighlightsLevel" value="NONE"
                            [checked]="matchHighlightsLevel === 'NONE'"
                            (change)="setMatchHighlightsLevel('NONE')"
-                           [disabled]="!viewFullMatch">
+                           [disabled]="!viewFullMatch || teamService.alwaysContinue">
                     <span>None</span>
                   </label>
                   <label class="radio-pill">
                     <input type="radio" name="matchHighlightsLevel" value="GOALS_ONLY"
                            [checked]="matchHighlightsLevel === 'GOALS_ONLY'"
                            (change)="setMatchHighlightsLevel('GOALS_ONLY')"
-                           [disabled]="!viewFullMatch">
+                           [disabled]="!viewFullMatch || teamService.alwaysContinue">
                     <span>Goals only</span>
                   </label>
                   <label class="radio-pill">
                     <input type="radio" name="matchHighlightsLevel" value="KEY_MOMENTS"
                            [checked]="matchHighlightsLevel === 'KEY_MOMENTS'"
                            (change)="setMatchHighlightsLevel('KEY_MOMENTS')"
-                           [disabled]="!viewFullMatch">
+                           [disabled]="!viewFullMatch || teamService.alwaysContinue">
                     <span>Key moments</span>
                   </label>
                 </div>

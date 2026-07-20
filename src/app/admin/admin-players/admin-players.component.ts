@@ -11,11 +11,11 @@ export class AdminPlayersComponent implements OnInit {
 
   teamId: number | null = null;
   name = '';
-  position = 'CM';
+  position = 'MC';
   age: number | null = 22;
-  overall: number | null = 70;
+  rating: number | null = 70;
 
-  positions = ['GK', 'DR', 'DC', 'DL', 'DM', 'MR', 'MC', 'ML', 'AM', 'ST', 'CM'];
+  positions = ['GK', 'DR', 'DC', 'DL', 'WBR', 'WBL', 'DM', 'MR', 'MC', 'ML', 'AMR', 'AMC', 'AML', 'ST'];
 
   loading = false;
   resultMessage = '';
@@ -30,21 +30,33 @@ export class AdminPlayersComponent implements OnInit {
   }
 
   generate(): void {
+    if (this.rating == null || !Number.isFinite(Number(this.rating))) {
+      this.resultOk = false;
+      this.resultMessage = 'Rating is required.';
+      return;
+    }
+    if (this.rating < 1 || this.rating > 300) {
+      this.resultOk = false;
+      this.resultMessage = 'Rating must be between 1 and 300.';
+      return;
+    }
+
     this.loading = true;
     this.resultMessage = '';
     this.resultOk = false;
     this.adminService.generatePlayer({
-      teamId: this.teamId,
-      name: this.name || undefined,
-      position: this.position || undefined,
-      age: this.age ?? undefined,
-      overall: this.overall ?? undefined
+      position: this.position,
+      rating: this.rating,
+      ...(this.teamId != null ? { teamId: this.teamId } : {}),
+      ...(this.name.trim() ? { name: this.name.trim() } : {}),
+      ...(this.age != null ? { age: this.age } : {})
     }).subscribe({
       next: (res) => {
         this.loading = false;
         this.resultOk = true;
         const nm = res?.name || this.name || 'player';
-        const id = res?.id != null ? ` (#${res.id})` : '';
+        const playerId = res?.playerId ?? res?.id;
+        const id = playerId != null ? ` (#${playerId})` : '';
         this.resultMessage = `Generated ${nm}${id}.`;
       },
       error: (err) => {

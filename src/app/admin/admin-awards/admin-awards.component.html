@@ -1,0 +1,108 @@
+<div class="admin-container">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <span class="eyebrow">AWARD CONTROL</span>
+        <h2>Ballon d’Or Winner</h2>
+      </div>
+      <div class="header-actions">
+        <a class="secondary hub-link" routerLink="/admin">← Hub</a>
+      </div>
+    </div>
+
+    <p class="awards-intro">
+      The 100-voter model ranks players from ratings, league-strength-weighted goals and assists, consistency and major-match
+      performances. You can leave the result automatic or lock in any eligible candidate. The
+      selected player keeps his real final statistics and voting total in the award history.
+    </p>
+
+    <div class="status" *ngIf="loading">Calculating the current ranking…</div>
+    <div class="status error" *ngIf="error">{{ error }}</div>
+    <div class="save-msg ok feedback" *ngIf="message">{{ message }}</div>
+
+    <ng-container *ngIf="!loading && state as award">
+      <div class="award-control-bar" [class.manual]="award.overrideWinnerId != null" [class.final]="award.finalized">
+        <div>
+          <span class="control-label">SEASON {{ award.season }}</span>
+          <strong *ngIf="award.finalized">
+            Award finalised{{ award.adminSelected ? ' · admin selection' : ' · statistical winner' }}
+          </strong>
+          <strong *ngIf="!award.finalized && award.overrideWinnerId != null">Manual winner armed</strong>
+          <strong *ngIf="!award.finalized && award.overrideWinnerId == null">Automatic statistical winner</strong>
+          <small *ngIf="!award.finalized">The choice remains editable until the awards ceremony.</small>
+        </div>
+        <button class="reset-button" *ngIf="!award.finalized && award.overrideWinnerId != null"
+                (click)="useStatisticalWinner()" [disabled]="savingPlayerId != null">
+          Use statistical winner
+        </button>
+      </div>
+
+      <div class="no-candidates" *ngIf="!award.candidates.length">
+        No eligible candidates yet. The ranking will appear after competitive matches have been played.
+      </div>
+
+      <div class="candidate-table-wrap" *ngIf="award.candidates.length">
+        <table class="candidate-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Candidate</th>
+              <th>Pos</th>
+              <th>Apps</th>
+              <th>Goals</th>
+              <th>Assists</th>
+              <th>Weighted G</th>
+              <th>Weighted A</th>
+              <th>Rating</th>
+              <th>Votes</th>
+              <th>1st votes</th>
+              <th>Decision</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let candidate of award.candidates"
+                [class.recommended]="candidate.playerId === award.recommendedWinnerId"
+                [class.selected]="candidate.playerId === award.overrideWinnerId || (award.finalized && candidate.playerId === award.winnerId)">
+              <td class="rank">{{ candidate.rank }}</td>
+              <td>
+                <div class="candidate-person">
+                  <app-player-face [size]="46" [baseFaceId]="candidate.baseFaceId"
+                                   [skinTone]="candidate.skinTone" [hairStyle]="candidate.hairStyle"
+                                   [hairColor]="candidate.hairColor" [eyeColor]="candidate.eyeColor"
+                                   [faceShape]="candidate.faceShape" [noseShape]="candidate.noseShape"
+                                   [eyeShape]="candidate.eyeShape" [mouthShape]="candidate.mouthShape"
+                                   [browShape]="candidate.browShape"
+                                   [species]="candidate.species || 'human'"></app-player-face>
+                  <div>
+                    <a [routerLink]="['/player', candidate.playerId]">{{ candidate.playerName }}</a>
+                    <span>{{ candidate.teamName }}</span>
+                    <em *ngIf="candidate.playerId === award.recommendedWinnerId">Statistical leader</em>
+                    <em class="manual-tag" *ngIf="candidate.playerId === award.overrideWinnerId">Admin selection</em>
+                  </div>
+                </div>
+              </td>
+              <td>{{ candidate.position || '—' }}</td>
+              <td>{{ candidate.appearances }}</td>
+              <td>{{ candidate.goals }}</td>
+              <td>{{ candidate.assists }}</td>
+              <td>{{ candidate.weightedGoals | number:'1.1-2' }}</td>
+              <td>{{ candidate.weightedAssists | number:'1.1-2' }}</td>
+              <td class="rating">{{ candidate.averageRating | number:'1.2-2' }}</td>
+              <td class="votes">{{ candidate.votingPoints }}</td>
+              <td>{{ candidate.firstPlaceVotes }}</td>
+              <td>
+                <button class="choose-button"
+                        *ngIf="!award.finalized && candidate.playerId !== award.overrideWinnerId"
+                        (click)="selectWinner(candidate)" [disabled]="savingPlayerId != null">
+                  {{ savingPlayerId === candidate.playerId ? 'Saving…' : 'Choose winner' }}
+                </button>
+                <span class="decision-badge" *ngIf="!award.finalized && candidate.playerId === award.overrideWinnerId">Selected</span>
+                <span class="decision-badge final" *ngIf="award.finalized && candidate.playerId === award.winnerId">Winner</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+  </div>
+</div>

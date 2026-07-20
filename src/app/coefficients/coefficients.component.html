@@ -2,8 +2,9 @@
   <div class="page-header">
     <h1>COEFFICIENTS</h1>
     <div class="tab-bar">
-      <button [class.active]="activeTab === 'country'" (click)="activeTab = 'country'">Country Rankings</button>
-      <button [class.active]="activeTab === 'club'" (click)="activeTab = 'club'">Club Rankings</button>
+      <button [class.active]="activeTab === 'country'" (click)="setActiveTab('country')">Country Rankings</button>
+      <button [class.active]="activeTab === 'club'" (click)="setActiveTab('club')">Club Rankings</button>
+      <button [class.active]="activeTab === 'rankings'" (click)="setActiveTab('rankings')">League Rankings</button>
     </div>
   </div>
 
@@ -91,7 +92,89 @@
     </table>
   </div>
 
-  <div *ngIf="countries.length === 0 && clubs.length === 0" class="no-data">
+  <!-- CHAMPIONSHIP STRENGTH RANKINGS -->
+  <div *ngIf="activeTab === 'rankings'" class="league-rankings-page">
+    <div class="rankings-state" *ngIf="rankingsLoading">Calculating league strength...</div>
+
+    <div class="rankings-state rankings-error" *ngIf="!rankingsLoading && rankingsError">
+      <span>{{ rankingsError }}</span>
+      <button type="button" (click)="loadLeagueRankings()">Try again</button>
+    </div>
+
+    <ng-container *ngIf="!rankingsLoading && !rankingsError && leagueStrength as strength">
+      <section class="rankings-intro">
+        <div>
+          <span class="rankings-eyebrow">Season {{ strength.season }} · Award coefficient</span>
+          <h2>Championship strength</h2>
+          <p>
+            Each club is rated using its best {{ strength.topPlayersPerTeam }} players. The league score is the
+            average of its clubs, and the resulting multiplier is used for Golden Boot and Ballon d'Or contributions.
+          </p>
+        </div>
+        <div class="ranking-tiers" aria-label="Award multiplier tiers">
+          <span class="tier-chip" *ngFor="let tier of strength.tiers">
+            Top {{ tier.maximumRank }} × {{ tier.multiplier | number:'1.0-1' }}
+          </span>
+          <span class="tier-chip muted">Others × {{ strength.defaultMultiplier | number:'1.0-1' }}</span>
+        </div>
+      </section>
+
+      <div class="rankings-hint">Select a league to see the Top XI average of every club.</div>
+      <div class="ranking-table-wrap" *ngIf="strength.ranking.length; else noLeagueRankings">
+        <table class="coefficient-table league-ranking-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Championship</th>
+              <th>Division</th>
+              <th>Rated teams</th>
+              <th>Average Top XI</th>
+              <th>Award multiplier</th>
+              <th aria-label="Details"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngFor="let league of strength.ranking">
+              <tr class="league-ranking-row" (click)="toggleLeagueDetails(league.competitionId)">
+                <td class="rank">{{ league.rank }}</td>
+                <td class="league-name">
+                  <a [routerLink]="['/competition', league.competitionId]" class="fm-link" (click)="$event.stopPropagation()">
+                    {{ league.competitionName }}
+                  </a>
+                </td>
+                <td>{{ league.competitionTypeId === 1 ? 'First' : 'Second' }}</td>
+                <td>{{ league.completeTeamCount }}/{{ league.teamCount }}</td>
+                <td class="strength-rating">{{ league.averageTopElevenRating | number:'1.2-2' }}</td>
+                <td><span class="multiplier-badge">× {{ league.multiplier | number:'1.0-1' }}</span></td>
+                <td class="expand-cell" [class.open]="expandedLeagueId === league.competitionId">⌄</td>
+              </tr>
+              <tr class="team-strength-detail" *ngIf="expandedLeagueId === league.competitionId">
+                <td colspan="7">
+                  <div class="team-strength-grid">
+                    <a *ngFor="let team of league.teams" [routerLink]="['/team', team.teamId]" class="team-strength-card">
+                      <span>{{ team.teamName }}</span>
+                      <strong>{{ team.topElevenRating | number:'1.2-2' }}</strong>
+                      <small>{{ team.ratedPlayerCount }}/{{ strength.topPlayersPerTeam }} players rated</small>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noLeagueRankings>
+        <div class="no-data">No league strength data is available for this season.</div>
+      </ng-template>
+    </ng-container>
+  </div>
+
+  <div *ngIf="activeTab === 'country' && countries.length === 0" class="no-data">
     No coefficient data available yet. Coefficients are earned through European competition results.
+  </div>
+
+  <div *ngIf="activeTab === 'club' && clubs.length === 0" class="no-data">
+    No club coefficient data available yet. Coefficients are earned through European competition results.
   </div>
 </div>

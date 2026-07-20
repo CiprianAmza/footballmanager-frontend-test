@@ -3,10 +3,61 @@
   <!-- HEADER -->
   <div class="page-header">
     <h1>FIXTURES & RESULTS</h1>
-    <div class="tab-buttons">
-        <button class="tab-btn" [class.active]="activeTab === 'fixtures'" (click)="switchTab('fixtures')">Fixtures</button>
-        <button class="tab-btn" [class.active]="activeTab === 'calendar'" (click)="switchTab('calendar')">Calendar</button>
+    <div class="header-actions">
+      <label class="season-picker">
+        <span>Season</span>
+        <select [(ngModel)]="selectedSeason" (ngModelChange)="changeSeason()">
+          <option *ngFor="let season of availableSeasons" [ngValue]="season">
+            {{ season }}
+          </option>
+        </select>
+      </label>
+      <div class="tab-buttons">
+          <button class="tab-btn" [class.active]="activeTab === 'fixtures'" (click)="switchTab('fixtures')">Fixtures</button>
+          <button class="tab-btn" [class.active]="activeTab === 'calendar'" (click)="switchTab('calendar')">Calendar</button>
+      </div>
     </div>
+  </div>
+
+  <div class="history-filters" *ngIf="activeTab === 'fixtures'">
+    <label class="history-search">
+      <span>Search</span>
+      <input type="search" [(ngModel)]="historySearch" placeholder="Opponent, competition or date">
+    </label>
+    <label>
+      <span>Status</span>
+      <select [(ngModel)]="historyStatus">
+        <option value="all">All matches</option>
+        <option value="played">Played</option>
+        <option value="upcoming">Upcoming</option>
+      </select>
+    </label>
+    <label>
+      <span>Result</span>
+      <select [(ngModel)]="historyResult">
+        <option value="all">All results</option>
+        <option value="W">Wins</option>
+        <option value="D">Draws</option>
+        <option value="L">Losses</option>
+      </select>
+    </label>
+    <label>
+      <span>Venue</span>
+      <select [(ngModel)]="historyVenue">
+        <option value="all">Home & away</option>
+        <option value="H">Home</option>
+        <option value="A">Away</option>
+      </select>
+    </label>
+    <label>
+      <span>Competition</span>
+      <select [(ngModel)]="historyCompetition">
+        <option value="all">All competitions</option>
+        <option *ngFor="let competition of competitionFilters" [value]="competition">{{ competition }}</option>
+      </select>
+    </label>
+    <button type="button" class="clear-filter-btn" *ngIf="hasHistoryFilters" (click)="clearHistoryFilters()">Clear</button>
+    <span class="filter-count">{{ filteredFixtures.length }} / {{ fixtures.length }}</span>
   </div>
 
   <!-- CALENDAR VIEW -->
@@ -24,7 +75,7 @@
         </thead>
         <tbody>
           <tr *ngFor="let entry of calendarEntries; trackBy: trackByFixture"
-              [class.current-round]="entry.roundNumber === currentRound"
+              [class.current-round]="isViewingCurrentSeason() && entry.roundNumber === currentRound"
               [class.played-row]="entry.status === 'played'"
               [class.upcoming-row]="entry.status === 'upcoming'">
 
@@ -39,11 +90,15 @@
 
             <td class="cal-venue">
               <span class="venue-badge" [ngClass]="{'venue-home': entry.homeOrAway === 'H', 'venue-away': entry.homeOrAway === 'A'}">
-                {{ entry.homeTeamAbbr || entry.homeOrAway }} v {{ entry.awayTeamAbbr || '' }}
+                {{ entry.homeTeamAbbr || 'TBD' }} v {{ entry.awayTeamAbbr || 'TBD' }}
               </span>
             </td>
 
-            <td class="cal-opponent"><a [routerLink]="['/team', entry.opponentTeamId]" class="fm-link">{{ entry.opponentTeamName }}</a></td>
+            <td class="cal-opponent">
+              <a *ngIf="entry.opponentTeamId > 0; else calendarTbdOpponent"
+                 [routerLink]="['/team', entry.opponentTeamId]" class="fm-link">{{ entry.opponentTeamName }}</a>
+              <ng-template #calendarTbdOpponent>TBD</ng-template>
+            </td>
 
             <td class="cal-result">
               <span *ngIf="entry.status === 'played'" class="cal-score-badge"
@@ -62,7 +117,9 @@
     </div>
   </div>
 
-  <div class="content-grid" *ngIf="activeTab === 'fixtures'">
+  <div class="content-grid"
+       [class.lineups-active]="activeMatchTab === 'lineups' && selectedMatch?.resultType !== 'Pending'"
+       *ngIf="activeTab === 'fixtures'">
 
     <!-- LEFT: SCHEDULE LIST -->
     <div class="list-panel">
@@ -78,7 +135,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let match of fixtures; trackBy: trackByFixture"
+                    <tr *ngFor="let match of filteredFixtures; trackBy: trackByFixture"
                         (click)="selectMatch(match)"
                         [class.selected]="selectedMatch === match">
 
@@ -93,13 +150,15 @@
                         </td>
 
                         <!-- Home/Away -->
-                        <td class="center venue-col">{{ match.homeTeamAbbr }} v {{ match.awayTeamAbbr }}</td>
+                        <td class="center venue-col">{{ match.homeTeamAbbr || 'TBD' }} v {{ match.awayTeamAbbr || 'TBD' }}</td>
 
                         <!-- Opponent -->
                         <td class="text-right opponent-col">
-                            <a [routerLink]="['/team', match.homeOrAway === 'H' ? match.teamId2 : match.teamId1]" class="fm-link" (click)="$event.stopPropagation()">
+                            <a *ngIf="opponentTeamId(match) > 0; else fixtureTbdOpponent"
+                               [routerLink]="['/team', opponentTeamId(match)]" class="fm-link" (click)="$event.stopPropagation()">
                                 {{ match.opponentTeam }}
                             </a>
+                            <ng-template #fixtureTbdOpponent>TBD</ng-template>
                         </td>
 
                         <!-- Result Score -->
@@ -112,7 +171,14 @@
                             }">
                                 {{ match.score }}
                             </div>
+                            <small class="decision-mini" *ngIf="decisionLabel(match) as decision">{{ decision }}</small>
                         </td>
+                    </tr>
+                    <tr *ngIf="filteredFixtures.length === 0">
+                      <td colspan="5" class="empty-filter-result">
+                        No matches fit these filters.
+                        <button type="button" (click)="clearHistoryFilters()">Reset filters</button>
+                      </td>
                     </tr>
                 </tbody>
             </table>
@@ -128,21 +194,35 @@
             <!-- Match Header -->
             <div class="match-card">
                 <div class="team-display home">
-                    <span class="big-name">{{ selectedMatch.homeOrAway === 'H' ? 'My Team' : selectedMatch.opponentTeam }}</span>
+                    <span class="big-name">{{ selectedMatch.homeOrAway === 'H' ? teamName : (selectedMatch.opponentTeam || 'TBD') }}</span>
                 </div>
 
                 <div class="score-display">
-                    <div class="final-score">{{ selectedMatch.score }}</div>
+                    <div class="final-score">{{ getSelectedMatchScore() }}</div>
                     <div class="match-status">{{ selectedMatch.resultType === 'Pending' ? 'UPCOMING' : 'FULL TIME' }}</div>
+                    <div class="match-decision" *ngIf="decisionLabel(selectedMatch) as decision">{{ decision }}</div>
                 </div>
 
                 <div class="team-display away">
-                    <span class="big-name">{{ selectedMatch.homeOrAway === 'H' ? selectedMatch.opponentTeam : 'My Team' }}</span>
+                    <span class="big-name">{{ selectedMatch.homeOrAway === 'H' ? (selectedMatch.opponentTeam || 'TBD') : teamName }}</span>
                 </div>
             </div>
 
+            <div class="match-detail-tabs">
+                <button [class.active]="activeMatchTab === 'summary'" (click)="switchMatchTab('summary')">
+                  {{ selectedMatch.resultType === 'Pending' ? 'Preview' : 'Summary' }}
+                </button>
+                <button *ngIf="selectedMatch.resultType !== 'Pending'"
+                        [class.active]="activeMatchTab === 'statistics'"
+                        (click)="switchMatchTab('statistics')">Statistics</button>
+                <button *ngIf="selectedMatch.resultType !== 'Pending'"
+                        [class.active]="activeMatchTab === 'lineups'"
+                        (click)="switchMatchTab('lineups')">Lineups</button>
+                <button [class.active]="activeMatchTab === 'h2h'" (click)="switchMatchTab('h2h')">H2H & Form</button>
+            </div>
+
             <!-- Post-Match Summary Header -->
-            <div class="info-box summary-box" *ngIf="selectedMatch.resultType !== 'Pending' && matchSummary">
+            <div class="info-box summary-box" *ngIf="selectedMatch.resultType !== 'Pending' && matchSummary && activeMatchTab === 'summary'">
                 <div class="box-title">POST-MATCH SUMMARY</div>
 
                 <!-- Man of the Match -->
@@ -206,7 +286,7 @@
             </div>
 
             <!-- Match Events Timeline -->
-            <div class="info-box" *ngIf="selectedMatch.resultType !== 'Pending'">
+            <div class="info-box" *ngIf="selectedMatch.resultType !== 'Pending' && activeMatchTab === 'summary'">
                 <div class="box-title">MATCH EVENTS</div>
 
                 <div *ngIf="loadingEvents" class="loading-events">Loading events...</div>
@@ -236,7 +316,7 @@
             </div>
 
             <!-- Match Statistics -->
-            <div class="info-box stats-box" *ngIf="selectedMatch.resultType !== 'Pending' && matchStats">
+            <div class="info-box stats-box" *ngIf="selectedMatch.resultType !== 'Pending' && activeMatchTab === 'statistics'">
                 <div class="box-title">MATCH STATISTICS</div>
 
                 <div *ngIf="loadingStats" class="loading-events">Loading stats...</div>
@@ -249,9 +329,9 @@
 
                     <div class="stat-item" *ngFor="let stat of matchStats.stats">
                         <div class="stat-values-row">
-                            <span class="stat-val home" [class.stat-higher]="(stat.home + '') > (stat.away + '')">{{ stat.home }}</span>
+                            <span class="stat-val home" [class.stat-higher]="isHigher(stat.home, stat.away)">{{ stat.home }}</span>
                             <span class="stat-name">{{ stat.label }}</span>
-                            <span class="stat-val away" [class.stat-higher]="(stat.away + '') > (stat.home + '')">{{ stat.away }}</span>
+                            <span class="stat-val away" [class.stat-higher]="isHigher(stat.away, stat.home)">{{ stat.away }}</span>
                         </div>
                         <div class="stat-bar-container">
                             <div class="stat-bar-home" [style.width]="getStatBarWidth(stat.home, stat.away).homeWidth"></div>
@@ -259,10 +339,139 @@
                         </div>
                     </div>
                 </div>
+
+                <div *ngIf="!loadingStats && !matchStats" class="no-events">
+                    No detailed statistics are available for this match.
+                </div>
+            </div>
+
+            <div class="lineups-tab" *ngIf="selectedMatch.resultType !== 'Pending' && activeMatchTab === 'lineups'">
+                <app-match-ratings
+                    [competitionId]="selectedMatch.competitionId"
+                    [season]="selectedMatch.seasonNumber"
+                    [round]="selectedMatch.roundNumber"
+                    [teamId1]="selectedMatch.teamId1"
+                    [teamId2]="selectedMatch.teamId2">
+                </app-match-ratings>
+            </div>
+
+            <div class="h2h-panel" *ngIf="activeMatchTab === 'h2h'">
+              <div *ngIf="loadingH2h" class="loading-events">Loading complete head-to-head history...</div>
+              <ng-container *ngIf="!loadingH2h && h2h">
+                <section class="h2h-scorecard">
+                  <div class="h2h-team-side">
+                    <a [routerLink]="['/team', h2h.teamAId]" class="fm-link">{{ h2h.teamAName }}</a>
+                    <strong>{{ h2h.teamAWins }}</strong>
+                    <span>wins</span>
+                  </div>
+                  <div class="h2h-draws">
+                    <strong>{{ h2h.draws }}</strong>
+                    <span>draws</span>
+                    <small>{{ h2h.teamAGoals }}–{{ h2h.teamBGoals }} goals</small>
+                  </div>
+                  <div class="h2h-team-side away">
+                    <a [routerLink]="['/team', h2h.teamBId]" class="fm-link">{{ h2h.teamBName }}</a>
+                    <strong>{{ h2h.teamBWins }}</strong>
+                    <span>wins</span>
+                  </div>
+                </section>
+
+                <section class="form-comparison" *ngIf="h2h.meetings?.length > 0">
+                  <div>
+                    <span class="form-team-name">{{ h2h.teamAName }} · recent H2H</span>
+                    <div class="form-dots">
+                      <span *ngFor="let result of h2h.teamAForm"
+                            class="dot" [ngClass]="{'w': result === 'W', 'd': result === 'D', 'l': result === 'L'}">
+                        {{ result }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="form-away">
+                    <span class="form-team-name">{{ h2h.teamBName }} · recent H2H</span>
+                    <div class="form-dots">
+                      <span *ngFor="let result of h2h.teamBForm"
+                            class="dot" [ngClass]="{'w': result === 'W', 'd': result === 'D', 'l': result === 'L'}">
+                        {{ result }}
+                      </span>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="trend-card">
+                  <div class="trend-heading">
+                    <div>
+                      <strong>Season form & evolution</strong>
+                      <span>{{ teamName }} · Season {{ selectedSeason }}</span>
+                    </div>
+                    <div class="trend-legend">
+                      <span class="legend-form">Match form</span>
+                      <span class="legend-points">Points evolution</span>
+                    </div>
+                  </div>
+                  <svg class="trend-chart" viewBox="0 0 600 160" role="img"
+                       [attr.aria-label]="'Form and points evolution for ' + teamName">
+                    <line x1="20" y1="22" x2="580" y2="22" class="chart-grid"></line>
+                    <line x1="20" y1="80" x2="580" y2="80" class="chart-grid"></line>
+                    <line x1="20" y1="138" x2="580" y2="138" class="chart-grid"></line>
+                    <text x="2" y="26">W</text>
+                    <text x="2" y="84">D</text>
+                    <text x="2" y="142">L</text>
+                    <polyline *ngIf="seasonEvolutionPolyline"
+                              [attr.points]="seasonEvolutionPolyline"
+                              class="trend-line evolution"></polyline>
+                    <polyline *ngIf="seasonFormPolyline"
+                              [attr.points]="seasonFormPolyline"
+                              class="trend-line form"></polyline>
+                  </svg>
+                  <div class="no-chart-data" *ngIf="!seasonFormPolyline">The graph will appear after the first result.</div>
+                </section>
+
+                <section class="trend-card h2h-trend" *ngIf="h2h.meetings?.length > 1">
+                  <div class="trend-heading">
+                    <div>
+                      <strong>H2H form trend</strong>
+                      <span>Oldest to newest · last {{ h2h.meetings?.slice(0, 12).length }} meetings</span>
+                    </div>
+                  </div>
+                  <svg class="trend-chart compact" viewBox="0 0 600 160" role="img" aria-label="Head-to-head form trend">
+                    <line x1="20" y1="22" x2="580" y2="22" class="chart-grid"></line>
+                    <line x1="20" y1="80" x2="580" y2="80" class="chart-grid"></line>
+                    <line x1="20" y1="138" x2="580" y2="138" class="chart-grid"></line>
+                    <text x="2" y="26">W</text>
+                    <text x="2" y="84">D</text>
+                    <text x="2" y="142">L</text>
+                    <polyline [attr.points]="h2hFormPolyline" class="trend-line form"></polyline>
+                  </svg>
+                </section>
+
+                <section class="meetings-card">
+                  <div class="box-title">PREVIOUS MEETINGS</div>
+                  <div class="no-events" *ngIf="h2h.meetings?.length === 0">
+                    These teams have not played each other yet.
+                  </div>
+                  <div class="meeting-row" *ngFor="let meeting of h2h.meetings; trackBy: trackByMeeting"
+                       [class.win]="meeting.teamAResult === 'W'"
+                       [class.draw]="meeting.teamAResult === 'D'"
+                       [class.loss]="meeting.teamAResult === 'L'">
+                    <span class="meeting-result">{{ meeting.teamAResult }}</span>
+                    <div class="meeting-meta">
+                      <strong>Season {{ meeting.seasonNumber }} · {{ meeting.competitionName }}</strong>
+                      <span>Round {{ meeting.roundNumber }}</span>
+                    </div>
+                    <span class="meeting-team home">{{ meeting.homeTeamName }}</span>
+                    <span class="meeting-score">{{ meeting.score }}</span>
+                    <span class="meeting-team away">{{ meeting.awayTeamName }}</span>
+                    <small *ngIf="h2hDecisionLabel(meeting) as decision">{{ decision }}</small>
+                  </div>
+                </section>
+              </ng-container>
+              <div class="no-events" *ngIf="!loadingH2h && !h2h">
+                Head-to-head history could not be loaded.
+              </div>
             </div>
 
             <!-- Opponent Info Card -->
-            <div class="info-box">
+            <div class="info-box" *ngIf="selectedMatch.resultType === 'Pending' && activeMatchTab === 'summary'">
                 <div class="box-title">OPPONENT REPORT</div>
                 <div class="info-row">
                     <span class="label">Opponent</span>
@@ -279,7 +488,7 @@
             </div>
 
             <!-- Recent Form -->
-            <div class="info-box">
+            <div class="info-box" *ngIf="selectedMatch.resultType === 'Pending' && activeMatchTab === 'summary'">
                 <div class="box-title">OPPONENT FORM</div>
                 <div class="form-dots">
                     <span *ngFor="let f of selectedOpponentInfo.form"

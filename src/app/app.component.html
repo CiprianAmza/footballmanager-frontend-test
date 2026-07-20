@@ -1,3 +1,39 @@
+<div class="game-load-overlay" *ngIf="loadGameStage !== 'idle'" role="dialog" aria-modal="true"
+     aria-labelledby="game-load-title" aria-live="polite">
+  <div class="game-load-card" [class.game-load-error]="loadGameStage === 'error'"
+       [class.game-load-success]="loadGameStage === 'success'">
+    <div class="game-load-icon" [class.is-spinning]="loadingGame && loadGameStage !== 'success'">
+      <span *ngIf="loadGameStage === 'success'">✓</span>
+      <span *ngIf="loadGameStage === 'error'">!</span>
+      <span *ngIf="loadGameStage !== 'success' && loadGameStage !== 'error'">↻</span>
+    </div>
+    <div class="game-load-eyebrow">SAVE GAME</div>
+    <h2 id="game-load-title">
+      {{ loadGameStage === 'success' ? 'Career restored' : (loadGameStage === 'error' ? 'Load failed' : 'Loading career') }}
+    </h2>
+    <p class="game-load-message">{{ loadGameMessage }}</p>
+
+    <div class="game-load-progress" *ngIf="loadGameStage !== 'error'">
+      <div class="game-load-progress-fill" [style.width.%]="loadGameProgress"></div>
+    </div>
+    <div class="game-load-progress-label" *ngIf="loadGameStage !== 'error'">{{ loadGameProgress }}%</div>
+
+    <div class="game-load-summary" *ngIf="loadedGameSummary">
+      <div><span>Season</span><strong>{{ loadedGameSummary.season }}</strong></div>
+      <div><span>Date</span><strong>{{ loadedGameSummary.date }}</strong></div>
+      <div><span>Club</span><strong>{{ loadedGameSummary.team || 'Free agent' }}</strong></div>
+      <div><span>Manager</span><strong>{{ loadedGameSummary.manager }}</strong></div>
+      <div *ngIf="loadedGameSummary.historyCount !== undefined">
+        <span>Career history</span><strong>{{ loadedGameSummary.historyCount }} season records</strong>
+      </div>
+    </div>
+
+    <p class="game-load-warning" *ngIf="loadingGame">Do not refresh or close the browser while the save is being restored.</p>
+    <button type="button" class="game-load-close" *ngIf="loadGameStage === 'error'"
+            (click)="dismissLoadGameStatus()">Close</button>
+  </div>
+</div>
+
 <!-- Login Screen -->
 <app-login *ngIf="!authService.isLoggedIn"
            (loggedIn)="onLoggedIn()"></app-login>
@@ -30,6 +66,7 @@
     </div>
     <div class="border" *ngIf="teamService.managerFired"></div>
     <div class="menu-group" *ngIf="teamService.managerFired">
+      <a routerLink="/overview" routerLinkActive="active">Overview</a>
       <a routerLink="/competition-list" routerLinkActive="active">Competitions</a>
       <a routerLink="/coefficients" routerLinkActive="active">Coefficients</a>
       <a routerLink="/all-time-champions" routerLinkActive="active">Champions</a>
@@ -59,6 +96,7 @@
     <div class="menu-group" *ngIf="!teamService.managerFired">
       <a [routerLink]="['/fixtures', teamService.teamId]" routerLinkActive="active">Schedule</a>
       <a routerLink="/friendlies" routerLinkActive="active">Friendlies</a>
+      <a routerLink="/overview" routerLinkActive="active">Overview</a>
       <a routerLink="/competition-list" routerLinkActive="active">Competitions</a>
       <a routerLink="/coefficients" routerLinkActive="active">Coefficients</a>
       <a routerLink="/all-time-champions" routerLinkActive="active">Champions</a>
@@ -93,6 +131,7 @@
       <a routerLink="/animation-preview" routerLinkActive="active">Anim. Preview</a>
       <a href="javascript:void(0)" (click)="saveGame()" class="save-link">Save Game</a>
       <a href="javascript:void(0)" (click)="triggerLoadGame()" class="load-link">Load Game</a>
+      <a href="javascript:void(0)" (click)="restartTutorial()" *ngIf="teamService.teamId > 0">Quick Start Guide</a>
       <input type="file" #fileInput style="display:none" accept=".json" (change)="loadGame($event)">
     </div>
 
@@ -115,12 +154,22 @@
       <button class="job-offer-action">Review</button>
     </div>
 
+    <div *ngIf="simulationStopMessage" class="simulation-stop-banner" role="status" aria-live="polite">
+      <span class="simulation-stop-icon">!</span>
+      <span class="simulation-stop-text">{{ simulationStopMessage }}</span>
+      <button type="button" class="simulation-stop-dismiss" (click)="dismissSimulationStop()" aria-label="Dismiss message">×</button>
+    </div>
+
     <!-- Game Top Bar -->
     <div class="game-top-bar">
       <button class="continue-btn" (click)="advanceGame()"
-              [disabled]="advancing || pendingOffers.length > 0"
+              [disabled]="advancing || fastForwardRunning || pendingOffers.length > 0"
               [title]="pendingOffers.length > 0 ? 'Resolve your job offer(s) first' : ''">
-        {{ advancing ? 'Processing...' : (pendingOffers.length > 0 ? 'OFFER PENDING' : 'CONTINUE') }}
+        {{ fastForwardRunning ? 'FAST-FORWARDING' : (advancing ? 'Processing...' : (pendingOffers.length > 0 ? 'OFFER PENDING' : 'CONTINUE')) }}
+      </button>
+      <button class="fast-forward-btn" type="button" (click)="openFastForward()"
+              [class.running]="fastForwardRunning" [disabled]="advancing">
+        {{ fastForwardRunning ? (fastForwardJob?.percent + '%') : 'FAST FORWARD' }}
       </button>
       <div class="date-info">
         <span class="day-date">{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }}</span>
@@ -129,6 +178,108 @@
       <div class="season-info">
         Season {{ teamService.currentSeason }}
       </div>
+    </div>
+
+    <div class="fast-forward-overlay" *ngIf="showFastForward" (click)="$event.stopPropagation()">
+      <section class="fast-forward-card" role="dialog" aria-modal="true" aria-labelledby="fast-forward-title">
+        <button *ngIf="!fastForwardRunning" class="fast-forward-close" type="button"
+                aria-label="Close" (click)="closeFastForward()">×</button>
+
+        <ng-container *ngIf="!fastForwardJob; else fastForwardProgress">
+          <span class="fast-forward-kicker">UNATTENDED SIMULATION</span>
+          <h2 id="fast-forward-title">Fast-forward seasons</h2>
+          <p>The backend advances the calendar without browser delays. Matches, transfers, training, injuries and awards are still fully processed.</p>
+          <div class="fast-forward-fields">
+            <label>
+              <span>Seasons</span>
+              <input type="number" min="1" max="100" [(ngModel)]="fastForwardSeasons">
+            </label>
+            <label>
+              <span>Days per progress chunk</span>
+              <input type="number" min="1" max="30" [(ngModel)]="fastForwardChunkDays">
+            </label>
+          </div>
+          <div class="fast-forward-note" [class.warning]="!teamService.alwaysContinue">
+            {{ teamService.alwaysContinue
+              ? 'Always Continue is active. The simulation can run unattended.'
+              : 'Enable Always Continue in Staff → Responsibilities before starting.' }}
+          </div>
+          <button class="fast-forward-start" type="button" (click)="startFastForward()"
+                  [disabled]="fastForwardStarting || !teamService.alwaysContinue">
+            {{ fastForwardStarting ? 'STARTING…' : 'START FAST FORWARD' }}
+          </button>
+        </ng-container>
+
+        <ng-template #fastForwardProgress>
+          <span class="fast-forward-kicker">{{ fastForwardJob?.status }}</span>
+          <h2 id="fast-forward-title">
+            {{ fastForwardJob?.status === 'RUNNING' ? 'Simulating your football world' : fastForwardJob?.message }}
+          </h2>
+          <p>{{ fastForwardJob?.message }}</p>
+          <div class="fast-forward-track" role="progressbar" aria-label="Fast-forward progress"
+               [attr.aria-valuenow]="fastForwardJob?.percent" aria-valuemin="0" aria-valuemax="100">
+            <span [style.width.%]="fastForwardJob?.percent || 0"></span>
+          </div>
+          <div class="fast-forward-percent">{{ fastForwardJob?.percent | number:'1.0-1' }}%</div>
+          <div class="fast-forward-stats">
+            <div><span>Calendar</span><strong>Season {{ fastForwardJob?.currentSeason }}, day {{ fastForwardJob?.currentDay }}</strong></div>
+            <div><span>Seasons completed</span><strong>{{ fastForwardJob?.completedSeasons }} / {{ fastForwardJob?.seasonsRequested }}</strong></div>
+            <div><span>Days processed</span><strong>{{ fastForwardJob?.processedDays }}</strong></div>
+            <div><span>Elapsed</span><strong>{{ fastForwardElapsed }}</strong></div>
+          </div>
+          <button *ngIf="fastForwardRunning" class="fast-forward-cancel" type="button" (click)="cancelFastForward()">
+            STOP AFTER CURRENT DAY
+          </button>
+          <button *ngIf="!fastForwardRunning" class="fast-forward-start" type="button" (click)="closeFastForward()">
+            CLOSE
+          </button>
+        </ng-template>
+      </section>
+    </div>
+
+    <!-- The backend currently advances synchronously, so this is intentionally
+         an indeterminate progress indicator: useful feedback without invented
+         percentages. -->
+    <div class="simulation-overlay" *ngIf="advancing" role="status" aria-live="polite">
+      <div class="simulation-card">
+        <div class="simulation-ball" aria-hidden="true">&#9917;</div>
+        <div class="simulation-copy">
+          <span class="simulation-kicker">GAME IS ADVANCING</span>
+          <h2>{{ simulationStage }}</h2>
+          <p>Please keep this window open. Results, injuries, suspensions and tables are being saved.</p>
+        </div>
+        <div class="simulation-progress" aria-label="Simulation in progress">
+          <span></span>
+        </div>
+        <div class="simulation-meta">
+          <span>Season {{ teamService.currentSeason }}</span>
+          <span>{{ simulationElapsedSeconds }}s elapsed</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- First-career tutorial. Each step opens the screen it explains, while
+         remaining dismissible so experienced players are never blocked. -->
+    <div class="tutorial-backdrop" *ngIf="showTutorial" (click)="$event.stopPropagation()">
+      <section class="tutorial-card" role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
+        <button class="tutorial-skip" type="button" (click)="completeTutorial()">Skip guide</button>
+        <div class="tutorial-eyebrow">{{ currentTutorialStep.eyebrow }}</div>
+        <h2 id="tutorial-title">{{ currentTutorialStep.title }}</h2>
+        <p>{{ currentTutorialStep.text }}</p>
+        <div class="tutorial-dots" aria-label="Tutorial progress">
+          <span *ngFor="let step of tutorialSteps; let i = index"
+                [class.active]="i === tutorialStep"
+                [class.done]="i < tutorialStep"></span>
+        </div>
+        <div class="tutorial-actions">
+          <button type="button" class="tutorial-secondary"
+                  [disabled]="tutorialStep === 0"
+                  (click)="previousTutorialStep()">Back</button>
+          <button type="button" class="tutorial-primary" (click)="nextTutorialStep()">
+            {{ tutorialStep === tutorialSteps.length - 1 ? 'Start managing' : 'Next' }}
+          </button>
+        </div>
+      </section>
     </div>
 
     <!-- Event Feed (shows last processed events) -->
@@ -144,6 +295,10 @@
     <div class="modal-overlay" *ngIf="showMatchResult && matchResult" (click)="$event.stopPropagation()">
       <div class="match-result-modal">
         <div class="mr-competition">{{ matchResult.competitionName }} - Matchday {{ matchResult.matchday }}</div>
+        <div class="mr-decision-badge" *ngIf="matchDecisionLabel as decision">
+          <span class="mr-decision-icon">{{ decision.indexOf('PENALT') >= 0 ? '⚽' : '⏱' }}</span>
+          {{ decision }}
+        </div>
         <div class="mr-teams">
           <div class="mr-team" [class.mr-winner]="matchResult.score?.split(' - ')[0] > matchResult.score?.split(' - ')[1]">
             <span class="mr-team-name"><a [routerLink]="['/team', matchResult.team1Id]" class="fm-link">{{ matchResult.team1Name }}</a></span>
@@ -533,6 +688,7 @@
         </div>
         <div class="ga-controls">
           <button class="ga-skip-btn" *ngIf="!goalAnimationFinished" (click)="skipGoalAnimation()">Skip</button>
+          <button class="ga-skip-match-btn" (click)="skipEntireMatchFromAnimation()">Skip Match</button>
           <button class="ga-replay-btn" *ngIf="goalAnimationFinished" (click)="replayGoalAnimation()">Replay</button>
           <button class="ga-continue-btn" *ngIf="goalAnimationFinished" (click)="closeGoalAnimation()">Continue</button>
         </div>

@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { urlApp } from '../app.component';
-import { forkJoin, Subscription } from 'rxjs';
+import { catchError, forkJoin, of, Subscription } from 'rxjs';
 import { GameEventsService } from '../services/game-events.service';
 
 // --- INTERFEȚE ---
@@ -55,6 +55,8 @@ interface Trophy {
 interface ClubDetails {
   id: number;
   name: string;
+  color1: string | null;
+  color2: string | null;
   nickname: string;
   foundedYear: number;
   nation: string;
@@ -80,6 +82,22 @@ interface ClubDetails {
   wageBudget: number;
 }
 
+interface TeamBranding {
+  id: number;
+  name: string;
+  color1: string | null;
+  color2: string | null;
+}
+
+interface CurrentManagerSummary {
+  found: boolean;
+  managerId?: number;
+  managerName?: string;
+  reputation?: number;
+  retired?: boolean;
+  humanControlled?: boolean;
+}
+
 @Component({
   selector: 'app-club-info',
   templateUrl: './club-info.component.html',
@@ -91,6 +109,7 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
 
   teamId!: number;
   club: ClubDetails | null = null;
+  currentManager: CurrentManagerSummary | null = null;
   loading: boolean = true;
   currentSeason: string = '1';
 
@@ -100,7 +119,7 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
   stadiumRevenueMultiplier: number = 1.0;
 
   // State pentru tab-ul activ
-  activeTab: 'overview' | 'squad' | 'tactics' | 'stats' = 'overview';
+  activeTab: 'overview' | 'squad' | 'tactics' | 'matches' | 'stats' = 'overview';
 
   // Per-competition breakdown (GET /stats/team/{teamId}/competitionBreakdown)
   competitionBreakdown: CompetitionStatLine[] = [];
@@ -130,7 +149,7 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
 
   // --- LOGICA DE NAVIGARE ---
   
-  switchTab(tab: 'overview' | 'squad' | 'tactics' | 'stats') {
+  switchTab(tab: 'overview' | 'squad' | 'tactics' | 'matches' | 'stats') {
     this.activeTab = tab;
   }
 
@@ -168,17 +187,26 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
     this.loading = true;
 
     const seasonReq = this.http.get<any>(urlApp + "/competition/getCurrentSeason");
-    const teamNameReq = this.http.get(urlApp + `/teams/getTeamNameById/${this.teamId}`, { responseType: 'text' });
+    const teamInfoReq = this.http.get<TeamBranding>(urlApp + `/teams/info/${this.teamId}`);
     const historyReq = this.http.get<CompetitionHistory[]>(urlApp + `/history/teamCompetitionWins/${this.teamId}`);
+    const managerReq = this.http.get<CurrentManagerSummary>(urlApp + `/managers/current/team/${this.teamId}`)
+      .pipe(catchError(() => of({ found: false } as CurrentManagerSummary)));
 
-    forkJoin([seasonReq, teamNameReq, historyReq]).subscribe({
-      next: ([seasonResp, teamNameResp, historyResp]) => {
+    forkJoin([seasonReq, teamInfoReq, historyReq, managerReq]).subscribe({
+      next: ([seasonResp, teamInfoResp, historyResp, managerResp]) => {
         
         this.currentSeason = seasonResp.toString();
-        const realTeamName = teamNameResp || "Unknown Club";
+        const teamBranding: TeamBranding = {
+          id: teamInfoResp?.id || this.teamId,
+          name: teamInfoResp?.name || 'Unknown Club',
+          color1: teamInfoResp?.color1 || null,
+          color2: teamInfoResp?.color2 || null
+        };
         
         const processedTrophies = this.processTrophies(historyResp);
-        this.generateMockData(realTeamName, processedTrophies);
+        this.currentManager = managerResp?.found ? managerResp : null;
+        this.generateMockData(teamBranding, processedTrophies,
+          this.currentManager?.managerName || 'Vacant');
         this.fetchCompetitionNames(processedTrophies);
 
         this.loading = false;
@@ -254,20 +282,24 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
 
   // --- MOCK DATA & HELPERS ---
 
-  generateMockData(realName: string, realTrophies: Trophy[]) {
+  generateMockData(team: TeamBranding, realTrophies: Trophy[], managerName: string) {
+    const primaryColor = team.color1 || '#2d6cdf';
+    const secondaryColor = team.color2 || '#f5f7ff';
     this.club = {
       id: this.teamId,
-      name: realName,
+      name: team.name,
+      color1: team.color1,
+      color2: team.color2,
       nickname: "The Team", 
       foundedYear: 1905,   
       nation: "England",    
       division: "Premier League",
       status: "Professional",
       reputation: 4, 
-      managerName: "Head Coach", 
+      managerName,
       captainName: "Club Captain", 
       viceCaptainName: "Vice Captain", 
-      stadiumName: realName + " Stadium",
+      stadiumName: team.name + " Stadium",
       capacity: 30000,
       surface: "Grass",
       condition: "Good",
@@ -275,22 +307,17 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
       derbies: ["City Rivals"],
       rivals: ["Old Enemy"],
       kits: [
-        { type: 'Home', primaryColor: this.getRandomColor(), secondaryColor: '#fff', pattern: 'solid' },
-        { type: 'Away', primaryColor: '#f1c40f', secondaryColor: '#000', pattern: 'stripes' },
+        { type: 'Home', primaryColor, secondaryColor, pattern: 'solid' },
+        { type: 'Away', primaryColor: secondaryColor, secondaryColor: primaryColor, pattern: 'stripes' },
         { type: 'Third', primaryColor: '#e74c3c', secondaryColor: '#2c3e50', pattern: 'sash' }
       ],
       legends: ["Legend 1", "Legend 2"],
       icons: ["Icon 1"],
-      historyDescription: `${realName} has a long and proud history...`,
+      historyDescription: `${team.name} has a long and proud history...`,
       trophies: realTrophies, 
       transferBudget: 10000000,
       wageBudget: 500000
     };
-  }
-
-  getRandomColor() {
-    const colors = ['#e74c3c', '#3498db', '#2ecc71', '#9b59b6', '#34495e', '#d35400'];
-    return colors[Math.floor(Math.random() * colors.length)];
   }
 
   getReputationStars(count: number): string {

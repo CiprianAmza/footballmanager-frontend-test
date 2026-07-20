@@ -17,6 +17,7 @@ export class SquadComponent implements OnInit, OnDestroy, OnChanges {
 
   selectedOption: string = 'General Info';
   players: any[] = [];
+  availability: any[] = [];
   expiringContracts: any[] = [];
 
   // Unhappy players (GET /contract/unhappy/{teamId}) + promise-playing-time action
@@ -43,6 +44,7 @@ export class SquadComponent implements OnInit, OnDestroy, OnChanges {
     }
     if (this.teamId) {
         this.loadPlayers();
+        this.loadAvailability();
         this.loadExpiringContracts();
         this.loadUnhappyPlayers();
     }
@@ -51,6 +53,7 @@ export class SquadComponent implements OnInit, OnDestroy, OnChanges {
     this.sub.add(this.gameEvents.on('squad').subscribe(() => {
       if (this.teamId) {
         this.loadPlayers();
+        this.loadAvailability();
         this.loadExpiringContracts();
         this.loadUnhappyPlayers();
       }
@@ -64,6 +67,7 @@ export class SquadComponent implements OnInit, OnDestroy, OnChanges {
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['teamId'] && !changes['teamId'].firstChange) {
         this.loadPlayers();
+        this.loadAvailability();
     }
   }
 
@@ -76,6 +80,28 @@ export class SquadComponent implements OnInit, OnDestroy, OnChanges {
         console.error('Error fetching players:', error);
       }
     );
+  }
+
+  loadAvailability(): void {
+    this.http.get<any[]>(urlApp + `/teams/availability/${this.teamId}`).subscribe({
+      next: (response) => this.availability = response || [],
+      error: (error) => {
+        console.error('Error fetching squad availability:', error);
+        this.availability = [];
+      }
+    });
+  }
+
+  availabilityFor(playerId: number): any[] {
+    return this.availability.filter(reason => reason.playerId === playerId);
+  }
+
+  isUnavailable(playerId: number): boolean {
+    return this.availabilityFor(playerId).length > 0;
+  }
+
+  availabilityTypeLabel(reason: any): string {
+    return reason.type === 'INJURY' ? 'Injured' : 'Suspended';
   }
 
   loadExpiringContracts() {
@@ -133,7 +159,8 @@ export class SquadComponent implements OnInit, OnDestroy, OnChanges {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
       this.sortColumn = column;
-      this.sortDirection = 'desc'; 
+      this.sortDirection = column === 'contractEndSeason' || column === 'name'
+        ? 'asc' : 'desc';
     }
 
     this.players.sort((a, b) => {
@@ -142,6 +169,8 @@ export class SquadComponent implements OnInit, OnDestroy, OnChanges {
 
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
+      if (valA === null || valA === undefined) valA = '';
+      if (valB === null || valB === undefined) valB = '';
 
       if (valA < valB) return this.sortDirection === 'asc' ? -1 : 1;
       if (valA > valB) return this.sortDirection === 'asc' ? 1 : -1;

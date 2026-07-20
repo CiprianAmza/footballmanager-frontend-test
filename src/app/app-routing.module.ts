@@ -57,12 +57,17 @@ import { AdminComponent } from './admin/admin.component';
 import { AdminScoresComponent } from './admin/admin-scores/admin-scores.component';
 import { AdminOffersComponent } from './admin/admin-offers/admin-offers.component';
 import { AdminPlayersComponent } from './admin/admin-players/admin-players.component';
+import { AdminAwardsComponent } from './admin/admin-awards/admin-awards.component';
+import { AdminDrawsComponent } from './admin/admin-draws/admin-draws.component';
+import { AdminTransfersComponent } from './admin/admin-transfers/admin-transfers.component';
 import { TacticsAdvisorComponent } from './tactics-advisor/tactics-advisor.component';
 import { SimulateComponent } from './simulate/simulate.component';
 import { PlayerCardComponent } from './player-card/player-card.component';
 import { MatchRatingsComponent } from './match-ratings/match-ratings.component';
 import { CoachControlComponent } from './boardroom/coach-control.component';
 import { PlayerGalleryComponent } from './player-gallery/player-gallery.component';
+import { AwardHistoryComponent } from './award-history/award-history.component';
+import { AwardCentreComponent } from './award-centre/award-centre.component';
 
 const routes: Routes = [
   { path: 'card/:playerId', component: PlayerCardComponent },
@@ -135,8 +140,15 @@ const routes: Routes = [
   { path: 'admin/scores', component: AdminScoresComponent },
   { path: 'admin/offers', component: AdminOffersComponent },
   { path: 'admin/players', component: AdminPlayersComponent },
+  { path: 'admin/awards', component: AdminAwardsComponent },
+  { path: 'admin/draws', component: AdminDrawsComponent },
+  { path: 'admin/transfers', component: AdminTransfersComponent },
   { path: 'admin', component: AdminComponent },
   { path: 'overview', component: LeaguesOverviewComponent },
+  { path: 'awards/golden-boot', component: AwardHistoryComponent, data: { awardType: 'GOLDEN_BOOT' } },
+  { path: 'awards/ballon-dor', component: AwardHistoryComponent, data: { awardType: 'BALLON_DOR' } },
+  { path: 'awards/global', component: AwardCentreComponent, data: { global: true } },
+  { path: 'awards/competition/:competitionId', component: AwardCentreComponent },
   { path: 'gallery/:teamId', component: PlayerGalleryComponent },
   { path: 'gallery', component: PlayerGalleryComponent },
 

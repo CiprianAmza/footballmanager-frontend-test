@@ -297,6 +297,11 @@
 .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
 .toggle-switch input:disabled + .toggle-slider { opacity: 0.4; cursor: not-allowed; }
 .resp-disabled { opacity: 0.5; }
+.always-continue-item { border-left-color: #f39c12; }
+.always-continue-active {
+  border-left-color: #2ecc71;
+  background: linear-gradient(90deg, rgba(46, 204, 113, 0.14), #2a2a2a 42%);
+}
 
 /* Match-highlights segmented control (None / Goals only / Key moments) */
 .highlights-radio-group {

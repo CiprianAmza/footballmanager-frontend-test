@@ -5,12 +5,31 @@
     <div class="header-left">
       <h1>Overview</h1>
       <div class="view-tabs">
+        <button class="tab-btn" [class.active]="view === 'all'" (click)="setView('all')">All competitions</button>
         <button class="tab-btn" [class.active]="view === 'leagues'" (click)="setView('leagues')">Leagues</button>
         <button class="tab-btn" [class.active]="view === 'cups'" (click)="setView('cups')">Cups</button>
+        <button class="tab-btn" [class.active]="view === 'statistics'" (click)="setView('statistics')">Statistics</button>
+        <button class="tab-btn" [class.active]="view === 'team-values'" (click)="setView('team-values')">Team Value</button>
+        <button class="tab-btn" [class.active]="view === 'world-xi'" (click)="setView('world-xi')">World Best XI</button>
+        <a class="tab-btn tab-link" routerLink="/awards/global">Global Awards</a>
       </div>
     </div>
 
     <div class="header-right">
+      <label class="catalog-search" *ngIf="view === 'all'">
+        <span class="sr-only">Search competitions</span>
+        <input type="search"
+               [(ngModel)]="competitionSearch"
+               placeholder="Search competitions..."
+               aria-label="Search competitions">
+      </label>
+      <label class="catalog-search" *ngIf="view === 'team-values'">
+        <span class="sr-only">Search teams</span>
+        <input type="search"
+               [(ngModel)]="teamValueSearch"
+               placeholder="Search teams..."
+               aria-label="Search teams">
+      </label>
       <div class="control-group" *ngIf="view === 'leagues'">
         <span class="control-label">Top</span>
         <button *ngFor="let n of topNOptions"
@@ -18,14 +37,321 @@
                 [class.active]="topN === n"
                 (click)="setTopN(n)">{{ n }}</button>
       </div>
-      <button class="filter-btn" (click)="filterOpen = !filterOpen">
+      <button class="filter-btn" *ngIf="view === 'leagues' || view === 'cups'" (click)="filterOpen = !filterOpen">
         Filter {{ filterOpen ? '▲' : '▼' }}
       </button>
     </div>
   </div>
 
+  <!-- WORLD TEAM VALUE RANKING -->
+  <section *ngIf="view === 'team-values'" class="team-values-page">
+    <div class="catalog-state" *ngIf="teamValuesLoading">Calculating every club's best eleven...</div>
+    <div class="catalog-state catalog-error" *ngIf="!teamValuesLoading && teamValuesError">
+      <span>{{ teamValuesError }}</span>
+      <button type="button" (click)="loadTeamValues()">Try again</button>
+    </div>
+
+    <ng-container *ngIf="!teamValuesLoading && !teamValuesError && teamValues as values">
+      <div class="world-page-intro team-value-intro">
+        <div>
+          <span class="eyebrow">Season {{ values.season }} · {{ values.teams.length }} clubs</span>
+          <h2>World Club Value</h2>
+          <p>{{ values.ratingDefinition }}</p>
+        </div>
+        <div class="value-sorter" aria-label="Sort team values">
+          <button [class.active]="teamValueSort === 'power'" (click)="setTeamValueSort('power')">Best XI</button>
+          <button [class.active]="teamValueSort === 'market'" (click)="setTeamValueSort('market')">Market value</button>
+          <button [class.active]="teamValueSort === 'reputation'" (click)="setTeamValueSort('reputation')">Reputation</button>
+        </div>
+      </div>
+
+      <div class="team-value-summary">
+        <span>Sorted by <strong>{{ teamValueSortLabel() }}</strong></span>
+        <span>{{ visibleTeamValues.length }} teams shown</span>
+      </div>
+
+      <div class="table-scroll value-table-shell">
+        <table class="team-value-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th class="value-team-column">Club</th>
+              <th>Manager / formation</th>
+              <th>Current XI</th>
+              <th>Best possible XI</th>
+              <th>Squad market value</th>
+              <th>Reputation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let team of visibleTeamValues; let position = index"
+                [class.user-club-row]="team.teamId === teamService.teamId">
+              <td><span class="world-rank" [class.podium]="position < 3">{{ position + 1 }}</span></td>
+              <td class="value-team-column">
+                <app-team-crest [teamId]="team.teamId" [teamName]="team.teamName"
+                                [color1]="team.color1" [color2]="team.color2" [size]="46"></app-team-crest>
+                <span class="value-team-name">
+                  <a [routerLink]="['/team', team.teamId]">{{ team.teamName }}</a>
+                  <small>{{ team.playerCount }} first-team players</small>
+                </span>
+              </td>
+              <td class="manager-cell">
+                <strong>{{ team.managerName }}</strong>
+                <small>{{ team.currentFormation }}</small>
+              </td>
+              <td class="power-cell">{{ team.currentXiRating | number:'1.1-1' }}</td>
+              <td class="best-power-cell">
+                <div class="best-power-line">
+                  <strong>{{ team.bestPossibleXiRating | number:'1.1-1' }}</strong>
+                  <small>{{ team.bestFormation }}</small>
+                </div>
+                <div class="power-track"><span [style.width.%]="powerPercent(team)"></span></div>
+              </td>
+              <td class="money-cell">{{ formatMoney(team.squadMarketValue) }}</td>
+              <td><span class="reputation-pill">{{ team.reputation | number }}</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
+  </section>
+
+  <!-- WORLD BEST XI -->
+  <section *ngIf="view === 'world-xi'" class="world-xi-page">
+    <div class="catalog-state" *ngIf="worldBestXiLoading">Selecting the best player for every position...</div>
+    <div class="catalog-state catalog-error" *ngIf="!worldBestXiLoading && worldBestXiError">
+      <span>{{ worldBestXiError }}</span>
+      <button type="button" (click)="loadWorldBestXi()">Try again</button>
+    </div>
+
+    <ng-container *ngIf="!worldBestXiLoading && !worldBestXiError && worldBestXi as xi">
+      <div class="world-page-intro">
+        <div>
+          <span class="eyebrow">Season {{ xi.season }} · Global selection</span>
+          <h2>World Best XI</h2>
+          <p>{{ xi.selectionRule }}</p>
+        </div>
+        <div class="xi-summary-badge">
+          <span>{{ xi.formation }}</span>
+          <strong>{{ xi.totalRating | number:'1.1-1' }}</strong>
+          <small>total positional value</small>
+        </div>
+      </div>
+
+      <div class="world-xi-layout">
+        <div class="world-pitch" aria-label="World Best XI formation">
+          <div class="pitch-line halfway"></div>
+          <div class="pitch-circle"></div>
+          <div class="pitch-box top"></div>
+          <div class="pitch-box bottom"></div>
+
+          <article class="world-player" *ngFor="let player of xi.players"
+                   [style.left.%]="player.xPercent" [style.top.%]="player.yPercent">
+            <a [routerLink]="['/player', player.playerId]" class="world-face-link">
+              <app-player-face
+                [size]="64"
+                [baseFaceId]="player.baseFaceId"
+                [skinTone]="player.skinTone"
+                [hairStyle]="player.hairStyle"
+                [hairColor]="player.hairColor"
+                [eyeColor]="player.eyeColor"
+                [faceShape]="player.faceShape"
+                [noseShape]="player.noseShape"
+                [eyeShape]="player.eyeShape"
+                [mouthShape]="player.mouthShape"
+                [browShape]="player.browShape"
+                [species]="player.species"
+                [nationId]="player.nationId">
+              </app-player-face>
+              <span class="position-rating">{{ player.positionRating | number:'1.0-0' }}</span>
+            </a>
+            <div class="world-player-label">
+              <span class="slot-tag">{{ player.slot }}</span>
+              <a [routerLink]="['/player', player.playerId]">{{ player.playerName }}</a>
+            </div>
+            <a class="world-player-club" [routerLink]="['/team', player.teamId]">
+              <app-team-crest [teamId]="player.teamId" [teamName]="player.teamName"
+                              [color1]="player.teamColor1" [color2]="player.teamColor2" [size]="21"></app-team-crest>
+              <span>{{ player.teamName }}</span>
+            </a>
+          </article>
+        </div>
+
+        <aside class="xi-team-sheet">
+          <div class="xi-team-sheet-header">
+            <span>Position</span><span>Player and club</span><span>Value</span>
+          </div>
+          <div class="xi-sheet-player" *ngFor="let player of xi.players">
+            <span class="xi-position">{{ player.slot }}</span>
+            <app-team-crest [teamId]="player.teamId" [teamName]="player.teamName"
+                            [color1]="player.teamColor1" [color2]="player.teamColor2" [size]="30"></app-team-crest>
+            <span class="xi-player-identity">
+              <a [routerLink]="['/player', player.playerId]">{{ player.playerName }}</a>
+              <a [routerLink]="['/team', player.teamId]">{{ player.teamName }}</a>
+            </span>
+            <strong>{{ player.positionRating | number:'1.1-1' }}</strong>
+          </div>
+        </aside>
+      </div>
+    </ng-container>
+  </section>
+
+  <!-- GLOBAL SEASON STATISTICS -->
+  <section *ngIf="view === 'statistics'" class="statistics-page">
+    <div class="statistics-scope-bar">
+      <div>
+        <span class="eyebrow">Statistics scope</span>
+        <strong>Every card uses the same matches</strong>
+      </div>
+      <div class="scope-options" aria-label="Statistics competition scope">
+        <button *ngFor="let scope of statisticsScopes"
+                [class.active]="statisticsScope === scope.key"
+                (click)="setStatisticsScope(scope.key)">{{ scope.label }}</button>
+      </div>
+    </div>
+
+    <div class="catalog-state" *ngIf="statisticsLoading">Loading season statistics...</div>
+
+    <div class="catalog-state catalog-error" *ngIf="!statisticsLoading && statisticsError">
+      <span>{{ statisticsError }}</span>
+      <button type="button" (click)="loadStatistics()">Try again</button>
+    </div>
+
+    <ng-container *ngIf="!statisticsLoading && !statisticsError && statistics as stats">
+      <article class="golden-boot-card">
+        <div class="statistics-titlebar">
+          <div>
+            <span class="eyebrow">Season {{ stats.season }} · {{ stats.scopeLabel }}</span>
+            <h2 *ngIf="stats.scope === 'LEAGUE'">
+              <a routerLink="/awards/golden-boot" class="award-title-link">Golden Boot <span>→</span></a>
+            </h2>
+            <h2 *ngIf="stats.scope !== 'LEAGUE'">{{ stats.scoringTitle }}</h2>
+          </div>
+          <div class="award-title-actions">
+            <div class="weight-rule" *ngIf="stats.scope === 'LEAGUE'">
+              <span class="weight-chip league-one">Goal × {{ (stats.goldenBootGoalWeight || 2.5) | number:'1.0-1' }}</span>
+              <span class="weight-chip league-two">Assist × {{ (stats.goldenBootAssistWeight || 1) | number:'1.0-1' }}</span>
+            </div>
+            <div class="award-history-links">
+              <a routerLink="/coefficients" [queryParams]="{ tab: 'rankings' }">League rankings</a>
+              <a routerLink="/awards/global">All global awards</a>
+              <a routerLink="/awards/golden-boot">Golden Boot history</a>
+              <a routerLink="/awards/ballon-dor">Ballon d'Or history</a>
+            </div>
+          </div>
+        </div>
+        <p class="statistics-explanation">{{ stats.goldenBootRule }}</p>
+
+        <div class="table-scroll" *ngIf="stats.goldenBoot.length; else noGoldenBoot">
+          <table class="statistics-table golden-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th class="player-column">Player</th>
+                <th class="team-column">Team</th>
+                <th *ngIf="stats.scope !== 'LEAGUE'">Apps</th>
+                <th>Goals</th>
+                <th *ngIf="stats.scope === 'LEAGUE'">Assists</th>
+                <th *ngIf="stats.scope === 'LEAGUE'" class="weighted-column">Award points</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let leader of stats.goldenBoot">
+                <td><span class="position-medal" [class.winner]="leader.rank === 1">{{ leader.rank }}</span></td>
+                <td class="player-column"><a [routerLink]="['/player', leader.playerId]">{{ leader.playerName }}</a></td>
+                <td class="team-column"><a [routerLink]="['/team', leader.teamId]">{{ leader.teamName }}</a></td>
+                <td *ngIf="stats.scope !== 'LEAGUE'">{{ leader.appearances }}</td>
+                <td>{{ leader.goals }}</td>
+                <td *ngIf="stats.scope === 'LEAGUE'">{{ leader.assists }}</td>
+                <td *ngIf="stats.scope === 'LEAGUE'" class="weighted-column">{{ (leader.awardPoints !== undefined ? leader.awardPoints : leader.weightedGoals) | number:'1.1-1' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #noGoldenBoot>
+          <div class="stat-empty">No goals have been recorded in {{ stats.scopeLabel | lowercase }} this season.</div>
+        </ng-template>
+      </article>
+
+      <div class="secondary-heading">
+        <div>
+          <span class="eyebrow">{{ stats.categoriesScope }}</span>
+          <h2>Season leaders</h2>
+        </div>
+        <span class="per90-note">Totals ranked first · per 90 shown for context</span>
+      </div>
+
+      <div class="statistics-grid">
+        <article class="stat-leader-card" *ngFor="let category of stats.categories">
+          <div class="stat-card-header">
+            <div>
+              <span class="stat-category-mark">{{ category.key === 'averageRating' ? 'AVG' : 'TOP' }}</span>
+              <h3>{{ category.title }}</h3>
+            </div>
+            <span>{{ category.unit }}</span>
+          </div>
+
+          <div class="compact-leader" *ngFor="let leader of category.leaders | slice:0:5">
+            <span class="compact-rank">{{ leader.rank }}</span>
+            <span class="compact-player">
+              <a [routerLink]="['/player', leader.playerId]">{{ leader.playerName }}</a>
+              <small>{{ leader.teamName }} · {{ leader.appearances }} apps</small>
+            </span>
+            <span class="compact-value">
+              <strong>{{ leader.value | number:(category.key === 'averageRating' ? '1.2-2' : '1.0-1') }}</strong>
+              <small *ngIf="leader.per90 !== null && leader.per90 !== undefined">{{ leader.per90 | number:'1.2-2' }}/90</small>
+            </span>
+          </div>
+
+          <div class="stat-empty compact" *ngIf="!category.leaders.length">
+            No data yet.
+          </div>
+        </article>
+      </div>
+    </ng-container>
+  </section>
+
+  <!-- ALL COMPETITIONS CATALOG -->
+  <div *ngIf="view === 'all'" class="catalog-section">
+    <div class="catalog-summary">
+      <span>{{ filteredCompetitions.length }} competitions</span>
+      <span>Season {{ teamService.currentSeason || season }}</span>
+    </div>
+
+    <div class="catalog-state" *ngIf="catalogLoading">Loading competitions...</div>
+
+    <div class="catalog-state catalog-error" *ngIf="!catalogLoading && catalogError">
+      <span>{{ catalogError }}</span>
+      <button type="button" (click)="loadCompetitionCatalog()">Try again</button>
+    </div>
+
+    <div class="competition-catalog" *ngIf="!catalogLoading && !catalogError && filteredCompetitions.length">
+      <button type="button"
+              class="catalog-card"
+              *ngFor="let competition of filteredCompetitions; trackBy: trackCompetition"
+              (click)="openCompetition(competition)"
+              [attr.aria-label]="'Open ' + competition.name">
+        <span class="catalog-accent" [style.background-color]="competitionColor(competition)"></span>
+        <span class="catalog-card-top">
+          <span class="catalog-mark" [style.background-color]="competitionColor(competition)">
+            {{ competitionMark(competition) }}
+          </span>
+          <span class="catalog-type">{{ competitionType(competition) }}</span>
+        </span>
+        <strong>{{ competition.name }}</strong>
+        <small>{{ competitionScope(competition) }} competition</small>
+        <span class="catalog-description">{{ competitionDescription(competition) }}</span>
+        <span class="catalog-action">View competition <span aria-hidden="true">&rarr;</span></span>
+      </button>
+    </div>
+
+    <div class="catalog-state" *ngIf="!catalogLoading && !catalogError && !filteredCompetitions.length">
+      No competitions match your search.
+    </div>
+  </div>
+
   <!-- Filter Panel -->
-  <div class="filter-panel" *ngIf="filterOpen">
+  <div class="filter-panel" *ngIf="filterOpen && (view === 'leagues' || view === 'cups')">
     <div *ngIf="view === 'leagues'">
       <div class="filter-row">
         <span class="filter-label">Show leagues:</span>
@@ -97,7 +423,12 @@
         <tbody>
           <tr *ngFor="let t of l.topTeams" [ngClass]="zoneFor(l.qualificationZones, t.position, l.totalTeams)">
             <td class="pos-col">{{ t.position }}</td>
-            <td class="team-col">{{ t.teamName }}</td>
+            <td class="team-col">
+              <span class="standings-team-name">
+                <app-team-crest [teamId]="t.teamId" [teamName]="t.teamName" [size]="25"></app-team-crest>
+                <a [routerLink]="['/team', t.teamId]">{{ t.teamName }}</a>
+              </span>
+            </td>
             <td class="num-col">{{ t.played }}</td>
             <td class="num-col">{{ t.wins }}</td>
             <td class="num-col">{{ t.draws }}</td>
@@ -126,7 +457,7 @@
       <div class="league-card-header">
         <span class="rank-badge">#{{ c.rank }}</span>
         <h2 class="league-name">{{ c.name }}</h2>
-        <span class="meta">{{ c.currentRoundName }}</span>
+        <span class="meta">{{ cupRoundName(c) }}</span>
       </div>
 
       <div class="cup-round-grid">

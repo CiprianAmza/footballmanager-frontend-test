@@ -1,0 +1,116 @@
+<section class="insights" *ngIf="loading || data">
+  <div class="insights-title">
+    <div><span>OVERVIEW</span><h2>Competition landscape</h2></div>
+    <span class="season">Season {{ season }}</span>
+  </div>
+
+  <div class="loading" *ngIf="loading">Loading competition overview…</div>
+
+  <ng-container *ngIf="!loading && data">
+    <div class="final-summary" *ngIf="data.champion as champion">
+      <span class="trophy">🏆</span>
+      <div>
+        <span class="eyebrow">CHAMPION</span>
+        <strong>{{ champion.teamName }}</strong>
+        <small *ngIf="data.finalResult as final">
+          {{ final.team1Name }} <b>{{ final.score }}</b> {{ final.team2Name }}
+          <em *ngIf="final.decidedBy && final.decidedBy !== 'NORMAL'">{{ decisionLabel(final.decidedBy) }}</em>
+        </small>
+        <small *ngIf="!data.finalResult && data.runnerUp">Runner-up: {{ data.runnerUp.teamName }}</small>
+      </div>
+    </div>
+
+    <div class="my-progress" *ngIf="data.selectedTeamProgress as progress"
+         [class.out]="progress.status === 'ELIMINATED'">
+      <div>
+        <span class="eyebrow">YOUR TEAM</span>
+        <strong>{{ progress.statusLabel }}</strong>
+        <small>Entered: {{ progress.entryStage }}</small>
+      </div>
+      <div class="fixtures" *ngIf="progress.currentFixtures?.length">
+        <span *ngFor="let match of progress.currentFixtures">
+          {{ match.team1Name }} <b>{{ match.score || 'v' }}</b> {{ match.team2Name }}
+        </span>
+      </div>
+      <table class="mini-table" *ngIf="progress.groupStandings?.length">
+        <tr *ngFor="let row of progress.groupStandings" [class.qualified]="row.qualified">
+          <td>{{ row.position }}</td><td>{{ row.teamName }}</td><td>{{ row.played }}</td><td>{{ row.points }} pts</td>
+          <td><span class="route" [class.out]="row.qualificationRoute === 'ELIMINATED'">
+            {{ qualificationLabel(row.qualificationRoute) }}
+          </span></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="stage-strip" *ngIf="data.stages?.length">
+      <span *ngFor="let stage of data.stages">{{ stage.label }}</span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="comparison-table">
+        <thead><tr>
+          <th>Media</th>
+          <th [class.active-sort]="sortKey === 'teamName'">
+            <button type="button" class="sort-header" (click)="setSort('teamName')"
+                    [attr.aria-label]="sortAriaLabel('teamName', 'Team')">
+              Team <span>{{ sortIndicator('teamName') }}</span>
+            </button>
+          </th>
+          <th [class.active-sort]="sortKey === 'entryStage'">
+            <button type="button" class="sort-header" (click)="setSort('entryStage')"
+                    [attr.aria-label]="sortAriaLabel('entryStage', 'Entry stage')">
+              Entry stage <span>{{ sortIndicator('entryStage') }}</span>
+            </button>
+          </th>
+          <th [class.active-sort]="sortKey === 'topElevenRating'">
+            <button type="button" class="sort-header" (click)="setSort('topElevenRating')"
+                    [attr.aria-label]="sortAriaLabel('topElevenRating', 'Top XI')">
+              Top XI <span>{{ sortIndicator('topElevenRating') }}</span>
+            </button>
+          </th>
+          <th [class.active-sort]="sortKey === 'squadValue'">
+            <button type="button" class="sort-header" (click)="setSort('squadValue')"
+                    [attr.aria-label]="sortAriaLabel('squadValue', 'Squad value')">
+              Squad value <span>{{ sortIndicator('squadValue') }}</span>
+            </button>
+          </th>
+          <th [class.active-sort]="sortKey === 'monthlyPayroll'">
+            <button type="button" class="sort-header" (click)="setSort('monthlyPayroll')"
+                    [attr.aria-label]="sortAriaLabel('monthlyPayroll', 'Payroll per month')">
+              Payroll / month <span>{{ sortIndicator('monthlyPayroll') }}</span>
+            </button>
+          </th>
+          <th [class.active-sort]="sortKey === 'reputation'">
+            <button type="button" class="sort-header" (click)="setSort('reputation')"
+                    [attr.aria-label]="sortAriaLabel('reputation', 'Reputation')">
+              Reputation <span>{{ sortIndicator('reputation') }}</span>
+            </button>
+          </th>
+          <th [class.active-sort]="sortKey === 'status'">
+            <button type="button" class="sort-header" (click)="setSort('status')"
+                    [attr.aria-label]="sortAriaLabel('status', 'Status')">
+              Status <span>{{ sortIndicator('status') }}</span>
+            </button>
+          </th>
+        </tr></thead>
+        <tbody>
+          <tr *ngFor="let team of sortedTeams" [class.mine]="team.teamId === teamService.teamId"
+              [class.qualified]="team.progress?.qualified">
+            <td>#{{ team.mediaPrediction }}</td>
+            <td><a [routerLink]="['/team', team.teamId]">{{ team.teamName }}</a></td>
+            <td>{{ team.entryStage }}</td>
+            <td>{{ team.topElevenRating | number:'1.1-2' }} <small>#{{ team.ratingRank }}</small></td>
+            <td>{{ money(team.squadValue) }} <small>#{{ team.valueRank }}</small></td>
+            <td>{{ money(team.monthlyPayroll) }} <small>#{{ team.payrollRank }}</small></td>
+            <td>{{ team.reputation }} <small>#{{ team.reputationRank }}</small></td>
+            <td>{{ team.progress?.statusLabel }}
+              <span class="route" *ngIf="team.progress?.qualificationRoute">
+                {{ qualificationLabel(team.progress.qualificationRoute) }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </ng-container>
+</section>

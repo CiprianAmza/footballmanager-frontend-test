@@ -29,7 +29,8 @@
 
           <div class="logos-container">
             <div class="team-side">
-              <div class="team-logo home-logo">{{ matchPreview.homeTeamName?.slice(0,3)?.toUpperCase() || 'HOM' }}</div>
+              <app-team-crest [teamId]="matchPreview.homeTeamId" [teamName]="matchPreview.homeTeamName"
+                              [size]="80"></app-team-crest>
               <div class="team-position" *ngIf="matchPreview.homeLeaguePosition > 0">
                 #{{ matchPreview.homeLeaguePosition }}
               </div>
@@ -43,7 +44,8 @@
             </div>
             <div class="vs-badge">VS</div>
             <div class="team-side">
-              <div class="team-logo away-logo">{{ matchPreview.awayTeamName?.slice(0,3)?.toUpperCase() || 'AWY' }}</div>
+              <app-team-crest [teamId]="matchPreview.awayTeamId" [teamName]="matchPreview.awayTeamName"
+                              [size]="80"></app-team-crest>
               <div class="team-position" *ngIf="matchPreview.awayLeaguePosition > 0">
                 #{{ matchPreview.awayLeaguePosition }}
               </div>
@@ -97,9 +99,13 @@
             <p class="sub-info">{{ nextMatch.competitionName }} ({{ nextMatch.homeOrAway }})</p>
           </div>
           <div class="logos-container">
-            <div class="team-logo home-logo">{{ nextMatch.homeTeamAbbr || (nextMatch.homeOrAway === 'H' ? teamName?.slice(0,3)?.toUpperCase() : nextMatch.opponentTeam?.slice(0,3)?.toUpperCase()) }}</div>
+            <app-team-crest [teamId]="nextMatch.homeTeamId || (nextMatch.homeOrAway === 'H' ? teamService.teamId : 0)"
+                            [teamName]="nextMatch.homeTeamName || (nextMatch.homeOrAway === 'H' ? teamName : nextMatch.opponentTeam)"
+                            [size]="80"></app-team-crest>
             <div class="vs-badge">VS</div>
-            <div class="team-logo away-logo">{{ nextMatch.awayTeamAbbr || (nextMatch.homeOrAway === 'A' ? teamName?.slice(0,3)?.toUpperCase() : nextMatch.opponentTeam?.slice(0,3)?.toUpperCase()) }}</div>
+            <app-team-crest [teamId]="nextMatch.awayTeamId || (nextMatch.homeOrAway === 'A' ? teamService.teamId : 0)"
+                            [teamName]="nextMatch.awayTeamName || (nextMatch.homeOrAway === 'A' ? teamName : nextMatch.opponentTeam)"
+                            [size]="80"></app-team-crest>
           </div>
         </div>
       </div>
@@ -339,15 +345,36 @@
       </div>
 
       <div class="panel">
-        <div class="panel-header red-text">PLAYER STATS</div>
-        <div class="stats-list">
-          <div class="stat-item" *ngFor="let stat of playerStats">
-              <div class="stat-name"><a [routerLink]="['/player', stat.playerId]" class="fm-link">{{ stat.playerName }}</a></div>
-              <div class="stat-value">{{ stat.goals }} goals, {{ stat.assists }} assists</div>
-              <div class="stat-label">Rating: {{ stat.averageRating }}</div>
+        <div class="panel-header player-stats-header">
+          <span class="red-text">PLAYER STATS</span>
+          <span class="player-stats-scope" *ngIf="playerStatsSeason">S{{ playerStatsSeason }} · ALL COMPS</span>
+        </div>
+        <div class="player-stats-list">
+          <div class="player-stat-row" *ngFor="let stat of playerStats">
+            <div class="player-stat-rank">{{ stat.rank }}</div>
+            <div class="player-stat-identity">
+              <a [routerLink]="['/player', stat.playerId]" class="fm-link player-stat-name">{{ stat.playerName }}</a>
+              <div class="player-stat-meta">
+                <span class="player-stat-position" *ngIf="stat.position">{{ stat.position }}</span>
+                <span>{{ stat.appearances }} apps</span>
+              </div>
+            </div>
+            <div class="player-stat-metrics">
+              <span class="player-stat-metric"><strong>{{ stat.goals }}</strong><small>G</small></span>
+              <span class="player-stat-metric" *ngIf="stat.assists !== null"><strong>{{ stat.assists }}</strong><small>A</small></span>
+              <span class="player-stat-metric rating" *ngIf="stat.averageRating !== null">
+                <strong>{{ stat.averageRating | number:'1.2-2' }}</strong><small>AVG</small>
+              </span>
+              <span class="player-stat-metric rating" *ngIf="stat.averageRating === null">
+                <strong>{{ stat.overallRating | number:'1.0-0' }}</strong><small>OVR</small>
+              </span>
+            </div>
           </div>
-          <div *ngIf="playerStats.length === 0" class="no-data">
-              No stats available yet
+          <div *ngIf="playerStatsLoading" class="no-data">
+            Loading player stats…
+          </div>
+          <div *ngIf="!playerStatsLoading && playerStats.length === 0" class="no-data">
+            No appearances recorded this season
           </div>
         </div>
       </div>

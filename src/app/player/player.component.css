@@ -36,6 +36,51 @@
 
 .bottom-row { font-size: 1.1em; color: #dcdcdc; font-weight: 300; }
 
+.major-award-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.major-award-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 31px;
+  padding: 4px 10px 4px 6px;
+  border: 1px solid rgba(255, 255, 255, .25);
+  border-radius: 999px;
+  color: #fff;
+  text-decoration: none;
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .02em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .22);
+}
+
+.major-award-badge:hover { transform: translateY(-1px); border-color: #fff; }
+.major-award-badge strong { font-size: .86rem; }
+.golden-boot-badge { background: linear-gradient(135deg, #7b4d08, #c88913); }
+.ballon-dor-badge { background: linear-gradient(135deg, #705207, #c99516); }
+.award-symbol {
+  width: 21px;
+  height: 21px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 21px;
+}
+.boot-symbol { font-size: 16px; filter: sepia(1) saturate(1.5) brightness(1.35); }
+.ball-symbol {
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 28%, #fff7a8 0 5%, transparent 6%),
+    repeating-conic-gradient(from 12deg, #f9dc64 0 14deg, #b97a0b 15deg 28deg);
+  border: 1px solid #ffe68a;
+  box-shadow: inset -3px -4px 5px rgba(80, 42, 0, .35), 0 0 7px rgba(255, 214, 72, .35);
+}
+
 .header-stats { display: flex; gap: 20px; }
 .stat-box { text-align: right; }
 .stat-label { display: block; font-size: 0.7em; color: #bbb; text-transform: uppercase; letter-spacing: 1px; }

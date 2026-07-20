@@ -5,6 +5,18 @@ import { distinctUntilChanged, filter } from 'rxjs/operators';
 import { TeamService } from '../services/team.service';
 import { urlApp } from '../app.component';
 
+interface HomePlayerStat {
+  rank: number;
+  playerId: number;
+  playerName: string;
+  position: string;
+  appearances: number;
+  goals: number;
+  assists: number | null;
+  averageRating: number | null;
+  overallRating?: number;
+}
+
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
@@ -34,8 +46,10 @@ export class HomeComponent implements OnInit, OnDestroy {
   // Mini league table
   leagueTable: any[] = [];
 
-  // Player stats (top scorers from leaderboard)
-  playerStats: any[] = [];
+  // Current-season contributors for the user's team
+  playerStats: HomePlayerStat[] = [];
+  playerStatsSeason: number = 0;
+  playerStatsLoading: boolean = true;
 
   // Upcoming fixtures (next 5 unplayed)
   upcomingFixtures: any[] = [];
@@ -164,19 +178,6 @@ export class HomeComponent implements OnInit, OnDestroy {
         error: (err) => console.error('Error loading match preview:', err)
       });
 
-    // Load player stats leaderboard
-    // Backend returns Map<Long, ScorerLeaderboardEntry> serialized as a JSON object
-    // ({"1":{...},"2":{...}}), so convert to array via Object.values before filtering.
-    this.http.get<{ [playerId: string]: any }>(urlApp + `/stats/playerStats/leaderboard`)
-      .subscribe({
-        next: (stats) => {
-          const entries = stats ? Object.values(stats) : [];
-          const teamStats = entries.filter((s: any) => s && s.teamId === teamId);
-          this.playerStats = teamStats.slice(0, 3);
-        },
-        error: (err) => console.error('Error loading player stats:', err)
-      });
-
     // Load finances summary
     this.http.get<any>(urlApp + `/teams/finances/${teamId}`)
       .subscribe({
@@ -202,12 +203,67 @@ export class HomeComponent implements OnInit, OnDestroy {
     // League news feed for the current season
     this.http.get<any>(urlApp + `/competition/getCurrentSeason`)
       .subscribe({
-        next: (season) => this.loadLeagueNews(Number(season)),
+        next: (season) => {
+          const seasonNumber = Number(season);
+          this.loadLeagueNews(seasonNumber);
+          this.loadPlayerStats(teamId, seasonNumber);
+        },
         error: (err) => console.error('Error loading current season:', err)
       });
 
     // Reload team talk status
     this.loadTeamTalkStatus();
+  }
+
+  private loadPlayerStats(teamId: number, seasonNumber: number): void {
+    this.playerStatsSeason = seasonNumber;
+    this.playerStatsLoading = true;
+    this.http.get<HomePlayerStat[]>(
+      urlApp + `/stats/team/${teamId}/season/${seasonNumber}?limit=3`
+    ).subscribe({
+      next: (stats) => {
+        this.playerStats = stats || [];
+        this.playerStatsLoading = false;
+      },
+      error: () => this.loadLegacyPlayerStats(teamId)
+    });
+  }
+
+  /**
+   * Keeps Home usable against an already-running older backend. That endpoint
+   * does not contain assists or match ratings, so the UI labels its overall
+   * rating honestly instead of rendering missing values as empty text.
+   */
+  private loadLegacyPlayerStats(teamId: number): void {
+    this.http.get<{ [playerId: string]: any }>(urlApp + `/stats/playerStats/leaderboard`)
+      .subscribe({
+        next: (stats) => {
+          this.playerStats = Object.entries(stats || {})
+            .map(([playerId, stat]: [string, any]) => ({ playerId: Number(playerId), stat }))
+            .filter(({ stat }) => stat && Number(stat.teamId) === Number(teamId))
+            .sort((left, right) =>
+              Number(right.stat.currentSeasonGoals || 0) - Number(left.stat.currentSeasonGoals || 0)
+              || Number(right.stat.currentRating || 0) - Number(left.stat.currentRating || 0))
+            .slice(0, 3)
+            .map(({ playerId, stat }, index) => ({
+              rank: index + 1,
+              playerId,
+              playerName: stat.name || 'Unknown player',
+              position: stat.position || '',
+              appearances: Number(stat.currentSeasonGames || 0),
+              goals: Number(stat.currentSeasonGoals || 0),
+              assists: null,
+              averageRating: null,
+              overallRating: Number(stat.currentRating || 0)
+            }));
+          this.playerStatsLoading = false;
+        },
+        error: (err) => {
+          this.playerStats = [];
+          this.playerStatsLoading = false;
+          console.error('Error loading player stats:', err);
+        }
+      });
   }
 
   loadLeagueNews(season: number): void {

@@ -7,6 +7,12 @@ import { TransferService, TransferOffer, AvailablePlayer, ScoutReport, Loan, Fre
 import { TeamService } from '../services/team.service';
 import { GameEventsService } from '../services/game-events.service';
 
+interface IncomingOfferGroup {
+  playerId: number;
+  player: TransferOffer;
+  offers: TransferOffer[];
+}
+
 @Component({
   selector: 'app-transfer-page',
   templateUrl: './transfer-page.component.html',
@@ -29,6 +35,11 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
   sortField: string = 'estimatedRating';
   sortDirection: 'asc' | 'desc' = 'desc';
   positions: string[] = ['ALL', 'GK', 'DC', 'DL', 'DR', 'MC', 'ML', 'MR', 'ST'];
+  marketPage: number = 0;
+  marketPageSize: number = 50;
+  marketTotalPages: number = 0;
+  marketTotalElements: number = 0;
+  marketLoading: boolean = false;
 
   // Scout Report
   scoutReport: ScoutReport | null = null;
@@ -51,6 +62,24 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
   counterOfferId: number | null = null;
   counterAmount: number = 0;
   respondLoading: boolean = false;
+
+  get incomingOfferGroups(): IncomingOfferGroup[] {
+    const groups = new Map<number, IncomingOfferGroup>();
+    for (const offer of this.incomingOffers) {
+      let group = groups.get(offer.playerId);
+      if (!group) {
+        group = { playerId: offer.playerId, player: offer, offers: [] };
+        groups.set(offer.playerId, group);
+      }
+      group.offers.push(offer);
+    }
+
+    return Array.from(groups.values()).map(group => ({
+      ...group,
+      offers: [...group.offers].sort((left, right) =>
+        right.offerAmount - left.offerAmount || left.fromTeamName.localeCompare(right.fromTeamName))
+    }));
+  }
 
   // Outgoing Offers
   outgoingOffers: TransferOffer[] = [];
@@ -197,39 +226,41 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
 
   // --- Transfer Market ---
 
-  loadMarket(): void {
-    this.transferService.getAvailablePlayers(this.teamId).subscribe({
-      next: (players) => {
-        this.availablePlayers = players;
-        this.applyFilters();
+  loadMarket(page: number = this.marketPage): void {
+    this.marketLoading = true;
+    const backendSort = this.sortField === 'estimatedRating' ? 'rating' : this.sortField;
+    this.transferService.getAvailablePlayersPage(
+      this.teamId,
+      page,
+      this.marketPageSize,
+      this.positionFilter,
+      backendSort,
+      this.sortDirection
+    ).subscribe({
+      next: (result) => {
+        this.availablePlayers = result.content;
+        this.filteredPlayers = result.content;
+        this.marketPage = result.page;
+        this.marketTotalPages = result.totalPages;
+        this.marketTotalElements = result.totalElements;
+        this.marketLoading = false;
       },
-      error: (err) => console.error('Error loading available players:', err)
+      error: (err) => {
+        this.availablePlayers = [];
+        this.filteredPlayers = [];
+        this.marketLoading = false;
+        console.error('Error loading available players:', err);
+      }
     });
   }
 
   applyFilters(): void {
-    let players = [...this.availablePlayers];
-
-    // Position filter
-    if (this.positionFilter !== 'ALL') {
-      players = players.filter(p => p.position === this.positionFilter);
-    }
-
-    // Sort
-    players.sort((a, b) => {
-      const valA = (a as any)[this.sortField];
-      const valB = (b as any)[this.sortField];
-      if (typeof valA === 'string') {
-        return this.sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-      }
-      return this.sortDirection === 'asc' ? valA - valB : valB - valA;
-    });
-
-    this.filteredPlayers = players;
+    this.filteredPlayers = [...this.availablePlayers];
   }
 
   onFilterChange(): void {
-    this.applyFilters();
+    this.marketPage = 0;
+    this.loadMarket(0);
   }
 
   toggleSort(field: string): void {
@@ -239,7 +270,14 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
       this.sortField = field;
       this.sortDirection = field === 'name' ? 'asc' : 'desc';
     }
-    this.applyFilters();
+    this.marketPage = 0;
+    this.loadMarket(0);
+  }
+
+  changeMarketPage(delta: number): void {
+    const nextPage = this.marketPage + delta;
+    if (nextPage < 0 || nextPage >= this.marketTotalPages || this.marketLoading) return;
+    this.loadMarket(nextPage);
   }
 
   getSortIcon(field: string): string {
@@ -314,8 +352,19 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
       next: (offers) => {
         this.incomingOffers = offers;
       },
-      error: (err) => console.error('Error loading incoming offers:', err)
+      error: (err) => {
+        console.error('Error loading incoming offers:', err);
+        this.showTransferError(err, 'Could not load incoming offers.');
+      }
     });
+  }
+
+  contractSummary(offer: TransferOffer): string {
+    if (!offer.contractEndSeason) return 'Contract information unavailable';
+    const remaining = offer.contractSeasonsRemaining ??
+      Math.max(0, offer.contractEndSeason - Number(this.currentSeason || 1));
+    if (remaining === 0) return `Expires this season (S${offer.contractEndSeason})`;
+    return `Until Season ${offer.contractEndSeason} · ${remaining} season${remaining === 1 ? '' : 's'} left`;
   }
 
   respondToOffer(offerId: number, action: 'accept' | 'reject' | 'counter'): void {
@@ -328,12 +377,9 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
 
     this.respondLoading = true;
     this.transferService.respondToOffer(offerId, action).subscribe({
-      next: (result) => {
-        const idx = this.incomingOffers.findIndex(o => o.id === offerId);
-        if (idx !== -1) {
-          this.incomingOffers[idx] = result;
-        }
+      next: () => {
         this.respondLoading = false;
+        this.loadIncoming();
         // Accepting an offer completes a sale — squad, finances and the
         // transfer lists all change.
         if (action === 'accept') {
@@ -343,6 +389,10 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
       error: (err) => {
         console.error('Error responding to offer:', err);
         this.respondLoading = false;
+        this.showTransferError(err, 'Could not process this offer.');
+        // A conflict normally means the player has moved or become a free
+        // agent. Reload so the stale offer disappears immediately.
+        this.loadIncoming();
       }
     });
   }
@@ -352,23 +402,34 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
     this.respondLoading = true;
 
     this.transferService.respondToOffer(offerId, 'counter', this.counterAmount).subscribe({
-      next: (result) => {
-        const idx = this.incomingOffers.findIndex(o => o.id === offerId);
-        if (idx !== -1) {
-          this.incomingOffers[idx] = result;
-        }
+      next: () => {
         this.counterOfferId = null;
         this.respondLoading = false;
+        this.loadIncoming();
+        this.gameEvents.emit('squad', 'finances', 'transfers');
       },
       error: (err) => {
         console.error('Error submitting counter:', err);
         this.respondLoading = false;
+        this.showTransferError(err, 'Could not submit this counter-offer.');
+        this.loadIncoming();
       }
     });
   }
 
   cancelCounter(): void {
     this.counterOfferId = null;
+  }
+
+  private showTransferError(err: any, fallback: string): void {
+    const backendError = err?.error;
+    const message = (typeof backendError === 'string'
+      ? backendError
+      : backendError?.message) || fallback;
+    this.errorMessage = message;
+    setTimeout(() => {
+      if (this.errorMessage === message) this.errorMessage = '';
+    }, 5000);
   }
 
   // --- Outgoing Offers ---

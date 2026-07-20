@@ -2,6 +2,7 @@
 
   <div class="page-header">
     <h1>{{ competitionName }}</h1>
+    <a class="awards-link" [routerLink]="['/awards/competition', competitionId]">🏆 Awards</a>
     <div class="season-nav">
       <button (click)="changeSeason(-1)" [disabled]="season <= 1">&lt;</button>
       <span>Season {{ season }}</span>
@@ -9,9 +10,104 @@
     </div>
   </div>
 
+  <app-competition-insights [competitionId]="competitionId" [season]="season"></app-competition-insights>
+
+  <!-- DRAW CENTRE -->
+  <section class="draw-centre" *ngIf="draws.length > 0 && selectedDraw as draw">
+    <div class="draw-centre-header">
+      <div>
+        <div class="eyebrow">European Draw Centre</div>
+        <h2>{{ draw.stageLabel }}</h2>
+      </div>
+      <select class="draw-stage-select"
+              [ngModel]="selectedDrawMatchday"
+              (ngModelChange)="selectDraw($event)">
+        <option *ngFor="let item of draws" [ngValue]="item.matchday">
+          {{ item.stageLabel }} · {{ item.drawDate }}
+        </option>
+      </select>
+    </div>
+
+    <div class="draw-timeline">
+      <div class="timeline-date">
+        <span class="timeline-kicker">Draw</span>
+        <strong>{{ draw.drawDate }}</strong>
+        <span>Day {{ draw.drawDay }}</span>
+      </div>
+      <div class="timeline-line"></div>
+      <div class="timeline-date match-date">
+        <span class="timeline-kicker">First matches</span>
+        <strong>{{ draw.matchDate }}</strong>
+        <span>Day {{ draw.matchDay }}</span>
+      </div>
+      <span class="draw-status" [ngClass]="drawStatusClass(draw.status)">{{ draw.statusLabel }}</span>
+    </div>
+
+    <div class="draw-warning" *ngIf="draw.status === 'WAITING_FOR_TEAMS'">
+      {{ draw.knownTeams }} of {{ draw.expectedTeams }} teams are known. The provisional pots update automatically as qualifiers arrive.
+    </div>
+
+    <div class="pots-heading">
+      <div>
+        <span class="eyebrow">Before the draw</span>
+        <h3>Seeding pots</h3>
+      </div>
+      <span class="coefficient-note">Coefficient = rolling five-season European record</span>
+    </div>
+    <div class="pots-grid">
+      <article class="pot-card" *ngFor="let pot of draw.pots">
+        <header>
+          <span class="pot-number">{{ pot.potNumber }}</span>
+          <strong>{{ pot.label }}</strong>
+        </header>
+        <div class="pot-team" *ngFor="let team of pot.teams">
+          <a [routerLink]="['/team', team.teamId]" class="fm-link">{{ team.teamName }}</a>
+          <span class="team-coefficient" title="European club coefficient">{{ team.coefficient | number:'1.2-2' }}</span>
+        </div>
+        <div class="empty-pot" *ngIf="pot.teams.length === 0">Awaiting qualifier</div>
+      </article>
+    </div>
+
+    <div class="draw-result" *ngIf="draw.status === 'DRAW_COMPLETED' && draw.pairings.length > 0">
+      <div class="pots-heading">
+        <div>
+          <span class="eyebrow">Draw completed</span>
+          <h3>Pairings</h3>
+        </div>
+      </div>
+      <div class="draw-pairing" *ngFor="let pairing of draw.pairings">
+        <a [routerLink]="['/team', pairing.team1.teamId]" class="fm-link">{{ pairing.team1.teamName }}</a>
+        <span class="versus">vs</span>
+        <a [routerLink]="['/team', pairing.team2.teamId]" class="fm-link">{{ pairing.team2.teamName }}</a>
+        <span class="legs-badge" *ngIf="pairing.twoLeg">2 legs</span>
+      </div>
+    </div>
+
+    <div class="draw-result" *ngIf="draw.status === 'DRAW_COMPLETED' && draw.groups.length > 0">
+      <div class="pots-heading">
+        <div>
+          <span class="eyebrow">Draw completed</span>
+          <h3>Group allocation</h3>
+        </div>
+      </div>
+      <div class="drawn-groups-grid">
+        <article class="drawn-group" *ngFor="let group of draw.groups">
+          <strong>Group {{ group.groupNumber }}</strong>
+          <a *ngFor="let team of group.teams" [routerLink]="['/team', team.teamId]" class="fm-link">
+            {{ team.teamName }} <small>{{ team.coefficient | number:'1.2-2' }}</small>
+          </a>
+        </article>
+      </div>
+    </div>
+  </section>
+
   <!-- GROUP STANDINGS -->
   <div class="groups-section" *ngIf="groupNumbers.length > 0">
     <h2>Group Stage</h2>
+    <div class="groups-legend">
+      <span><strong>P1–P4</strong> = draw seeding pot</span>
+      <span>Table order = current group position</span>
+    </div>
     <div class="groups-grid">
       <div class="group-card" *ngFor="let gn of groupNumbers">
         <div class="group-header">Group {{ gn }}</div>
@@ -33,7 +129,11 @@
             <tr *ngFor="let team of groups.get(gn); let i = index"
                 [class.qualified]="i < 2">
               <td class="team-name">
-                <span *ngIf="team.potNumber > 0" class="pot-badge pot-{{team.potNumber}}">{{ getPotLabel(team.potNumber) }}</span>
+                <span *ngIf="team.potNumber > 0"
+                      class="pot-badge pot-{{team.potNumber}}"
+                      [attr.title]="'Draw seeding pot ' + team.potNumber">
+                  {{ getPotLabel(team.potNumber) }}
+                </span>
                 <a [routerLink]="['/team', team.teamId]" class="fm-link">{{ team.teamName }}</a>
               </td>
               <td>{{ team.games }}</td>
@@ -74,7 +174,7 @@
     </div>
   </div>
 
-  <div *ngIf="roundNumbers.length === 0 && groupNumbers.length === 0" class="no-data">
+  <div *ngIf="roundNumbers.length === 0 && groupNumbers.length === 0 && draws.length === 0" class="no-data">
     No data available for this competition in season {{ season }}.
   </div>
 

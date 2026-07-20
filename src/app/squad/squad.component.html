@@ -1,5 +1,26 @@
 <div class="squad-container">
 
+  <div class="availability-panel" *ngIf="availability.length > 0">
+    <div class="availability-heading">
+      <div>
+        <strong>Unavailable players</strong>
+        <span>{{ availability.length }} active reason{{ availability.length === 1 ? '' : 's' }}</span>
+      </div>
+      <a routerLink="/medical" *ngIf="isOwnTeam">Open Medical Centre</a>
+    </div>
+    <div class="availability-grid">
+      <article class="availability-card" *ngFor="let reason of availability"
+               [class.injury]="reason.type === 'INJURY'"
+               [class.suspension]="reason.type === 'SUSPENSION'">
+        <span class="availability-icon">{{ reason.type === 'INJURY' ? '✚' : '▣' }}</span>
+        <div>
+          <a [routerLink]="['/player', reason.playerId]" class="fm-link">{{ reason.playerName }}</a>
+          <p>{{ reason.explanation }}</p>
+        </div>
+      </article>
+    </div>
+  </div>
+
   <!-- Expiring Contracts Notification -->
   <div class="expiring-contracts-banner" *ngIf="expiringContracts.length > 0">
     <div class="banner-icon">&#9888;</div>
@@ -65,6 +86,7 @@
             <th class="pos-col" (click)="sort('position')">PKD {{ getSortIcon('position') }}</th>
             <th (click)="sort('nationality')">Nat {{ getSortIcon('nationality') }}</th>
             <th (click)="sort('name')">Name {{ getSortIcon('name') }}</th>
+            <th>Availability</th>
             <th class="center" (click)="sort('age')">Age {{ getSortIcon('age') }}</th>
             <th class="center" (click)="sort('position')">Best Pos {{ getSortIcon('position') }}</th>
             
@@ -73,19 +95,19 @@
                 {{ getSortIcon(selectedOption === 'Contract Info' ? 'agent' : 'morale') }}
             </th>
 
-            <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'APT' : 'fitness')">
+            <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'agreedPlayingTime' : 'fitness')">
                 {{ selectedOption === 'Contract Info' ? 'Agreed Time' : 'Fitness' }}
-                {{ getSortIcon(selectedOption === 'Contract Info' ? 'APT' : 'fitness') }}
+                {{ getSortIcon(selectedOption === 'Contract Info' ? 'agreedPlayingTime' : 'fitness') }}
             </th>
 
-            <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'salary' : 'CA')">
+            <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'wage' : 'CA')">
                 {{ selectedOption === 'Contract Info' ? 'Salary' : 'Cur. Ability' }}
-                {{ getSortIcon(selectedOption === 'Contract Info' ? 'salary' : 'CA') }}
+                {{ getSortIcon(selectedOption === 'Contract Info' ? 'wage' : 'CA') }}
             </th>
 
-            <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'contractEnd' : 'PA')">
+            <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'contractEndSeason' : 'PA')">
                 {{ selectedOption === 'Contract Info' ? 'Expires' : 'Pot. Ability' }}
-                {{ getSortIcon(selectedOption === 'Contract Info' ? 'contractEnd' : 'PA') }}
+                {{ getSortIcon(selectedOption === 'Contract Info' ? 'contractEndSeason' : 'PA') }}
             </th>
 
             <th class="center" (click)="sort(selectedOption === 'Contract Info' ? 'transferValue' : 'rating')">
@@ -96,7 +118,8 @@
         </thead>
         
         <tbody>
-          <tr *ngFor="let player of players; let index = index">
+          <tr *ngFor="let player of players; let index = index"
+              [class.player-unavailable]="isUnavailable(player.id)">
 
             <td class="face-col">
               <app-player-face [size]="54"
@@ -115,23 +138,10 @@
             </td>
 
             <td class="pos-col">
-              <select class="tactic-select" [ngClass]="player.position">
-                <option value="GK">GK</option>
-                <option value="DR">DR</option>
-                <option value="DL">DL</option>
-                <option value="DC">DC</option>
-                <option value="DM">DM</option>
-                <option value="MC">MC</option>
-                <option value="MR">MR</option>
-                <option value="ML">ML</option>
-                <option value="AMR">AMR</option>
-                <option value="AML">AML</option>
-                <option value="AMC">AMC</option>
-                <option value="ST">ST</option>
-              </select>
+              <span class="position-marker" [ngClass]="player.position">{{ player.position }}</span>
             </td>
 
-            <td><span class="nat-flag">{{ player.nationality }}</span></td>
+            <td><span class="nat-flag">{{ player.nationFlagCode || player.nationName || '—' }}</span></td>
 
             <td class="name-cell"> 
                 <div class="name-wrapper" (contextmenu)="onRightClick($event, index)">
@@ -145,6 +155,19 @@
                         </ul>
                     </div>
                 </div>
+            </td>
+
+            <td class="availability-cell">
+              <ng-container *ngIf="availabilityFor(player.id) as reasons">
+                <span *ngIf="reasons.length === 0" class="available-chip">Available</span>
+                <span *ngFor="let reason of reasons"
+                      class="unavailable-chip"
+                      [class.injury]="reason.type === 'INJURY'"
+                      [class.suspension]="reason.type === 'SUSPENSION'"
+                      [title]="reason.explanation">
+                  {{ availabilityTypeLabel(reason) }} · {{ reason.remaining }} {{ reason.remainingUnit }}
+                </span>
+              </ng-container>
             </td>
 
             <td class="center">{{ player.age }}</td>
@@ -164,7 +187,7 @@
             
             <td class="center"> 
                 <span *ngIf="selectedOption === 'General Info'">{{ player.fitness }}%</span>
-                <span *ngIf="selectedOption === 'Contract Info'">{{ player.APT }}</span> 
+                <span *ngIf="selectedOption === 'Contract Info'">{{ player.agreedPlayingTime || '—' }}</span>
             </td>
             
             <td class="center money-col"> 

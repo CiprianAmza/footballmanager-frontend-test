@@ -28,6 +28,9 @@ import { AdminComponent } from './admin/admin.component';
 import { AdminScoresComponent } from './admin/admin-scores/admin-scores.component';
 import { AdminOffersComponent } from './admin/admin-offers/admin-offers.component';
 import { AdminPlayersComponent } from './admin/admin-players/admin-players.component';
+import { AdminAwardsComponent } from './admin/admin-awards/admin-awards.component';
+import { AdminDrawsComponent } from './admin/admin-draws/admin-draws.component';
+import { AdminTransfersComponent } from './admin/admin-transfers/admin-transfers.component';
 import { TacticsAdvisorComponent } from './tactics-advisor/tactics-advisor.component';
 import { SimulateComponent } from './simulate/simulate.component';
 import { InboxComponent } from './inbox/inbox.component';
@@ -82,6 +85,10 @@ import { PlayerCardComponent } from './player-card/player-card.component';
 import { MatchRatingsComponent } from './match-ratings/match-ratings.component';
 import { CoachControlComponent } from './boardroom/coach-control.component';
 import { PlayerGalleryComponent } from './player-gallery/player-gallery.component';
+import { TeamCrestComponent } from './team-crest/team-crest.component';
+import { AwardHistoryComponent } from './award-history/award-history.component';
+import { AwardCentreComponent } from './award-centre/award-centre.component';
+import { CompetitionInsightsComponent } from './competition-insights/competition-insights.component';
 
 @NgModule({
   declarations: [
@@ -91,6 +98,10 @@ import { PlayerGalleryComponent } from './player-gallery/player-gallery.componen
     MatchRatingsComponent,
     CoachControlComponent,
     PlayerGalleryComponent,
+    TeamCrestComponent,
+    AwardHistoryComponent,
+    AwardCentreComponent,
+    CompetitionInsightsComponent,
     CompetitionComponent,
     TacticDisplayComponent,
     CompetitionComponent,
@@ -114,6 +125,9 @@ import { PlayerGalleryComponent } from './player-gallery/player-gallery.componen
     AdminScoresComponent,
     AdminOffersComponent,
     AdminPlayersComponent,
+    AdminAwardsComponent,
+    AdminDrawsComponent,
+    AdminTransfersComponent,
     TacticsAdvisorComponent,
     SimulateComponent,
     InboxComponent,

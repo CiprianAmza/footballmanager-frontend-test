@@ -20,6 +20,37 @@ interface CompetitionData {
   position?: number;
   totalTeams?: number;
   cupRound?: number;
+  status?: string;
+  statusLabel?: string;
+  entryStage?: string;
+  currentStage?: string;
+  stageReached?: string;
+  start?: {
+    round: number;
+    stage: string;
+    started: boolean;
+  };
+  nextMatch?: {
+    round: number;
+    stage: string;
+    day?: number;
+    date?: string;
+    legNumber?: number;
+    opponentTeamId: number;
+    opponentTeamName: string;
+    venue: 'HOME' | 'AWAY';
+  };
+  elimination?: {
+    round: number;
+    stage: string;
+    day?: number;
+    date?: string;
+    byTeamId: number;
+    byTeamName: string;
+    reason?: 'GROUP_TABLE' | 'KNOCKOUT_LOSS';
+    score?: string;
+    decidedBy?: string;
+  };
 }
 
 @Component({
@@ -77,7 +108,7 @@ export class CompetitionsListComponent implements OnInit {
   }
 
   isCup(comp: CompetitionData): boolean {
-    return comp.typeId === 2;
+    return comp.typeId === 2 || comp.typeId === 6;
   }
 
   isEuropean(comp: CompetitionData): boolean {
@@ -96,6 +127,7 @@ export class CompetitionsListComponent implements OnInit {
       case 3: return '#2c3e50'; // Second league dark
       case 4: return '#2e3192'; // Champions blue
       case 5: return '#009460'; // Stars Cup green
+      case 6: return '#d5a500'; // Super Cup gold
       default: return '#95a5a6';
     }
   }
@@ -107,18 +139,9 @@ export class CompetitionsListComponent implements OnInit {
       case 3: return 'Second League';
       case 4: return 'European';
       case 5: return 'European';
+      case 6: return 'Super Cup';
       default: return '';
     }
   }
 
-  getCupRoundLabel(round: number | undefined): string {
-    if (!round) return '';
-    switch (round) {
-      case 1: return 'Round 1';
-      case 2: return 'Round 2';
-      case 3: return 'Semi-Final';
-      case 4: return 'Final';
-      default: return 'Round ' + round;
-    }
-  }
 }

@@ -36,6 +36,7 @@
           <div class="score-badge">
               <span *ngIf="match.score !== '-'" class="score">{{ match.score }}</span>
               <span *ngIf="match.score === '-'" class="vs">V</span>
+              <small *ngIf="match.decision" class="decision">{{ match.decision }}</small>
           </div>
 
           <!-- Away Team -->

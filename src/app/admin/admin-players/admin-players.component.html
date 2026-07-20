@@ -9,8 +9,8 @@
 
     <div class="best-tactic-panel">
       <p class="hint">
-        Create a new player. Provide an optional team id to assign the player directly to a squad;
-        leave fields blank to let the backend pick sensible defaults.
+        Create a new player. Position and rating are required. Provide an optional team id to assign
+        the player directly to a squad; name and age can use the backend defaults.
       </p>
 
       <div class="best-tactic-controls">
@@ -33,8 +33,8 @@
           <input type="number" min="15" max="40" [(ngModel)]="age" />
         </label>
         <label>
-          Overall
-          <input type="number" min="1" max="99" [(ngModel)]="overall" />
+          Rating (1–300)
+          <input type="number" min="1" max="300" required [(ngModel)]="rating" />
         </label>
         <button class="primary" (click)="generate()" [disabled]="loading">
           {{ loading ? 'Generating...' : 'Generate player' }}

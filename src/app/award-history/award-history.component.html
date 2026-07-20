@@ -1,0 +1,87 @@
+<div class="award-history-page" [class.ball-award]="awardType === 'BALLON_DOR'">
+  <nav class="award-tabs" aria-label="Major award history">
+    <a routerLink="/awards/golden-boot" routerLinkActive="active">Golden Boot</a>
+    <a routerLink="/awards/ballon-dor" routerLinkActive="active">Ballon d'Or</a>
+    <a routerLink="/overview" [queryParams]="{ view: 'statistics' }">Back to statistics</a>
+  </nav>
+
+  <div class="award-state" *ngIf="loading">Loading award history...</div>
+  <div class="award-state error" *ngIf="!loading && error">
+    {{ error }} <button (click)="loadHistory()">Try again</button>
+  </div>
+
+  <ng-container *ngIf="!loading && !error && data as historyData">
+    <header class="award-hero">
+      <div class="major-award-symbol" [class.ball]="awardType === 'BALLON_DOR'">
+        <span>{{ awardType === 'GOLDEN_BOOT' ? '🥾' : '◆' }}</span>
+      </div>
+      <div>
+        <span class="award-kicker">All-time honours · {{ historyData.history.length }} editions</span>
+        <h1>{{ historyData.title }}</h1>
+        <p>{{ historyData.description }}</p>
+      </div>
+      <div class="award-rule">
+        <span>Selection rule</span>
+        <strong>{{ historyData.rule }}</strong>
+      </div>
+    </header>
+
+    <section class="latest-winner" *ngIf="historyData.history[0] as winner">
+      <div class="latest-label">Most recent winner · Season {{ winner.season }}</div>
+      <div class="latest-winner-body">
+        <app-player-face [size]="106"
+                         [baseFaceId]="winner.baseFaceId" [skinTone]="winner.skinTone"
+                         [hairStyle]="winner.hairStyle" [hairColor]="winner.hairColor"
+                         [eyeColor]="winner.eyeColor" [faceShape]="winner.faceShape"
+                         [noseShape]="winner.noseShape" [eyeShape]="winner.eyeShape"
+                         [mouthShape]="winner.mouthShape" [browShape]="winner.browShape"
+                         [species]="winner.species || 'human'"></app-player-face>
+        <div class="latest-identity">
+          <a [routerLink]="['/player', winner.playerId]">{{ winner.playerName }}</a>
+          <span class="winner-club">
+            <app-team-crest [teamId]="winner.teamId" [teamName]="winner.teamName"
+                            [color1]="winner.teamColor1" [color2]="winner.teamColor2"
+                            [size]="30"></app-team-crest>
+            <a [routerLink]="['/team', winner.teamId]">{{ winner.teamName }}</a>
+          </span>
+        </div>
+        <div class="latest-metrics">
+          <span><strong>{{ winner.goals }}</strong> goals</span>
+          <span><strong>{{ winner.assists }}</strong> assists</span>
+          <span><strong>{{ winner.averageRating | number:'1.2-2' }}</strong> rating</span>
+          <span *ngIf="awardType === 'BALLON_DOR'"><strong>{{ winner.votingPoints | number:'1.0-0' }}</strong> votes</span>
+          <span *ngIf="awardType === 'GOLDEN_BOOT'"><strong>{{ winner.votingPoints | number:'1.1-1' }}</strong> weighted</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="award-chronicle" *ngIf="historyData.history.length; else noHistory">
+      <div class="chronicle-heading">
+        <span>Season</span><span>Winner</span><span>Club at the time</span><span>Winning record</span>
+      </div>
+      <article *ngFor="let winner of historyData.history; trackBy: trackSeason" class="chronicle-row">
+        <strong class="season-cell">S{{ winner.season }}</strong>
+        <span class="history-player">
+          <app-player-face [size]="48"
+                           [baseFaceId]="winner.baseFaceId" [skinTone]="winner.skinTone"
+                           [hairStyle]="winner.hairStyle" [hairColor]="winner.hairColor"
+                           [eyeColor]="winner.eyeColor" [faceShape]="winner.faceShape"
+                           [noseShape]="winner.noseShape" [eyeShape]="winner.eyeShape"
+                           [mouthShape]="winner.mouthShape" [browShape]="winner.browShape"
+                           [species]="winner.species || 'human'"></app-player-face>
+          <span><a [routerLink]="['/player', winner.playerId]">{{ winner.playerName }}</a><small>{{ winner.appearances }} appearances</small></span>
+        </span>
+        <span class="history-club">
+          <app-team-crest [teamId]="winner.teamId" [teamName]="winner.teamName"
+                          [color1]="winner.teamColor1" [color2]="winner.teamColor2" [size]="34"></app-team-crest>
+          <a [routerLink]="['/team', winner.teamId]">{{ winner.teamName }}</a>
+        </span>
+        <span class="winning-record">{{ winner.value }}</span>
+      </article>
+    </section>
+
+    <ng-template #noHistory>
+      <div class="award-state empty">No winner has been awarded yet. The first entry will be created at the end-of-season awards ceremony.</div>
+    </ng-template>
+  </ng-container>
+</div>

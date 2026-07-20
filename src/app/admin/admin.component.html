@@ -34,6 +34,14 @@
     </p>
 
     <div class="hub-buttons">
+      <a routerLink="/admin/transfers" class="hub-card">
+        <span class="hub-title">Transfer Centre</span>
+        <span class="hub-desc">Move, sign or loan any player now or at a future season boundary.</span>
+      </a>
+      <a routerLink="/admin/draws" class="hub-card">
+        <span class="hub-title">Competition Draws</span>
+        <span class="hub-desc">Choose cup ties and European groups before the draw.</span>
+      </a>
       <a routerLink="/admin/scores" class="hub-card">
         <span class="hub-title">Predetermined Scores</span>
         <span class="hub-desc">Set fixed results for upcoming matches.</span>
@@ -46,10 +54,118 @@
         <span class="hub-title">Generate Player</span>
         <span class="hub-desc">Create a new player and assign to a team.</span>
       </a>
+      <a routerLink="/admin/awards" class="hub-card">
+        <span class="hub-title">Ballon d’Or Winner</span>
+        <span class="hub-desc">Review the statistical ranking or lock in the winner.</span>
+      </a>
       <a routerLink="/tactics" class="hub-card">
         <span class="hub-title">Tactics Advisor</span>
         <span class="hub-desc">Best-tactic analysis &amp; simulation (user page).</span>
       </a>
     </div>
+
+    <section class="club-funding-panel">
+      <div>
+        <h3>Club Finance Adjustment</h3>
+        <p>Add or remove money using an audited transaction and a controlled reason.</p>
+      </div>
+
+      <div class="funding-controls">
+        <label>
+          Operation
+          <select [ngModel]="financeAction" (ngModelChange)="changeFinanceAction($event)">
+            <option value="ADD">Add funds</option>
+            <option value="REMOVE">Remove funds</option>
+          </select>
+        </label>
+
+        <label>
+          Club
+          <select [(ngModel)]="fundingTeamId">
+            <option *ngFor="let team of teams" [ngValue]="team.id">{{ team.name }}</option>
+          </select>
+        </label>
+
+        <label>
+          Amount
+          <input type="number" [(ngModel)]="fundingAmount" min="1" max="10000000000000" step="1000000" />
+        </label>
+
+        <label>
+          {{ financeAction === 'ADD' ? 'Source / reason' : 'Reason' }}
+          <select [(ngModel)]="fundingReason">
+            <option *ngFor="let option of financeReasonOptions()" [value]="option.code">{{ option.label }}</option>
+          </select>
+        </label>
+
+        <label class="funding-note-label">
+          Note <span>(optional)</span>
+          <input type="text" [(ngModel)]="fundingNote" maxlength="200"
+                 placeholder="e.g. long-term infrastructure support" />
+        </label>
+
+        <button class="funding-button" [class.remove]="financeAction === 'REMOVE'"
+                (click)="submitFinanceAdjustment()" [disabled]="fundingLoading">
+          {{ fundingLoading ? 'Saving...' : (financeAction === 'ADD' ? 'Add Funds' : 'Remove Funds') }}
+        </button>
+      </div>
+
+      <p class="funding-description" *ngIf="selectedFundingDescription()">
+        {{ selectedFundingDescription() }}
+      </p>
+      <p class="funding-note" *ngIf="financeAction === 'ADD'">
+        The full amount enters the club balance and is visible in Finances → Recent Transactions.
+        The transfer-budget share follows the club's current board-confidence rule.
+      </p>
+      <p class="funding-note" *ngIf="financeAction === 'REMOVE'">
+        The amount is recorded as an expense in Finances → Recent Transactions. It reduces the club balance;
+        the transfer budget remains unchanged, consistently with other club expenses.
+      </p>
+      <div *ngIf="fundingMessage" class="contract-result"
+           [class.ok]="fundingSuccess" [class.error]="!fundingSuccess">
+        {{ fundingMessage }}
+      </div>
+    </section>
+
+    <section class="bulk-contract-panel">
+      <div>
+        <h3>Bulk Contract Extension</h3>
+        <p>Extend active player contracts without renegotiating wages.</p>
+      </div>
+
+      <div class="contract-controls">
+        <label>
+          Scope
+          <select [(ngModel)]="contractScope">
+            <option value="TEAM">One team</option>
+            <option value="ALL">All teams</option>
+          </select>
+        </label>
+
+        <label *ngIf="contractScope === 'TEAM'">
+          Team
+          <select [(ngModel)]="selectedTeamId">
+            <option *ngFor="let team of teams" [ngValue]="team.id">{{ team.name }}</option>
+          </select>
+        </label>
+
+        <label>
+          Seasons to add
+          <input type="number" [(ngModel)]="extensionSeasons" min="1" max="100" />
+        </label>
+
+        <button class="extend-button" (click)="extendContracts()" [disabled]="contractLoading">
+          {{ contractLoading ? 'Extending...' : 'Extend Contracts' }}
+        </button>
+      </div>
+
+      <p class="contract-note">
+        The selected number is added to each current expiry season. Expired deals restart from the current season.
+      </p>
+      <div *ngIf="contractMessage" class="contract-result"
+           [class.ok]="contractSuccess" [class.error]="!contractSuccess">
+        {{ contractMessage }}
+      </div>
+    </section>
   </div>
 </div>

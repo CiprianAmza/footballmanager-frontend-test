@@ -26,6 +26,82 @@
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+.availability-panel {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid #4b3f31;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #29251f, #242424);
+}
+
+.availability-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 11px;
+}
+
+.availability-heading strong {
+  display: block;
+  color: #fff;
+  font-size: 14px;
+}
+
+.availability-heading span {
+  color: #9c9286;
+  font-size: 11px;
+}
+
+.availability-heading a {
+  color: #68b9ee;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.availability-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 8px;
+}
+
+.availability-card {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  border-left: 3px solid #777;
+  background: rgba(0, 0, 0, .2);
+  border-radius: 4px;
+}
+
+.availability-card.injury { border-left-color: #e67e22; }
+.availability-card.suspension { border-left-color: #e74c3c; }
+.availability-icon { color: #d7c1a7; }
+.availability-card p {
+  margin: 3px 0 0;
+  color: #a8a29a;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.player-unavailable { background: rgba(122, 56, 43, .12); }
+.availability-cell { min-width: 155px; }
+.available-chip,
+.unavailable-chip {
+  display: block;
+  width: fit-content;
+  margin: 2px 0;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.available-chip { color: #72d99a; background: rgba(46, 204, 113, .12); }
+.unavailable-chip.injury { color: #ffb366; background: rgba(230, 126, 34, .16); }
+.unavailable-chip.suspension { color: #ff8580; background: rgba(231, 76, 60, .16); }
+
 /* --- View Controls --- */
 .view-controls {
   margin-bottom: 15px;
@@ -107,19 +183,20 @@
 
 /* --- Specific Components --- */
 
-/* Tactic Selector (in table) */
-.tactic-select {
+/* Read-only natural position marker. Position changes belong in the tactics screen. */
+.position-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
   background-color: #1f2f2f; /* Dark Green tint */
   color: #2ecc71; /* Green Text */
   border: 1px solid #2ecc71;
   border-radius: 3px;
-  padding: 2px;
+  padding: 3px 6px;
   font-size: 0.85em;
   font-weight: bold;
-  width: 100%;
   text-align: center;
-  cursor: pointer;
-  outline: none;
 }
 
 /* Player Name Link */

@@ -9,10 +9,15 @@ interface BracketMatch {
   team1Name: string | null;
   team2Name: string | null;
   score: string | null;
+  winnerTeamId?: number | null;
+  qualifiedTeamId?: number | null;
+  decidedBy?: string | null;
+  legNumber?: number;
 }
 
 interface BracketRound {
   round: number;
+  roundLabel: string;
   matches: BracketMatch[];
 }
 
@@ -30,6 +35,7 @@ interface DisplayMatch {
   winner: 'home' | 'away' | null;
   isPlaceholderHome: boolean;
   isPlaceholderAway: boolean;
+  decision: string | null;
 }
 
 @Component({
@@ -74,7 +80,7 @@ export class CupOverviewComponent implements OnInit, OnChanges {
     this.http.get<CupBracket>(url).subscribe({
       next: (data) => {
         this.bracket = data;
-        this.roundNames = this.buildRoundNames(data.rounds);
+        this.roundNames = (data.rounds || []).map(round => round.roundLabel || `Round ${round.round}`);
         this.currentRoundIndex = Math.min(this.currentRoundIndex, Math.max(0, data.rounds.length - 1));
         this.renderCurrentRound();
         this.loading = false;
@@ -98,27 +104,6 @@ export class CupOverviewComponent implements OnInit, OnChanges {
    *   - any earlier round whose match count != next power-of-2 expected for
    *     a "round of N" is labelled "Preliminary"
    */
-  buildRoundNames(rounds: BracketRound[]): string[] {
-    if (!rounds || rounds.length === 0) return [];
-    const total = rounds.length;
-    const names: string[] = new Array(total);
-    // Standard knockout names from the back
-    for (let i = total - 1; i >= 0; i--) {
-      const fromEnd = total - i;
-      if (fromEnd === 1) names[i] = 'Final';
-      else if (fromEnd === 2) names[i] = 'Semi-Final';
-      else if (fromEnd === 3) names[i] = 'Quarter-Final';
-      else if (fromEnd === 4) names[i] = 'Round of 16';
-      else if (fromEnd === 5) names[i] = 'Round of 32';
-      else names[i] = 'Round of ' + Math.pow(2, fromEnd - 1);
-    }
-    // If the first round has fewer matches than the second, it's the prelim
-    if (total >= 2 && rounds[0].matches.length < rounds[1].matches.length) {
-      names[0] = 'Preliminary';
-    }
-    return names;
-  }
-
   private renderCurrentRound(): void {
     if (!this.bracket || this.bracket.rounds.length === 0) {
       this.matches = [];
@@ -140,13 +125,17 @@ export class CupOverviewComponent implements OnInit, OnChanges {
       const away = this.resolveSlotName(m.team2Id, m.team2Name, prevRound, m.matchIndex * 2);
 
       const score = (m.score === null || m.score === undefined) ? '-' : m.score;
+      const qualifiedTeamId = m.qualifiedTeamId ?? m.winnerTeamId;
+      const backendWinner = qualifiedTeamId === m.team1Id ? 'home'
+        : qualifiedTeamId === m.team2Id ? 'away' : null;
       return {
         homeTeam: home.label,
         awayTeam: away.label,
         score,
-        winner: this.calculateWinner(score),
+        winner: backendWinner || this.calculateWinner(score),
         isPlaceholderHome: home.isPlaceholder,
         isPlaceholderAway: away.isPlaceholder,
+        decision: this.decisionLabel(m.decidedBy),
       };
     });
   }
@@ -195,5 +184,15 @@ export class CupOverviewComponent implements OnInit, OnChanges {
     if (h > a) return 'home';
     if (a > h) return 'away';
     return null;
+  }
+
+  private decisionLabel(decidedBy?: string | null): string | null {
+    switch (decidedBy) {
+      case 'PENALTIES': return 'Penalties';
+      case 'EXTRA_TIME': return 'After extra time';
+      case 'AGGREGATE': return 'Aggregate';
+      case 'FIRST_LEG': return 'First leg';
+      default: return null;
+    }
   }
 }

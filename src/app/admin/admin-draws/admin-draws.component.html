@@ -1,0 +1,122 @@
+<div class="admin-container">
+  <div class="panel draw-panel">
+    <div class="panel-header">
+      <div>
+        <h2>Competition Draw Control</h2>
+        <p class="draw-subtitle">Choose exact ties or groups before the scheduled draw is completed.</p>
+      </div>
+      <div class="header-actions">
+        <a class="secondary hub-link" routerLink="/admin">← Hub</a>
+        <button class="secondary" (click)="load()" [disabled]="loading">Refresh</button>
+      </div>
+    </div>
+
+    <div *ngIf="loading" class="status">Loading draws...</div>
+    <div *ngIf="error" class="status error">{{ error }}</div>
+    <div *ngIf="message" class="status success">{{ message }}</div>
+
+    <div class="draw-layout" *ngIf="!loading && stages.length">
+      <aside class="stage-list">
+        <button *ngFor="let stage of stages"
+                class="stage-card"
+                [class.active]="selected && stageKey(selected) === stageKey(stage)"
+                [class.waiting]="!stage.canEdit"
+                (click)="selectStage(stage)">
+          <span class="stage-card-top">
+            <strong>{{ stage.competitionName }}</strong>
+            <span class="source-badge" [class.europe]="stage.source === 'EUROPEAN_DRAW'">
+              {{ stage.source === 'EUROPEAN_DRAW' ? 'EUROPE' : 'CUP' }}
+            </span>
+          </span>
+          <span class="stage-name">{{ stage.stageLabel }}</span>
+          <span class="stage-status" [class.ready]="stage.canEdit">{{ stage.statusLabel }}</span>
+        </button>
+      </aside>
+
+      <section class="draw-editor" *ngIf="selected as stage">
+        <div class="editor-title">
+          <div>
+            <span class="eyebrow">SEASON {{ stage.season }} · ROUND {{ stage.round }}</span>
+            <h3>{{ stage.competitionName }} — {{ stage.stageLabel }}</h3>
+          </div>
+          <span class="mode-badge">{{ stage.drawMode === 'GROUPS' ? 'GROUP DRAW' : 'HEAD-TO-HEAD DRAW' }}</span>
+        </div>
+
+        <div class="date-strip" *ngIf="stage.drawDate || stage.matchDate">
+          <span *ngIf="stage.drawDate"><b>Draw:</b> {{ stage.drawDate }}</span>
+          <span *ngIf="stage.matchDate"><b>First match:</b> {{ stage.matchDate }}</span>
+        </div>
+
+        <div *ngIf="!stage.canEdit" class="waiting-box">
+          <strong>This draw is not editable yet.</strong>
+          <span>{{ stage.statusLabel }} ({{ stage.participants.length }}/{{ stage.expectedTeams }} teams known).</span>
+        </div>
+
+        <ng-container *ngIf="stage.canEdit && stage.drawMode === 'PAIRINGS'">
+          <div class="pairing-grid">
+            <div class="pairing-row" *ngFor="let pairing of pairings; let index = index">
+              <span class="tie-number">TIE {{ index + 1 }}</span>
+              <select [(ngModel)]="pairing.team1Id">
+                <option [ngValue]="null">Select team</option>
+                <option *ngFor="let team of stage.participants"
+                        [ngValue]="team.teamId"
+                        [disabled]="isUnavailable(team.teamId, pairing.team1Id)">
+                  {{ teamLabel(team) }}
+                </option>
+              </select>
+              <span class="versus">vs</span>
+              <select [(ngModel)]="pairing.team2Id">
+                <option [ngValue]="null">Select team</option>
+                <option *ngFor="let team of stage.participants"
+                        [ngValue]="team.teamId"
+                        [disabled]="isUnavailable(team.teamId, pairing.team2Id)">
+                  {{ teamLabel(team) }}
+                </option>
+              </select>
+            </div>
+            <div class="pairing-row bye-row" *ngIf="stage.byeSlots === 1">
+              <span class="tie-number">BYE</span>
+              <select [(ngModel)]="byeTeamId">
+                <option [ngValue]="null">Select bye team</option>
+                <option *ngFor="let team of stage.participants"
+                        [ngValue]="team.teamId"
+                        [disabled]="isUnavailable(team.teamId, byeTeamId)">
+                  {{ teamLabel(team) }}
+                </option>
+              </select>
+            </div>
+          </div>
+        </ng-container>
+
+        <ng-container *ngIf="stage.canEdit && stage.drawMode === 'GROUPS'">
+          <p class="group-note">Every eligible team must appear once. Pot labels remain visible, but Admin may override normal seeding.</p>
+          <div class="groups-grid">
+            <div class="group-card" *ngFor="let group of groups">
+              <h4>GROUP {{ group.groupNumber }}</h4>
+              <select *ngFor="let teamId of group.teamIds; let slot = index"
+                      [(ngModel)]="group.teamIds[slot]">
+                <option [ngValue]="null">Select team</option>
+                <option *ngFor="let team of stage.participants"
+                        [ngValue]="team.teamId"
+                        [disabled]="isUnavailable(team.teamId, group.teamIds[slot])">
+                  {{ teamLabel(team) }}
+                </option>
+              </select>
+            </div>
+          </div>
+        </ng-container>
+
+        <div class="save-draw-row" *ngIf="stage.canEdit">
+          <span *ngIf="!selectionComplete" class="validation-hint">Select every team exactly once.</span>
+          <button class="save-draw" (click)="save()" [disabled]="saving || !selectionComplete">
+            {{ saving ? 'SAVING DRAW...' : 'CONFIRM MANUAL DRAW' }}
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <div *ngIf="!loading && !stages.length && !error" class="status">
+      There are no pending or editable draws in the current season.
+    </div>
+  </div>
+</div>

@@ -34,6 +34,23 @@
           <span class="nation-text" *ngIf="playerView.nationName"> · {{ playerView.nationName }}</span>
           <a class="fm-link card-link" [routerLink]="['/card', playerView.id]" style="margin-left:10px;">🎴 Card</a>
         </div>
+        <div class="major-award-badges"
+             *ngIf="majorAwardSummary.goldenBoots > 0 || majorAwardSummary.ballonDors > 0">
+          <a class="major-award-badge golden-boot-badge" routerLink="/awards/golden-boot"
+             *ngIf="majorAwardSummary.goldenBoots > 0"
+             title="Open Golden Boot history">
+            <span class="award-symbol boot-symbol" aria-hidden="true">🥾</span>
+            <span>Golden Boot</span>
+            <strong>×{{ majorAwardSummary.goldenBoots }}</strong>
+          </a>
+          <a class="major-award-badge ballon-dor-badge" routerLink="/awards/ballon-dor"
+             *ngIf="majorAwardSummary.ballonDors > 0"
+             title="Open Ballon d'Or history">
+            <span class="award-symbol ball-symbol" aria-hidden="true"></span>
+            <span>Ballon d'Or</span>
+            <strong>×{{ majorAwardSummary.ballonDors }}</strong>
+          </a>
+        </div>
       </div>
 
       <div class="header-stats">
@@ -331,6 +348,11 @@
                 </button>
 
                 <div *ngIf="showRenewForm" class="renew-form">
+                    <p class="renew-guidance" *ngIf="renewalDemand > 0">
+                        Current: {{ playerView.wage | currency:'EUR':'symbol':'1.0-0' }} ·
+                        Player request: <strong>{{ renewalDemand | currency:'EUR':'symbol':'1.0-0' }}</strong>
+                        (request is always within −40% / +40% of the current wage)
+                    </p>
                     <div class="renew-form-row">
                         <label>New Weekly Wage:</label>
                         <input type="number" [(ngModel)]="renewWage" class="renew-input" />

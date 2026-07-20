@@ -49,12 +49,211 @@ h2 {
   letter-spacing: 1px;
 }
 
+/* DRAW CENTRE */
+.draw-centre {
+  margin: 22px 0 28px;
+  border: 1px solid #303654;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #20243b 0%, #171a2d 68%);
+  overflow: hidden;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .22);
+}
+
+.draw-centre-header,
+.pots-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.draw-centre-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid #303654;
+}
+
+.draw-centre h2,
+.draw-centre h3 {
+  margin: 3px 0 0;
+  color: #fff;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.draw-centre h2 { font-size: 1.2rem; }
+.draw-centre h3 { font-size: .98rem; }
+
+.eyebrow,
+.timeline-kicker {
+  color: #f1c40f;
+  font-size: .65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.3px;
+}
+
+.draw-stage-select {
+  min-width: 250px;
+  padding: 9px 12px;
+  border: 1px solid #3a4267;
+  border-radius: 5px;
+  color: #e9ebf4;
+  background: #121527;
+}
+
+.draw-timeline {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 15px 20px;
+  background: rgba(8, 10, 20, .28);
+}
+
+.timeline-date {
+  display: grid;
+  gap: 2px;
+  min-width: 130px;
+}
+
+.timeline-date strong { color: #fff; font-size: .9rem; }
+.timeline-date > span:last-child { color: #7f879d; font-size: .68rem; }
+.match-date { text-align: right; }
+.timeline-line { flex: 1; height: 2px; background: linear-gradient(90deg, #f1c40f, #3498db); }
+
+.draw-status {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: .67rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.draw-status.pots-published { color: #8ed6ff; background: rgba(52, 152, 219, .16); }
+.draw-status.waiting-for-teams { color: #ffc96a; background: rgba(243, 156, 18, .16); }
+.draw-status.draw-completed { color: #78e5a4; background: rgba(46, 204, 113, .16); }
+
+.draw-warning {
+  margin: 16px 20px 0;
+  padding: 10px 12px;
+  border-left: 3px solid #f39c12;
+  color: #d8c399;
+  background: rgba(243, 156, 18, .08);
+  font-size: .76rem;
+}
+
+.pots-heading { padding: 18px 20px 10px; }
+.coefficient-note { color: #858da2; font-size: .68rem; }
+
+.pots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  padding: 0 20px 20px;
+}
+
+.pot-card {
+  border: 1px solid #303654;
+  border-radius: 7px;
+  background: #171a2c;
+  overflow: hidden;
+}
+
+.pot-card header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #2c314d;
+  color: #dfe3ef;
+  font-size: .76rem;
+}
+
+.pot-number {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: #171a2c;
+  background: #f1c40f;
+  font-weight: 900;
+}
+
+.pot-team {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #252a43;
+  font-size: .76rem;
+}
+
+.pot-team:last-child { border-bottom: 0; }
+.team-coefficient { color: #f1c40f; font-variant-numeric: tabular-nums; font-weight: 700; }
+.empty-pot { padding: 13px 12px; color: #656d81; font-size: .72rem; font-style: italic; }
+
+.draw-result {
+  padding-bottom: 20px;
+  border-top: 1px solid #303654;
+}
+
+.draw-pairing {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 38px minmax(120px, 1fr) 55px;
+  align-items: center;
+  gap: 8px;
+  margin: 0 20px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #292e48;
+  background: rgba(10, 12, 24, .22);
+  font-size: .8rem;
+}
+
+.draw-pairing > a:first-child { text-align: right; }
+.versus { color: #f1c40f; text-align: center; font-weight: 900; }
+.legs-badge { color: #9aa2b8; font-size: .62rem; text-transform: uppercase; }
+
+.drawn-groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  padding: 0 20px;
+}
+
+.drawn-group { display: grid; gap: 7px; padding: 12px; border: 1px solid #303654; border-radius: 6px; }
+.drawn-group > strong { color: #f1c40f; font-size: .76rem; }
+.drawn-group > a { display: flex; justify-content: space-between; font-size: .74rem; }
+.drawn-group small { color: #7f879d; }
+
+@media (max-width: 720px) {
+  .draw-centre-header, .pots-heading { align-items: stretch; flex-direction: column; }
+  .draw-stage-select { min-width: 0; width: 100%; }
+  .draw-timeline { flex-wrap: wrap; }
+  .draw-status { width: 100%; text-align: center; }
+  .draw-pairing { grid-template-columns: 1fr 30px 1fr; }
+  .legs-badge { grid-column: 1 / -1; text-align: center; }
+}
+
 /* GROUPS */
 .groups-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
+}
+
+.groups-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: -4px 0 12px;
+  color: #8f96a8;
+  font-size: 0.72rem;
+}
+
+.groups-legend strong {
+  color: #c5cad6;
 }
 
 .group-card {
@@ -178,7 +377,7 @@ h2 {
   padding-left: 16px;
 }
 
-/* POT BADGES */
+/* DRAW-SEEDING POT BADGES */
 .pot-badge {
   display: inline-block;
   font-size: 0.6rem;
@@ -217,3 +416,5 @@ h2 {
   color: #666;
   font-style: italic;
 }
+.awards-link { margin-left: auto; padding: 8px 12px; border: 1px solid #d5b72c; border-radius: 5px; color: #f4d85a; background: #302a12; font-size: .75rem; font-weight: 800; text-decoration: none; }
+.awards-link:hover { color: #201b04; background: #f1c40f; }

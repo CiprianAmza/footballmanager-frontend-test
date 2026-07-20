@@ -1,0 +1,174 @@
+<div class="admin-container">
+  <div class="panel transfer-admin-panel">
+    <div class="panel-header">
+      <div>
+        <h2>Admin Transfer Centre</h2>
+        <p class="subtitle">Force or schedule permanent moves, free-agent signings and multi-season loans.</p>
+      </div>
+      <div class="header-actions">
+        <a class="secondary hub-link" routerLink="/admin">← Hub</a>
+        <button class="secondary" (click)="load()" [disabled]="loading">Refresh</button>
+      </div>
+    </div>
+
+    <div *ngIf="error" class="status error">{{ error }}</div>
+    <div *ngIf="message" class="status success">{{ message }}</div>
+
+    <section class="movement-editor">
+      <div class="section-title">
+        <div>
+          <span class="eyebrow">CURRENT SEASON {{ currentSeason }}</span>
+          <h3>Create player movement</h3>
+        </div>
+        <span class="movement-badge">{{ typeLabel }}</span>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          Movement type
+          <select [(ngModel)]="type" (ngModelChange)="changeType()">
+            <option value="PERMANENT">Permanent transfer</option>
+            <option value="FREE_AGENT">Sign free agent</option>
+            <option value="LOAN">Loan</option>
+          </select>
+        </label>
+
+        <label *ngIf="type !== 'FREE_AGENT'">
+          From team
+          <select [(ngModel)]="sourceTeamId" (ngModelChange)="changeSource()">
+            <option *ngFor="let team of teams" [ngValue]="team.id">{{ team.name }}</option>
+          </select>
+        </label>
+
+        <label>
+          To team
+          <select [(ngModel)]="destinationTeamId">
+            <option *ngFor="let team of destinationTeams" [ngValue]="team.id">{{ team.name }}</option>
+          </select>
+        </label>
+
+        <label>
+          Execution
+          <select [(ngModel)]="executionMode">
+            <option value="NOW">Now</option>
+            <option value="START_OF_SEASON">Start of a future season</option>
+          </select>
+        </label>
+
+        <label *ngIf="executionMode === 'START_OF_SEASON'">
+          Joining season
+          <input type="number" [(ngModel)]="executionSeason" [min]="currentSeason + 1" [max]="currentSeason + 100" />
+        </label>
+      </div>
+
+      <div class="player-picker">
+        <div class="player-search">
+          <label>
+            Player search
+            <input type="text" [(ngModel)]="playerQuery" (keyup.enter)="loadPlayers()" placeholder="Name contains..." />
+          </label>
+          <button (click)="loadPlayers()" [disabled]="playersLoading">
+            {{ playersLoading ? 'Loading...' : 'Search / reload squad' }}
+          </button>
+        </div>
+
+        <label class="player-select">
+          Player
+          <select [(ngModel)]="playerId" (ngModelChange)="selectPlayer($event)">
+            <option *ngFor="let player of players" [ngValue]="player.id">
+              {{ player.name }} · {{ player.position }} · {{ player.rating }} · age {{ player.age }}
+            </option>
+          </select>
+        </label>
+
+        <div class="player-summary" *ngIf="selectedPlayer as player">
+          <div><span>Club</span><strong>{{ player.teamName }}</strong></div>
+          <div><span>Rating</span><strong>{{ player.rating }}</strong></div>
+          <div><span>Age</span><strong>{{ player.age }}</strong></div>
+          <div><span>Salary</span><strong>{{ formatMoney(player.wage) }}</strong></div>
+          <div><span>Value</span><strong>{{ formatMoney(player.transferValue) }}</strong></div>
+          <div><span>Contract</span><strong>Until Season {{ player.contractEndSeason }}</strong></div>
+          <div *ngIf="player.activeLoan" class="warning"><span>Status</span><strong>Already on loan</strong></div>
+        </div>
+      </div>
+
+      <div class="deal-grid" *ngIf="selectedPlayer">
+        <label *ngIf="type !== 'FREE_AGENT'">
+          {{ type === 'LOAN' ? 'Loan fee' : 'Transfer fee' }}
+          <input type="number" [(ngModel)]="transferFee" min="0" />
+        </label>
+
+        <ng-container *ngIf="type !== 'LOAN'">
+          <label>
+            New salary / month
+            <input type="number" [(ngModel)]="wage" min="1" />
+          </label>
+          <label>
+            Contract length
+            <input type="number" [(ngModel)]="contractSeasons" min="1" max="100" />
+            <small>season(s) from execution</small>
+          </label>
+        </ng-container>
+
+        <ng-container *ngIf="type === 'LOAN'">
+          <label>
+            Loan duration
+            <input type="number" [(ngModel)]="loanSeasons" min="1" [max]="maxLoanSeasons" />
+            <small>Maximum {{ maxLoanSeasons }} based on contract</small>
+          </label>
+          <label>
+            Parent pays salary
+            <input type="number" [(ngModel)]="parentWageContribution" min="0" max="100" />
+            <small>0–100%</small>
+          </label>
+        </ng-container>
+      </div>
+
+      <div class="submit-row">
+        <span class="validation" *ngIf="validationMessage">{{ validationMessage }}</span>
+        <button class="confirm-movement" (click)="submit()" [disabled]="saving || !!validationMessage">
+          {{ saving ? 'SAVING...' : (executionMode === 'NOW' ? 'EXECUTE MOVEMENT' : 'SCHEDULE MOVEMENT') }}
+        </button>
+      </div>
+    </section>
+
+    <section class="movement-history">
+      <div class="section-title">
+        <div>
+          <span class="eyebrow">DURABLE QUEUE &amp; AUDIT</span>
+          <h3>Admin movements</h3>
+        </div>
+        <span class="movement-count">{{ movements.length }} records</span>
+      </div>
+
+      <div class="table-scroll" *ngIf="movements.length; else noMovements">
+        <table>
+          <thead>
+          <tr>
+            <th>Status</th><th>Player</th><th>Movement</th><th>Route</th><th>Terms</th><th>When</th><th></th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr *ngFor="let movement of movements">
+            <td><span class="status-pill" [ngClass]="movement.status.toLowerCase()">{{ movement.status }}</span></td>
+            <td><strong>{{ movement.playerName }}</strong><small *ngIf="movement.failureReason">{{ movement.failureReason }}</small></td>
+            <td>{{ movement.movementType.replace('_', ' ') }}</td>
+            <td>{{ movement.sourceTeamName }} → {{ movement.destinationTeamName }}</td>
+            <td>
+              <ng-container *ngIf="movement.movementType === 'LOAN'; else permanentTerms">
+                {{ movement.loanSeasons }} season(s) · {{ formatMoney(movement.transferFee) }}
+              </ng-container>
+              <ng-template #permanentTerms>
+                {{ formatMoney(movement.transferFee) }} · salary {{ formatMoney(movement.wage) }}
+              </ng-template>
+            </td>
+            <td>{{ movement.executionMode === 'NOW' ? 'Season ' + movement.executionSeason + ' · immediate' : 'Start Season ' + movement.executionSeason }}</td>
+            <td><button class="cancel-button" *ngIf="movement.status === 'PENDING'" (click)="cancel(movement)">Cancel</button></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noMovements><div class="empty-state">No Admin player movements yet.</div></ng-template>
+    </section>
+  </div>
+</div>

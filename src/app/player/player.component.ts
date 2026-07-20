@@ -15,6 +15,7 @@ export class PlayerComponent implements OnInit {
 
     playerId: number;
     playerView: any;
+    majorAwardSummary: any = { goldenBoots: 0, ballonDors: 0, awards: [] };
 
     // Tab Management (Default: Overview)
     activeTab: string = 'overview'; // 'overview', 'stats', 'contract', 'history', 'analytics', 'trophies'
@@ -31,6 +32,9 @@ export class PlayerComponent implements OnInit {
     renewMessage: string = '';
     renewSuccess: boolean = false;
     showRenewForm: boolean = false;
+    renewalDemand: number = 0;
+    renewalMinimum: number = 0;
+    renewalMaximum: number = 0;
 
     // Contract Clauses
     showClausesForm: boolean = false;
@@ -73,8 +77,8 @@ export class PlayerComponent implements OnInit {
     ngOnInit(): void {
         this.route.params.subscribe(params => {
             this.playerId = params['playerId'];
-            this.fetchData();
             // Reset state on player change
+            this.majorAwardSummary = { goldenBoots: 0, ballonDors: 0, awards: [] };
             this.activeTab = 'overview';
             this.trophies = [];
             this.trophiesLoaded = false;
@@ -87,6 +91,20 @@ export class PlayerComponent implements OnInit {
             this.roleSuitabilitiesLoaded = false;
             this.maxSeason = this.teamService.currentSeason;
             this.selectedSeason = this.maxSeason;
+            this.fetchData();
+            this.fetchMajorAwards();
+        });
+    }
+
+    fetchMajorAwards(): void {
+        this.http.get<any>(urlApp + `/awards/player/${this.playerId}`).subscribe({
+            next: data => {
+                this.majorAwardSummary = data || { goldenBoots: 0, ballonDors: 0, awards: [] };
+            },
+            error: () => {
+                // The profile remains usable even if award history is unavailable.
+                this.majorAwardSummary = { goldenBoots: 0, ballonDors: 0, awards: [] };
+            }
         });
     }
 
@@ -104,7 +122,21 @@ export class PlayerComponent implements OnInit {
                 this.checkShortlist();
                 this.fetchPlayerForm();
                 this.fetchRoleSuitabilities();
+                if (this.isOwnPlayer()) {
+                    this.fetchRenewalDemand();
+                }
             });
+    }
+
+    fetchRenewalDemand(): void {
+        this.http.get<any>(urlApp + `/contract/demand/${this.playerId}`).subscribe({
+            next: data => {
+                this.renewalDemand = data.wageDemand || this.playerView.wage;
+                this.renewalMinimum = data.minimumWage || 0;
+                this.renewalMaximum = data.maximumWage || 0;
+                this.renewWage = this.renewalDemand;
+            }
+        });
     }
 
     checkShortlist() {

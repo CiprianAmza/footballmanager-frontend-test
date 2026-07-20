@@ -51,6 +51,9 @@ export class CompetitionComponent implements OnInit, OnDestroy {
         // Standings + stats change after matches are played — refresh live when
         // viewing the current season (historical seasons are immutable).
         this.sub.add(this.gameEvents.on('standings').subscribe(() => {
+            // The event stream can emit while the route is still initializing.
+            // Do not build stats URLs until both route and season are available.
+            if (!this.parameterCompetitionId || !this.selectedSeason) return;
             if (this.competitionType === 'League' && this.selectedSeason === this.currentSeason) {
                 this.loadLeagueData();
             }
@@ -85,7 +88,7 @@ export class CompetitionComponent implements OnInit, OnDestroy {
                     this.router.navigate(['/european-rounds', this.parameterCompetitionId, this.currentSeason]);
                     return;
                 }
-                if (info.typeId === 2) {
+                if (info.typeId === 2 || info.typeId === 6) {
                     this.competitionType = 'Cup';
                 } else {
                     this.competitionType = 'League';
@@ -132,6 +135,7 @@ export class CompetitionComponent implements OnInit, OnDestroy {
     }
 
     loadCompetitionStats() {
+        if (!this.parameterCompetitionId || !this.selectedSeason) return;
         this.compStatsLoading = true;
         this.http.get<any>(urlApp + `/stats/competition/${this.parameterCompetitionId}/${this.selectedSeason}`).subscribe({
             next: (data) => {
@@ -203,6 +207,7 @@ export class CompetitionComponent implements OnInit, OnDestroy {
     }
 
     loadChampionshipStats() {
+        if (!this.parameterCompetitionId || !this.selectedSeason) return;
         this.champStatsLoading = true;
         this.http.get<any>(urlApp + `/stats/championshipStats/${this.parameterCompetitionId}/${this.selectedSeason}`).subscribe({
             next: (data) => {

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, OnDestroy, SimpleChanges } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
@@ -18,6 +18,8 @@ export interface ScheduleView {
   roundNumber: number;
   teamId1: number;
   teamId2: number;
+  winnerTeamId?: number | null;
+  decidedBy?: string | null;
   resultType?: 'W' | 'D' | 'L' | 'Pending';
 }
 
@@ -60,9 +62,11 @@ export interface MatchEvent {
   templateUrl: './fixtures.component.html',
   styleUrls: ['./fixtures.component.css']
 })
-export class FixturesComponent implements OnInit, OnDestroy {
+export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
 
+  @Input() teamIdInput?: number;
   teamId!: number;
+  teamName: string = 'Team';
   fixtures: ScheduleView[] = [];
   selectedMatch: ScheduleView | null = null;
 
@@ -76,22 +80,47 @@ export class FixturesComponent implements OnInit, OnDestroy {
 
   // Calendar tab
   activeTab: 'fixtures' | 'calendar' = 'fixtures';
+  activeMatchTab: 'summary' | 'statistics' | 'lineups' | 'h2h' = 'summary';
   calendarEntries: CalendarEntry[] = [];
   currentRound: number = 0;
+  selectedSeason: number = 0;
+  availableSeasons: number[] = [1];
+
+  // Match-history filters
+  historySearch = '';
+  historyStatus: 'all' | 'played' | 'upcoming' = 'all';
+  historyResult: 'all' | 'W' | 'D' | 'L' = 'all';
+  historyVenue: 'all' | 'H' | 'A' = 'all';
+  historyCompetition = 'all';
+
+  // Complete pair history, shared by played and upcoming match detail views.
+  h2h: any = null;
+  loadingH2h = false;
 
   private refreshSub?: Subscription;
   private routeSub?: Subscription;
+  private initialized = false;
 
   constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private teamService: TeamService) {}
 
   ngOnInit(): void {
+    this.initialized = true;
     this.routeSub = this.route.params.subscribe(params => {
-      this.teamId = Number(params['teamId']) || this.teamService.teamId;
+      this.teamId = this.teamIdInput || Number(params['teamId']) || this.teamService.teamId;
       this.loadAll();
     });
 
     // Reload after each game advance (CONTINUE) so scores, fixtures and calendar refresh
     this.refreshSub = this.teamService.refresh$.subscribe(() => this.loadAll());
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    if (!this.initialized || !changes['teamIdInput'] || !this.teamIdInput) return;
+    this.teamId = this.teamIdInput;
+    this.fixtures = [];
+    this.calendarEntries = [];
+    this.selectedMatch = null;
+    this.loadAll();
   }
 
   ngOnDestroy(): void {
@@ -100,9 +129,59 @@ export class FixturesComponent implements OnInit, OnDestroy {
   }
 
   private loadAll(): void {
+    if (!this.teamId) return;
+    const currentSeason = Math.max(1, this.teamService.currentSeason);
+    if (!this.selectedSeason || this.selectedSeason > currentSeason) {
+      this.selectedSeason = currentSeason;
+    }
+    this.availableSeasons = Array.from(
+      { length: currentSeason },
+      (_, index) => currentSeason - index
+    );
+    this.fetchTeamName();
     this.fetchFixtures();
     this.fetchCurrentRound();
     this.fetchCalendar();
+  }
+
+  get competitionFilters(): string[] {
+    return Array.from(new Set(this.fixtures.map(match => match.competitionName).filter(Boolean))).sort();
+  }
+
+  get filteredFixtures(): ScheduleView[] {
+    const query = this.historySearch.trim().toLowerCase();
+    return this.fixtures.filter(match => {
+      if (this.historyStatus === 'played' && match.resultType === 'Pending') return false;
+      if (this.historyStatus === 'upcoming' && match.resultType !== 'Pending') return false;
+      if (this.historyResult !== 'all' && match.resultType !== this.historyResult) return false;
+      if (this.historyVenue !== 'all' && match.homeOrAway !== this.historyVenue) return false;
+      if (this.historyCompetition !== 'all' && match.competitionName !== this.historyCompetition) return false;
+      if (query && !`${match.opponentTeam} ${match.competitionName} ${match.date}`.toLowerCase().includes(query)) {
+        return false;
+      }
+      return true;
+    });
+  }
+
+  clearHistoryFilters(): void {
+    this.historySearch = '';
+    this.historyStatus = 'all';
+    this.historyResult = 'all';
+    this.historyVenue = 'all';
+    this.historyCompetition = 'all';
+  }
+
+  get hasHistoryFilters(): boolean {
+    return !!this.historySearch
+      || this.historyStatus !== 'all'
+      || this.historyResult !== 'all'
+      || this.historyVenue !== 'all'
+      || this.historyCompetition !== 'all';
+  }
+
+  private fetchTeamName(): void {
+    this.http.get(urlApp + `/teams/getTeamNameById/${this.teamId}`, { responseType: 'text' })
+      .subscribe({ next: name => this.teamName = name || 'Team', error: () => this.teamName = 'Team' });
   }
 
   switchTab(tab: 'fixtures' | 'calendar'): void {
@@ -117,7 +196,7 @@ export class FixturesComponent implements OnInit, OnDestroy {
   }
 
   fetchCalendar(): void {
-    const season = this.teamService.currentSeason;
+    const season = this.selectedSeason;
     this.http.get<CalendarEntry[]>(urlApp + `/match/calendar/${this.teamId}/${season}`)
       .subscribe(data => {
         // First load — populate normally
@@ -175,11 +254,13 @@ export class FixturesComponent implements OnInit, OnDestroy {
   }
 
   fetchFixtures(): void {
-    this.http.get<ScheduleView[]>(urlApp + `/match/getScheduleForCurrentSeasonAndTeamId/${this.teamId}`)
+    this.http.get<ScheduleView[]>(
+      urlApp + `/match/getScheduleForSeasonNumber/${this.selectedSeason}/${this.teamId}`
+    )
       .subscribe(data => {
         const incoming = data.map(match => ({
           ...match,
-          resultType: this.calculateResultType(match.score, match.homeOrAway)
+          resultType: this.calculateResultType(match)
         }));
 
         // ===== First load: populate normally and auto-select first fixture =====
@@ -238,8 +319,12 @@ export class FixturesComponent implements OnInit, OnDestroy {
       });
   }
 
-  calculateResultType(score: string, homeOrAway: string): 'W' | 'D' | 'L' | 'Pending' {
+  calculateResultType(match: ScheduleView): 'W' | 'D' | 'L' | 'Pending' {
+    const score = match.score;
     if (!score || score.trim() === "" || score.trim() === "-") return 'Pending';
+    if (match.winnerTeamId != null) {
+      return match.winnerTeamId === this.teamId ? 'W' : 'L';
+    }
 
     // The backend stores scores as "X - Y" (already from our team's perspective)
     // and may append a knockout suffix like " (agg 3-2, a.e.t.)" or " (4-2 pen)".
@@ -258,8 +343,29 @@ export class FixturesComponent implements OnInit, OnDestroy {
     return 'D';
   }
 
+  opponentTeamId(match: ScheduleView): number {
+    return match.homeOrAway === 'H' ? match.teamId2 : match.teamId1;
+  }
+
+  changeSeason(): void {
+    this.fixtures = [];
+    this.calendarEntries = [];
+    this.selectedMatch = null;
+    this.matchEvents = [];
+    this.matchSummary = null;
+    this.matchStats = null;
+    this.h2h = null;
+    this.fetchFixtures();
+    this.fetchCalendar();
+  }
+
+  isViewingCurrentSeason(): boolean {
+    return this.selectedSeason === this.teamService.currentSeason;
+  }
+
   selectMatch(match: ScheduleView) {
       this.selectedMatch = match;
+      this.activeMatchTab = 'summary';
       this.selectedOpponentInfo = {
           name: match.opponentTeam,
           stadium: "Opponent Stadium",
@@ -272,12 +378,127 @@ export class FixturesComponent implements OnInit, OnDestroy {
       this.matchEvents = [];
       this.matchSummary = null;
       this.matchStats = null;
+      this.h2h = null;
+      this.loadHeadToHead(match);
       if (match.resultType !== 'Pending' && match.competitionId && match.teamId1 && match.teamId2) {
           this.loadMatchEvents(match);
           this.loadMatchSummary(match);
           this.loadMatchStats(match);
       }
   }
+
+  getSelectedMatchScore(): string {
+      if (!this.selectedMatch) return '-';
+      if (this.selectedMatch.resultType === 'Pending') return this.selectedMatch.score;
+      if (this.matchSummary?.score) return this.matchSummary.score;
+
+      // Schedule scores are intentionally returned from the viewed team's perspective.
+      // The detail header, however, is laid out home vs away, so reverse the first score pair
+      // while the canonical match summary is loading for an away fixture.
+      if (this.selectedMatch.homeOrAway === 'A') {
+          return this.selectedMatch.score.replace(
+              /(\d+)\s*-\s*(\d+)/,
+              (_match, teamGoals, opponentGoals) => `${opponentGoals} - ${teamGoals}`
+          );
+      }
+      return this.selectedMatch.score;
+  }
+
+  switchMatchTab(tab: 'summary' | 'statistics' | 'lineups' | 'h2h'): void {
+      this.activeMatchTab = tab;
+  }
+
+  loadHeadToHead(match: ScheduleView): void {
+      const opponentId = this.opponentTeamId(match);
+      if (!this.teamId || !opponentId) return;
+      this.loadingH2h = true;
+      this.http.get<any>(`${urlApp}/match/h2h/${this.teamId}/${opponentId}`).subscribe({
+          next: data => {
+              this.h2h = data;
+              this.loadingH2h = false;
+          },
+          error: () => {
+              this.h2h = null;
+              this.loadingH2h = false;
+          }
+      });
+  }
+
+  decisionLabel(match: ScheduleView | null): string | null {
+      if (!match) return null;
+      switch ((match.decidedBy || '').toUpperCase()) {
+          case 'PENALTIES': return 'PENALTIES';
+          case 'EXTRA_TIME': return 'AFTER EXTRA TIME';
+          case 'AGGREGATE': return 'ON AGGREGATE';
+          case 'FIRST_LEG': return 'FIRST LEG';
+          default: {
+              const score = (match.score || '').toLowerCase();
+              if (score.includes('pen')) return 'PENALTIES';
+              if (score.includes('a.e.t')) return 'AFTER EXTRA TIME';
+              if (score.includes('agg')) return 'ON AGGREGATE';
+              return null;
+          }
+      }
+  }
+
+  oppositeResult(result: string): string {
+      if (result === 'W') return 'L';
+      if (result === 'L') return 'W';
+      return 'D';
+  }
+
+  h2hDecisionLabel(meeting: any): string | null {
+      const decision = String(meeting?.decidedBy || '').toUpperCase();
+      if (decision === 'PENALTIES') return 'pens';
+      if (decision === 'EXTRA_TIME') return 'a.e.t.';
+      if (decision === 'AGGREGATE') return 'agg.';
+      if (decision === 'FIRST_LEG') return 'leg 1';
+      return null;
+  }
+
+  /**
+   * W/D/L form line for this season: win=top, draw=middle, loss=bottom.
+   * SVG keeps the chart dependency-free and responsive.
+   */
+  get seasonFormPolyline(): string {
+      const played = this.fixtures.filter(f => f.resultType !== 'Pending');
+      return this.resultPolyline(played.map(f => f.resultType as string));
+  }
+
+  get h2hFormPolyline(): string {
+      const results = (this.h2h?.meetings || [])
+          .slice(0, 12)
+          .reverse()
+          .map((meeting: any) => meeting.teamAResult);
+      return this.resultPolyline(results);
+  }
+
+  get seasonEvolutionPolyline(): string {
+      const played = this.fixtures.filter(f => f.resultType !== 'Pending');
+      if (!played.length) return '';
+      let cumulative = 0;
+      const totals = played.map(match => {
+          cumulative += match.resultType === 'W' ? 3 : match.resultType === 'D' ? 1 : 0;
+          return cumulative;
+      });
+      const max = Math.max(3, totals[totals.length - 1]);
+      return totals.map((total, index) => {
+          const x = totals.length === 1 ? 300 : 20 + index * (560 / (totals.length - 1));
+          const y = 140 - total * (120 / max);
+          return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+  }
+
+  private resultPolyline(results: string[]): string {
+      return results.map((result, index) => {
+          const x = results.length === 1 ? 300 : 20 + index * (560 / (results.length - 1));
+          const y = result === 'W' ? 22 : result === 'D' ? 80 : 138;
+          return `${x.toFixed(1)},${y}`;
+      }).join(' ');
+  }
+
+  trackByMeeting = (_: number, meeting: any): string =>
+      `${meeting.competitionId}-${meeting.seasonNumber}-${meeting.roundNumber}-${meeting.homeTeamId}-${meeting.awayTeamId}`;
 
   loadMatchSummary(match: ScheduleView): void {
       this.loadingSummary = true;
@@ -365,6 +586,10 @@ export class FixturesComponent implements OnInit, OnDestroy {
           homeWidth: Math.round(h / total * 100) + '%',
           awayWidth: Math.round(a / total * 100) + '%'
       };
+  }
+
+  isHigher(first: any, second: any): boolean {
+      return (parseFloat(first) || 0) > (parseFloat(second) || 0);
   }
 
   isHomeTeamEvent(event: MatchEvent): boolean {

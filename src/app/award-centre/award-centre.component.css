@@ -1,0 +1,34 @@
+.awards-page { min-height: 100%; padding: 22px; color: #e9ebf3; background: #181b2c; }
+.awards-nav { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 18px; }
+.awards-nav a { padding: 8px 12px; border: 1px solid #414761; border-radius: 5px; color: #b8bccb; background: #272b40; font-size: .72rem; font-weight: 800; text-decoration: none; }
+.awards-nav a.active, .awards-nav a:hover { color: #201b04; border-color: #f1c40f; background: #f1c40f; }
+.centre-hero { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 20px; align-items: center; padding: 22px; border: 1px solid #5a4c24; border-radius: 11px; background: radial-gradient(circle at 8% 15%, rgba(241,196,15,.18), transparent 30%), linear-gradient(120deg, #302710, #292d43 68%); }
+.hero-mark { display: grid; width: 78px; height: 78px; place-items: center; border: 2px solid #f5dc73; border-radius: 22px; background: linear-gradient(145deg, #f8dd69, #a86e05); font-size: 2.4rem; }
+.centre-hero > div:nth-child(2) > span, .season-picker span { color: #b5a76d; font-size: .65rem; font-weight: 900; letter-spacing: .12em; }
+.centre-hero h1 { margin: 3px 0 5px; color: #fff; font-size: 1.85rem; }
+.centre-hero p { margin: 0; color: #b6bac9; font-size: .8rem; }
+.season-picker { display: flex; flex-direction: column; gap: 6px; }
+.season-picker select { min-width: 130px; padding: 9px 10px; border: 1px solid #5a607b; border-radius: 5px; color: #fff; background: #202438; }
+.award-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-top: 18px; }
+.award-card, .toty-card { overflow: hidden; border: 1px solid #3c4159; border-radius: 9px; background: #24283b; box-shadow: 0 7px 20px rgba(0,0,0,.2); }
+.toty-card { grid-column: 1 / -1; }
+.card-heading { display: flex; align-items: center; gap: 12px; min-height: 72px; padding: 12px 15px; border-bottom: 1px solid #373c53; background: #282c41; }
+.award-icon { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border: 1px solid #ead363; border-radius: 50%; color: #f5dc68; background: #4a3d0b; font-size: 1rem; font-weight: 950; }
+.card-heading h2 { margin: 0; color: #fff; font-size: 1rem; }
+.card-heading p { margin: 3px 0 0; color: #9297aa; font-size: .68rem; line-height: 1.4; }
+.winner-body { display: flex; align-items: center; gap: 14px; padding: 13px 16px; }
+.winner-identity { display: flex; min-width: 0; flex-direction: column; gap: 8px; }
+.winner-identity > a { overflow: hidden; color: #fff; font-size: 1.15rem; font-weight: 900; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.winner-identity span { display: flex; align-items: center; gap: 7px; color: #b5b9c8; font-size: .74rem; font-weight: 700; }
+.winning-value { padding: 10px 15px; color: #e4cd63; background: #202335; font-size: .73rem; font-weight: 800; }
+.award-pitch { position: relative; height: 690px; margin: 16px; overflow: hidden; border: 3px solid rgba(224,240,226,.7); border-radius: 5px; background: repeating-linear-gradient(90deg, #33764b 0 12.5%, #2f6f46 12.5% 25%); }
+.half-line { position: absolute; top: 50%; right: 0; left: 0; border-top: 2px solid rgba(255,255,255,.55); }
+.centre-circle { position: absolute; top: 50%; left: 50%; width: 105px; height: 105px; border: 2px solid rgba(255,255,255,.55); border-radius: 50%; transform: translate(-50%,-50%); }
+.xi-player { position: absolute; display: flex; width: 155px; align-items: center; flex-direction: column; color: #fff; text-decoration: none; transform: translate(-50%,-50%); }
+.xi-player app-player-face { border: 2px solid #fff; border-radius: 24%; background: #193d27; filter: drop-shadow(0 4px 5px rgba(0,0,0,.4)); }
+.xi-player strong, .xi-player small { max-width: 150px; overflow: hidden; padding: 3px 7px; border-radius: 4px; background: rgba(12,22,15,.88); text-overflow: ellipsis; white-space: nowrap; }
+.xi-player strong { margin-top: 2px; font-size: .7rem; }
+.xi-player small { margin-top: 1px; color: #c7d1c9; font-size: .58rem; }
+.award-state { margin-top: 18px; padding: 34px; border: 1px solid #3b4059; border-radius: 8px; color: #adb1c1; background: #232639; text-align: center; }
+.award-state.error { color: #ff9b9b; }
+@media (max-width: 850px) { .award-grid { grid-template-columns: 1fr; } .centre-hero { grid-template-columns: auto 1fr; } .season-picker { grid-column: 1 / -1; } .award-pitch { min-width: 680px; } .toty-card { overflow-x: auto; } }
