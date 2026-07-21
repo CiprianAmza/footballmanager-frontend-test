@@ -162,13 +162,78 @@
       </button>
     </div>
 
-    <div class="matches-list">
-      <div class="match-row" *ngFor="let m of getMatchesForRound()">
-        <span class="home-team"><a [routerLink]="['/team', m.team1Id]" class="fm-link">{{ m.teamName1 }}</a></span>
-        <span class="score">{{ m.score }}</span>
-        <span class="away-team"><a [routerLink]="['/team', m.team2Id]" class="fm-link">{{ m.teamName2 }}</a></span>
-      </div>
-      <div *ngIf="getMatchesForRound().length === 0" class="no-matches">
+    <div class="result-groups">
+      <article class="result-card" *ngFor="let group of getResultGroupsForRound()"
+               [class.two-leg-card]="group.twoLeg">
+
+        <ng-container *ngIf="!group.twoLeg">
+          <div class="match-row" *ngFor="let m of group.matches">
+            <span class="home-team result-team"
+                  [class.winner]="isWinner(m, m.team1Id)"
+                  [class.loser]="isLoser(m, m.team1Id)">
+              <span class="winner-mark" *ngIf="isWinner(m, m.team1Id)" title="Winner">✓</span>
+              <a [routerLink]="['/team', m.team1Id]" class="fm-link">{{ m.teamName1 }}</a>
+            </span>
+            <span class="score-stack">
+              <strong class="score">{{ mainScore(m) }}</strong>
+              <span class="decision-badge" *ngIf="decisionBadge(m) as badge">{{ badge }}</span>
+            </span>
+            <span class="away-team result-team"
+                  [class.winner]="isWinner(m, m.team2Id)"
+                  [class.loser]="isLoser(m, m.team2Id)">
+              <a [routerLink]="['/team', m.team2Id]" class="fm-link">{{ m.teamName2 }}</a>
+              <span class="winner-mark" *ngIf="isWinner(m, m.team2Id)" title="Winner">✓</span>
+            </span>
+          </div>
+
+          <div class="decision-strip penalties" *ngIf="group.matches[0].decidedBy === 'PENALTIES'">
+            <span>Penalty shootout</span>
+            <strong *ngIf="penaltyScore(group.matches[0]) as pens">{{ pens }}</strong>
+            <span class="qualified-team">✓ {{ groupWinnerName(group) }} win</span>
+          </div>
+          <div class="decision-strip extra-time" *ngIf="group.matches[0].decidedBy === 'EXTRA_TIME'">
+            <span>After extra time</span>
+            <span class="qualified-team">✓ {{ groupWinnerName(group) }} win</span>
+          </div>
+        </ng-container>
+
+        <ng-container *ngIf="group.twoLeg">
+          <header class="tie-header">
+            <span>Two-leg tie</span>
+            <strong *ngIf="group.winnerTeamId" class="qualified-team">✓ {{ groupWinnerName(group) }} advance</strong>
+          </header>
+          <div class="match-row tie-leg" *ngFor="let m of group.matches">
+            <span class="leg-label">{{ legLabel(m) }}</span>
+            <span class="home-team result-team"
+                  [class.winner]="group.winnerTeamId === m.team1Id"
+                  [class.loser]="group.winnerTeamId != null && group.winnerTeamId !== m.team1Id">
+              <a [routerLink]="['/team', m.team1Id]" class="fm-link">{{ m.teamName1 }}</a>
+            </span>
+            <strong class="score">{{ mainScore(m) }}</strong>
+            <span class="away-team result-team"
+                  [class.winner]="group.winnerTeamId === m.team2Id"
+                  [class.loser]="group.winnerTeamId != null && group.winnerTeamId !== m.team2Id">
+              <a [routerLink]="['/team', m.team2Id]" class="fm-link">{{ m.teamName2 }}</a>
+            </span>
+          </div>
+          <footer class="tie-summary" *ngIf="groupAggregate(group) as aggregate">
+            <span class="summary-item">
+              <small>Aggregate</small>
+              <strong>{{ aggregate }}</strong>
+            </span>
+            <span class="summary-item" *ngIf="groupPenaltyScore(group) as pens">
+              <small>Penalties</small>
+              <strong>{{ pens }}</strong>
+            </span>
+            <span class="tie-outcome">
+              <strong>{{ groupWinnerName(group) }}</strong>
+              {{ groupDecidedBy(group) }}
+            </span>
+          </footer>
+        </ng-container>
+      </article>
+
+      <div *ngIf="getResultGroupsForRound().length === 0" class="no-matches">
         No matches played yet in this round.
       </div>
     </div>

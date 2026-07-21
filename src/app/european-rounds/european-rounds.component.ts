@@ -5,6 +5,7 @@ import { urlApp } from '../app.component';
 import { TeamService } from '../services/team.service';
 
 interface MatchResult {
+  id?: number;
   team1Id: number;
   team2Id: number;
   teamName1: string;
@@ -13,6 +14,23 @@ interface MatchResult {
   roundId: number;
   competitionId: number;
   seasonNumber: number;
+  winnerTeamId?: number | null;
+  decidedBy?: 'NORMAL' | 'EXTRA_TIME' | 'PENALTIES' | 'AGGREGATE' | 'FIRST_LEG' | null;
+  matchIndex?: number;
+  day?: number;
+  tieId?: number;
+  legNumber?: number;
+  penaltyTeam1Score?: number | null;
+  penaltyTeam2Score?: number | null;
+  aggregateTeam1Score?: number | null;
+  aggregateTeam2Score?: number | null;
+}
+
+interface ResultGroup {
+  key: string;
+  matches: MatchResult[];
+  twoLeg: boolean;
+  winnerTeamId: number | null;
 }
 
 interface GroupStanding {
@@ -94,6 +112,7 @@ export class EuropeanRoundsComponent implements OnInit {
 
   // All match results by round
   rounds: Map<number, MatchResult[]> = new Map();
+  resultGroups: Map<number, ResultGroup[]> = new Map();
   roundNumbers: number[] = [];
 
   selectedRound: number = 1;
@@ -164,11 +183,16 @@ export class EuropeanRoundsComponent implements OnInit {
     this.http.get<MatchResult[]>(urlApp + `/competition/getMatchesByCompetitionAndSeason/${this.competitionId}/${this.season}`)
       .subscribe(data => {
         this.rounds = new Map();
+        this.resultGroups = new Map();
         data.forEach(m => {
           if (!this.rounds.has(m.roundId)) {
             this.rounds.set(m.roundId, []);
           }
           this.rounds.get(m.roundId)!.push(m);
+        });
+        this.rounds.forEach((matches, round) => {
+          matches.sort((a, b) => this.matchOrder(a) - this.matchOrder(b));
+          this.resultGroups.set(round, this.buildResultGroups(matches));
         });
         this.roundNumbers = Array.from(this.rounds.keys()).sort((a, b) => a - b);
         if (this.roundNumbers.length > 0) {
@@ -195,6 +219,117 @@ export class EuropeanRoundsComponent implements OnInit {
 
   getMatchesForRound(): MatchResult[] {
     return this.rounds.get(this.selectedRound) || [];
+  }
+
+  getResultGroupsForRound(): ResultGroup[] {
+    return this.resultGroups.get(this.selectedRound) || [];
+  }
+
+  mainScore(match: MatchResult): string {
+    const parsed = this.scorePair(match.score);
+    return parsed ? `${parsed[0]} – ${parsed[1]}` : match.score;
+  }
+
+  decisionBadge(match: MatchResult): string | null {
+    if (match.decidedBy === 'PENALTIES') return 'PENS';
+    if (match.decidedBy === 'EXTRA_TIME') return 'AET';
+    if (match.decidedBy === 'FIRST_LEG') return 'LEG 1';
+    return null;
+  }
+
+  isWinner(match: MatchResult, teamId: number): boolean {
+    return match.winnerTeamId === teamId;
+  }
+
+  isLoser(match: MatchResult, teamId: number): boolean {
+    return match.winnerTeamId != null && match.winnerTeamId !== teamId;
+  }
+
+  penaltyScore(match: MatchResult): string | null {
+    if (match.penaltyTeam1Score != null && match.penaltyTeam2Score != null) {
+      return `${match.penaltyTeam1Score} – ${match.penaltyTeam2Score}`;
+    }
+    const legacy = match.score?.match(/pens(?:alties)?\s*(\d+)\s*[-–]\s*(\d+)/i);
+    return legacy ? `${legacy[1]} – ${legacy[2]}` : null;
+  }
+
+  groupWinnerName(group: ResultGroup): string {
+    const winnerId = group.winnerTeamId;
+    if (winnerId == null) return '';
+    for (const match of group.matches) {
+      if (match.team1Id === winnerId) return match.teamName1;
+      if (match.team2Id === winnerId) return match.teamName2;
+    }
+    return '';
+  }
+
+  groupAggregate(group: ResultGroup): string | null {
+    const secondLeg = group.matches.find(match => match.legNumber === 2);
+    if (!secondLeg) return null;
+    if (secondLeg.aggregateTeam1Score != null && secondLeg.aggregateTeam2Score != null) {
+      // The card follows leg one's A/B order; leg two is played B/A.
+      return `${secondLeg.aggregateTeam2Score} – ${secondLeg.aggregateTeam1Score}`;
+    }
+    const legacy = secondLeg.score?.match(/agg\s*(\d+)\s*[-–]\s*(\d+)/i);
+    // Legacy rows stored the aggregate in first-leg A/B order even though the
+    // second-leg team columns are B/A.
+    return legacy ? `${legacy[1]} – ${legacy[2]}` : null;
+  }
+
+  groupPenaltyScore(group: ResultGroup): string | null {
+    const decider = group.matches.find(match => match.decidedBy === 'PENALTIES');
+    if (!decider) return null;
+    if (decider.penaltyTeam1Score != null && decider.penaltyTeam2Score != null) {
+      return `${decider.penaltyTeam2Score} – ${decider.penaltyTeam1Score}`;
+    }
+    const score = this.penaltyScore(decider);
+    if (!score) return null;
+    const parts = score.split(' – ');
+    return `${parts[1]} – ${parts[0]}`;
+  }
+
+  groupDecidedBy(group: ResultGroup): string | null {
+    const decider = group.matches.find(match => match.winnerTeamId != null);
+    if (decider?.decidedBy === 'PENALTIES') return 'Won on penalties';
+    if (decider?.decidedBy === 'EXTRA_TIME') return 'Won after extra time';
+    return group.winnerTeamId != null ? 'Won on aggregate' : null;
+  }
+
+  legLabel(match: MatchResult): string {
+    return match.legNumber === 2 ? 'Leg 2' : 'Leg 1';
+  }
+
+  private buildResultGroups(matches: MatchResult[]): ResultGroup[] {
+    const grouped = new Map<string, MatchResult[]>();
+    matches.forEach((match, index) => {
+      const key = match.tieId && match.tieId > 0
+        ? `tie-${match.tieId}`
+        : `match-${match.id ?? `${match.team1Id}-${match.team2Id}-${index}`}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(match);
+    });
+
+    return Array.from(grouped.entries()).map(([key, groupMatches]) => {
+      groupMatches.sort((a, b) => this.matchOrder(a) - this.matchOrder(b));
+      return {
+        key,
+        matches: groupMatches,
+        twoLeg: groupMatches.length > 1 && groupMatches.some(match => (match.legNumber || 0) > 0),
+        winnerTeamId: groupMatches.find(match => match.winnerTeamId != null)?.winnerTeamId ?? null
+      };
+    }).sort((a, b) => this.matchOrder(a.matches[0]) - this.matchOrder(b.matches[0]));
+  }
+
+  private matchOrder(match: MatchResult): number {
+    const slot = match.matchIndex && match.matchIndex > 0
+      ? match.matchIndex
+      : (match.tieId && match.tieId > 0 ? match.tieId : 1_000_000 + (match.id || 0));
+    return slot * 10 + (match.legNumber || 0);
+  }
+
+  private scorePair(score: string): [number, number] | null {
+    const match = score?.match(/^(\d+)\s*[-–]\s*(\d+)/);
+    return match ? [Number(match[1]), Number(match[2])] : null;
   }
 
   getPotLabel(potNumber: number): string {
