@@ -336,6 +336,30 @@
                     <span class="c-label">Status</span>
                     <span class="c-val" style="color: #ff4444; font-weight: bold;">Expiring soon</span>
                 </div>
+                <div class="contract-item" *ngIf="playerView.willNeverLeave">
+                    <span class="c-label">Career plan</span>
+                    <span class="c-val one-club-status">One-club player · retires when this contract ends</span>
+                </div>
+            </div>
+
+            <div class="player-editor-panel" *ngIf="adminService.isAuthenticated">
+                <div>
+                    <span class="editor-kicker">FEDERATION EDITOR</span>
+                    <h3>One-club player rule</h3>
+                    <p>When enabled, the player is removed from transfers, loans, free-agent signings and pre-contracts. If the contract is not renewed, the player retires.</p>
+                </div>
+                <label class="editor-toggle">
+                    <input type="checkbox" [(ngModel)]="editorWillNeverLeave">
+                    <span>Player will never leave</span>
+                </label>
+                <button class="editor-save-btn" type="button" [disabled]="editorSaving"
+                        (click)="saveWillNeverLeave()">
+                    {{ editorSaving ? 'Saving…' : 'Save editor setting' }}
+                </button>
+                <div class="editor-message" *ngIf="editorMessage"
+                     [class.success]="editorSuccess" [class.error]="!editorSuccess">
+                    {{ editorMessage }}
+                </div>
             </div>
 
             <!-- Renew button (for any player in the user's team) -->

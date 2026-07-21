@@ -226,6 +226,43 @@
 .contract-item { display: flex; flex-direction: column; gap: 5px; }
 .c-label { font-size: 0.8em; color: #aaa; text-transform: uppercase; }
 .c-val { font-size: 1.2em; font-weight: bold; }
+.one-club-status { color: #f1c40f; font-size: 1rem; }
+
+.player-editor-panel {
+  margin: 0 20px 20px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto auto;
+  gap: 18px;
+  align-items: center;
+  border: 1px solid #9b59b6;
+  border-left: 4px solid #9b59b6;
+  border-radius: 5px;
+  background: linear-gradient(135deg, rgba(93, 47, 120, .26), rgba(30, 30, 30, .9));
+}
+.player-editor-panel h3 { margin: 3px 0 6px; color: #fff; }
+.player-editor-panel p { margin: 0; max-width: 760px; color: #bbb; font-size: .86rem; line-height: 1.45; }
+.editor-kicker { color: #c39bd3; font-size: .7rem; font-weight: 800; letter-spacing: .12em; }
+.editor-toggle { display: inline-flex; align-items: center; gap: 9px; color: #fff; font-weight: 700; cursor: pointer; }
+.editor-toggle input { width: 20px; height: 20px; accent-color: #9b59b6; }
+.editor-save-btn {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 4px;
+  background: #9b59b6;
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+.editor-save-btn:disabled { opacity: .55; cursor: wait; }
+.editor-message { grid-column: 1 / -1; padding: 9px 11px; border-radius: 4px; font-size: .85rem; }
+.editor-message.success { color: #a7f3c5; background: rgba(46, 204, 113, .12); }
+.editor-message.error { color: #ffb3ad; background: rgba(231, 76, 60, .13); }
+
+@media (max-width: 900px) {
+  .player-editor-panel { grid-template-columns: 1fr; }
+  .editor-message { grid-column: 1; }
+}
 
 /* Trophies Grid */
 .trophy-grid {

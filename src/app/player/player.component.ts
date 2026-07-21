@@ -5,6 +5,7 @@ import { urlApp } from '../app.component';
 import { forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { TeamService } from '../services/team.service';
+import { AdminService } from '../services/admin.service';
 
 @Component({
     selector: 'player',
@@ -67,11 +68,18 @@ export class PlayerComponent implements OnInit {
     seasonStatsLoading: boolean = false;
     seasonStatsLoaded: boolean = false;
 
+    // Federation editor
+    editorWillNeverLeave: boolean = false;
+    editorSaving: boolean = false;
+    editorMessage: string = '';
+    editorSuccess: boolean = false;
+
     constructor(
         private http: HttpClient,
         private route: ActivatedRoute,
         private router: Router,
-        private teamService: TeamService
+        private teamService: TeamService,
+        public adminService: AdminService
     ) { }
 
     ngOnInit(): void {
@@ -112,6 +120,7 @@ export class PlayerComponent implements OnInit {
         this.http.get(urlApp + `/humans/${this.playerId}`)
             .subscribe((data: any) => {
                 this.playerView = data;
+                this.editorWillNeverLeave = !!data.willNeverLeave;
                 this.currentSeason = this.teamService.currentSeason;
                 if (data.wage) {
                     this.renewWage = data.wage;
@@ -126,6 +135,28 @@ export class PlayerComponent implements OnInit {
                     this.fetchRenewalDemand();
                 }
             });
+    }
+
+    saveWillNeverLeave(): void {
+        if (!this.adminService.isAuthenticated || this.editorSaving) return;
+        this.editorSaving = true;
+        this.editorMessage = '';
+        this.adminService.updateWillNeverLeave(this.playerId, this.editorWillNeverLeave).subscribe({
+            next: response => {
+                this.editorSaving = false;
+                this.editorSuccess = true;
+                this.editorMessage = response.message || 'Editor setting saved.';
+                this.playerView.willNeverLeave = !!response.willNeverLeave;
+                this.editorWillNeverLeave = !!response.willNeverLeave;
+            },
+            error: error => {
+                this.editorSaving = false;
+                this.editorSuccess = false;
+                this.editorMessage = error.error?.error || error.error?.message || error.error
+                    || 'Could not save the editor setting.';
+                this.editorWillNeverLeave = !!this.playerView.willNeverLeave;
+            }
+        });
     }
 
     fetchRenewalDemand(): void {

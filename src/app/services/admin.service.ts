@@ -332,6 +332,15 @@ export class AdminService {
     return this.http.post<any>(urlApp + '/admin/generatePlayer', payload, { headers: this.authHeaders() });
   }
 
+  /** Editor-only one-club-player rule shown on the player profile. */
+  updateWillNeverLeave(playerId: number, willNeverLeave: boolean): Observable<any> {
+    return this.http.patch<any>(
+      urlApp + `/admin/players/${playerId}/will-never-leave`,
+      { willNeverLeave },
+      { headers: this.authHeaders() }
+    );
+  }
+
   // ===== Ballon d'Or winner control =====
 
   ballonDorState(season?: number): Observable<BallonDorAdminState> {
