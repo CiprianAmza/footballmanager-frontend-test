@@ -221,13 +221,19 @@
               <small>Aggregate</small>
               <strong>{{ aggregate }}</strong>
             </span>
-            <span class="summary-item" *ngIf="groupPenaltyScore(group) as pens">
-              <small>Penalties</small>
-              <strong>{{ pens }}</strong>
+            <span class="penalty-resolution" *ngIf="groupDecision(group) === 'PENALTIES'">
+              <span class="summary-item">
+                <small>Penalty shootout</small>
+                <strong *ngIf="groupPenaltyScore(group) as pens">{{ pens }}</strong>
+              </span>
+              <strong class="shootout-winner">✓ {{ groupWinnerName(group) }} won</strong>
             </span>
-            <span class="tie-outcome">
-              <strong>{{ groupWinnerName(group) }}</strong>
-              {{ groupDecidedBy(group) }}
+            <span class="tie-outcome" *ngIf="groupDecision(group) !== 'PENALTIES'">
+              <span class="advance-icon">✓</span>
+              <span>
+                <strong>{{ groupWinnerName(group) }}</strong>
+                {{ groupDecidedBy(group) }}
+              </span>
             </span>
           </footer>
         </ng-container>

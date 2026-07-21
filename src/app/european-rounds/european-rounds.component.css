@@ -520,14 +520,50 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
+.penalty-resolution {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 6px 10px;
+  border: 1px solid rgba(98, 220, 150, .28);
+  border-radius: 5px;
+  background: rgba(98, 220, 150, .08);
+}
+
+.shootout-winner {
+  color: #62dc96;
+  font-size: .72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
 .tie-outcome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-left: auto;
+  padding: 6px 10px;
+  border-radius: 5px;
   color: #aab1c3;
+  background: rgba(98, 220, 150, .08);
 }
 
 .tie-outcome strong {
   margin-right: 4px;
   color: #62dc96;
+}
+
+.advance-icon {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+  border-radius: 50%;
+  color: #10271a;
+  background: #62dc96;
+  font-size: .7rem;
+  font-weight: 900;
 }
 
 @media (max-width: 720px) {
@@ -539,6 +575,7 @@ h2 {
   .score-stack { min-width: 72px; }
   .score { min-width: 56px; font-size: .92rem; }
   .tie-summary { flex-wrap: wrap; gap: 10px 18px; }
+  .penalty-resolution { width: 100%; justify-content: center; }
   .tie-outcome { width: 100%; margin-left: 0; text-align: center; }
 }
 

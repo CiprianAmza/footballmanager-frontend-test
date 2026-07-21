@@ -307,10 +307,14 @@ export class EuropeanRoundsComponent implements OnInit {
     return `${parts[1]} – ${parts[0]}`;
   }
 
+  groupDecision(group: ResultGroup): MatchResult['decidedBy'] {
+    return group.matches.find(match => match.winnerTeamId != null)?.decidedBy ?? null;
+  }
+
   groupDecidedBy(group: ResultGroup): string | null {
-    const decider = group.matches.find(match => match.winnerTeamId != null);
-    if (decider?.decidedBy === 'PENALTIES') return 'Won on penalties';
-    if (decider?.decidedBy === 'EXTRA_TIME') return 'Won after extra time';
+    const decision = this.groupDecision(group);
+    if (decision === 'PENALTIES') return 'Advanced after penalty shootout';
+    if (decision === 'EXTRA_TIME') return 'Advanced after extra time';
     return group.winnerTeamId != null ? 'Won on aggregate' : null;
   }
 
