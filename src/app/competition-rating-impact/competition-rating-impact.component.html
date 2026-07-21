@@ -1,0 +1,66 @@
+<section class="impact-panel">
+  <header class="impact-header">
+    <div>
+      <span class="eyebrow">Season {{ season }}</span>
+      <h2>Rating impact by team</h2>
+      <p>
+        Each team's highest-rated eligible player compared with the average rating of all
+        player performances for that team in this competition.
+      </p>
+    </div>
+    <div class="eligibility-rule">
+      <strong>{{ minimumAppearancePercentage }}%</strong>
+      <span>minimum appearances</span>
+    </div>
+  </header>
+
+  <div class="impact-table-wrap" *ngIf="rows.length > 0">
+    <table class="impact-table">
+      <thead>
+        <tr>
+          <th class="rank-column">#</th>
+          <th (click)="sortBy('playerName')">Player <span>{{ sortMarker('playerName') }}</span></th>
+          <th (click)="sortBy('position')">Pos <span>{{ sortMarker('position') }}</span></th>
+          <th (click)="sortBy('teamName')">Team <span>{{ sortMarker('teamName') }}</span></th>
+          <th class="number-column" (click)="sortBy('appearances')">Apps <span>{{ sortMarker('appearances') }}</span></th>
+          <th class="number-column" (click)="sortBy('playerRating')">Player R <span>{{ sortMarker('playerRating') }}</span></th>
+          <th class="number-column" (click)="sortBy('teamRating')">Team R <span>{{ sortMarker('teamRating') }}</span></th>
+          <th class="number-column" (click)="sortBy('difference')">Diff <span>{{ sortMarker('difference') }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of rows; let index = index">
+          <td class="rank-column">{{ index + 1 }}</td>
+          <td class="player-cell">
+            <a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a>
+          </td>
+          <td><span class="position-badge">{{ row.position || '—' }}</span></td>
+          <td class="team-cell">
+            <a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a>
+          </td>
+          <td class="number-column appearances"
+              [attr.title]="'Required: ' + row.requiredAppearances + ' of ' + row.teamMatches + ' team matches'">
+            {{ row.appearances }}/{{ row.teamMatches }}
+            <small>{{ row.appearancePercentage | number:'1.0-1' }}%</small>
+          </td>
+          <td class="number-column rating player-rating">{{ row.playerRating | number:'1.2-2' }}</td>
+          <td class="number-column rating">{{ row.teamRating | number:'1.2-2' }}</td>
+          <td class="number-column difference" [ngStyle]="impactStyle(row.difference)">
+            {{ row.difference > 0 ? '+' : '' }}{{ row.difference | number:'1.2-2' }}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="impact-state" *ngIf="loading">Calculating rating impact…</div>
+  <div class="impact-state" *ngIf="!loading && !failed && rows.length === 0">
+    No player has reached the {{ minimumAppearancePercentage }}% eligibility threshold yet.
+  </div>
+  <div class="impact-state error" *ngIf="failed">Rating impact could not be loaded.</div>
+
+  <footer *ngIf="rows.length > 0">
+    Eligibility is rounded up to the next full appearance.
+    <span *ngIf="teamAverageMethod">{{ teamAverageMethod }}.</span>
+  </footer>
+</section>

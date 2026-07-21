@@ -310,6 +310,15 @@ export class AdminService {
     );
   }
 
+  /** Federation-level override: save the selected club's tactic with admin credentials. */
+  saveTeamTactic(payload: any): Observable<any> {
+    return this.http.post<any>(
+      urlApp + '/tactic/saveFormation',
+      payload,
+      { headers: this.authHeaders() }
+    );
+  }
+
   // ===== Generate player =====
 
   /** Generate a new player and (optionally) assign to a team. */

@@ -89,6 +89,7 @@ import { TeamCrestComponent } from './team-crest/team-crest.component';
 import { AwardHistoryComponent } from './award-history/award-history.component';
 import { AwardCentreComponent } from './award-centre/award-centre.component';
 import { CompetitionInsightsComponent } from './competition-insights/competition-insights.component';
+import { CompetitionRatingImpactComponent } from './competition-rating-impact/competition-rating-impact.component';
 
 @NgModule({
   declarations: [
@@ -102,6 +103,7 @@ import { CompetitionInsightsComponent } from './competition-insights/competition
     AwardHistoryComponent,
     AwardCentreComponent,
     CompetitionInsightsComponent,
+    CompetitionRatingImpactComponent,
     CompetitionComponent,
     TacticDisplayComponent,
     CompetitionComponent,

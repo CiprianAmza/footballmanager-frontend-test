@@ -1,4 +1,4 @@
-<div class="lab-shell">
+<div class="lab-shell" [class.read-only]="isReadOnly" [class.admin-edit]="isAdminEditingExternalTeam">
 
   <!-- ===================== HEADER STRIP ===================== -->
   <div class="lab-topbar">
@@ -32,7 +32,7 @@
         </div>
       </div>
     </div>
-    <div class="lab-actions">
+    <div class="lab-actions" *ngIf="canEdit">
       <button class="lab-btn ghost" (click)="askAssistant()">ASK ASSISTANT</button>
       <button class="lab-btn danger"
               (click)="removeAll()"
@@ -41,6 +41,24 @@
         CLEAR LINEUP
       </button>
       <button class="lab-btn solid" (click)="saveData()">SAVE</button>
+    </div>
+  </div>
+
+  <div class="access-strip" *ngIf="isExternalTeam">
+    <div class="access-copy">
+      <span class="access-badge" [class.admin]="isAdminEditingExternalTeam">
+        {{ isAdminEditingExternalTeam ? 'FEDERATION ADMIN · EDIT MODE' : 'OPPOSITION SCOUT · READ ONLY' }}
+      </span>
+      <span class="access-manager">
+        Manager: <strong>{{ managerName }}</strong>
+        · {{ managerTacticSource === 'SAVED' ? 'saved match tactic' : 'preferred manager system' }}
+      </span>
+    </div>
+    <div class="tactical-view-switch" role="group" aria-label="Tactical view">
+      <button type="button" [class.active]="tacticalViewMode === 'manager'"
+              (click)="switchTacticalView('manager')">MANAGER TACTIC</button>
+      <button type="button" [class.active]="tacticalViewMode === 'best'"
+              (click)="switchTacticalView('best')">BEST POSSIBLE XI + BENCH</button>
     </div>
   </div>
 
@@ -167,12 +185,12 @@
       <div class="widget set-pieces">
         <div class="w-head">
           <span class="w-title mini">SET PIECES</span>
-          <button class="sp-suggest mono" (click)="suggestSetPieceTakers()">AUTO</button>
+          <button *ngIf="canEdit" class="sp-suggest mono" (click)="suggestSetPieceTakers()">AUTO</button>
         </div>
 
         <div class="sp-slot">
           <span class="sp-label mono">PEN</span>
-          <select class="sp-select" [(ngModel)]="penaltyTakerId">
+          <select class="sp-select" [(ngModel)]="penaltyTakerId" [disabled]="!canEdit">
             <option [ngValue]="null">— none —</option>
             <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} · {{ p.position }}</option>
           </select>
@@ -181,7 +199,7 @@
 
         <div class="sp-slot">
           <span class="sp-label mono">FK</span>
-          <select class="sp-select" [(ngModel)]="freeKickTakerId">
+          <select class="sp-select" [(ngModel)]="freeKickTakerId" [disabled]="!canEdit">
             <option [ngValue]="null">— none —</option>
             <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} · {{ p.position }}</option>
           </select>
@@ -190,7 +208,7 @@
 
         <div class="sp-slot">
           <span class="sp-label mono">CK·L</span>
-          <select class="sp-select" [(ngModel)]="cornerTakerLeftId">
+          <select class="sp-select" [(ngModel)]="cornerTakerLeftId" [disabled]="!canEdit">
             <option [ngValue]="null">— none —</option>
             <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} · {{ p.position }}</option>
           </select>
@@ -199,7 +217,7 @@
 
         <div class="sp-slot">
           <span class="sp-label mono">CK·R</span>
-          <select class="sp-select" [(ngModel)]="cornerTakerRightId">
+          <select class="sp-select" [(ngModel)]="cornerTakerRightId" [disabled]="!canEdit">
             <option [ngValue]="null">— none —</option>
             <option *ngFor="let p of players" [ngValue]="p.id">{{ p.name }} · {{ p.position }}</option>
           </select>
@@ -249,11 +267,11 @@
 
                  <div *ngIf="cell.player" class="node"
                       [class.locked-slot]="isSlotLocked(cell.positionIndex, cell.player.position)"
-                      [attr.draggable]="isSlotLocked(cell.positionIndex, cell.player.position) ? null : 'true'"
+                      [attr.draggable]="canEdit && !isSlotLocked(cell.positionIndex, cell.player.position) ? 'true' : null"
                       (dragstart)="drag($event, cell.player)">
                     <span class="lock-badge" *ngIf="isSlotLocked(cell.positionIndex, cell.player.position)"
                           title="Locked by the owner">&#128274;</span>
-                    <button class="node-plus mono" title="Roles & Instructions"
+                    <button *ngIf="canEdit" class="node-plus mono" title="Roles & Instructions"
                             (click)="openPlayerPanel(cell, $event)">+</button>
                     <div *ngIf="pitchView === 'tokens'" class="node-disc"
                          (click)="openPlayerCard(cell.player.id)"
@@ -315,7 +333,8 @@
                class="bench-slot"
                (dragover)="allowDrop($event)"
                (drop)="dropSubstitute($event, i)">
-               <div *ngIf="sub.player" class="node mini" draggable="true" (dragstart)="drag($event, sub.player)">
+               <div *ngIf="sub.player" class="node mini"
+                    [attr.draggable]="canEdit ? 'true' : null" (dragstart)="drag($event, sub.player)">
                   <div class="node-disc gray"></div>
                   <div class="nt-name small">{{ sub.player.name }}</div>
                </div>
@@ -340,7 +359,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let player of players"
-                draggable="true"
+                [attr.draggable]="canEdit ? 'true' : null"
                 (dragstart)="drag($event, player)"
                 [class.picked]="isPlayerSelected(player.id)">
               <td class="c-sel">

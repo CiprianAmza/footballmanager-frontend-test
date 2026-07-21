@@ -73,6 +73,79 @@
 }
 .lab-btn.solid:hover { filter: brightness(1.1); }
 
+/* Opponent scouting / federation-admin access context. */
+.access-strip {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #14192a;
+  border-bottom: 1px solid var(--fm-border, #3a3f5c);
+}
+.access-copy { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.access-badge {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid rgba(52, 152, 219, .65);
+  border-radius: 3px;
+  color: #72c7ff;
+  background: rgba(52, 152, 219, .1);
+  font-size: .63em;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+.access-badge.admin {
+  border-color: rgba(241, 196, 15, .72);
+  color: #f6d657;
+  background: rgba(241, 196, 15, .1);
+}
+.access-manager {
+  color: var(--fm-text-dim, #aab0c3);
+  font-size: .78em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tactical-view-switch {
+  flex: 0 0 auto;
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid var(--fm-border, #3a3f5c);
+  border-radius: 4px;
+  background: #101424;
+}
+.tactical-view-switch button {
+  border: 0;
+  padding: 7px 12px;
+  border-radius: 3px;
+  color: var(--fm-text-faded, #7f8499);
+  background: transparent;
+  font-size: .66em;
+  font-weight: 800;
+  letter-spacing: .8px;
+  cursor: pointer;
+}
+.tactical-view-switch button.active {
+  color: #101424;
+  background: var(--fm-accent, #f1c40f);
+}
+.lab-shell.read-only .widget,
+.lab-shell.read-only .meter-row,
+.lab-shell.read-only .squad-table tr { cursor: default; }
+.lab-shell.read-only .widget:hover { border-color: var(--fm-border, #3a3f5c); }
+.lab-shell.read-only .node,
+.lab-shell.read-only .squad-table tr { user-select: text; }
+.lab-shell.read-only .sp-select:disabled { opacity: .78; color: var(--fm-text, #e8eaf0); }
+
+@media (max-width: 1050px) {
+  .access-strip { align-items: flex-start; flex-direction: column; }
+  .tactical-view-switch { align-self: stretch; }
+  .tactical-view-switch button { flex: 1; }
+}
+
 /* ---------------- MAIN GRID ---------------- */
 .lab-grid {
   flex: 1;

@@ -7,6 +7,7 @@ import { forkJoin } from 'rxjs';
 import { TeamService } from '../services/team.service';
 import { RatingTierService } from '../services/rating-tier.service';
 import { CoachPermissionsService, CoachLockState } from '../services/coach-permissions.service';
+import { AdminService } from '../services/admin.service';
 
 // ... (Interfețele Player, PositionedPlayer, SavedTactic rămân la fel) ...
 interface Player {
@@ -76,6 +77,16 @@ interface SavedTactic {
     formationDataList: { positionIndex: number; playerId: number; role?: string | null; duty?: string | null; instructions?: string[] | null }[];
 }
 
+interface TeamTacticViewResponse {
+    teamId: number;
+    teamName: string;
+    managerId: number | null;
+    managerName: string;
+    managerTacticSource: 'SAVED' | 'MANAGER_PREFERENCE';
+    managerTactic: SavedTactic;
+    bestPossibleTactic: SavedTactic;
+}
+
 @Component({
   selector: 'app-tactics4',
   templateUrl: './tactics4.component.html',
@@ -84,6 +95,28 @@ interface SavedTactic {
 export class Tactics4Component implements OnInit, OnChanges {
 
   @Input() teamId!: number; // Input pentru reutilizare
+
+  tacticalViewMode: 'manager' | 'best' = 'manager';
+  managerName: string = 'Manager';
+  managerTacticSource: 'SAVED' | 'MANAGER_PREFERENCE' = 'MANAGER_PREFERENCE';
+  managerTacticSnapshot: SavedTactic | null = null;
+  bestPossibleTacticSnapshot: SavedTactic | null = null;
+
+  get isExternalTeam(): boolean {
+    return !!this.teamId && this.teamId !== this.teamService.teamId;
+  }
+
+  get isAdminEditingExternalTeam(): boolean {
+    return this.isExternalTeam && this.adminService.isAuthenticated;
+  }
+
+  get canEdit(): boolean {
+    return !!this.teamId && (!this.isExternalTeam || this.adminService.isAuthenticated);
+  }
+
+  get isReadOnly(): boolean {
+    return !this.canEdit;
+  }
 
   // ... (restul variabilelor de state rămân la fel) ...
   players: Player[] = [];
@@ -168,11 +201,12 @@ export class Tactics4Component implements OnInit, OnChanges {
 
   constructor(private route: ActivatedRoute, private http: HttpClient,
               private teamService: TeamService, public ratingTiers: RatingTierService,
-              private coachPermissions: CoachPermissionsService) {}
+              private coachPermissions: CoachPermissionsService,
+              private adminService: AdminService) {}
 
   /** A pitch cell is locked when the owner revoked XI picking or pinned this slot. */
   isSlotLocked(positionIndex: number, position?: string): boolean {
-    return this.lockState.isSlotLocked(positionIndex, position);
+    return !this.isAdminEditingExternalTeam && this.lockState.isSlotLocked(positionIndex, position);
   }
 
   ngOnInit(): void {
@@ -235,7 +269,7 @@ export class Tactics4Component implements OnInit, OnChanges {
 
     forkJoin({
       players: this.http.get<Player[]>(urlApp + `/tactic/getPlayers/${this.teamId}`),
-      savedTactic: this.http.get<SavedTactic>(urlApp + `/tactic/getFormation/${this.teamId}`),
+      teamView: this.http.get<TeamTacticViewResponse>(urlApp + `/tactic/teamView/${this.teamId}`),
       tactics: this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/getAllPossibleTactics/${this.teamId}`)
     }).subscribe({
       next: (response) => {
@@ -248,45 +282,52 @@ export class Tactics4Component implements OnInit, OnChanges {
              key: t.tacticName,
              label: this.PRETTY[t.tacticName] || t.tacticName
          }));
-         const savedKey = response.savedTactic?.tactic;
-         const defaultKey = savedKey || this.formationOptions[0]?.key || "442";
-         if (response.savedTactic) {
-             const data = response.savedTactic;
-             this.selectedTactic = defaultKey;
-             this.selectedOptions.mentality = data.mentality || "Balanced";
-             this.selectedOptions.possession = data.inPossession || "Standard";
-             this.selectedOptions.tempo = data.tempo || "Standard";
-             this.selectedOptions.passing = data.passingType || "Normal";
-             this.selectedOptions.timeWasting = data.timeWasting || "Sometimes";
-             this.selectedOptions.defensiveLine = data.defensiveLine || "Standard";
-             this.selectedOptions.pressing = data.pressing || "Low";
-             this.selectedOptions.width = data.width || "Balanced";
-             this.selectedOptions.dribbling = data.dribbling || "Standard";
-             this.selectedOptions.foulFrequency = data.foulFrequency || "Normal";
-             this.selectedOptions.foulHardness = data.foulHardness || "Medium";
-             this.selectedOptions.tempoFragmentation = data.tempoFragmentation || "Normal";
-             this.selectedOptions.widePlay = data.widePlay || "Shoot";
-             this.selectedOptions.transition = data.transition || "Balanced";
-             this.penaltyTakerId = data.penaltyTakerId ?? null;
-             this.freeKickTakerId = data.freeKickTakerId ?? null;
-             this.cornerTakerLeftId = data.cornerTakerLeftId ?? null;
-             this.cornerTakerRightId = data.cornerTakerRightId ?? null;
-             this.setFormationIndices(this.selectedTactic);
-             if (data.formationDataList) {
-                this.mapSavedPlayersToField(data.formationDataList);
-             }
-         } else {
-             this.selectedTactic = defaultKey;
-             this.setFormationIndices(this.selectedTactic);
-         }
+         this.managerName = response.teamView?.managerName || 'No appointed manager';
+         this.managerTacticSource = response.teamView?.managerTacticSource || 'MANAGER_PREFERENCE';
+         this.managerTacticSnapshot = response.teamView?.managerTactic || null;
+         this.bestPossibleTacticSnapshot = response.teamView?.bestPossibleTactic || null;
+         this.tacticalViewMode = 'manager';
+         const initial = this.managerTacticSnapshot || this.bestPossibleTacticSnapshot;
+         if (initial) this.applyTacticSnapshot(initial);
       },
       error: (err) => console.error("Error loading tactic data", err)
     });
   }
 
+  switchTacticalView(mode: 'manager' | 'best'): void {
+    const snapshot = mode === 'manager' ? this.managerTacticSnapshot : this.bestPossibleTacticSnapshot;
+    if (!snapshot) return;
+    this.tacticalViewMode = mode;
+    this.applyTacticSnapshot(snapshot);
+  }
+
+  private applyTacticSnapshot(data: SavedTactic): void {
+    this.selectedTactic = data.tactic || this.formationOptions[0]?.key || '442';
+    this.selectedOptions.mentality = data.mentality || 'Balanced';
+    this.selectedOptions.possession = data.inPossession || 'Standard';
+    this.selectedOptions.tempo = data.tempo || 'Standard';
+    this.selectedOptions.passing = data.passingType || 'Normal';
+    this.selectedOptions.timeWasting = data.timeWasting || 'Sometimes';
+    this.selectedOptions.defensiveLine = data.defensiveLine || 'Standard';
+    this.selectedOptions.pressing = data.pressing || 'Low';
+    this.selectedOptions.width = data.width || 'Balanced';
+    this.selectedOptions.dribbling = data.dribbling || 'Standard';
+    this.selectedOptions.foulFrequency = data.foulFrequency || 'Normal';
+    this.selectedOptions.foulHardness = data.foulHardness || 'Medium';
+    this.selectedOptions.tempoFragmentation = data.tempoFragmentation || 'Normal';
+    this.selectedOptions.widePlay = data.widePlay || 'Shoot';
+    this.selectedOptions.transition = data.transition || 'Balanced';
+    this.penaltyTakerId = data.penaltyTakerId ?? null;
+    this.freeKickTakerId = data.freeKickTakerId ?? null;
+    this.cornerTakerLeftId = data.cornerTakerLeftId ?? null;
+    this.cornerTakerRightId = data.cornerTakerRightId ?? null;
+    this.setFormationIndices(this.selectedTactic);
+    this.mapSavedPlayersToField(data.formationDataList || []);
+  }
+
   // ... (Restul clasei e la fel) ...
   mapSavedPlayersToField(savedPositions: { positionIndex: number; playerId: number; role?: string | null; duty?: string | null; instructions?: string[] | null }[]) {
-      this.removeAll();
+      this.clearLineupState();
       savedPositions.forEach(pos => {
           const playerObj = this.players.find(p => p.id === pos.playerId);
           if (playerObj) {
@@ -304,7 +345,10 @@ export class Tactics4Component implements OnInit, OnChanges {
           }
       });
   }
-  openModal(type: string): void { this.activeModal = type; }
+  openModal(type: string): void {
+    if (!this.canEdit) return;
+    this.activeModal = type;
+  }
   closeModal(): void { this.activeModal = null; }
   // For the formation modal we show pretty labels (mapped back to KEY on select);
   // every other modal keeps its plain string options.
@@ -314,6 +358,7 @@ export class Tactics4Component implements OnInit, OnChanges {
       return this.optionsData[this.activeModal] || [];
   }
   selectOption(option: string): void {
+      if (!this.canEdit) return;
       if (this.activeModal === 'mentality') this.selectedOptions.mentality = option;
       if (this.activeModal === 'possession') this.selectedOptions.possession = option;
       if (this.activeModal === 'passing') this.selectedOptions.passing = option;
@@ -339,7 +384,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
   /** Fetch the active pitch cells for a formation KEY from the backend. */
   setFormationIndices(tactic: string) {
-      this.removeAll();
+      this.clearLineupState();
       this.allowedIndexes = [];
       if (!tactic) return;
       this.http.get<{ index: number; position: string }[]>(urlApp + `/tactic/formationLayout/${tactic}`).subscribe({
@@ -347,9 +392,13 @@ export class Tactics4Component implements OnInit, OnChanges {
           error: (err) => console.error('Error loading formation layout', err)
       });
   }
-  allowDrop(event: DragEvent): void { event.preventDefault(); }
-  drag(event: DragEvent, player: Player): void { if (event.dataTransfer) event.dataTransfer.setData('player', JSON.stringify(player)); }
+  allowDrop(event: DragEvent): void { if (this.canEdit) event.preventDefault(); }
+  drag(event: DragEvent, player: Player): void {
+      if (!this.canEdit) return;
+      if (event.dataTransfer) event.dataTransfer.setData('player', JSON.stringify(player));
+  }
   drop(event: DragEvent, positionIndex: number): void {
+      if (!this.canEdit) return;
       if (!this.allowedIndexes.includes(positionIndex)) return;
       // Owner locked this slot (or revoked XI picking): refuse the drop.
       if (this.isSlotLocked(positionIndex, this.fieldPositions[positionIndex]?.player?.position)) return;
@@ -367,6 +416,7 @@ export class Tactics4Component implements OnInit, OnChanges {
       }
   }
   dropSubstitute(event: DragEvent, subIndex: number): void {
+      if (!this.canEdit) return;
       const playerData = event.dataTransfer?.getData('player');
       if (playerData) {
           const player = JSON.parse(playerData) as Player;
@@ -385,6 +435,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
   onRightClick(positionIndex: number, event: MouseEvent): void {
       event.preventDefault();
+      if (!this.canEdit) return;
       // Locked slots are read-only — don't allow removing the pinned player.
       if (this.isSlotLocked(positionIndex, this.fieldPositions[positionIndex]?.player?.position)) return;
       const pos = this.fieldPositions[positionIndex];
@@ -399,6 +450,11 @@ export class Tactics4Component implements OnInit, OnChanges {
       }
   }
   removeAll(): void {
+      if (!this.canEdit) return;
+      this.clearLineupState();
+  }
+
+  private clearLineupState(): void {
       this.fieldPositions.forEach(p => { p.player = null; p.role = null; p.duty = null; p.instructions = []; });
       this.substitutes.forEach(p => { p.player = null; p.role = null; p.duty = null; p.instructions = []; });
       this.selectedPlayers.clear();
@@ -407,6 +463,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
   isPlayerSelected(playerId: number): boolean { return this.selectedPlayers.has(playerId); }
   askAssistant(): void {
+      if (!this.canEdit) return;
       this.http.get<{ positionIndex: number; playerId: number }[]>(
           urlApp + `/tactic/askAssistant/${this.teamId}/${encodeURIComponent(this.selectedTactic)}`
       ).subscribe({
@@ -418,6 +475,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
 
   saveData() {
+      if (!this.canEdit) return;
       const formationData = this.fieldPositions.filter(p => p.player).map(p => ({
           positionIndex: p.positionIndex,
           playerId: p.player!.id,
@@ -455,15 +513,29 @@ export class Tactics4Component implements OnInit, OnChanges {
           cornerTakerLeftId: this.cornerTakerLeftId,
           cornerTakerRightId: this.cornerTakerRightId
       };
-      this.http.post(urlApp + '/tactic/saveFormation', payload).subscribe(
-          () => alert('Tactics saved successfully!'),
-          (error) => console.error('Error saving tactics:', error)
-      );
+      const request$ = this.isAdminEditingExternalTeam
+          ? this.adminService.saveTeamTactic(payload)
+          : this.http.post(urlApp + '/tactic/saveFormation', payload);
+      request$.subscribe({
+          next: () => {
+              this.managerTacticSnapshot = payload as SavedTactic;
+              this.managerTacticSource = 'SAVED';
+              this.tacticalViewMode = 'manager';
+              alert(this.isAdminEditingExternalTeam
+                  ? `Tactics saved for ${this.managerName}'s team.`
+                  : 'Tactics saved successfully!');
+          },
+          error: (error) => {
+              console.error('Error saving tactics:', error);
+              alert(error?.error?.error || 'The tactic could not be saved.');
+          }
+      });
   }
 
   // ===== Set Piece Takers =====
   /** Ask the backend for the best takers and apply them to the four slots. */
   suggestSetPieceTakers(): void {
+    if (!this.canEdit) return;
     this.http.get<any>(urlApp + `/tactic/suggestSetPieceTakers/${this.teamId}`).subscribe({
       next: (data) => {
         this.suggestedSetPieces = data;
@@ -665,6 +737,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   /** Open the per-player panel for a cell; toggles closed if already open. */
   openPlayerPanel(slot: PositionedPlayer, event: MouseEvent): void {
     event.stopPropagation();
+    if (!this.canEdit) return;
     if (!slot.player) return;
     if (this.activeRoleSlot === slot || this.activeInstructionsSlot === slot) {
       this.closePlayerPanel();
@@ -682,6 +755,7 @@ export class Tactics4Component implements OnInit, OnChanges {
 
   /** Tab switch within the open panel for a given slot. */
   showRolesTab(slot: PositionedPlayer): void {
+    if (!this.canEdit) return;
     if (!slot.player) return;
     this.activeRoleSlot = slot;
     this.activeInstructionsSlot = null;
@@ -689,6 +763,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
 
   showInstructionsTab(slot: PositionedPlayer): void {
+    if (!this.canEdit) return;
     if (!slot.player) return;
     this.activeInstructionsSlot = slot;
     this.activeRoleSlot = null;
@@ -722,11 +797,13 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
 
   selectRole(slot: PositionedPlayer, role: RoleDef, duty: string): void {
+    if (!this.canEdit) return;
     slot.role = role.name;
     slot.duty = duty;
   }
 
   clearRole(slot: PositionedPlayer): void {
+    if (!this.canEdit) return;
     slot.role = null;
     slot.duty = null;
   }
@@ -748,6 +825,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
 
   toggleInstruction(slot: PositionedPlayer, instructionName: string): void {
+    if (!this.canEdit) return;
     const idx = slot.instructions.indexOf(instructionName);
     if (idx >= 0) slot.instructions.splice(idx, 1);
     else slot.instructions.push(instructionName);

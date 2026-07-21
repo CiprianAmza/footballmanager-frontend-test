@@ -1,0 +1,123 @@
+.impact-panel {
+  margin: 26px 20px;
+  overflow: hidden;
+  color: #e8eaf0;
+  background: linear-gradient(145deg, #20243a, #181b2c 72%);
+  border: 1px solid #343a58;
+  border-radius: 9px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .2);
+}
+
+.impact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 20px 22px;
+  border-bottom: 1px solid #343a58;
+}
+
+.impact-header h2 {
+  margin: 3px 0 5px;
+  color: #fff;
+  font-size: 1.25rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.impact-header p {
+  max-width: 720px;
+  margin: 0;
+  color: #969db1;
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.eyebrow {
+  color: #f1c40f;
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.eligibility-rule {
+  display: grid;
+  flex: 0 0 auto;
+  min-width: 138px;
+  padding: 11px 14px;
+  text-align: right;
+  background: rgba(241, 196, 15, .09);
+  border: 1px solid rgba(241, 196, 15, .25);
+  border-radius: 7px;
+}
+
+.eligibility-rule strong { color: #f1c40f; font-size: 1.25rem; }
+.eligibility-rule span { color: #a5a9b7; font-size: .64rem; text-transform: uppercase; }
+
+.impact-table-wrap { overflow-x: auto; }
+.impact-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+
+.impact-table th {
+  padding: 10px 12px;
+  color: #81889d;
+  background: rgba(9, 11, 21, .28);
+  border-bottom: 1px solid #343a58;
+  font-size: .67rem;
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.impact-table th span { color: #555e79; font-size: .58rem; }
+.impact-table th:hover { color: #f1c40f; }
+
+.impact-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, .05);
+  font-size: .8rem;
+}
+
+.impact-table tbody tr:hover { background: rgba(255, 255, 255, .035); }
+.impact-table tbody tr:last-child td { border-bottom: 0; }
+.impact-table a { color: #edf0f8; text-decoration: none; }
+.impact-table a:hover { color: #52b9f2; text-decoration: underline; }
+.player-cell a { font-weight: 750; }
+.team-cell a { color: #b7bdcc; }
+.rank-column { width: 34px; color: #6e768c; text-align: center !important; }
+.number-column { text-align: right !important; }
+.rating { font-weight: 750; }
+.player-rating { color: #f1c40f; }
+.difference { min-width: 68px; font-weight: 900; }
+.appearances small { display: block; color: #747c91; font-size: .6rem; }
+
+.position-badge {
+  display: inline-flex;
+  padding: 3px 6px;
+  color: #9dd6f5;
+  background: rgba(52, 152, 219, .12);
+  border-radius: 4px;
+  font-size: .65rem;
+  font-weight: 800;
+}
+
+.impact-state { padding: 28px; color: #747c91; text-align: center; font-size: .8rem; }
+.impact-state.error { color: #ef7f77; }
+
+footer {
+  padding: 9px 14px;
+  color: #6e768c;
+  background: rgba(9, 11, 21, .2);
+  border-top: 1px solid #303650;
+  font-size: .65rem;
+}
+
+@media (max-width: 700px) {
+  .impact-panel { margin: 18px 0; }
+  .impact-header { align-items: flex-start; padding: 16px; }
+  .eligibility-rule { min-width: 94px; }
+  .impact-table th, .impact-table td { padding: 9px 8px; }
+}

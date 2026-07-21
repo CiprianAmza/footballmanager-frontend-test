@@ -317,5 +317,11 @@
         Loading championship stats…
     </div>
 
+    <app-competition-rating-impact
+        *ngIf="compStats"
+        [season]="selectedSeason"
+        [data]="compStats.ratingImpact">
+    </app-competition-rating-impact>
+
   </div>
 </div>

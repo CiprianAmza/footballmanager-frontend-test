@@ -9,6 +9,7 @@
         <button class="tab-btn" [class.active]="view === 'leagues'" (click)="setView('leagues')">Leagues</button>
         <button class="tab-btn" [class.active]="view === 'cups'" (click)="setView('cups')">Cups</button>
         <button class="tab-btn" [class.active]="view === 'statistics'" (click)="setView('statistics')">Statistics</button>
+        <button class="tab-btn" [class.active]="view === 'rating-history'" (click)="setView('rating-history')">Rating History</button>
         <button class="tab-btn" [class.active]="view === 'team-values'" (click)="setView('team-values')">Team Value</button>
         <button class="tab-btn" [class.active]="view === 'world-xi'" (click)="setView('world-xi')">World Best XI</button>
         <a class="tab-btn tab-link" routerLink="/awards/global">Global Awards</a>
@@ -193,6 +194,133 @@
           </div>
         </aside>
       </div>
+    </ng-container>
+  </section>
+
+  <!-- ALL-TIME COMPETITION RATING IMPACT -->
+  <section *ngIf="view === 'rating-history'" class="rating-history-page">
+    <div class="rating-history-intro">
+      <div>
+        <span class="eyebrow">All competitions · all seasons</span>
+        <h2>All-time rating impact</h2>
+        <p>
+          The highest-rated eligible player for every team in every competition season,
+          compared with that team's average rating.
+        </p>
+      </div>
+      <div class="rating-history-thresholds">
+        <div class="rating-history-threshold">
+          <strong>{{ ratingHistory?.teamAppearancePercentage || 55 }}%</strong>
+          <span>of team matches</span>
+        </div>
+        <div class="rating-history-threshold competition-threshold">
+          <strong>{{ ratingHistory?.competitionAppearancePercentage || 60 }}%</strong>
+          <span>of competition route</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="rating-history-criteria">
+      <label>
+        <span>Team matches</span>
+        <span class="percentage-input"><input type="number" min="1" max="100"
+          [(ngModel)]="ratingHistoryTeamPercentage">%</span>
+      </label>
+      <label>
+        <span>Competition maximum</span>
+        <span class="percentage-input"><input type="number" min="1" max="100"
+          [(ngModel)]="ratingHistoryCompetitionPercentage">%</span>
+      </label>
+      <button type="button" (click)="applyRatingHistoryCriteria()" [disabled]="ratingHistoryLoading">
+        Apply eligibility
+      </button>
+      <small>A player must satisfy both conditions.</small>
+    </div>
+
+    <div class="rating-history-controls">
+      <div class="rating-history-scopes" aria-label="Competition type filter">
+        <button *ngFor="let scope of ratingHistoryScopes"
+                [class.active]="ratingHistoryScope === scope.key"
+                (click)="setRatingHistoryScope(scope.key)">{{ scope.label }}</button>
+      </div>
+      <div class="rating-history-secondary-filters">
+        <select [(ngModel)]="ratingHistorySeason" aria-label="Filter by season">
+          <option [ngValue]="null">All seasons</option>
+          <option *ngFor="let seasonNumber of ratingHistorySeasons" [ngValue]="seasonNumber">
+            Season {{ seasonNumber }}
+          </option>
+        </select>
+        <select [(ngModel)]="ratingHistoryTop" aria-label="Number of rows to show">
+          <option *ngFor="let top of ratingHistoryTopOptions" [ngValue]="top">Top {{ top }}</option>
+        </select>
+        <input type="search" [(ngModel)]="ratingHistorySearch"
+               placeholder="Player, team or competition..." aria-label="Search rating history">
+      </div>
+    </div>
+
+    <div class="catalog-state" *ngIf="ratingHistoryLoading">Building the all-time competition report...</div>
+    <div class="catalog-state catalog-error" *ngIf="!ratingHistoryLoading && ratingHistoryError">
+      <span>{{ ratingHistoryError }}</span>
+      <button type="button" (click)="loadRatingHistory()">Try again</button>
+    </div>
+
+    <ng-container *ngIf="!ratingHistoryLoading && !ratingHistoryError && ratingHistory as report">
+      <div class="rating-history-summary">
+        <span>{{ report.competitionCount }} competitions</span>
+        <span>{{ report.seasonCount }} seasons</span>
+        <span>{{ filteredRatingHistoryRows.length }} qualifying team-seasons</span>
+        <span>Showing top {{ visibleRatingHistoryRows.length }}</span>
+      </div>
+
+      <div class="table-scroll rating-history-table-shell" *ngIf="filteredRatingHistoryRows.length; else noRatingHistory">
+        <table class="rating-history-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th (click)="setRatingHistorySort('competitionName')">Competition {{ ratingHistorySortMarker('competitionName') }}</th>
+              <th (click)="setRatingHistorySort('seasonNumber')">Season {{ ratingHistorySortMarker('seasonNumber') }}</th>
+              <th (click)="setRatingHistorySort('playerName')">Player {{ ratingHistorySortMarker('playerName') }}</th>
+              <th>Pos</th>
+              <th (click)="setRatingHistorySort('teamName')">Team {{ ratingHistorySortMarker('teamName') }}</th>
+              <th (click)="setRatingHistorySort('appearances')">Apps {{ ratingHistorySortMarker('appearances') }}</th>
+              <th (click)="setRatingHistorySort('playerRating')">Player R {{ ratingHistorySortMarker('playerRating') }}</th>
+              <th (click)="setRatingHistorySort('teamRating')">Team R {{ ratingHistorySortMarker('teamRating') }}</th>
+              <th (click)="setRatingHistorySort('difference')">Diff {{ ratingHistorySortMarker('difference') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of visibleRatingHistoryRows; let index = index">
+              <td><span class="history-rank">{{ index + 1 }}</span></td>
+              <td class="history-competition">
+                <a [routerLink]="ratingHistoryCompetitionLink(row)">{{ row.competitionName }}</a>
+                <small>{{ row.competitionType }}</small>
+              </td>
+              <td class="history-season">{{ row.seasonNumber }}</td>
+              <td class="history-player"><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a></td>
+              <td><span class="history-position">{{ row.position || '—' }}</span></td>
+              <td class="history-team"><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td>
+              <td class="history-apps"
+                  [title]="'Required: ' + row.requiredAppearances + ' (team: ' + row.requiredTeamAppearances + ', competition: ' + row.requiredCompetitionAppearances + ')'">
+                {{ row.appearances }}/{{ row.teamMatches }}
+                <small>min {{ row.requiredAppearances }} · route {{ row.competitionMatches }}</small>
+              </td>
+              <td class="history-rating player-rating">{{ row.playerRating | number:'1.2-2' }}</td>
+              <td class="history-rating">{{ row.teamRating | number:'1.2-2' }}</td>
+              <td class="history-difference" [ngStyle]="ratingHistoryImpactStyle(row.difference)">
+                {{ row.difference > 0 ? '+' : '' }}{{ row.difference | number:'1.2-2' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="rating-history-method">
+        {{ report.teamAverageMethod }}. {{ report.competitionMatchesMethod }}. Eligibility is rounded up.
+      </p>
+
+      <ng-template #noRatingHistory>
+        <div class="catalog-state">No qualifying records match the selected filters.</div>
+      </ng-template>
     </ng-container>
   </section>
 

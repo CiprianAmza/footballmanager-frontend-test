@@ -1,14 +1,25 @@
 <div class="champions-container">
   <div class="champions-header">
-    <h1>All-Time Champions</h1>
-    <p class="subtitle">Complete title history across all competitions</p>
+    <div>
+      <h1>All-Time Champions</h1>
+      <p class="subtitle">Complete title history across all competitions</p>
+    </div>
+    <div class="champions-view-switch" role="group" aria-label="Champions view">
+      <button type="button" [class.active]="view === 'clubs'" (click)="setView('clubs')">Club ranking</button>
+      <button type="button" [class.active]="view === 'competitions'" (click)="setView('competitions')">By competition</button>
+    </div>
   </div>
 
   <div *ngIf="loading" class="loading-msg">Loading records...</div>
+  <div *ngIf="!loading && error" class="empty-msg error-msg">
+    {{ error }}
+    <button type="button" (click)="loadChampions()">Try again</button>
+  </div>
+  <div *ngIf="!loading && !error && champions.length === 0" class="empty-msg">
+    No championship data available yet.
+  </div>
 
-  <div *ngIf="!loading && champions.length === 0" class="empty-msg">No championship data available yet.</div>
-
-  <div class="champions-table-wrapper" *ngIf="!loading && champions.length > 0">
+  <div class="champions-table-wrapper" *ngIf="!loading && !error && champions.length > 0 && view === 'clubs'">
     <table class="champions-table">
       <thead>
         <tr>
@@ -19,7 +30,8 @@
           <th class="type-col">Cup</th>
           <th class="type-col">League 2</th>
           <th class="type-col">LoC</th>
-          <th class="type-col">SC</th>
+          <th class="type-col">Stars Cup</th>
+          <th class="type-col">Super Cup</th>
           <th class="expand-col"></th>
         </tr>
       </thead>
@@ -30,11 +42,10 @@
               <span class="rank-num" [ngClass]="getMedalClass(i)">{{ i + 1 }}</span>
             </td>
             <td class="team-col">
-              <a [routerLink]="['/team', team.teamId]" class="fm-link team-name-link" (click)="$event.stopPropagation()">{{ team.teamName }}</a>
+              <a [routerLink]="['/team', team.teamId]" class="fm-link team-name-link"
+                 (click)="$event.stopPropagation()">{{ team.teamName }}</a>
             </td>
-            <td class="total-col">
-              <span class="total-badge">{{ team.totalTitles }}</span>
-            </td>
+            <td class="total-col"><span class="total-badge">{{ team.totalTitles }}</span></td>
             <td class="type-col">
               <span *ngIf="team.leagueTitles > 0" class="type-count type-league">{{ team.leagueTitles }}</span>
               <span *ngIf="team.leagueTitles === 0" class="type-zero">-</span>
@@ -55,18 +66,23 @@
               <span *ngIf="team.starsCupTitles > 0" class="type-count type-sc">{{ team.starsCupTitles }}</span>
               <span *ngIf="team.starsCupTitles === 0" class="type-zero">-</span>
             </td>
+            <td class="type-col">
+              <span *ngIf="team.superCupTitles > 0" class="type-count type-super-cup">{{ team.superCupTitles }}</span>
+              <span *ngIf="team.superCupTitles === 0" class="type-zero">-</span>
+            </td>
             <td class="expand-col">
               <span class="expand-icon" [class.expanded]="expandedTeamId === team.teamId">&#x276F;</span>
             </td>
           </tr>
-          <!-- Expanded titles -->
           <tr *ngIf="expandedTeamId === team.teamId" class="titles-detail-row">
-            <td colspan="9">
+            <td colspan="10">
               <div class="titles-detail">
-                <div class="title-chip" *ngFor="let title of team.titles" [ngClass]="getCompTypeClass(title.competitionTypeId)">
+                <a class="title-chip" *ngFor="let title of team.titles"
+                   [routerLink]="['/competition', title.competitionId]"
+                   [ngClass]="getCompTypeClass(title.competitionTypeId)">
                   <span class="chip-season">S{{ title.season }}</span>
                   <span class="chip-comp">{{ title.competitionName }}</span>
-                </div>
+                </a>
                 <div *ngIf="!team.titles?.length" class="no-titles">No individual titles recorded.</div>
               </div>
             </td>
@@ -75,4 +91,81 @@
       </tbody>
     </table>
   </div>
+
+  <section class="competition-history" *ngIf="!loading && !error && competitions.length > 0 && view === 'competitions'">
+    <div class="competition-controls">
+      <label>
+        <span>Competition</span>
+        <select [(ngModel)]="selectedCompetitionKey">
+          <option *ngFor="let competition of sortedCompetitions; trackBy: trackCompetition"
+                  [ngValue]="competition.key">
+            {{ competition.competitionName }} ({{ competition.pastWinners.length }})
+          </option>
+        </select>
+      </label>
+      <label>
+        <span>Sort competitions</span>
+        <select [(ngModel)]="competitionSort">
+          <option value="name">Name A–Z</option>
+          <option value="editions">Most completed editions</option>
+          <option value="type">Competition type</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="competition-browser">
+      <nav class="competition-list" aria-label="Competitions">
+        <button type="button" *ngFor="let competition of sortedCompetitions; trackBy: trackCompetition"
+                [class.active]="selectedCompetition?.key === competition.key"
+                (click)="selectCompetition(competition.key)">
+          <span class="competition-list-name">{{ competition.competitionName }}</span>
+          <span class="competition-list-meta">
+            {{ getCompTypeLabel(competition.competitionTypeId) }} · {{ competition.pastWinners.length }} seasons
+          </span>
+        </button>
+      </nav>
+
+      <div class="competition-record" *ngIf="selectedCompetition as competition">
+        <header class="competition-record-header" [ngClass]="getCompTypeClass(competition.competitionTypeId)">
+          <div>
+            <span>{{ getCompTypeLabel(competition.competitionTypeId) }}</span>
+            <h2>
+              <a *ngIf="competition.competitionId" [routerLink]="['/competition', competition.competitionId]">
+                {{ competition.competitionName }}
+              </a>
+              <ng-container *ngIf="!competition.competitionId">{{ competition.competitionName }}</ng-container>
+            </h2>
+          </div>
+          <strong>{{ competition.pastWinners.length }} editions</strong>
+        </header>
+
+        <div class="competition-record-grid">
+          <section class="most-successful">
+            <h3>Most successful clubs</h3>
+            <ol>
+              <li *ngFor="let club of competition.winnerRanking; let i = index">
+                <span class="ranking-position">{{ i + 1 }}</span>
+                <a [routerLink]="['/team', club.teamId]">{{ club.teamName }}</a>
+                <strong>{{ club.titles }}<small> title{{ club.titles === 1 ? '' : 's' }}</small></strong>
+              </li>
+            </ol>
+          </section>
+
+          <section class="past-winners">
+            <h3>Past Winners</h3>
+            <div class="past-winners-table">
+              <div class="past-winners-heading">
+                <span>Season</span>
+                <span>Champion</span>
+              </div>
+              <div class="past-winner-row" *ngFor="let winner of competition.pastWinners; trackBy: trackWinner">
+                <strong>Season {{ winner.season }}</strong>
+                <a [routerLink]="['/team', winner.teamId]">🏆 {{ winner.teamName }}</a>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>

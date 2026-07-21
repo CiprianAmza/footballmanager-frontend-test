@@ -13,7 +13,7 @@
 }
 .header-left { display: flex; align-items: center; gap: 20px; }
 .header-left h1 { margin: 0; font-size: 1.7em; color: #fff; }
-.view-tabs { display: flex; gap: 4px; }
+.view-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
 .tab-btn {
   background: #2a2e44; color: #aab; border: none;
   padding: 8px 18px; border-radius: 4px; cursor: pointer;
@@ -327,6 +327,192 @@
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* All-time competition rating impact */
+.rating-history-page { display: flex; flex-direction: column; gap: 16px; }
+
+.rating-history-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 22px;
+  border: 1px solid #383c55;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #262b43, #202439 70%);
+}
+.rating-history-intro h2 { margin: 4px 0 6px; color: #fff; font-size: 1.35rem; }
+.rating-history-intro p { max-width: 760px; margin: 0; color: #9ca2b7; font-size: .8rem; line-height: 1.45; }
+.rating-history-thresholds { display: flex; gap: 8px; }
+.rating-history-threshold {
+  display: grid;
+  flex: 0 0 auto;
+  min-width: 150px;
+  padding: 12px 15px;
+  text-align: right;
+  border: 1px solid rgba(241, 196, 15, .28);
+  border-radius: 7px;
+  background: rgba(241, 196, 15, .08);
+}
+.rating-history-threshold strong { color: #f1c40f; font-size: 1.4rem; }
+.rating-history-threshold span { color: #9ca2b7; font-size: .62rem; text-transform: uppercase; }
+.rating-history-threshold.competition-threshold {
+  border-color: rgba(82, 185, 242, .3);
+  background: rgba(52, 152, 219, .09);
+}
+.rating-history-threshold.competition-threshold strong { color: #52b9f2; }
+
+.rating-history-criteria {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px solid #343951;
+  border-radius: 7px;
+  background: #202335;
+}
+.rating-history-criteria label { display: grid; gap: 5px; color: #9198ad; font-size: .65rem; font-weight: 800; text-transform: uppercase; }
+.percentage-input {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding-right: 9px;
+  border: 1px solid #454a66;
+  border-radius: 5px;
+  color: #f1c40f;
+  background: #181b2b;
+}
+.percentage-input input {
+  width: 70px;
+  padding: 7px 4px 7px 10px;
+  border: 0;
+  outline: 0;
+  color: #fff;
+  background: transparent;
+  font: inherit;
+  font-size: .78rem;
+}
+.rating-history-criteria button {
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid #8c76ff;
+  border-radius: 5px;
+  color: #fff;
+  background: #6552c8;
+  font-weight: 800;
+  cursor: pointer;
+}
+.rating-history-criteria button:disabled { opacity: .55; cursor: wait; }
+.rating-history-criteria small { align-self: center; color: #777e92; font-size: .65rem; }
+
+.rating-history-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px;
+  border: 1px solid #343951;
+  border-radius: 7px;
+  background: #232639;
+}
+.rating-history-scopes { display: flex; gap: 6px; flex-wrap: wrap; }
+.rating-history-scopes button {
+  padding: 8px 12px;
+  border: 1px solid #464b68;
+  border-radius: 5px;
+  color: #aeb2c3;
+  background: #2b2f46;
+  font-size: .72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.rating-history-scopes button:hover { color: #fff; border-color: #696f94; }
+.rating-history-scopes button.active { color: #1b1d29; border-color: #f1c40f; background: #f1c40f; }
+.rating-history-secondary-filters { display: flex; gap: 8px; }
+.rating-history-secondary-filters select,
+.rating-history-secondary-filters input {
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid #454a66;
+  border-radius: 5px;
+  outline: none;
+  color: #e9ebf3;
+  background: #181b2b;
+  font: inherit;
+  font-size: .75rem;
+}
+.rating-history-secondary-filters input { min-width: 240px; }
+.rating-history-secondary-filters select:focus,
+.rating-history-secondary-filters input:focus { border-color: #8c76ff; }
+
+.rating-history-summary {
+  display: flex;
+  gap: 18px;
+  padding: 0 4px;
+  color: #8f95a8;
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.rating-history-table-shell { border: 1px solid #343951; border-radius: 7px; background: #202335; }
+.rating-history-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.rating-history-table th {
+  padding: 10px 9px;
+  color: #868da2;
+  background: #191c2c;
+  border-bottom: 1px solid #383d57;
+  font-size: .63rem;
+  font-weight: 850;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.rating-history-table th:nth-last-child(-n+4),
+.rating-history-table td:nth-last-child(-n+4) { text-align: right; }
+.rating-history-table td {
+  padding: 10px 9px;
+  border-bottom: 1px solid rgba(255,255,255,.045);
+  color: #d8dbe5;
+  font-size: .76rem;
+}
+.rating-history-table tr:hover { background: rgba(255,255,255,.035); }
+.rating-history-table a { color: #e9ebf4; text-decoration: none; }
+.rating-history-table a:hover { color: #52b9f2; text-decoration: underline; }
+.history-rank { color: #72798e; font-weight: 800; }
+.history-competition, .history-apps { display: grid; gap: 2px; }
+.history-competition small, .history-apps small { color: #737b91; font-size: .58rem; }
+.history-player a { font-weight: 800; }
+.history-team a { color: #b9bece; }
+.history-season { color: #f1c40f !important; font-weight: 800; }
+.history-position { padding: 3px 6px; color: #9ed8f7; background: rgba(52,152,219,.12); border-radius: 4px; font-size: .62rem; font-weight: 800; }
+.history-rating { font-weight: 800; }
+.history-rating.player-rating { color: #f1c40f; }
+.history-difference { min-width: 58px; font-weight: 900; }
+.rating-history-more {
+  align-self: center;
+  padding: 9px 18px;
+  border: 1px solid #595f7e;
+  border-radius: 5px;
+  color: #daddE8;
+  background: #2b2f46;
+  font-weight: 750;
+  cursor: pointer;
+}
+.rating-history-more:hover { border-color: #f1c40f; color: #f1c40f; }
+.rating-history-method { margin: 0; color: #72798e; font-size: .65rem; text-align: center; }
+
+@media (max-width: 760px) {
+  .rating-history-intro { align-items: flex-start; flex-direction: column; }
+  .rating-history-thresholds { width: 100%; }
+  .rating-history-threshold { min-width: 100px; }
+  .rating-history-secondary-filters { width: 100%; }
+  .rating-history-secondary-filters input { min-width: 0; flex: 1; }
 }
 
 /* Global season statistics */

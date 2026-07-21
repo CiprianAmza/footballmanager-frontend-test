@@ -198,9 +198,49 @@ interface WorldBestXiResponse {
   players: WorldBestPlayer[];
 }
 
-type OverviewView = 'all' | 'leagues' | 'cups' | 'statistics' | 'team-values' | 'world-xi';
+interface RatingImpactHistoryRow {
+  rank: number;
+  competitionId: number;
+  competitionName: string;
+  competitionTypeId: number;
+  competitionType: string;
+  seasonNumber: number;
+  teamId: number;
+  teamName: string;
+  playerId: number;
+  playerName: string;
+  position: string;
+  appearances: number;
+  teamMatches: number;
+  competitionMatches: number;
+  requiredTeamAppearances: number;
+  requiredCompetitionAppearances: number;
+  requiredAppearances: number;
+  appearancePercentage: number;
+  playerRating: number;
+  teamRating: number;
+  difference: number;
+}
+
+interface RatingImpactHistoryResponse {
+  minimumAppearancePercentage: number;
+  teamAppearancePercentage: number;
+  competitionAppearancePercentage: number;
+  teamAverageMethod: string;
+  competitionMatchesMethod: string;
+  competitionCount: number;
+  seasonCount: number;
+  rowCount: number;
+  rows: RatingImpactHistoryRow[];
+}
+
+type OverviewView = 'all' | 'leagues' | 'cups' | 'statistics' | 'team-values' | 'world-xi' | 'rating-history';
 type TeamValueSort = 'power' | 'market' | 'reputation';
 type StatisticsScope = 'LEAGUE' | 'CUP' | 'EUROPEAN' | 'ALL';
+type RatingHistoryScope = 'ALL' | 'LEAGUES' | 'CUPS' | 'CHAMPIONS' | 'STARS_CUP' | 'SUPER_CUPS';
+type RatingHistorySort = keyof Pick<RatingImpactHistoryRow,
+  'competitionName' | 'seasonNumber' | 'playerName' | 'teamName' | 'appearances'
+  | 'playerRating' | 'teamRating' | 'difference'>;
 
 @Component({
   selector: 'app-leagues-overview',
@@ -243,6 +283,27 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
   worldBestXiLoading = false;
   worldBestXiError = '';
 
+  ratingHistory?: RatingImpactHistoryResponse;
+  ratingHistoryLoading = false;
+  ratingHistoryError = '';
+  ratingHistoryScope: RatingHistoryScope = 'ALL';
+  ratingHistorySeason: number | null = null;
+  ratingHistorySearch = '';
+  ratingHistoryTeamPercentage = 55;
+  ratingHistoryCompetitionPercentage = 60;
+  ratingHistoryTop = 20;
+  readonly ratingHistoryTopOptions = [10, 20, 50, 100];
+  ratingHistorySort: RatingHistorySort = 'difference';
+  ratingHistorySortDirection: 1 | -1 = -1;
+  readonly ratingHistoryScopes: { key: RatingHistoryScope; label: string; typeIds: number[] }[] = [
+    { key: 'ALL', label: 'All', typeIds: [1, 2, 3, 4, 5, 6] },
+    { key: 'LEAGUES', label: 'Leagues', typeIds: [1, 3] },
+    { key: 'CUPS', label: 'Cups', typeIds: [2] },
+    { key: 'CHAMPIONS', label: 'League of Champions', typeIds: [4] },
+    { key: 'STARS_CUP', label: 'Stars Cup', typeIds: [5] },
+    { key: 'SUPER_CUPS', label: 'Super Cups', typeIds: [6] }
+  ];
+
   // Per-league visibility — keyed by competitionId. Default true.
   visibleLeagues: { [id: number]: boolean } = {};
   visibleCups: { [id: number]: boolean } = {};
@@ -260,7 +321,7 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     const requestedView = this.route.snapshot.queryParamMap.get('view') as OverviewView | null;
-    if (requestedView && ['all', 'leagues', 'cups', 'statistics', 'team-values', 'world-xi'].includes(requestedView)) {
+    if (requestedView && ['all', 'leagues', 'cups', 'statistics', 'team-values', 'world-xi', 'rating-history'].includes(requestedView)) {
       this.view = requestedView;
     }
     this.loadAll();
@@ -277,6 +338,7 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
     if (v === 'statistics' && !this.statistics) this.loadStatistics();
     if (v === 'team-values' && !this.teamValues) this.loadTeamValues();
     if (v === 'world-xi' && !this.worldBestXi) this.loadWorldBestXi();
+    if (v === 'rating-history' && !this.ratingHistory) this.loadRatingHistory();
   }
 
   setTopN(n: number): void {
@@ -324,6 +386,36 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
     });
   }
 
+  get ratingHistorySeasons(): number[] {
+    return Array.from(new Set((this.ratingHistory?.rows || []).map(row => row.seasonNumber)))
+      .sort((left, right) => right - left);
+  }
+
+  get filteredRatingHistoryRows(): RatingImpactHistoryRow[] {
+    const allowedTypes = this.ratingHistoryScopes
+      .find(scope => scope.key === this.ratingHistoryScope)?.typeIds || [];
+    const query = this.ratingHistorySearch.trim().toLocaleLowerCase();
+    return [...(this.ratingHistory?.rows || [])]
+      .filter(row => allowedTypes.includes(row.competitionTypeId))
+      .filter(row => this.ratingHistorySeason == null || row.seasonNumber === this.ratingHistorySeason)
+      .filter(row => !query
+        || row.playerName.toLocaleLowerCase().includes(query)
+        || row.teamName.toLocaleLowerCase().includes(query)
+        || row.competitionName.toLocaleLowerCase().includes(query))
+      .sort((left, right) => {
+        const a = left[this.ratingHistorySort];
+        const b = right[this.ratingHistorySort];
+        if (typeof a === 'number' && typeof b === 'number') {
+          return (a - b) * this.ratingHistorySortDirection;
+        }
+        return String(a).localeCompare(String(b)) * this.ratingHistorySortDirection;
+      });
+  }
+
+  get visibleRatingHistoryRows(): RatingImpactHistoryRow[] {
+    return this.filteredRatingHistoryRows.slice(0, this.ratingHistoryTop);
+  }
+
   loadAll(): void {
     this.loadCompetitionCatalog();
     this.loadLeagues();
@@ -331,6 +423,11 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
     if (this.view === 'statistics') this.loadStatistics();
     if (this.view === 'team-values') this.loadTeamValues();
     if (this.view === 'world-xi') this.loadWorldBestXi();
+    // The history query spans every completed competition season. Keep the loaded
+    // report while the game advances instead of rebuilding it on every date tick.
+    if (this.view === 'rating-history' && !this.ratingHistory && !this.ratingHistoryLoading) {
+      this.loadRatingHistory();
+    }
   }
 
   loadTeamValues(): void {
@@ -361,6 +458,74 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
         this.worldBestXiLoading = false;
       }
     });
+  }
+
+  loadRatingHistory(): void {
+    this.ratingHistoryLoading = true;
+    this.ratingHistoryError = '';
+    const endpoint = `${urlApp}/stats/rating-impact/history`
+      + `?teamAppearancePercentage=${this.ratingHistoryTeamPercentage}`
+      + `&competitionAppearancePercentage=${this.ratingHistoryCompetitionPercentage}`;
+    this.http.get<RatingImpactHistoryResponse>(endpoint).subscribe({
+      next: data => {
+        this.ratingHistory = data;
+        this.ratingHistoryTeamPercentage = data.teamAppearancePercentage;
+        this.ratingHistoryCompetitionPercentage = data.competitionAppearancePercentage;
+        this.ratingHistoryLoading = false;
+      },
+      error: () => {
+        this.ratingHistoryError = 'The all-time rating report could not be loaded.';
+        this.ratingHistoryLoading = false;
+      }
+    });
+  }
+
+  setRatingHistoryScope(scope: RatingHistoryScope): void {
+    this.ratingHistoryScope = scope;
+  }
+
+  applyRatingHistoryCriteria(): void {
+    this.ratingHistoryTeamPercentage = this.clampRatingHistoryPercentage(
+      this.ratingHistoryTeamPercentage, 55);
+    this.ratingHistoryCompetitionPercentage = this.clampRatingHistoryPercentage(
+      this.ratingHistoryCompetitionPercentage, 60);
+    this.loadRatingHistory();
+  }
+
+  private clampRatingHistoryPercentage(value: number, fallback: number): number {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+    return Math.max(1, Math.min(100, Math.round(parsed)));
+  }
+
+  setRatingHistorySort(key: RatingHistorySort): void {
+    if (this.ratingHistorySort === key) {
+      this.ratingHistorySortDirection = this.ratingHistorySortDirection === -1 ? 1 : -1;
+    } else {
+      this.ratingHistorySort = key;
+      this.ratingHistorySortDirection = key === 'competitionName' || key === 'playerName' || key === 'teamName' ? 1 : -1;
+    }
+  }
+
+  ratingHistorySortMarker(key: RatingHistorySort): string {
+    if (this.ratingHistorySort !== key) return '↕';
+    return this.ratingHistorySortDirection === -1 ? '▼' : '▲';
+  }
+
+  ratingHistoryImpactStyle(value: number): { [key: string]: string } {
+    const intensity = Math.min(0.34, 0.08 + Math.abs(value) * 0.14);
+    return {
+      color: value >= 0 ? '#87e6ad' : '#ff9d9d',
+      background: value >= 0
+        ? `rgba(46, 204, 113, ${intensity})`
+        : `rgba(231, 76, 60, ${intensity})`
+    };
+  }
+
+  ratingHistoryCompetitionLink(row: RatingImpactHistoryRow): any[] {
+    return row.competitionTypeId === 4 || row.competitionTypeId === 5
+      ? ['/european-rounds', row.competitionId, row.seasonNumber]
+      : ['/comp', row.competitionId];
   }
 
   setTeamValueSort(sort: TeamValueSort): void {
