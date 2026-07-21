@@ -6,6 +6,7 @@ import { urlApp } from '../app.component';
 import { CareerService } from '../services/career.service';
 import { TeamService } from '../services/team.service';
 import { GameEventsService } from '../services/game-events.service';
+import { AdminService } from '../services/admin.service';
 
 interface ManagerHistoryEntry {
   id: number;
@@ -117,6 +118,9 @@ interface ManagerProfile {
   // New financial fields (longs from the backend).
   monthlySalary?: number;
   careerEarnings?: number;
+  tacticStyle?: string;
+  knownTactics?: string;
+  alwaysUseBestPossibleTactic: boolean;
   // Per-competition breakdown of the in-progress season (may also be fetched separately).
   competitionBreakdown?: CompetitionStatLine[];
 }
@@ -144,6 +148,10 @@ export class ManagerProfileComponent implements OnInit, OnDestroy {
   resigning: boolean = false;
   resignMessage: string = '';
   showResignConfirm: boolean = false;
+  editorAlwaysBestTactic: boolean = false;
+  editorSaving: boolean = false;
+  editorMessage: string = '';
+  editorError: boolean = false;
 
   constructor(
     private http: HttpClient,
@@ -151,7 +159,8 @@ export class ManagerProfileComponent implements OnInit, OnDestroy {
     private router: Router,
     public careerService: CareerService,
     public teamService: TeamService,
-    private gameEvents: GameEventsService
+    private gameEvents: GameEventsService,
+    public adminService: AdminService
   ) {}
 
   ngOnInit(): void {
@@ -204,6 +213,7 @@ export class ManagerProfileComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (data) => {
           this.profile = data;
+          this.editorAlwaysBestTactic = !!data.alwaysUseBestPossibleTactic;
           if (this.profile.history) {
             this.profile.history.sort((a, b) => a.seasonNumber - b.seasonNumber);
           }
@@ -223,6 +233,31 @@ export class ManagerProfileComponent implements OnInit, OnDestroy {
           this.loading = false;
         }
       });
+  }
+
+  saveTacticPolicy(): void {
+    if (!this.profile || !this.adminService.isAuthenticated || this.editorSaving) return;
+    this.editorSaving = true;
+    this.editorMessage = '';
+    this.editorError = false;
+    this.adminService.updateManagerBestTacticPolicy(
+      this.profile.managerId,
+      this.editorAlwaysBestTactic
+    ).subscribe({
+      next: (response) => {
+        this.editorSaving = false;
+        const enabled = !!response.alwaysUseBestPossibleTactic;
+        if (this.profile) this.profile.alwaysUseBestPossibleTactic = enabled;
+        this.editorAlwaysBestTactic = enabled;
+        this.editorMessage = response.message || 'Manager tactic policy updated.';
+      },
+      error: (error) => {
+        this.editorSaving = false;
+        this.editorError = true;
+        this.editorAlwaysBestTactic = !!this.profile?.alwaysUseBestPossibleTactic;
+        this.editorMessage = error?.error?.error || 'Could not update the manager tactic policy.';
+      }
+    });
   }
 
   /** Pull the current-season per-competition breakdown for a team. */

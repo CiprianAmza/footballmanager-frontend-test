@@ -341,6 +341,18 @@ export class AdminService {
     );
   }
 
+  /** Federation Editor control for an AI manager's squad-adaptive tactic policy. */
+  updateManagerBestTacticPolicy(
+    managerId: number,
+    alwaysUseBestPossibleTactic: boolean
+  ): Observable<any> {
+    return this.http.patch<any>(
+      urlApp + `/admin/managers/${managerId}/always-best-tactic`,
+      { alwaysUseBestPossibleTactic },
+      { headers: this.authHeaders() }
+    );
+  }
+
   // ===== Ballon d'Or winner control =====
 
   ballonDorState(season?: number): Observable<BallonDorAdminState> {

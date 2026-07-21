@@ -28,6 +28,33 @@
 
   <div *ngIf="resignMessage" class="resign-status">{{ resignMessage }}</div>
 
+  <section class="federation-editor" *ngIf="adminService.isAuthenticated">
+    <div class="editor-copy">
+      <span class="editor-eyebrow">Federation Editor</span>
+      <h2>AI tactic policy</h2>
+      <p>
+        Preferred formation: <strong>{{ profile.tacticStyle || 'Not set' }}</strong>.
+        When this rule is active, the AI ignores that preference and selects the
+        best formation and tactical setup for the current squad before every match.
+      </p>
+    </div>
+    <div class="editor-control">
+      <label class="policy-toggle">
+        <input type="checkbox" [(ngModel)]="editorAlwaysBestTactic" [disabled]="editorSaving">
+        <span>
+          <strong>Always use best possible tactic</strong>
+          <small>{{ editorAlwaysBestTactic ? 'Squad-adaptive elite AI' : 'Manager preference and ability' }}</small>
+        </span>
+      </label>
+      <button type="button" class="save-policy-btn" (click)="saveTacticPolicy()" [disabled]="editorSaving">
+        {{ editorSaving ? 'Saving...' : 'Save policy' }}
+      </button>
+      <span *ngIf="editorMessage" class="editor-message" [class.error]="editorError">
+        {{ editorMessage }}
+      </span>
+    </div>
+  </section>
+
   <div class="modal-overlay" *ngIf="showResignConfirm">
     <div class="resign-modal">
       <h3>Submit resignation?</h3>

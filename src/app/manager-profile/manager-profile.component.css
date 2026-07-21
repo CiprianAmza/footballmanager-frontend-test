@@ -47,6 +47,114 @@
   color: #b5e8b8;
 }
 
+.federation-editor {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(45, 77, 125, 0.24), rgba(26, 26, 46, 0.96));
+  border: 1px solid #35537a;
+  border-left: 4px solid #4a9eff;
+  border-radius: 10px;
+  display: flex;
+  gap: 28px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding: 18px 20px;
+}
+
+.editor-copy {
+  max-width: 700px;
+}
+
+.editor-eyebrow {
+  color: #69b1ff;
+  font-size: 0.72em;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+}
+
+.editor-copy h2 {
+  color: #f2f4f8;
+  font-size: 1.2em;
+  margin: 4px 0 7px;
+}
+
+.editor-copy p {
+  color: #a9b1c2;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.editor-control {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 285px;
+}
+
+.policy-toggle {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+}
+
+.policy-toggle input {
+  accent-color: #4a9eff;
+  height: 19px;
+  width: 19px;
+}
+
+.policy-toggle span {
+  display: flex;
+  flex-direction: column;
+}
+
+.policy-toggle strong {
+  color: #e9edf5;
+  font-size: 0.9em;
+}
+
+.policy-toggle small {
+  color: #81899b;
+  margin-top: 2px;
+}
+
+.save-policy-btn {
+  background: #2e78c4;
+  border: 1px solid #559de8;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 8px 14px;
+}
+
+.save-policy-btn:hover { background: #3789dc; }
+.save-policy-btn:disabled { cursor: not-allowed; opacity: 0.55; }
+
+.editor-message {
+  color: #78d69a;
+  font-size: 0.78em;
+  text-align: right;
+}
+
+.editor-message.error { color: #ff7c7c; }
+
+@media (max-width: 760px) {
+  .federation-editor {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .editor-control {
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .editor-message { text-align: left; }
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
