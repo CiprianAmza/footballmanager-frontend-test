@@ -227,7 +227,18 @@ export class EuropeanRoundsComponent implements OnInit {
 
   mainScore(match: MatchResult): string {
     const parsed = this.scorePair(match.score);
-    return parsed ? `${parsed[0]} – ${parsed[1]}` : match.score;
+    if (!parsed) return match.score;
+
+    // Compatibility with rows written by the old simulator: it selected an
+    // extra-time winner but persisted only the 90-minute score. The old API
+    // also lacks the new structured decider fields, so show the minimum valid
+    // final score instead of an impossible tied "AET" result.
+    if (match.decidedBy === 'EXTRA_TIME' && !this.hasStructuredDecider(match)
+        && match.winnerTeamId != null) {
+      if (match.winnerTeamId === match.team1Id) parsed[0]++;
+      if (match.winnerTeamId === match.team2Id) parsed[1]++;
+    }
+    return `${parsed[0]} – ${parsed[1]}`;
   }
 
   decisionBadge(match: MatchResult): string | null {
@@ -273,7 +284,15 @@ export class EuropeanRoundsComponent implements OnInit {
     const legacy = secondLeg.score?.match(/agg\s*(\d+)\s*[-–]\s*(\d+)/i);
     // Legacy rows stored the aggregate in first-leg A/B order even though the
     // second-leg team columns are B/A.
-    return legacy ? `${legacy[1]} – ${legacy[2]}` : null;
+    if (!legacy) return null;
+    let teamA = Number(legacy[1]);
+    let teamB = Number(legacy[2]);
+    if (secondLeg.decidedBy === 'EXTRA_TIME' && teamA === teamB && group.winnerTeamId != null) {
+      const firstLeg = group.matches.find(match => match.legNumber === 1);
+      if (firstLeg?.team1Id === group.winnerTeamId) teamA++;
+      if (firstLeg?.team2Id === group.winnerTeamId) teamB++;
+    }
+    return `${teamA} – ${teamB}`;
   }
 
   groupPenaltyScore(group: ResultGroup): string | null {
@@ -330,6 +349,11 @@ export class EuropeanRoundsComponent implements OnInit {
   private scorePair(score: string): [number, number] | null {
     const match = score?.match(/^(\d+)\s*[-–]\s*(\d+)/);
     return match ? [Number(match[1]), Number(match[2])] : null;
+  }
+
+  private hasStructuredDecider(match: MatchResult): boolean {
+    return Object.prototype.hasOwnProperty.call(match, 'aggregateTeam1Score')
+      || Object.prototype.hasOwnProperty.call(match, 'penaltyTeam1Score');
   }
 
   getPotLabel(potNumber: number): string {
