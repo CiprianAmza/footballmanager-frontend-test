@@ -2,7 +2,10 @@
 
   <div class="page-header">
     <h1>{{ competitionName }}</h1>
-    <a class="awards-link" [routerLink]="['/awards/competition', competitionId]">🏆 Awards</a>
+    <div class="page-actions">
+      <a class="awards-link" [routerLink]="['/awards/competition', competitionId]">🏆 Awards</a>
+      <a class="records-link" [routerLink]="['/competition-records', competitionId]">⚽ Records</a>
+    </div>
     <div class="season-nav">
       <button (click)="changeSeason(-1)" [disabled]="season <= 1">&lt;</button>
       <span>Season {{ season }}</span>

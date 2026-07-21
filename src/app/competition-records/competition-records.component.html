@@ -1,0 +1,125 @@
+<main class="records-page">
+  <header class="records-hero">
+    <div>
+      <a class="back-link" [routerLink]="['/competition', competitionId]">← Competition</a>
+      <span class="eyebrow">Historical leaderboards</span>
+      <h1>{{ data?.competitionName || 'Competition records' }}</h1>
+      <p>Single-season peaks and all-time totals, calculated only from matches in this competition.</p>
+    </div>
+
+    <div class="hero-controls">
+      <label for="record-limit">Show</label>
+      <select id="record-limit" [(ngModel)]="limit" (change)="load()">
+        <option *ngFor="let option of limitOptions" [ngValue]="option">Top {{ option }}</option>
+      </select>
+      <a class="awards-link" [routerLink]="['/awards/competition', competitionId]">🏆 Awards</a>
+    </div>
+  </header>
+
+  <nav class="metric-tabs" aria-label="Record type">
+    <button type="button" [class.active]="metric === 'goals'" (click)="setMetric('goals')">
+      ⚽ Goal records
+    </button>
+    <button type="button" [class.active]="metric === 'assists'" (click)="setMetric('assists')">
+      ◇ Assist records
+    </button>
+  </nav>
+
+  <div class="page-state" *ngIf="loading">Loading the competition archive…</div>
+  <div class="page-state error" *ngIf="failed">
+    The records could not be loaded. Please try again.
+    <button type="button" (click)="load()">Retry</button>
+  </div>
+
+  <section class="records-grid" *ngIf="data && !loading">
+    <article class="record-card">
+      <header>
+        <div>
+          <span class="card-kicker">Best individual campaign</span>
+          <h2>{{ metric === 'goals' ? 'Goals in a season' : 'Assists in a season' }}</h2>
+        </div>
+        <span class="record-symbol">{{ metric === 'goals' ? 'G' : 'A' }}</span>
+      </header>
+
+      <div class="table-wrap" *ngIf="singleSeasonRows().length; else noSeasonRecords">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th>Club</th>
+              <th>Season</th>
+              <th class="number">Apps</th>
+              <th class="number">G</th>
+              <th class="number">A</th>
+              <th class="number primary">Record</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of singleSeasonRows(); trackBy: trackRecord" [class.current]="row.seasonNumber === data.currentSeason">
+              <td class="rank"><span [class.podium]="row.rank <= 3">{{ row.rank }}</span></td>
+              <td class="player"><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a></td>
+              <td class="club">
+                <a *ngIf="row.teamId; else seasonClubText" [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a>
+                <ng-template #seasonClubText><span>{{ row.teamName }}</span></ng-template>
+              </td>
+              <td class="season">S{{ row.seasonNumber }} <span *ngIf="row.seasonNumber === data.currentSeason">Live</span></td>
+              <td class="number">{{ row.appearances }}</td>
+              <td class="number">{{ row.goals }}</td>
+              <td class="number">{{ row.assists }}</td>
+              <td class="number record-value">{{ row.recordValue }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noSeasonRecords><div class="empty-state">No records have been registered yet.</div></ng-template>
+    </article>
+
+    <article class="record-card">
+      <header>
+        <div>
+          <span class="card-kicker">Career record</span>
+          <h2>{{ metric === 'goals' ? 'All-time goals' : 'All-time assists' }}</h2>
+        </div>
+        <span class="record-symbol all-time">∞</span>
+      </header>
+
+      <div class="table-wrap" *ngIf="allTimeRows().length; else noAllTimeRecords">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Player</th>
+              <th>Club</th>
+              <th>Seasons</th>
+              <th class="number">Apps</th>
+              <th class="number">G</th>
+              <th class="number">A</th>
+              <th class="number primary">Record</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of allTimeRows(); trackBy: trackRecord">
+              <td class="rank"><span [class.podium]="row.rank <= 3">{{ row.rank }}</span></td>
+              <td class="player"><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a></td>
+              <td class="club">
+                <a *ngIf="row.teamId; else careerClubText" [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a>
+                <ng-template #careerClubText><span [class.multiple]="row.multipleClubs">{{ row.teamName }}</span></ng-template>
+              </td>
+              <td class="season">{{ seasonRange(row) }}</td>
+              <td class="number">{{ row.appearances }}</td>
+              <td class="number">{{ row.goals }}</td>
+              <td class="number">{{ row.assists }}</td>
+              <td class="number record-value">{{ row.recordValue }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noAllTimeRecords><div class="empty-state">No records have been registered yet.</div></ng-template>
+    </article>
+  </section>
+
+  <footer class="records-note" *ngIf="data">
+    Players tied on the main record share the same rank. “Multiple clubs” means the player represented more than one team in this competition.
+  </footer>
+</main>

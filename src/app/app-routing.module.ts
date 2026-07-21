@@ -68,6 +68,7 @@ import { CoachControlComponent } from './boardroom/coach-control.component';
 import { PlayerGalleryComponent } from './player-gallery/player-gallery.component';
 import { AwardHistoryComponent } from './award-history/award-history.component';
 import { AwardCentreComponent } from './award-centre/award-centre.component';
+import { CompetitionRecordsComponent } from './competition-records/competition-records.component';
 
 const routes: Routes = [
   { path: 'card/:playerId', component: PlayerCardComponent },
@@ -149,6 +150,7 @@ const routes: Routes = [
   { path: 'awards/ballon-dor', component: AwardHistoryComponent, data: { awardType: 'BALLON_DOR' } },
   { path: 'awards/global', component: AwardCentreComponent, data: { global: true } },
   { path: 'awards/competition/:competitionId', component: AwardCentreComponent },
+  { path: 'competition-records/:competitionId', component: CompetitionRecordsComponent },
   { path: 'gallery/:teamId', component: PlayerGalleryComponent },
   { path: 'gallery', component: PlayerGalleryComponent },
 
