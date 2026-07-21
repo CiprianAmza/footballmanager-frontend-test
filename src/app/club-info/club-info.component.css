@@ -191,6 +191,75 @@
 .icon-tag { color: #3498db; }
 
 /* PER-COMPETITION BREAKDOWN */
+.stats-competition-filter {
+    background: linear-gradient(135deg, #24282f, #202329);
+    border-bottom: 1px solid #3a3f47;
+    padding: 14px 16px 16px;
+}
+.stats-filter-heading {
+    align-items: center;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+.stats-filter-label { color: #e7e9ec; font-size: 0.78em; font-weight: 800; letter-spacing: 0.08em; }
+.stats-filter-help { color: #8d939c; font-size: 0.75em; margin-left: 10px; }
+.stats-filter-count {
+    background: #1a1d22;
+    border: 1px solid #353b44;
+    border-radius: 12px;
+    color: #aab0b9;
+    font-size: 0.72em;
+    padding: 5px 9px;
+    white-space: nowrap;
+}
+.stats-filter-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 7px; }
+.competition-filter-chip,
+.clear-filter-btn {
+    align-items: center;
+    background: #191c21;
+    border: 1px solid #3c424b;
+    border-radius: 5px;
+    color: #aeb3bb;
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-size: 0.76em;
+    font-weight: 650;
+    gap: 6px;
+    min-height: 32px;
+    padding: 6px 9px;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.competition-filter-chip:hover { border-color: #3498db; color: #fff; }
+.competition-filter-chip.active {
+    background: #174b6d;
+    border-color: #3498db;
+    color: #fff;
+}
+.competition-filter-chip.all-chip.active { background: #216b45; border-color: #2ecc71; }
+.competition-filter-chip small {
+    color: #7d8792;
+    font-size: 0.75em;
+    font-weight: 500;
+}
+.competition-filter-chip.active small { color: #b8d9ef; }
+.chip-check {
+    align-items: center;
+    border: 1px solid #535a64;
+    border-radius: 3px;
+    display: inline-flex;
+    height: 14px;
+    justify-content: center;
+    width: 14px;
+}
+.competition-filter-chip.active .chip-check { background: #3498db; border-color: #65b5ea; }
+.all-chip .chip-check { display: none; }
+.clear-filter-btn { background: transparent; color: #e08a83; margin-left: auto; }
+.clear-filter-btn:hover:not(:disabled) { border-color: #e74c3c; color: #ffaaa2; }
+.clear-filter-btn:disabled { cursor: not-allowed; opacity: 0.35; }
+.stats-table-scroll { overflow-x: auto; }
 .comp-breakdown-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
 .comp-breakdown-table th { background-color: #2e2e2e; color: #aaa; text-align: center; padding: 8px 6px; border-bottom: 1px solid #444; font-weight: 600; }
 .comp-breakdown-table td { text-align: center; padding: 7px 6px; border-bottom: 1px solid #333; color: #ddd; }
@@ -199,6 +268,20 @@
 .comp-breakdown-table .position-cell .position-badge { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 3px; background-color: #3a3a3a; }
 .comp-breakdown-table .position-cell .position-badge.pos-1 { background-color: #f1c40f; color: #222; font-weight: bold; }
 .empty-state { padding: 20px; color: #888; text-align: center; }
+.filter-empty-state button {
+    background: transparent;
+    border: 0;
+    color: #3498db;
+    cursor: pointer;
+    font-weight: 700;
+    margin-left: 5px;
+}
+
+@media (max-width: 760px) {
+    .stats-filter-heading { align-items: flex-start; flex-direction: column; gap: 8px; }
+    .stats-filter-help { display: block; margin: 4px 0 0; }
+    .clear-filter-btn { margin-left: 0; }
+}
 
 /* LOADING */
 .loading-screen { display: flex; justify-content: center; padding: 50px; }

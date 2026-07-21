@@ -37,6 +37,12 @@ interface CompetitionStatLine {
   leaguePosition: number | null;
 }
 
+interface CompetitionFilterOption {
+  competitionId: number;
+  competitionName: string;
+  competitionTypeId: number;
+}
+
 interface Kit {
   type: 'Home' | 'Away' | 'Third';
   primaryColor: string;
@@ -123,6 +129,8 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
 
   // Per-competition breakdown (GET /stats/team/{teamId}/competitionBreakdown)
   competitionBreakdown: CompetitionStatLine[] = [];
+  competitionOptions: CompetitionFilterOption[] = [];
+  selectedCompetitionIds = new Set<number>();
 
   constructor(
     private route: ActivatedRoute,
@@ -136,6 +144,7 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
       this.teamId = Number(params['teamId']);
       // Resetam pe overview cand schimbam echipa
       this.activeTab = 'overview';
+      this.setCompetitionBreakdown([]);
       this.loadData();
     }));
     // Stadium/facility info on the overview reacts to upgrades; the embedded
@@ -223,9 +232,63 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
   loadCompetitionBreakdown(): void {
     this.http.get<CompetitionStatLine[]>(urlApp + `/stats/team/${this.teamId}/competitionBreakdown`)
       .subscribe({
-        next: (lines) => { this.competitionBreakdown = lines || []; },
-        error: () => { this.competitionBreakdown = []; }
+        next: (lines) => { this.setCompetitionBreakdown(lines || []); },
+        error: () => { this.setCompetitionBreakdown([]); }
       });
+  }
+
+  get filteredCompetitionBreakdown(): CompetitionStatLine[] {
+    if (this.selectedCompetitionIds.size === 0) return [];
+    return this.competitionBreakdown.filter(line =>
+      this.selectedCompetitionIds.has(line.competitionId));
+  }
+
+  get allCompetitionsSelected(): boolean {
+    return this.competitionOptions.length > 0
+      && this.selectedCompetitionIds.size === this.competitionOptions.length;
+  }
+
+  isCompetitionSelected(competitionId: number): boolean {
+    return this.selectedCompetitionIds.has(competitionId);
+  }
+
+  toggleCompetition(competitionId: number): void {
+    const nextSelection = new Set(this.selectedCompetitionIds);
+    if (nextSelection.has(competitionId)) {
+      nextSelection.delete(competitionId);
+    } else {
+      nextSelection.add(competitionId);
+    }
+    this.selectedCompetitionIds = nextSelection;
+  }
+
+  selectAllCompetitions(): void {
+    this.selectedCompetitionIds = new Set(
+      this.competitionOptions.map(option => option.competitionId));
+  }
+
+  clearCompetitionSelection(): void {
+    this.selectedCompetitionIds = new Set<number>();
+  }
+
+  private setCompetitionBreakdown(lines: CompetitionStatLine[]): void {
+    this.competitionBreakdown = [...lines].sort((left, right) =>
+      right.seasonNumber - left.seasonNumber
+      || left.competitionName.localeCompare(right.competitionName));
+
+    const uniqueOptions = new Map<number, CompetitionFilterOption>();
+    for (const line of this.competitionBreakdown) {
+      if (!uniqueOptions.has(line.competitionId)) {
+        uniqueOptions.set(line.competitionId, {
+          competitionId: line.competitionId,
+          competitionName: line.competitionName,
+          competitionTypeId: line.competitionTypeId
+        });
+      }
+    }
+    this.competitionOptions = Array.from(uniqueOptions.values()).sort((left, right) =>
+      left.competitionName.localeCompare(right.competitionName));
+    this.selectAllCompetitions();
   }
 
   loadStadiumData(): void {
