@@ -1,7 +1,6 @@
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { urlApp } from '../app.component';
-import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-game-setup',
@@ -20,7 +19,7 @@ export class GameSetupComponent implements OnInit {
   submitting = false;
   error = '';
 
-  constructor(private http: HttpClient, private authService: AuthService) {}
+  constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
     this.http.get<any[]>(urlApp + '/game/availableTeams').subscribe({
@@ -78,12 +77,11 @@ export class GameSetupComponent implements OnInit {
     this.error = '';
     this.submitting = true;
 
-    this.http.post<any>(urlApp + '/game/setup', {
+    this.http.post<any>(urlApp + '/api/career/manager/setup', {
       managerName: this.managerName.trim(),
       managerAge: this.managerAge,
       teamId: body.teamId,
-      freeAgent: body.freeAgent,
-      userId: this.authService.currentUserId
+      freeAgent: body.freeAgent
     }).subscribe({
       next: (result) => {
         if (result.success) {

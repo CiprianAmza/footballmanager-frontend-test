@@ -35,15 +35,21 @@
 </div>
 
 <!-- Login Screen -->
-<app-login *ngIf="!authService.isLoggedIn"
+<app-login *ngIf="authService.sessionChecked && !authService.isLoggedIn"
            (loggedIn)="onLoggedIn()"></app-login>
 
 <!-- Game Setup Screen -->
 <app-game-setup *ngIf="authService.isLoggedIn && teamService.setupChecked && !teamService.setupComplete"
                 (setupComplete)="onSetupComplete($event)"></app-game-setup>
 
+<section class="chairman-phase-zero" *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'CHAIRMAN'">
+  <h1>Chairman career created</h1>
+  <p>Your secure chairman identity is ready. Boardroom and economy features remain disabled until their reviewed rollout phase.</p>
+  <button type="button" (click)="logout()">Logout</button>
+</section>
+
 <!-- Main Game -->
-<div class="app-container" *ngIf="authService.isLoggedIn && teamService.setupComplete">
+<div class="app-container" *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'MANAGER'">
 
   <nav class="sidebar">
     <div class="sidebar-header">

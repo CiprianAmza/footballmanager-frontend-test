@@ -106,3 +106,18 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.login-form select {
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: 6px;
+  border: 1px solid #3c4658;
+  background: #18202c;
+  color: #f4f7fb;
+}
+
+.login-btn.secondary {
+  margin-top: 8px;
+  background: transparent;
+  border: 1px solid #536176;
+}

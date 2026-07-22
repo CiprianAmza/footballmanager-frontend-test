@@ -179,6 +179,12 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
     // Pull offers once on app load (in case some are leftover from a prior session)
     if (this.authService.isLoggedIn) this.careerService.refresh();
 
+    this.authService.sessionRestored$.subscribe(user => {
+      if (!this.authService.sessionChecked || !user) return;
+      this.teamService.checkSetup();
+      if (user.careerRole === 'MANAGER') this.careerService.refresh();
+    });
+
     // Resume a live match modal that the user left mid-flight (browser
     // refresh, accidental close). The BE session lives in an in-memory map
     // and survives a page reload, so as long as the FE remembers the key we
@@ -479,7 +485,13 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
   }
 
   onLoggedIn(): void {
-    // After login, trigger the setup check
+    if (this.authService.careerRole === 'CHAIRMAN') {
+      this.http.post(urlApp + '/api/career/chairman/setup', {}).subscribe({
+        next: () => this.teamService.checkSetup(),
+        error: () => this.teamService.checkSetup()
+      });
+      return;
+    }
     this.teamService.checkSetup();
   }
 
@@ -488,8 +500,7 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
   }
 
   logout(): void {
-    this.authService.logout();
-    window.location.reload();
+    this.authService.logout().subscribe(() => window.location.reload());
   }
 
   advanceGame(): void {
@@ -829,14 +840,14 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
     this.loadGameProgress = 90;
     this.loadGameMessage = 'Restoring your login, club and manager history…';
 
-    this.authService.login(username).subscribe({
+    this.authService.verifySession().subscribe({
       next: auth => {
         if (!auth.success || auth.userId == null) {
           this.showLoadGameError(auth.error || 'The saved user profile could not be restored.');
           return;
         }
 
-        const setupRequest = this.http.get<any>(urlApp + `/game/isSetupComplete?userId=${auth.userId}`);
+        const setupRequest = this.http.get<any>(urlApp + '/api/career/status');
         const stateRequest = this.http.get<any>(urlApp + '/game/state');
         const managerRequest = auth.managerId != null
           ? this.http.get<any>(urlApp + `/managers/profile/${auth.managerId}`)

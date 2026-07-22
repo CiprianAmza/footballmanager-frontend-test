@@ -3,23 +3,47 @@
     <div class="login-header">
       <span class="fm-logo">FM</span>
       <h1>Football Manager</h1>
-      <p class="login-subtitle">Enter your manager name to continue</p>
+      <p class="login-subtitle">{{ mode === 'login' ? 'Sign in to your career' : 'Create a secure career identity' }}</p>
     </div>
 
     <div class="login-form">
       <div class="form-row">
         <label for="username">Username</label>
-        <input id="username" type="text" [(ngModel)]="username"
-               placeholder="Enter username"
-               maxlength="30"
-               (keydown)="onKeydown($event)"
-               autofocus />
+        <input id="username" type="text" [(ngModel)]="username" maxlength="64"
+               autocomplete="username" (keydown)="onKeydown($event)" autofocus />
       </div>
 
-      <div class="error-message" *ngIf="error">{{ error }}</div>
+      <div class="form-row">
+        <label for="password">Password</label>
+        <input id="password" type="password" [(ngModel)]="password" maxlength="128"
+               [attr.autocomplete]="mode === 'login' ? 'current-password' : 'new-password'"
+               (keydown)="onKeydown($event)" />
+      </div>
 
+      <ng-container *ngIf="mode === 'register'">
+        <div class="form-row">
+          <label for="email">Email</label>
+          <input id="email" type="email" [(ngModel)]="email" maxlength="254" autocomplete="email" />
+        </div>
+        <div class="form-row">
+          <label for="displayName">Display name</label>
+          <input id="displayName" type="text" [(ngModel)]="displayName" maxlength="100" />
+        </div>
+        <div class="form-row">
+          <label for="careerRole">Career</label>
+          <select id="careerRole" [(ngModel)]="careerRole">
+            <option value="MANAGER">Manager</option>
+            <option value="CHAIRMAN">Chairman</option>
+          </select>
+        </div>
+      </ng-container>
+
+      <div class="error-message" *ngIf="error">{{ error }}</div>
       <button class="login-btn" (click)="submit()" [disabled]="loading">
-        {{ loading ? 'Connecting...' : 'Continue' }}
+        {{ loading ? 'Please wait…' : (mode === 'login' ? 'Sign in' : 'Create account') }}
+      </button>
+      <button class="login-btn secondary" type="button" (click)="switchMode()" [disabled]="loading">
+        {{ mode === 'login' ? 'Create an account' : 'Back to sign in' }}
       </button>
     </div>
   </div>
