@@ -39,20 +39,22 @@ describe('AuthService', () => {
     expect(login.request.headers.has('X-User-Id')).toBeFalse();
     expect(login.request.headers.get('X-XSRF-TOKEN')).toBe('csrf');
     expect(login.request.body).toEqual({ username: 'alice', password: 'correct-password' });
-    login.flush({ success: true, userId: 1, username: 'alice', careerRole: 'MANAGER' });
+    login.flush({ success: true, userId: 1, username: 'alice', careerRole: 'MANAGER', regentEnabled: true });
 
     expect(service.currentUserId).toBe(1);
+    expect(service.regentEnabled).toBeTrue();
     expect(localStorage.getItem('fm_user')).not.toContain('alice');
   });
 
   it('registers an explicit career role', () => {
     service.register({
       username: 'chair', email: 'chair@example.com', password: 'long-password',
-      displayName: 'Chair Person', careerRole: 'CHAIRMAN'
+      displayName: 'Chair Person', careerRole: 'CHAIRMAN', startingWealth: 20000000
     }).subscribe();
     http.expectOne(urlApp + '/api/auth/csrf').flush({ token: 'csrf' });
     const registration = http.expectOne(urlApp + '/api/auth/register');
     expect(registration.request.body.careerRole).toBe('CHAIRMAN');
+    expect(registration.request.body.startingWealth).toBe(20000000);
     registration.flush({ success: true, userId: 2, username: 'chair', careerRole: 'CHAIRMAN' });
   });
 });

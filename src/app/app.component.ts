@@ -183,6 +183,10 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
       if (!this.authService.sessionChecked || !user) return;
       this.teamService.checkSetup();
       if (user.careerRole === 'MANAGER') this.careerService.refresh();
+      if (user.careerRole === 'CHAIRMAN' && user.regentEnabled
+          && (this.router.url === '/' || this.router.url === '/home')) {
+        this.router.navigate(['/economy']);
+      }
     });
 
     // Resume a live match modal that the user left mid-flight (browser
@@ -487,7 +491,10 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
   onLoggedIn(): void {
     if (this.authService.careerRole === 'CHAIRMAN') {
       this.http.post(urlApp + '/api/career/chairman/setup', {}).subscribe({
-        next: () => this.teamService.checkSetup(),
+        next: () => {
+          this.teamService.checkSetup();
+          if (this.authService.regentEnabled) this.router.navigate(['/economy']);
+        },
         error: () => this.teamService.checkSetup()
       });
       return;

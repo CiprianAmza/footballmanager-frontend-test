@@ -91,6 +91,9 @@ import { AwardCentreComponent } from './award-centre/award-centre.component';
 import { CompetitionInsightsComponent } from './competition-insights/competition-insights.component';
 import { CompetitionRatingImpactComponent } from './competition-rating-impact/competition-rating-impact.component';
 import { CompetitionRecordsComponent } from './competition-records/competition-records.component';
+import { EconomyDashboardComponent } from './economy/economy-dashboard.component';
+import { WealthRankingsComponent } from './economy/wealth-rankings.component';
+import { PublicEconomyProfileComponent } from './economy/public-economy-profile.component';
 
 @NgModule({
   declarations: [
@@ -106,6 +109,9 @@ import { CompetitionRecordsComponent } from './competition-records/competition-r
     CompetitionInsightsComponent,
     CompetitionRatingImpactComponent,
     CompetitionRecordsComponent,
+    EconomyDashboardComponent,
+    WealthRankingsComponent,
+    PublicEconomyProfileComponent,
     CompetitionComponent,
     TacticDisplayComponent,
     CompetitionComponent,

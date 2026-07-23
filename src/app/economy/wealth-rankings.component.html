@@ -1,0 +1,17 @@
+<section class="economy-page">
+  <header class="economy-header"><div><span class="eyebrow">GLOBAL</span><h1>Wealth rankings</h1></div><a routerLink="/economy" class="outline-btn">My economy</a></header>
+  <div class="filters">
+    <label>Career<select [(ngModel)]="role" (change)="load()"><option>ALL</option><option>MANAGERS</option><option>CHAIRMEN</option><option>PLAYERS</option></select></label>
+    <label>Control<select [(ngModel)]="control" (change)="load()"><option>ALL</option><option>USER</option><option>AI</option></select></label>
+    <label>Sort<select [(ngModel)]="sort" (change)="load()"><option value="NET_WORTH">Net worth</option><option value="CASH">Cash</option><option value="CAREER_EARNINGS">Career earnings</option></select></label>
+  </div>
+  <p class="error" *ngIf="error">{{ error }}</p><p *ngIf="loading">Loading exact rankings…</p>
+  <div class="ranking-table" *ngIf="!loading">
+    <a *ngFor="let row of rows" [routerLink]="['/people', row.profile.profileId]">
+      <b>#{{ row.rank }}</b><span><strong>{{ row.profile.displayName }}</strong><small>{{ row.profile.careerType }} · {{ row.profile.controlType }}</small></span>
+      <span>Cash <strong>{{ money(row.profile.wealth.cash.amount) }}</strong></span>
+      <span>Assets <strong>{{ money(row.profile.wealth.assetValue.amount) }}</strong></span>
+      <span>Net worth <strong>{{ money(row.profile.wealth.netWorth.amount) }}</strong></span>
+    </a>
+  </div>
+</section>

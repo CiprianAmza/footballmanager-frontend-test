@@ -36,6 +36,12 @@
             <option value="CHAIRMAN">Chairman</option>
           </select>
         </div>
+        <div class="form-row" *ngIf="careerRole === 'CHAIRMAN'">
+          <label for="startingWealth">Starting personal capital (€)</label>
+          <input id="startingWealth" type="number" [(ngModel)]="startingWealth"
+                 min="1000000" max="10000000000" step="100000" />
+          <small>This is personal in-game money; it is never club treasury or career earnings.</small>
+        </div>
       </ng-container>
 
       <div class="error-message" *ngIf="error">{{ error }}</div>

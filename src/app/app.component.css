@@ -2217,3 +2217,7 @@
   .game-load-card { padding: 28px 20px; }
   .game-load-summary { grid-template-columns: 1fr; }
 }
+.chairman-phase-one { min-height:100vh; background:#0c1320; color:#eef4fb; }
+.chairman-nav { display:flex; align-items:center; gap:22px; padding:17px 28px; background:#121d2d; border-bottom:1px solid #2d4058; }
+.chairman-nav strong { color:#63c4ff; letter-spacing:2px; }.chairman-nav a { color:#bdc9d8; text-decoration:none; }.chairman-nav a.active { color:white; }.chairman-nav span { margin-left:auto; color:#92a4b8; }.chairman-nav button { padding:7px 12px; color:#fff; background:#753e47; border:0; border-radius:5px; cursor:pointer; }
+.chairman-content { min-height:calc(100vh - 65px); }

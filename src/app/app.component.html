@@ -42,11 +42,20 @@
 <app-game-setup *ngIf="authService.isLoggedIn && teamService.setupChecked && !teamService.setupComplete"
                 (setupComplete)="onSetupComplete($event)"></app-game-setup>
 
-<section class="chairman-phase-zero" *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'CHAIRMAN'">
+<section class="chairman-phase-zero" *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'CHAIRMAN' && !authService.regentEnabled">
   <h1>Chairman career created</h1>
   <p>Your secure chairman identity is ready. Boardroom and economy features remain disabled until their reviewed rollout phase.</p>
   <button type="button" (click)="logout()">Logout</button>
 </section>
+
+<div class="chairman-phase-one" *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'CHAIRMAN' && authService.regentEnabled">
+  <nav class="chairman-nav">
+    <strong>REGENT</strong><a routerLink="/economy" routerLinkActive="active">My economy</a>
+    <a routerLink="/wealth-rankings" routerLinkActive="active">Wealth rankings</a>
+    <span>{{ authService.currentUsername }}</span><button type="button" (click)="logout()">Logout</button>
+  </nav>
+  <main class="chairman-content"><router-outlet></router-outlet></main>
+</div>
 
 <!-- Main Game -->
 <div class="app-container" *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'MANAGER'">
@@ -61,6 +70,8 @@
       <a routerLink="/home" routerLinkActive="active">Home</a>
       <a routerLink="/inbox" routerLinkActive="active">Inbox</a>
       <a href="javascript:void(0)" (click)="openMyManager()">My Manager</a>
+      <a routerLink="/economy" routerLinkActive="active" *ngIf="authService.regentEnabled">Personal Economy</a>
+      <a routerLink="/wealth-rankings" routerLinkActive="active" *ngIf="authService.regentEnabled">Wealth Rankings</a>
     </div>
 
     <div class="border"></div>

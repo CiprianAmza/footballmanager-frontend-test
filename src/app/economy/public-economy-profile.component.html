@@ -1,0 +1,14 @@
+<section class="economy-page">
+  <a routerLink="/wealth-rankings" class="back-link">← Wealth rankings</a><p class="error" *ngIf="error">{{ error }}</p>
+  <ng-container *ngIf="profile">
+    <header class="economy-header"><div><span class="eyebrow">{{ profile.controlType }} {{ profile.careerType }}</span><h1>{{ profile.displayName }}</h1></div></header>
+    <div class="money-grid">
+      <article><span>Cash</span><strong>{{ money(profile.wealth.cash.amount) }}</strong></article>
+      <article><span>Assets</span><strong>{{ money(profile.wealth.assetValue.amount) }}</strong></article>
+      <article><span>Investments</span><strong>{{ money(profile.wealth.investmentValue.amount) }}</strong></article>
+      <article><span>Club equity</span><strong>{{ money(profile.wealth.clubEquityValue.amount) }}</strong></article>
+      <article class="net-worth"><span>Net worth</span><strong>{{ money(profile.wealth.netWorth.amount) }}</strong></article>
+      <article><span>Career earnings</span><strong>{{ money(profile.wealth.lifetimeCareerEarnings.amount) }}</strong></article>
+    </div>
+  </ng-container>
+</section>

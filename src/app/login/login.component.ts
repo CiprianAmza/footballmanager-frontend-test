@@ -16,6 +16,7 @@ export class LoginComponent {
   email = '';
   displayName = '';
   careerRole: CareerRole = 'MANAGER';
+  startingWealth = 10000000;
   loading = false;
   error = '';
 
@@ -54,7 +55,8 @@ export class LoginComponent {
       email: this.email.trim(),
       password: this.password,
       displayName: this.displayName.trim(),
-      careerRole: this.careerRole
+      careerRole: this.careerRole,
+      startingWealth: this.careerRole === 'CHAIRMAN' ? this.startingWealth : undefined
     }).subscribe({
       next: result => {
         if (result.success) this.startLogin();

@@ -69,8 +69,15 @@ import { PlayerGalleryComponent } from './player-gallery/player-gallery.componen
 import { AwardHistoryComponent } from './award-history/award-history.component';
 import { AwardCentreComponent } from './award-centre/award-centre.component';
 import { CompetitionRecordsComponent } from './competition-records/competition-records.component';
+import { EconomyDashboardComponent } from './economy/economy-dashboard.component';
+import { WealthRankingsComponent } from './economy/wealth-rankings.component';
+import { PublicEconomyProfileComponent } from './economy/public-economy-profile.component';
+import { RegentGuard } from './services/regent.guard';
 
 const routes: Routes = [
+  { path: 'economy', component: EconomyDashboardComponent, canActivate: [RegentGuard] },
+  { path: 'wealth-rankings', component: WealthRankingsComponent, canActivate: [RegentGuard] },
+  { path: 'people/:profileId', component: PublicEconomyProfileComponent, canActivate: [RegentGuard] },
   { path: 'card/:playerId', component: PlayerCardComponent },
   { path: 'match/ratings/:competitionId/:season/:round/:teamId1/:teamId2', component: MatchRatingsComponent },
   { path: 'boardroom/coach-control/:teamId', component: CoachControlComponent },

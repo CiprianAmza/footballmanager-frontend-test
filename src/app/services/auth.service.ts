@@ -16,6 +16,7 @@ export interface AuthResponse {
   careerRole?: CareerRole;
   profileId?: number;
   roles?: string[];
+  regentEnabled?: boolean;
   error?: string;
 }
 
@@ -25,6 +26,7 @@ export interface RegistrationRequest {
   password: string;
   displayName: string;
   careerRole: CareerRole;
+  startingWealth?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -53,6 +55,10 @@ export class AuthService {
 
   get careerRole(): CareerRole | null {
     return this.user?.careerRole ?? null;
+  }
+
+  get regentEnabled(): boolean {
+    return this.user?.regentEnabled === true;
   }
 
   login(username: string, password: string): Observable<AuthResponse> {

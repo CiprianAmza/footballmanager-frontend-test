@@ -1,0 +1,48 @@
+<section class="economy-page">
+  <header class="economy-header">
+    <div><span class="eyebrow">PERSONAL ECONOMY</span><h1>{{ profile?.displayName || 'My account' }}</h1></div>
+    <a routerLink="/wealth-rankings" class="outline-btn">Global wealth rankings</a>
+  </header>
+  <p class="error" *ngIf="error">{{ error }}</p>
+  <p *ngIf="loading">Loading verified account data…</p>
+
+  <ng-container *ngIf="profile && !loading">
+    <div class="money-grid">
+      <article><span>Cash</span><strong>{{ money(profile.wealth.cash.amount) }}</strong></article>
+      <article><span>Personal assets</span><strong>{{ money(profile.wealth.assetValue.amount) }}</strong></article>
+      <article><span>Investments</span><strong>{{ money(profile.wealth.investmentValue.amount) }}</strong></article>
+      <article><span>Club equity</span><strong>{{ money(profile.wealth.clubEquityValue.amount) }}</strong></article>
+      <article class="net-worth"><span>Net worth</span><strong>{{ money(profile.wealth.netWorth.amount) }}</strong></article>
+      <article><span>Career earnings</span><strong>{{ money(profile.wealth.lifetimeCareerEarnings.amount) }}</strong></article>
+    </div>
+
+    <h2>Server catalogue</h2>
+    <div class="asset-grid">
+      <article class="asset-card" *ngFor="let item of catalog">
+        <span class="asset-type">{{ item.type }}<ng-container *ngIf="item.apartmentRooms"> · {{ item.apartmentRooms }} room{{ item.apartmentRooms === 1 ? '' : 's' }}</ng-container></span>
+        <h3>{{ item.name }}</h3><strong>{{ money(item.purchasePrice.amount) }}</strong>
+        <small>Verified server price · resale haircut {{ item.resaleHaircutBps / 100 }}%</small>
+        <button (click)="buy(item)" [disabled]="busyId !== null || profile.wealth.cash.amount < item.purchasePrice.amount">Buy</button>
+      </article>
+    </div>
+
+    <h2>Owned assets</h2>
+    <div class="asset-grid" *ngIf="assets.length; else noAssets">
+      <article class="asset-card owned" *ngFor="let asset of assets">
+        <span class="asset-type">{{ asset.type }}</span><h3>{{ asset.name }}</h3>
+        <strong>{{ money(asset.currentValue.amount) }}</strong>
+        <small>Purchased S{{ asset.purchaseSeason }} · D{{ asset.purchaseDay }}</small>
+        <button class="sell" (click)="sell(asset)" [disabled]="busyId !== null">Sell</button>
+      </article>
+    </div>
+    <ng-template #noAssets><p class="muted">No personal assets owned yet.</p></ng-template>
+
+    <h2>Ledger</h2>
+    <div class="ledger">
+      <div *ngFor="let entry of ledger">
+        <span><strong>{{ entry.type }}</strong><small>{{ entry.description }} · S{{ entry.season }} D{{ entry.day }}</small></span>
+        <b [class.negative]="entry.signedAmount < 0">{{ entry.signedAmount > 0 ? '+' : '' }}{{ money(entry.signedAmount) }}</b>
+      </div>
+    </div>
+  </ng-container>
+</section>
