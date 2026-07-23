@@ -7,6 +7,7 @@ export interface MarketInstrumentView {
   id: number; code: string; type: MarketInstrumentType; teamId?: number;
   name: string; price: Money; totalSupply: number; availableSupply: number;
   dailyLimitBps: number; weeklyLimitBps: number; algorithmVersion: string;
+  underlyingClubValuation?: Money; clubValuationVersion?: string;
 }
 export interface MarketPriceView {
   id: number; season: number; day: number; previousClose: Money;

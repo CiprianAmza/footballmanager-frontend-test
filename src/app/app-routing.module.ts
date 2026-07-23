@@ -76,6 +76,8 @@ import { PortfolioComponent } from './market/portfolio.component';
 import { LegacyBoardroomGuard } from './services/legacy-boardroom.guard';
 import { FeatureUnavailableComponent } from './feature-unavailable/feature-unavailable.component';
 import { NotFoundComponent } from './not-found/not-found.component';
+import { ChairmanClubComponent } from './chairman-club/chairman-club.component';
+import { ChairmanRegentGuard } from './services/chairman-regent.guard';
 
 export const APP_ROUTES: Routes = [
   { path: 'economy', component: EconomyDashboardComponent, canActivate: [RegentGuard] },
@@ -83,6 +85,8 @@ export const APP_ROUTES: Routes = [
   { path: 'portfolio', component: PortfolioComponent, canActivate: [RegentGuard] },
   { path: 'wealth-rankings', component: WealthRankingsComponent, canActivate: [RegentGuard] },
   { path: 'people/:profileId', component: PublicEconomyProfileComponent, canActivate: [RegentGuard] },
+  { path: 'chairman/clubs', component: ChairmanClubComponent, canActivate: [ChairmanRegentGuard] },
+  { path: 'chairman/clubs/:teamId', component: ChairmanClubComponent, canActivate: [ChairmanRegentGuard] },
   { path: 'card/:playerId', component: PlayerCardComponent },
   { path: 'match/ratings/:competitionId/:season/:round/:teamId1/:teamId2', component: MatchRatingsComponent },
   { path: 'boardroom/coach-control/:teamId', component: CoachControlComponent, canActivate: [LegacyBoardroomGuard] },

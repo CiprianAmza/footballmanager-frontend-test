@@ -1,0 +1,80 @@
+<section class="club-page">
+  <header class="club-header">
+    <div><span class="eyebrow">CHAIRMAN CLUB DESK</span><h1>Club acquisition & treasury</h1></div>
+    <select [ngModel]="selectedTeamId" (ngModelChange)="selectClub($event)" aria-label="Select club">
+      <option *ngFor="let club of clubs; trackBy: trackClub" [ngValue]="club.teamId">
+        {{ club.name }} · {{ money(club.valuation.amount) }}
+      </option>
+    </select>
+  </header>
+
+  <p class="notice error" *ngIf="error">{{ error }}</p>
+  <p class="notice success" *ngIf="message">{{ message }}</p>
+  <p *ngIf="loading">Loading canonical club state…</p>
+
+  <ng-container *ngIf="dashboard && !loading">
+    <div class="summary-grid">
+      <article><span>Canonical valuation</span><strong>{{ money(dashboard.valuation.totalValue.amount) }}</strong><small>{{ dashboard.valuation.formulaVersion }}</small></article>
+      <article><span>Treasury</span><strong>{{ money(dashboard.treasury.balance.amount) }}</strong><small>Club-side retained cash</small></article>
+      <article><span>Distributable</span><strong>{{ money(dashboard.treasury.distributableCash.amount) }}</strong><small>After reserve and obligations</small></article>
+      <article><span>Control</span><strong>{{ dashboard.capTable.controllingDisplayName || 'No controller' }}</strong><small>Threshold {{ percent(dashboard.capTable.controlThresholdBps) }}</small></article>
+    </div>
+
+    <div class="club-columns">
+      <article class="panel">
+        <h2>Valuation breakdown</h2>
+        <dl>
+          <div><dt>Squad market value</dt><dd>{{ money(dashboard.valuation.squadMarketValue.amount) }}</dd></div>
+          <div><dt>Cash minus debt/obligations</dt><dd>{{ money(dashboard.valuation.netCash.amount) }}</dd></div>
+          <div><dt>Stadium & facilities</dt><dd>{{ money(dashboard.valuation.stadiumFacilitiesValue.amount) }}</dd></div>
+          <div><dt>Reputation & brand</dt><dd>{{ money(dashboard.valuation.reputationBrandValue.amount) }}</dd></div>
+          <div><dt>Recent performance ({{ percent(dashboard.valuation.recentPerformanceBps) }})</dt><dd>{{ money(dashboard.valuation.recentPerformanceValue.amount) }}</dd></div>
+        </dl>
+        <small class="version">State {{ dashboard.valuation.stateVersion.slice(0, 16) }}…</small>
+      </article>
+
+      <article class="panel">
+        <h2>Cap table</h2>
+        <p>{{ dashboard.capTable.issuedShares | number }} issued · {{ dashboard.capTable.freeFloat | number }} free float</p>
+        <div class="holding" *ngFor="let holding of dashboard.capTable.holdings; trackBy: trackHolding">
+          <span><b>{{ holding.displayName }}</b><small *ngIf="holding.protectedUser">protected user shareholder</small></span>
+          <span>{{ holding.quantity | number }} · {{ percent(holding.stakeBps) }}</span>
+          <b>{{ money(holding.equityValue.amount) }}</b>
+        </div>
+        <p *ngIf="!dashboard.capTable.holdings.length">All issued shares remain in free float.</p>
+      </article>
+    </div>
+
+    <div class="club-columns">
+      <article class="panel">
+        <h2>Full takeover</h2>
+        <p>Price and premium are owned by the server. Protected user minority shares are never confiscated.</p>
+        <button type="button" (click)="requestQuote()" [disabled]="inFlight !== null || dashboard.controlledByPrincipal">
+          {{ inFlight === 'quote' ? 'Quoting…' : 'Request takeover quote' }}
+        </button>
+        <div class="quote" *ngIf="quote">
+          <p><b>{{ quote.sharesToAcquire | number }}</b> shares at {{ money(quote.unitPrice.amount) }}</p>
+          <p>Premium {{ percent(quote.premiumBps) }} · total <b>{{ money(quote.totalConsideration.amount) }}</b></p>
+          <button type="button" (click)="executeTakeover()" [disabled]="inFlight !== null">{{ inFlight === 'execute' ? 'Executing…' : 'Execute atomically' }}</button>
+        </div>
+      </article>
+
+      <article class="panel">
+        <h2>Treasury transfer</h2>
+        <dl>
+          <div><dt>Protected reserve</dt><dd>{{ money(dashboard.treasury.protectedReserve.amount) }}</dd></div>
+          <div><dt>Due obligations</dt><dd>{{ money(dashboard.treasury.dueObligations.amount) }}</dd></div>
+          <div><dt>Debt</dt><dd>{{ money(dashboard.treasury.debt.amount) }}</dd></div>
+        </dl>
+        <div class="transfer-form">
+          <select [(ngModel)]="direction" aria-label="Transfer direction"><option value="INJECTION">Injection</option><option value="WITHDRAWAL">Withdrawal</option></select>
+          <input type="number" min="1" step="1" [(ngModel)]="amount" placeholder="Amount" aria-label="Transfer amount">
+          <button type="button" (click)="transfer()" [disabled]="inFlight !== null || !dashboard.controlledByPrincipal || dashboard.treasury.withdrawalRestricted && direction === 'WITHDRAWAL'">
+            {{ inFlight === 'transfer' ? 'Posting…' : 'Post mirrored transfer' }}
+          </button>
+        </div>
+        <small *ngIf="!dashboard.controlledByPrincipal">Take controlling ownership to operate this treasury.</small>
+      </article>
+    </div>
+  </ng-container>
+</section>
