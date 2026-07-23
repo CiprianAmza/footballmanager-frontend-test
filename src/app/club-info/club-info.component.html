@@ -104,11 +104,16 @@
           <div class="people-list">
             <div class="person-row">
               <span class="role">Manager</span>
-              <a *ngIf="currentManager?.managerId; else vacantManager"
+              <span *ngIf="managerLoading" class="p-name vacant-role" role="status">Loading manager…</span>
+              <div *ngIf="!managerLoading && managerUnavailable" class="unavailable-inline" role="alert">
+                <span>Manager data unavailable.</span>
+                <button type="button" class="inline-retry-btn" (click)="retryManager()">Retry</button>
+              </div>
+              <a *ngIf="!managerLoading && !managerUnavailable && currentManager?.managerId"
                 class="p-name manager-link" [routerLink]="['/manager-profile', currentManager?.managerId]">
                 {{ currentManager?.managerName || 'Unknown' }}
               </a>
-              <ng-template #vacantManager><span class="p-name vacant-role">Vacant</span></ng-template>
+              <span *ngIf="!managerLoading && !managerUnavailable && !currentManager" class="p-name vacant-role">Vacant</span>
             </div>
           </div>
         </div>
@@ -142,7 +147,9 @@
         </div>
 
         <div class="fm-panel">
-          <a class="panel-header panel-header-link" routerLink="/stadium">STADIUM <span>➤</span></a>
+          <a *ngIf="isControlledClub; else readOnlyStadiumHeader"
+            class="panel-header panel-header-link" routerLink="/stadium">STADIUM <span>➤</span></a>
+          <ng-template #readOnlyStadiumHeader><div class="panel-header">STADIUM</div></ng-template>
           <div class="stadium-content">
             <div class="stadium-name">{{ stadiumData?.stadiumName || 'N/A' }}</div>
             <div class="stadium-grid">
@@ -167,7 +174,12 @@
     <div class="tab-content" *ngIf="activeTab === 'stats'">
       <div class="fm-panel">
         <div class="panel-header">PER-COMPETITION RECORD</div>
-        <div class="stats-competition-filter" *ngIf="competitionOptions.length > 0">
+        <div class="page-state compact-state" *ngIf="competitionBreakdownLoading" role="status">Loading competition records…</div>
+        <div class="page-state compact-state" *ngIf="!competitionBreakdownLoading && competitionBreakdownUnavailable" role="alert">
+          <p>Competition records are unavailable.</p>
+          <button type="button" (click)="loadCompetitionBreakdown()">Retry</button>
+        </div>
+        <div class="stats-competition-filter" *ngIf="!competitionBreakdownLoading && !competitionBreakdownUnavailable && competitionOptions.length > 0">
           <div class="stats-filter-heading">
             <div><span class="stats-filter-label">COMPETITIONS</span><span class="stats-filter-help">Choose one or more competitions to include.</span></div>
             <span class="stats-filter-count">{{ selectedCompetitionIds.size }}/{{ competitionOptions.length }} selected · {{ filteredCompetitionBreakdown.length }} records</span>
@@ -186,7 +198,7 @@
             <button type="button" class="clear-filter-btn" [disabled]="selectedCompetitionIds.size === 0" (click)="clearCompetitionSelection()">Clear</button>
           </div>
         </div>
-        <div class="stats-table-scroll" *ngIf="filteredCompetitionBreakdown.length > 0">
+        <div class="stats-table-scroll" *ngIf="!competitionBreakdownLoading && !competitionBreakdownUnavailable && filteredCompetitionBreakdown.length > 0">
           <table class="comp-breakdown-table">
             <thead><tr><th>Competition</th><th>Type</th><th>Season</th><th>Pos</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th></tr></thead>
             <tbody>
@@ -199,8 +211,8 @@
             </tbody>
           </table>
         </div>
-        <div *ngIf="competitionBreakdown.length === 0" class="empty-state">No competition records yet for this club.</div>
-        <div *ngIf="competitionBreakdown.length > 0 && selectedCompetitionIds.size === 0" class="empty-state filter-empty-state">
+        <div *ngIf="!competitionBreakdownLoading && !competitionBreakdownUnavailable && competitionBreakdown.length === 0" class="empty-state">No competition records yet for this club.</div>
+        <div *ngIf="!competitionBreakdownLoading && !competitionBreakdownUnavailable && competitionBreakdown.length > 0 && selectedCompetitionIds.size === 0" class="empty-state filter-empty-state">
           Select at least one competition to view its records.
           <button type="button" (click)="selectAllCompetitions()">Show all competitions</button>
         </div>

@@ -28,6 +28,20 @@ describe('PlayerComponent Phase 1A', () => {
     expect(component.preferredFootLabel).toBe('Left');
   });
 
+  it('does not create a club route for free agents or missing team ids', () => {
+    const component = createComponent(() => of({}));
+
+    for (const teamId of [0, -1, null, undefined, 'N/A']) {
+      component.playerView = { teamId, teamName: 'N/A' };
+      expect(component.teamRoute).toBeNull();
+      expect(component.teamLabel).toBe('No club');
+    }
+
+    component.playerView = { teamId: 8, teamName: 'Orbit FC' };
+    expect(component.teamRoute).toEqual(['/team', 8]);
+    expect(component.teamLabel).toBe('Orbit FC');
+  });
+
   it('exposes loading success and retryable not-found states', () => {
     const success = createComponent((url: string) => {
       if (url.includes('/humans/7')) return of({ id: 7, name: 'Keeper', teamId: 1, position: 'GK' });

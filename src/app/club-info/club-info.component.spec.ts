@@ -83,6 +83,68 @@ describe('ClubInfoComponent Phase 1A', () => {
       .toContain('No active competition membership');
   });
 
+  it('links Stadium only when the viewed club is the controlled team', () => {
+    teamService.teamId = 4;
+    fixture.detectChanges();
+    flushSuccess();
+
+    const page = fixture.nativeElement as HTMLElement;
+    expect(component.isControlledClub).toBeFalse();
+    expect(page.querySelector<HTMLAnchorElement>('a[href="/stadium"]')).toBeNull();
+
+    teamService.teamId = 9;
+    fixture.detectChanges();
+    expect(component.isControlledClub).toBeTrue();
+    expect(page.querySelector<HTMLAnchorElement>('a[href="/stadium"]')).not.toBeNull();
+  });
+
+  it('distinguishes an unavailable manager lookup from a valid vacant role and retries it', () => {
+    fixture.detectChanges();
+    http.expectOne(urlApp + '/competition/getCurrentSeason').flush(3);
+    http.expectOne(urlApp + '/teams/info/9').flush({ id: 9, name: 'Cluj Orbit', color1: '#123', color2: '#456' });
+    http.expectOne(urlApp + '/history/teamCompetitionWins/9').flush([]);
+    http.expectOne(urlApp + '/managers/current/team/9')
+      .flush('failed', { status: 503, statusText: 'Unavailable' });
+    http.expectOne(urlApp + '/game/facilities/9').flush({});
+    http.expectOne(urlApp + '/stats/team/9/competitionBreakdown').flush([]);
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement as HTMLElement;
+    expect(component.managerUnavailable).toBeTrue();
+    expect(page.querySelector('.people-list')?.textContent).toContain('Manager data unavailable');
+    expect(page.querySelector('.people-list')?.textContent).not.toContain('Vacant');
+
+    component.retryManager();
+    http.expectOne(urlApp + '/managers/current/team/9').flush({ found: false });
+    fixture.detectChanges();
+    expect(component.managerUnavailable).toBeFalse();
+    expect(page.querySelector('.people-list')?.textContent).toContain('Vacant');
+  });
+
+  it('distinguishes unavailable competition records from a valid empty result and retries them', () => {
+    fixture.detectChanges();
+    http.expectOne(urlApp + '/competition/getCurrentSeason').flush(3);
+    http.expectOne(urlApp + '/teams/info/9').flush({ id: 9, name: 'Cluj Orbit', color1: '#123', color2: '#456' });
+    http.expectOne(urlApp + '/history/teamCompetitionWins/9').flush([]);
+    http.expectOne(urlApp + '/managers/current/team/9').flush({ found: false });
+    http.expectOne(urlApp + '/game/facilities/9').flush({});
+    http.expectOne(urlApp + '/stats/team/9/competitionBreakdown')
+      .flush('failed', { status: 503, statusText: 'Unavailable' });
+    component.switchTab('stats');
+    fixture.detectChanges();
+
+    const page = fixture.nativeElement as HTMLElement;
+    expect(component.competitionBreakdownUnavailable).toBeTrue();
+    expect(page.textContent).toContain('Competition records are unavailable');
+    expect(page.textContent).not.toContain('No competition records yet');
+
+    component.loadCompetitionBreakdown();
+    http.expectOne(urlApp + '/stats/team/9/competitionBreakdown').flush([]);
+    fixture.detectChanges();
+    expect(component.competitionBreakdownUnavailable).toBeFalse();
+    expect(page.textContent).toContain('No competition records yet');
+  });
+
   it('shows a retryable error when critical club data fails', () => {
     fixture.detectChanges();
     http.expectOne(urlApp + '/competition/getCurrentSeason').flush(3);

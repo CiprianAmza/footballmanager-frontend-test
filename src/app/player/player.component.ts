@@ -189,6 +189,15 @@ export class PlayerComponent implements OnInit {
         return this.playerView?.preferredFoot || 'Unknown';
     }
 
+    get teamRoute(): any[] | null {
+        const teamId = Number(this.playerView?.teamId);
+        return Number.isFinite(teamId) && teamId > 0 ? ['/team', teamId] : null;
+    }
+
+    get teamLabel(): string {
+        return this.teamRoute ? (this.playerView?.teamName || 'Unknown Club') : 'No club';
+    }
+
     competitionLink(competition: { competitionId: number; competitionTypeId?: number | null }): any[] {
         return competition.competitionTypeId === 4 || competition.competitionTypeId === 5
             ? ['/european-rounds', competition.competitionId, this.teamService.currentSeason]

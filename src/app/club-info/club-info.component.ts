@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { catchError, forkJoin, of, Subscription } from 'rxjs';
+import { catchError, forkJoin, map, of, Subscription } from 'rxjs';
 import { urlApp } from '../app.component';
 import { GameEventsService } from '../services/game-events.service';
 import { TeamService } from '../services/team.service';
@@ -82,6 +82,11 @@ interface CurrentManagerSummary {
   humanControlled?: boolean;
 }
 
+interface ManagerLoadResult {
+  manager: CurrentManagerSummary | null;
+  unavailable: boolean;
+}
+
 @Component({
   selector: 'app-club-info',
   templateUrl: './club-info.component.html',
@@ -93,6 +98,8 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
   teamId!: number;
   club: ClubView | null = null;
   currentManager: CurrentManagerSummary | null = null;
+  managerLoading = false;
+  managerUnavailable = false;
   loading = true;
   errorMessage = '';
   emptyMessage = '';
@@ -109,6 +116,8 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
 
   activeTab: 'overview' | 'squad' | 'tactics' | 'matches' | 'stats' = 'overview';
   competitionBreakdown: CompetitionStatLine[] = [];
+  competitionBreakdownLoading = false;
+  competitionBreakdownUnavailable = false;
   competitionOptions: CompetitionFilterOption[] = [];
   selectedCompetitionIds = new Set<number>();
 
@@ -168,6 +177,10 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
       + this.europeanCompetitions.length + this.otherCompetitions.length > 0;
   }
 
+  get isControlledClub(): boolean {
+    return this.teamId > 0 && this.teamId === Number(this.teamService.teamId);
+  }
+
   goToTransfers(): void {
     this.router.navigate(['/transfers', this.teamId, this.currentSeason]);
   }
@@ -188,6 +201,10 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
     this.emptyMessage = '';
     this.club = null;
     this.currentManager = null;
+    this.managerLoading = false;
+    this.managerUnavailable = false;
+    this.competitionBreakdownLoading = false;
+    this.competitionBreakdownUnavailable = false;
     this.setMemberships([]);
     this.stadiumData = null;
     this.stadiumEffectiveCapacity = null;
@@ -197,7 +214,10 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
     const teamInfoReq = this.http.get<TeamBranding>(urlApp + `/teams/info/${this.teamId}`);
     const historyReq = this.http.get<CompetitionHistory[]>(urlApp + `/history/teamCompetitionWins/${this.teamId}`);
     const managerReq = this.http.get<CurrentManagerSummary>(urlApp + `/managers/current/team/${this.teamId}`)
-      .pipe(catchError(() => of({ found: false } as CurrentManagerSummary)));
+      .pipe(
+        map(manager => ({ manager, unavailable: false } as ManagerLoadResult)),
+        catchError(() => of({ manager: null, unavailable: true } as ManagerLoadResult))
+      );
     const membershipsReq = this.teamService.getTeamCompetitions(this.teamId);
 
     forkJoin({ seasonReq, teamInfoReq, historyReq, managerReq, membershipsReq }).subscribe({
@@ -216,7 +236,7 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
           color2: team?.color2 ?? null,
           trophies: this.processTrophies(history || [])
         };
-        this.currentManager = manager?.found ? manager : null;
+        this.applyManagerResult(manager);
         this.setMemberships((memberships || []) as ClubCompetition[]);
         this.loading = false;
         this.loadStadiumData();
@@ -224,10 +244,31 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loading = false;
+        this.managerLoading = false;
         this.emptyMessage = '';
         this.errorMessage = 'Club data could not be loaded. Check the connection and try again.';
       }
     });
+  }
+
+  retryManager(): void {
+    this.managerLoading = true;
+    this.managerUnavailable = false;
+    this.http.get<CurrentManagerSummary>(urlApp + `/managers/current/team/${this.teamId}`).subscribe({
+      next: manager => {
+        this.managerLoading = false;
+        this.applyManagerResult({ manager, unavailable: false });
+      },
+      error: () => {
+        this.managerLoading = false;
+        this.applyManagerResult({ manager: null, unavailable: true });
+      }
+    });
+  }
+
+  private applyManagerResult(result: ManagerLoadResult): void {
+    this.managerUnavailable = result.unavailable;
+    this.currentManager = !result.unavailable && result.manager?.found ? result.manager : null;
   }
 
   private setMemberships(memberships: ClubCompetition[]): void {
@@ -239,10 +280,19 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
   }
 
   loadCompetitionBreakdown(): void {
+    this.competitionBreakdownLoading = true;
+    this.competitionBreakdownUnavailable = false;
     this.http.get<CompetitionStatLine[]>(urlApp + `/stats/team/${this.teamId}/competitionBreakdown`)
       .subscribe({
-        next: lines => this.setCompetitionBreakdown(lines || []),
-        error: () => this.setCompetitionBreakdown([])
+        next: lines => {
+          this.setCompetitionBreakdown(lines || []);
+          this.competitionBreakdownLoading = false;
+        },
+        error: () => {
+          this.setCompetitionBreakdown([]);
+          this.competitionBreakdownLoading = false;
+          this.competitionBreakdownUnavailable = true;
+        }
       });
   }
 

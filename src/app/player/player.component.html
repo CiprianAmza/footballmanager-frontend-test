@@ -45,7 +45,10 @@
         </div>
         <div class="bottom-row">
           <span class="position-text">{{ positionLabel }}</span>
-          <span class="team-text"> - <a [routerLink]="['/team', playerView.teamId]" class="fm-link">{{ playerView.teamName }}</a></span>
+          <span class="team-text"> -
+            <a *ngIf="teamRoute as route; else noClubHeader" [routerLink]="route" class="fm-link">{{ teamLabel }}</a>
+            <ng-template #noClubHeader><span>{{ teamLabel }}</span></ng-template>
+          </span>
           <span class="nation-text" *ngIf="playerView.nationName"> · {{ playerView.nationName }}</span>
           <a class="fm-link card-link" [routerLink]="['/card', playerView.id]" style="margin-left:10px;">🎴 Card</a>
         </div>
@@ -328,7 +331,10 @@
             <div class="contract-details">
                 <div class="contract-item">
                     <span class="c-label">Club</span>
-                    <span class="c-val"><a [routerLink]="['/team', playerView.teamId]" class="fm-link">{{ playerView.teamName }}</a></span>
+                    <span class="c-val">
+                      <a *ngIf="teamRoute as route; else noContractClub" [routerLink]="route" class="fm-link">{{ teamLabel }}</a>
+                      <ng-template #noContractClub>{{ teamLabel }}</ng-template>
+                    </span>
                 </div>
                 <div class="contract-item">
                     <span class="c-label">Contract Until</span>
