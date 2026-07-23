@@ -73,10 +73,6 @@ export class TeamService {
   lastEvents$ = this.lastEventsSubject.asObservable();
 
   constructor(private http: HttpClient, private authService: AuthService) {
-    // Only check setup if user is already logged in (restored from localStorage)
-    if (this.authService.isLoggedIn) {
-      this.checkSetup();
-    }
   }
 
   get teamId(): number {
@@ -92,22 +88,14 @@ export class TeamService {
   }
 
   checkSetup(): void {
-    const userId = this.authService.currentUserId;
-    const url = userId != null
-      ? urlApp + `/game/isSetupComplete?userId=${userId}`
-      : urlApp + '/game/isSetupComplete';
-
-    this.http.get<any>(url).subscribe({
+    this.http.get<any>(urlApp + '/api/career/status').subscribe({
       next: (result) => {
-        // Stale localStorage pointing at a user the backend doesn't have anymore
-        // (DB wipe, in-memory restart). Purge the cached login and reload so the
-        // login screen shows again instead of jumping straight to team selection.
-        if (result.userNotFound) {
-          this.authService.logout();
-          window.location.reload();
+        this.setupChecked = true;
+        if (result.careerRole === 'CHAIRMAN') {
+          this.teamIdSubject.next(0);
+          this.setupCompleteSubject.next(true);
           return;
         }
-        this.setupChecked = true;
         if (result.setupComplete && result.freeAgent) {
           // Fresh free agent: setup done, no team yet. Reuse the fired-manager
           // UI so the job-search menu is shown until they accept an offer.
