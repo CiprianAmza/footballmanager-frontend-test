@@ -1,4 +1,6 @@
 import { Component, EventEmitter, Output } from '@angular/core';
+import { Router } from '@angular/router';
+import { AdminService } from '../services/admin.service';
 import { AuthService, CareerRole } from '../services/auth.service';
 
 @Component({
@@ -19,7 +21,11 @@ export class LoginComponent {
   loading = false;
   error = '';
 
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+    private adminService: AdminService,
+    private router: Router
+  ) {}
 
   submit(): void {
     if (!this.username.trim() || !this.password) {
@@ -67,6 +73,23 @@ export class LoginComponent {
   private startLogin(): void {
     this.loading = true;
     this.error = '';
+    if (this.username.trim() === 'admin') {
+      this.adminService.login('admin', this.password).subscribe({
+        next: result => {
+          this.loading = false;
+          if (result.success && result.token) {
+            this.adminService.storeToken(result.token);
+            void this.router.navigateByUrl('/admin');
+          } else {
+            this.error = result.message || 'Invalid username or password.';
+          }
+        },
+        error: err => this.finishWithError(
+          err?.error?.message || err?.error?.error || 'Invalid username or password.'
+        )
+      });
+      return;
+    }
     this.authService.login(this.username.trim(), this.password).subscribe({
       next: result => {
         this.loading = false;
