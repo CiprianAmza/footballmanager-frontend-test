@@ -1,3 +1,8 @@
+<ng-container *ngIf="isAdminRoute; else gameApplication">
+  <router-outlet></router-outlet>
+</ng-container>
+
+<ng-template #gameApplication>
 <div class="game-load-overlay" *ngIf="loadGameStage !== 'idle'" role="dialog" aria-modal="true"
      aria-labelledby="game-load-title" aria-live="polite">
   <div class="game-load-card" [class.game-load-error]="loadGameStage === 'error'"
@@ -824,3 +829,4 @@
   </div>
 
 </div>
+</ng-template>

@@ -95,6 +95,7 @@ export class AdminComponent implements OnInit {
   }
 
   loadFundingOptions(): void {
+    this.fundingMessage = '';
     this.adminService.fundingOptions().subscribe({
       next: options => {
         this.fundingOptions = options || [];

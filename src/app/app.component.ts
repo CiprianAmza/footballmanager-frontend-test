@@ -198,6 +198,12 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
     });
   }
 
+  /** The administration console owns its authentication shell and must remain
+   * reachable before a manager/chairman career has been created. */
+  get isAdminRoute(): boolean {
+    return this.router.url === '/admin' || this.router.url.startsWith('/admin/');
+  }
+
   get fastForwardRunning(): boolean {
     return this.fastForwardJob?.status === 'RUNNING';
   }
