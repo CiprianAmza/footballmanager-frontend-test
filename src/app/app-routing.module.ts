@@ -144,6 +144,7 @@ const routes: Routes = [
   { path: 'admin/awards', component: AdminAwardsComponent },
   { path: 'admin/draws', component: AdminDrawsComponent },
   { path: 'admin/transfers', component: AdminTransfersComponent },
+  { path: 'admin/tactics-advisor', component: TacticsAdvisorComponent },
   { path: 'admin', component: AdminComponent },
   { path: 'overview', component: LeaguesOverviewComponent },
   { path: 'awards/golden-boot', component: AwardHistoryComponent, data: { awardType: 'GOLDEN_BOOT' } },
