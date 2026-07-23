@@ -1,0 +1,20 @@
+<section class="market-page">
+  <header class="market-header">
+    <div><span class="eyebrow">DETERMINISTIC EXCHANGE</span><h1>Market</h1><p>Company and club shares have finite supply. All execution prices are verified by the server.</p></div>
+    <a routerLink="/portfolio">My portfolio</a>
+  </header>
+  <p class="notice error" *ngIf="error">{{ error }}</p><p class="notice success" *ngIf="message">{{ message }}</p><p *ngIf="loading">Loading market…</p>
+  <div class="market-table" *ngIf="!loading">
+    <div class="market-row market-labels"><span>Instrument</span><span>Price</span><span>Available</span><span>Order</span></div>
+    <div class="market-row" *ngFor="let instrument of instruments; trackBy: trackInstrument">
+      <button class="instrument" type="button" (click)="showHistory(instrument)"><b>{{ instrument.code }}</b><span>{{ instrument.name }} · {{ instrument.type }}</span></button>
+      <strong>{{ money(instrument.price.amount) }}</strong><span>{{ instrument.availableSupply | number }} / {{ instrument.totalSupply | number }}</span>
+      <div class="order"><input type="number" min="1" step="1" [(ngModel)]="quantities[instrument.id]" [disabled]="busy">
+        <button type="button" (click)="execute(instrument, 'BUY')" [disabled]="busy || instrument.availableSupply < quantities[instrument.id]">Buy</button>
+        <button class="sell" type="button" (click)="execute(instrument, 'SELL')" [disabled]="busy">Sell</button></div>
+    </div>
+  </div>
+  <section class="history" *ngIf="selected"><h2>{{ selected.code }} price history</h2>
+    <div *ngFor="let quote of history"><span>S{{ quote.season }} · D{{ quote.day }}</span><b>{{ money(quote.closePrice.amount) }}</b><em [class.negative]="quote.dailyChangeBps < 0">{{ quote.dailyChangeBps / 100 | number:'1.2-2' }}%</em></div>
+    <p *ngIf="!history.length">No daily close has been generated yet.</p></section>
+</section>

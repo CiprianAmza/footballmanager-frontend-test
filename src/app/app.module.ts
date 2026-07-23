@@ -94,6 +94,8 @@ import { CompetitionRecordsComponent } from './competition-records/competition-r
 import { EconomyDashboardComponent } from './economy/economy-dashboard.component';
 import { WealthRankingsComponent } from './economy/wealth-rankings.component';
 import { PublicEconomyProfileComponent } from './economy/public-economy-profile.component';
+import { MarketComponent } from './market/market.component';
+import { PortfolioComponent } from './market/portfolio.component';
 
 @NgModule({
   declarations: [
@@ -112,6 +114,8 @@ import { PublicEconomyProfileComponent } from './economy/public-economy-profile.
     EconomyDashboardComponent,
     WealthRankingsComponent,
     PublicEconomyProfileComponent,
+    MarketComponent,
+    PortfolioComponent,
     CompetitionComponent,
     TacticDisplayComponent,
     CompetitionComponent,

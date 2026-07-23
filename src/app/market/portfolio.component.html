@@ -1,0 +1,9 @@
+<section class="market-page">
+  <header class="market-header"><div><span class="eyebrow">PERSONAL HOLDINGS</span><h1>Portfolio</h1></div><a routerLink="/market">Trade market</a></header>
+  <p class="notice error" *ngIf="error">{{ error }}</p><p *ngIf="loading">Loading portfolio…</p>
+  <ng-container *ngIf="portfolio && !loading">
+    <div class="portfolio-summary"><article><span>Cost basis</span><b>{{ money(portfolio.totalCostBasis.amount) }}</b></article><article><span>Market value</span><b>{{ money(portfolio.marketValue.amount) }}</b></article><article><span>Unrealized gain</span><b [class.negative]="portfolio.unrealizedGain.amount < 0">{{ money(portfolio.unrealizedGain.amount) }}</b></article><article><span>Realized gain</span><b [class.negative]="portfolio.realizedGain.amount < 0">{{ money(portfolio.realizedGain.amount) }}</b></article></div>
+    <h2>Positions</h2><div class="market-table"><div class="market-row" *ngFor="let position of portfolio.positions"><span><b>{{ position.code }}</b><small>{{ position.name }}</small></span><span>{{ position.quantity | number }} shares</span><span>{{ money(position.costBasis.amount) }} basis</span><b [class.negative]="position.unrealizedGain.amount < 0">{{ money(position.marketValue.amount) }} · {{ money(position.unrealizedGain.amount) }}</b></div><p *ngIf="!portfolio.positions.length">No market positions yet.</p></div>
+    <h2>Trade history</h2><div class="history"><div *ngFor="let trade of trades"><span>S{{ trade.season }} · D{{ trade.day }} · {{ trade.side }}</span><b>{{ trade.quantity }} {{ trade.code }} at {{ money(trade.unitPrice.amount) }}</b><em [class.negative]="trade.realizedGain.amount < 0">{{ money(trade.realizedGain.amount) }}</em></div><p *ngIf="!trades.length">No trades yet.</p></div>
+  </ng-container>
+</section>
