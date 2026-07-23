@@ -73,9 +73,13 @@ import { EconomyDashboardComponent } from './economy/economy-dashboard.component
 import { WealthRankingsComponent } from './economy/wealth-rankings.component';
 import { PublicEconomyProfileComponent } from './economy/public-economy-profile.component';
 import { RegentGuard } from './services/regent.guard';
+import { MarketComponent } from './market/market.component';
+import { PortfolioComponent } from './market/portfolio.component';
 
 const routes: Routes = [
   { path: 'economy', component: EconomyDashboardComponent, canActivate: [RegentGuard] },
+  { path: 'market', component: MarketComponent, canActivate: [RegentGuard] },
+  { path: 'portfolio', component: PortfolioComponent, canActivate: [RegentGuard] },
   { path: 'wealth-rankings', component: WealthRankingsComponent, canActivate: [RegentGuard] },
   { path: 'people/:profileId', component: PublicEconomyProfileComponent, canActivate: [RegentGuard] },
   { path: 'card/:playerId', component: PlayerCardComponent },
