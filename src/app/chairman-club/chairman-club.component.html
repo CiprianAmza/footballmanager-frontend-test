@@ -1,7 +1,8 @@
 <section class="club-page">
   <header class="club-header">
     <div><span class="eyebrow">CHAIRMAN CLUB DESK</span><h1>Club acquisition & treasury</h1></div>
-    <select [ngModel]="selectedTeamId" (ngModelChange)="selectClub($event)" aria-label="Select club">
+    <select *ngIf="clubs.length" [ngModel]="selectedTeamId"
+            (ngModelChange)="selectClub($event)" aria-label="Select club">
       <option *ngFor="let club of clubs; trackBy: trackClub" [ngValue]="club.teamId">
         {{ club.name }} · {{ money(club.valuation.amount) }}
       </option>
@@ -10,9 +11,30 @@
 
   <p class="notice error" *ngIf="error">{{ error }}</p>
   <p class="notice success" *ngIf="message">{{ message }}</p>
-  <p *ngIf="loading">Loading canonical club state…</p>
+  <p *ngIf="clubsLoading">Loading available clubs…</p>
 
-  <ng-container *ngIf="dashboard && !loading">
+  <article class="panel empty-state" *ngIf="!clubsLoading && clubsError">
+    <h2>Clubs could not be loaded</h2>
+    <p>{{ clubsError }}</p>
+    <button type="button" (click)="retryClubs()">Retry clubs</button>
+  </article>
+
+  <article class="panel empty-state"
+           *ngIf="!clubsLoading && !clubsError && clubs.length === 0">
+    <h2>No clubs are available</h2>
+    <p>There are no club instruments available to this chairman yet.</p>
+    <button type="button" (click)="retryClubs()">Check again</button>
+  </article>
+
+  <p *ngIf="!clubsLoading && loading">Loading canonical club state…</p>
+
+  <article class="panel empty-state" *ngIf="!clubsLoading && dashboardError">
+    <h2>Club dashboard could not be loaded</h2>
+    <p>{{ dashboardError }}</p>
+    <button type="button" (click)="retryDashboard()">Retry dashboard</button>
+  </article>
+
+  <ng-container *ngIf="dashboard && !loading && !dashboardError">
     <div class="summary-grid">
       <article><span>Canonical valuation</span><strong>{{ money(dashboard.valuation.totalValue.amount) }}</strong><small>{{ dashboard.valuation.formulaVersion }}</small></article>
       <article><span>Treasury</span><strong>{{ money(dashboard.treasury.balance.amount) }}</strong><small>Club-side retained cash</small></article>

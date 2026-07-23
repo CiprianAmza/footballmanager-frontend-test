@@ -20,5 +20,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .transfer-form { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; margin-top: 1rem; }
 .transfer-form button { grid-column: 1 / -1; }
 .notice { padding: .75rem; border-radius: 6px; }.error { background: #55252d; }.success { background: #194936; }
+.empty-state { margin-top: 1rem; text-align: center; }
+.empty-state h2 { margin-top: 0; }
 .version { color: #8fa39c; }
 @media (max-width: 850px) { .summary-grid { grid-template-columns: 1fr 1fr; }.club-columns { grid-template-columns: 1fr; }.club-header { align-items: stretch; flex-direction: column; } }
