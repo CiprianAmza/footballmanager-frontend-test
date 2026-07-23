@@ -9,8 +9,8 @@
       
       <div class="season-tabs">
         <button class="tab-btn" [class.active]="activeTab === 'current'" (click)="setTab('current')">Current Season</button>
-        <button class="tab-btn" [class.active]="activeTab === 'next'" (click)="setTab('next')">Next Season</button>
-        <button class="tab-btn" [class.active]="activeTab === 'after'" (click)="setTab('after')">Season After</button>
+        <button class="tab-btn" type="button" disabled title="Multi-season planning is not available yet">Next Season (Unavailable)</button>
+        <button class="tab-btn" type="button" disabled title="Multi-season planning is not available yet">Season After (Unavailable)</button>
       </div>
     </div>
   
@@ -19,8 +19,7 @@
       <!-- LEFT: PITCH VIEW -->
       <div class="pitch-panel">
         <div class="tactic-selector">
-          <span>4-2-3-1 Wide - Control Possession</span>
-          <button class="icon-btn">⛶</button>
+          <span>Current squad by position</span>
         </div>
   
         <div class="football-pitch">
@@ -40,12 +39,11 @@
                (click)="selectPosition(pos)">
             
             <span class="pos-code">{{ pos.code }}</span>
-            <span class="pos-role">Role</span> <!-- Placeholder -->
           </div>
         </div>
         
         <div class="checkbox-row">
-          <input type="checkbox" id="allPos"> <label for="allPos">All Positions</label>
+          <input type="checkbox" id="allPos" disabled> <label for="allPos" title="This filter is not available yet">All Positions (Unavailable)</label>
         </div>
       </div>
   
@@ -58,9 +56,9 @@
               <span class="code">{{ selectedPosCode }}</span> - {{ selectedPosName | uppercase }}
           </div>
           <div class="list-actions">
-              <button class="fm-btn small">Ask Assistant</button>
-              <button class="fm-btn small">Add ▼</button>
-              <button class="fm-btn small">Filter ▼</button>
+              <button class="fm-btn small" type="button" disabled title="Assistant suggestions are not available yet">Ask Assistant</button>
+              <button class="fm-btn small" type="button" disabled title="Manual additions are not available yet">Add</button>
+              <button class="fm-btn small" type="button" disabled title="Additional filters are not available yet">Filter</button>
           </div>
         </div>
   
@@ -127,15 +125,14 @@
   
                       <!-- Remove Btn -->
                       <td class="center">
-                          <button class="remove-btn">⛔</button>
+                          <button class="remove-btn" type="button" disabled title="Manual removal is not available yet">⛔</button>
                       </td>
                   </tr>
   
                   <!-- Empty State -->
                   <tr *ngIf="displayList.length === 0">
                       <td colspan="8" class="no-data">
-                          No players found suitable for this position. 
-                          <a href="#">Create New Recruitment Focus</a>
+                          No players found suitable for this position. Recruitment focuses are not available yet.
                       </td>
                   </tr>
               </tbody>

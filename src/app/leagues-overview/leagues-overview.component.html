@@ -423,7 +423,7 @@
             <span class="compact-rank">{{ leader.rank }}</span>
             <span class="compact-player">
               <a [routerLink]="['/player', leader.playerId]">{{ leader.playerName }}</a>
-              <small>{{ leader.teamName }} · {{ leader.appearances }} apps</small>
+              <small><a [routerLink]="['/team', leader.teamId]">{{ leader.teamName }}</a> · {{ leader.appearances }} apps</small>
             </span>
             <span class="compact-value">
               <strong>{{ leader.value | number:(category.key === 'averageRating' ? '1.2-2' : '1.0-1') }}</strong>

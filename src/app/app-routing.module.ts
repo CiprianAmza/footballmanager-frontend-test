@@ -28,12 +28,10 @@ import { BoardroomAssetsComponent } from './boardroom/boardroom-assets.component
 import { BoardroomOwnershipComponent } from './boardroom/boardroom-ownership.component';
 import { ScoutingComponent } from './scouting/scouting.component';
 import { SquadPlannerComponent } from './squad-planner/squad-planner.component';
-import { DynamicsComponent } from './dynamics/dynamics.component';
 import { CompetitionsListComponent } from './competition-list/competition-list.component';
 import { CommonModule } from '@angular/common';
 import { FinancesComponent } from './finances/finances.component';
 import { ClubInfoComponent } from './club-info/club-info.component';
-import { DevCenterComponent } from './dev-center/dev-center.component';
 import { TrainingComponent } from './training/training.component';
 import { MedicalCentreComponent } from './medical-centre/medical-centre.component';
 import { StaffComponent } from './staff/staff.component';
@@ -75,8 +73,11 @@ import { PublicEconomyProfileComponent } from './economy/public-economy-profile.
 import { RegentGuard } from './services/regent.guard';
 import { MarketComponent } from './market/market.component';
 import { PortfolioComponent } from './market/portfolio.component';
+import { LegacyBoardroomGuard } from './services/legacy-boardroom.guard';
+import { FeatureUnavailableComponent } from './feature-unavailable/feature-unavailable.component';
+import { NotFoundComponent } from './not-found/not-found.component';
 
-const routes: Routes = [
+export const APP_ROUTES: Routes = [
   { path: 'economy', component: EconomyDashboardComponent, canActivate: [RegentGuard] },
   { path: 'market', component: MarketComponent, canActivate: [RegentGuard] },
   { path: 'portfolio', component: PortfolioComponent, canActivate: [RegentGuard] },
@@ -84,8 +85,8 @@ const routes: Routes = [
   { path: 'people/:profileId', component: PublicEconomyProfileComponent, canActivate: [RegentGuard] },
   { path: 'card/:playerId', component: PlayerCardComponent },
   { path: 'match/ratings/:competitionId/:season/:round/:teamId1/:teamId2', component: MatchRatingsComponent },
-  { path: 'boardroom/coach-control/:teamId', component: CoachControlComponent },
-  { path: 'boardroom/coach-control', component: CoachControlComponent },
+  { path: 'boardroom/coach-control/:teamId', component: CoachControlComponent, canActivate: [LegacyBoardroomGuard] },
+  { path: 'boardroom/coach-control', component: CoachControlComponent, canActivate: [LegacyBoardroomGuard] },
   { path: 'comp/:competitionId', component: CompetitionComponent },
   { path: 'competition/:competitionId', component: CompetitionComponent },
   { path: 'rounds', component: DisplayComponent },
@@ -106,11 +107,12 @@ const routes: Routes = [
   { path: 'tactics3', component: Tactics3Component },
   { path: 'tactics4', component: Tactics4Component },
   { path: 'tactics5', component: Tactics5Component },
-  { path: 'boardroom', component: BoardroomHubComponent },
-  { path: 'boardroom/wealth', component: BoardroomWealthComponent },
-  { path: 'boardroom/assets/:humanId', component: BoardroomAssetsComponent },
-  { path: 'boardroom/ownership/:humanId', component: BoardroomOwnershipComponent },
-  { path: 'boardroom/ownership', component: BoardroomOwnershipComponent },
+  { path: 'boardroom/assets', component: BoardroomAssetsComponent, canActivate: [LegacyBoardroomGuard] },
+  { path: 'boardroom', component: BoardroomHubComponent, canActivate: [LegacyBoardroomGuard] },
+  { path: 'boardroom/wealth', component: BoardroomWealthComponent, canActivate: [LegacyBoardroomGuard] },
+  { path: 'boardroom/assets/:humanId', component: BoardroomAssetsComponent, canActivate: [LegacyBoardroomGuard] },
+  { path: 'boardroom/ownership/:humanId', component: BoardroomOwnershipComponent, canActivate: [LegacyBoardroomGuard] },
+  { path: 'boardroom/ownership', component: BoardroomOwnershipComponent, canActivate: [LegacyBoardroomGuard] },
   { path: 'mediaPrediction/:competitionId', component: MediaPredictionComponent},
   { path: 'playerHistory/:playerId', component: PlayerCompetitionHistoryComponent },
   { path: 'fixtures/:teamId', component: FixturesComponent },
@@ -123,11 +125,13 @@ const routes: Routes = [
   { path: 'simulate', component: SimulateComponent },
   { path: 'scouting', component: ScoutingComponent },
   { path: 'squad-planner', component: SquadPlannerComponent },
-  { path: 'squad-dynamics', component: DynamicsComponent },
+  { path: 'squad-dynamics', component: FeatureUnavailableComponent,
+    data: { featureName: 'Squad Dynamics' } },
   { path: 'competition-list', component: CompetitionsListComponent },
   { path: 'finances', component: FinancesComponent },
   { path: 'team/:teamId', component: ClubInfoComponent }, 
-  { path: 'dev-center', component: DevCenterComponent },
+  { path: 'dev-center', component: FeatureUnavailableComponent,
+    data: { featureName: 'Development Centre' } },
   { path: 'training', component: TrainingComponent },
   { path: 'medical', component: MedicalCentreComponent },
   { path: 'staff', component: StaffComponent },
@@ -166,13 +170,14 @@ const routes: Routes = [
   { path: 'gallery/:teamId', component: PlayerGalleryComponent },
   { path: 'gallery', component: PlayerGalleryComponent },
 
-  { path: '', redirectTo: '/home', pathMatch: 'full' }
+  { path: '', redirectTo: '/home', pathMatch: 'full' },
+  { path: '**', component: NotFoundComponent }
   
 ];
 
 
 @NgModule({
-  imports: [RouterModule.forRoot(routes)],
+  imports: [RouterModule.forRoot(APP_ROUTES)],
   exports: [RouterModule]
 })
 export class AppRoutingModule { }

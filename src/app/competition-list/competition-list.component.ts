@@ -61,6 +61,8 @@ interface CompetitionData {
 export class CompetitionsListComponent implements OnInit {
 
   competitions: CompetitionData[] = [];
+  loading = true;
+  errorMessage = '';
 
   constructor(private http: HttpClient, private teamService: TeamService, private router: Router) {}
 
@@ -72,16 +74,31 @@ export class CompetitionsListComponent implements OnInit {
     }
   }
 
+  competitionLink(comp: CompetitionData): any[] {
+    return comp.typeId === 4 || comp.typeId === 5
+      ? ['/european-rounds', comp.competitionId, this.teamService.currentSeason]
+      : ['/comp', comp.competitionId];
+  }
+
   ngOnInit(): void {
     this.loadCompetitions();
   }
 
   loadCompetitions(): void {
+    this.loading = true;
+    this.errorMessage = '';
     const teamId = this.teamService.teamId;
-    this.http.get<CompetitionData[]>(urlApp + `/competition/getTeamCompetitions/${teamId}`).subscribe(
-      (data) => { this.competitions = this.dedupe(data || []); },
-      (error) => console.error('Error loading competitions:', error)
-    );
+    this.http.get<CompetitionData[]>(urlApp + `/competition/getTeamCompetitions/${teamId}`).subscribe({
+      next: data => {
+        this.competitions = this.dedupe(data || []);
+        this.loading = false;
+      },
+      error: () => {
+        this.competitions = [];
+        this.loading = false;
+        this.errorMessage = 'Competitions could not be loaded. Check the connection and try again.';
+      }
+    });
   }
 
   /**

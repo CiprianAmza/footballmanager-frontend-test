@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { RouterTestingModule } from '@angular/router/testing';
 import { Subject } from 'rxjs';
 
 import { urlApp } from '../app.component';
@@ -12,7 +13,7 @@ describe('LeaguesOverviewComponent', () => {
   let component: LeaguesOverviewComponent;
   let fixture: ComponentFixture<LeaguesOverviewComponent>;
   let httpController: HttpTestingController;
-  let router: jasmine.SpyObj<Router>;
+  let router: Router;
 
   const teamService = {
     currentSeason: 3,
@@ -20,14 +21,11 @@ describe('LeaguesOverviewComponent', () => {
   };
 
   beforeEach(async () => {
-    router = jasmine.createSpyObj<Router>('Router', ['navigate']);
-
     await TestBed.configureTestingModule({
       declarations: [LeaguesOverviewComponent],
-      imports: [FormsModule, HttpClientTestingModule],
+      imports: [FormsModule, HttpClientTestingModule, RouterTestingModule],
       providers: [
         { provide: TeamService, useValue: teamService },
-        { provide: Router, useValue: router },
         { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } }
       ]
     }).compileComponents();
@@ -35,6 +33,7 @@ describe('LeaguesOverviewComponent', () => {
     fixture = TestBed.createComponent(LeaguesOverviewComponent);
     component = fixture.componentInstance;
     httpController = TestBed.inject(HttpTestingController);
+    router = TestBed.inject(Router);
   });
 
   afterEach(() => httpController.verify());
@@ -71,12 +70,13 @@ describe('LeaguesOverviewComponent', () => {
   it('navigates from Overview to domestic and European competition pages', () => {
     fixture.detectChanges();
     flushPage([]);
+    const navigate = spyOn(router, 'navigate');
 
     component.openCompetition({ competitionId: 4, nationId: 3, typeId: 2, name: 'Khess Cup' });
     component.openCompetition({ competitionId: 10, nationId: 0, typeId: 4, name: 'League of Champions' });
 
-    expect(router.navigate.calls.argsFor(0)).toEqual([['/comp', 4]]);
-    expect(router.navigate.calls.argsFor(1)).toEqual([['/european-rounds', 10, 3]]);
+    expect(navigate.calls.argsFor(0)).toEqual([['/comp', 4]]);
+    expect(navigate.calls.argsFor(1)).toEqual([['/european-rounds', 10, 3]]);
   });
 
   it('labels the focus cup round instead of the last played round', () => {
@@ -123,5 +123,40 @@ describe('LeaguesOverviewComponent', () => {
     });
     expect(component.statisticsScope).toBe('CUP');
     expect(component.statistics?.scope).toBe('CUP');
+  });
+
+  it('links compact statistic leaders to their real team ids', () => {
+    fixture.detectChanges();
+    flushPage([]);
+    component.view = 'statistics';
+    component.statistics = {
+      season: 3,
+      scope: 'LEAGUE',
+      scopeLabel: 'Domestic leagues',
+      scoringTitle: 'Golden Boot',
+      goldenBootRule: 'API rule',
+      categoriesScope: 'Domestic leagues',
+      goldenBoot: [],
+      categories: [{
+        key: 'assists',
+        label: 'Assists',
+        valueLabel: 'Assists',
+        leaders: [{
+          rank: 1,
+          playerId: 4,
+          playerName: 'Ada Playmaker',
+          teamId: 18,
+          teamName: 'Orbit FC',
+          appearances: 8,
+          value: 6,
+          per90: null
+        }]
+      }]
+    } as any;
+    fixture.detectChanges();
+
+    const link = (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLAnchorElement>('.compact-leader small a');
+    expect(link?.getAttribute('href')).toBe('/team/18');
   });
 });

@@ -1,0 +1,13 @@
+.feature-state {
+  margin: 4rem auto;
+  max-width: 42rem;
+  padding: 2rem;
+  text-align: center;
+}
+.eyebrow { color: #d6a742; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.14em; }
+.feature-state a {
+  color: #66b8ee;
+  display: inline-block;
+  font-weight: 700;
+  margin-top: 1rem;
+}

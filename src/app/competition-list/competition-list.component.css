@@ -64,6 +64,10 @@
     font-weight: 900; font-size: 1.1em; text-transform: uppercase; letter-spacing: 0.5px;
     color: white;
 }
+.comp-title a,
+.entity-link { color: inherit; text-decoration: none; }
+.comp-title a:hover,
+.entity-link:hover { color: #72c4fa; text-decoration: underline; }
 
 /* Sections */
 .card-section {
@@ -181,3 +185,5 @@
     transition: all 0.2s;
 }
 .fm-btn:hover { border-color: #777; color: white; background-color: #333; }
+.page-state { color: #aeb7c0; padding: 42px 24px; text-align: center; }
+.error-state button { background: #1f6ea5; border: 1px solid #3189c7; border-radius: 4px; color: white; cursor: pointer; font: inherit; padding: 8px 14px; }

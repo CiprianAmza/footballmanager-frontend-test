@@ -80,6 +80,17 @@
 .title-section h1 { margin: 0; font-size: 2.2em; font-weight: 900; letter-spacing: 1px; }
 .subtitle { color: #aaa; font-size: 1em; text-transform: uppercase; font-weight: bold; }
 .id-tag { font-size: 0.8em; color: #666; margin-left: 10px; font-weight: normal; }
+.membership-summary { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 5px; }
+.membership-summary a,
+.membership-group a,
+.panel-header-link,
+.comp-name-cell a,
+.competition-filter-option a { color: #67b9ef; text-decoration: none; }
+.membership-summary a:hover,
+.membership-group a:hover,
+.panel-header-link:hover,
+.comp-name-cell a:hover,
+.competition-filter-option a:hover { text-decoration: underline; }
 
 .reputation-section { 
     position: absolute;
@@ -128,6 +139,10 @@
     font-size: 0.85em;
     border-bottom: 1px solid #444;
 }
+.panel-header-link { align-items: center; display: flex; justify-content: space-between; }
+.membership-groups { display: grid; gap: 14px; padding: 15px; }
+.membership-group { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+.membership-group .label { flex-basis: 100%; }
 
 /* FINANCE */
 .finance-summary {
@@ -169,6 +184,8 @@
 .clickable-header { cursor: pointer; display: flex; justify-content: space-between; }
 .clickable-item { cursor: pointer; transition: transform 0.2s; }
 .clickable-item:hover { transform: translateY(-2px); background-color: #383838; }
+.trophy-item { text-decoration: none; transition: transform 0.2s; }
+.trophy-item:hover { background-color: #383838; transform: translateY(-2px); }
 
 /* KITS */
 .kits-container { display: flex; justify-content: space-around; padding: 30px 15px; background: linear-gradient(to bottom, #252525, #202020); }
@@ -215,6 +232,27 @@
     white-space: nowrap;
 }
 .stats-filter-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 7px; }
+.competition-filter-option {
+    align-items: center;
+    background: #191c21;
+    border: 1px solid #3c424b;
+    border-radius: 5px;
+    display: inline-flex;
+    gap: 7px;
+    min-height: 32px;
+    padding: 4px 8px 4px 4px;
+}
+.competition-filter-option.active { background: #174b6d; border-color: #3498db; }
+.competition-filter-option small { color: #9ca9b5; margin-left: 4px; }
+.competition-filter-toggle {
+    background: transparent;
+    border: 1px solid #535a64;
+    border-radius: 3px;
+    color: white;
+    cursor: pointer;
+    height: 23px;
+    width: 23px;
+}
 .competition-filter-chip,
 .clear-filter-btn {
     align-items: center;
@@ -287,3 +325,6 @@
 .loading-screen { display: flex; justify-content: center; padding: 50px; }
 .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.2); border-top-color: #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.page-state { align-items: center; display: flex; flex-direction: column; gap: 15px; margin: 4rem auto; max-width: 42rem; text-align: center; }
+.error-state button,
+.error-state a { background: #1f6ea5; border: 1px solid #3189c7; border-radius: 4px; color: white; cursor: pointer; font: inherit; padding: 8px 14px; text-decoration: none; }

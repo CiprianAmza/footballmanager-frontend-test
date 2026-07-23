@@ -1,4 +1,19 @@
-<div class="fm-player-view" *ngIf="playerView">
+<div class="player-page-state" *ngIf="loading" role="status" aria-live="polite">Loading player…</div>
+<section class="player-page-state player-error-state" *ngIf="!loading && errorMessage" role="alert">
+  <h1>Player unavailable</h1>
+  <p>{{ errorMessage }}</p>
+  <button type="button" (click)="retry()">Retry</button>
+  <a routerLink="/home">Home</a>
+</section>
+
+<section class="player-page-state" *ngIf="!loading && !errorMessage && emptyMessage">
+  <h1>No player data</h1>
+  <p>{{ emptyMessage }}</p>
+  <button type="button" (click)="retry()">Retry</button>
+  <a routerLink="/home">Home</a>
+</section>
+
+<div class="fm-player-view" *ngIf="!loading && !errorMessage && !emptyMessage && playerView">
   
   <!-- 1. TOP HEADER (Stil FM) -->
   <div class="fm-header">
@@ -22,14 +37,14 @@
       
       <div class="player-identity">
         <div class="top-row">
-          <span class="shirt-number">14.</span> <!-- Poti pune id-ul sau nr de pe tricou -->
+          <span class="shirt-number">{{ shirtNumberLabel }}<ng-container *ngIf="playerView.shirtNumber != null">.</ng-container></span>
           <h1 class="player-name">{{ playerView.name }}</h1>
           <button class="shortlist-btn-player" (click)="toggleShortlistFromPlayer()" [title]="isInShortlist ? 'Remove from shortlist' : 'Add to shortlist'">
             {{ isInShortlist ? '\u2605' : '\u2606' }}
           </button>
         </div>
         <div class="bottom-row">
-          <span class="position-text">{{ playerView.position }} (Center)</span>
+          <span class="position-text">{{ positionLabel }}</span>
           <span class="team-text"> - <a [routerLink]="['/team', playerView.teamId]" class="fm-link">{{ playerView.teamName }}</a></span>
           <span class="nation-text" *ngIf="playerView.nationName"> · {{ playerView.nationName }}</span>
           <a class="fm-link card-link" [routerLink]="['/card', playerView.id]" style="margin-left:10px;">🎴 Card</a>
@@ -60,7 +75,8 @@
         </div>
         <div class="stat-box">
             <span class="stat-label">RATING</span>
-            <div class="star-rating">★★★★ <span class="half">★</span></div> <!-- Doar vizual -->
+            <span class="stat-val" *ngIf="playerView.rating != null; else unknownRating">{{ ratingLabel | number:'1.0-0' }}</span>
+            <ng-template #unknownRating><span class="stat-val">—</span></ng-template>
         </div>
       </div>
     </div>
@@ -130,7 +146,7 @@
                         <span>Age</span> <span class="white">{{ playerView.age }} years old</span>
                     </div>
                     <div class="detail-row">
-                        <span>Preferred Foot</span> <span class="white">{{ playerView.preferredFoot || 'Right' }}</span>
+                        <span>Preferred Foot</span> <span class="white">{{ preferredFootLabel }}</span>
                     </div>
                     <div class="detail-row">
                         <span>Height</span> <span class="white">{{ playerView.heightCm }} cm</span>
@@ -279,7 +295,10 @@
                         </thead>
                         <tbody>
                             <tr *ngFor="let comp of seasonStats.competitions">
-                                <td class="comp-name-cell">{{ comp.name }}</td>
+                                <td class="comp-name-cell">
+                                  <a *ngIf="comp.competitionId; else competitionNameOnly" [routerLink]="competitionLink(comp)">{{ comp.name }}</a>
+                                  <ng-template #competitionNameOnly>{{ comp.name }}</ng-template>
+                                </td>
                                 <td class="center stat-cell">{{ comp.games }}</td>
                                 <td class="center stat-cell sub-cell">{{ comp.subApps }}</td>
                                 <td class="center stat-cell goal-cell">{{ comp.goals }}</td>
@@ -505,9 +524,9 @@
                 <div class="trophy-card" *ngFor="let trophy of trophies">
                     <div class="trophy-icon">🏆</div>
                     <div class="trophy-info">
-                        <div class="trophy-name">{{ trophy.competitionName }}</div>
+                        <div class="trophy-name"><a [routerLink]="['/comp', trophy.competitionId]">{{ trophy.competitionName }}</a></div>
                         <div class="trophy-year">{{ trophy.seasonNumber | number }}</div>
-                        <div class="trophy-team">{{ trophy.teamName }}</div>
+                        <div class="trophy-team"><a [routerLink]="['/team', trophy.teamId]">{{ trophy.teamName }}</a></div>
                     </div>
                 </div>
             </div>

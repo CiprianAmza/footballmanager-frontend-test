@@ -97,7 +97,7 @@
       <a routerLink="/coefficients" routerLinkActive="active">Coefficients</a>
       <a routerLink="/all-time-champions" routerLinkActive="active">Champions</a>
       <a routerLink="/stats/scorers" routerLinkActive="active">Top Scorers</a>
-      <a routerLink="/manager-leaderboard" routerLinkActive="active">Manager Rankings</a>
+      <a routerLink="/hall-of-fame/managers" routerLinkActive="active">Manager Rankings</a>
     </div>
 
     <!-- Normal: show team pages -->
@@ -105,7 +105,6 @@
       <a [routerLink]="['/team', teamService.teamId]" routerLinkActive="active">Squad</a>
       <a [routerLink]="['/gallery', teamService.teamId]" routerLinkActive="active">Card Gallery</a>
       <a routerLink="/squad-planner" routerLinkActive="active">Squad Planner</a>
-      <a routerLink="/squad-dynamics" routerLinkActive="active">Dynamics</a>
       <a [routerLink]="['/tactics', teamService.teamId]" routerLinkActive="active">Tactics</a>
       <a routerLink="/tactics" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}">Tactics Advisor</a>
       <a routerLink="/simulate" routerLinkActive="active">Simulator</a>
@@ -153,7 +152,6 @@
     <div class="border"></div>
 
     <div class="menu-group bottom-group">
-      <a routerLink="/dev-center" routerLinkActive="active">Dev. Centre</a>
       <a routerLink="/animation-preview" routerLinkActive="active">Anim. Preview</a>
       <a href="javascript:void(0)" (click)="saveGame()" class="save-link">Save Game</a>
       <a href="javascript:void(0)" (click)="triggerLoadGame()" class="load-link">Load Game</a>

@@ -52,7 +52,7 @@ export class TrainingComponent implements OnInit, OnDestroy {
 
   currentWeek: DaySchedule[] = [];
   activeTab: string = 'Overview';
-  tabs: string[] = ['Overview', 'Calendar', 'Schedules', 'Units', 'Mentoring', 'Individual', 'Coaches'];
+  tabs: string[] = ['Overview', 'Calendar', 'Individual'];
 
   // Training focus
   trainingFocus: string = 'Balanced';

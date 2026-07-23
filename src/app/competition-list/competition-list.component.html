@@ -5,9 +5,18 @@
     <span class="subtitle">Your Team's Competitions</span>
   </div>
 
-  <div class="cards-grid">
+  <div class="page-state" *ngIf="loading" role="status" aria-live="polite">Loading competitions…</div>
+  <div class="page-state error-state" *ngIf="!loading && errorMessage" role="alert">
+    <p>{{ errorMessage }}</p>
+    <button type="button" (click)="loadCompetitions()">Retry</button>
+  </div>
+  <div class="page-state" *ngIf="!loading && !errorMessage && competitions.length === 0">
+    No active competition memberships for this team.
+  </div>
 
-    <div class="comp-card" *ngFor="let comp of competitions; trackBy: trackByCompId" (click)="openCompetition(comp)" style="cursor: pointer;">
+  <div class="cards-grid" *ngIf="!loading && !errorMessage && competitions.length > 0">
+
+    <article class="comp-card" *ngFor="let comp of competitions; trackBy: trackByCompId">
 
       <!-- HEADER -->
       <div class="card-header" [style.border-left-color]="getCompetitionColor(comp)">
@@ -15,7 +24,7 @@
           <span>{{ comp.name | slice:0:1 }}</span>
         </div>
         <div class="comp-title">
-          <div>{{ comp.name }}</div>
+          <a [routerLink]="competitionLink(comp)">{{ comp.name }}</a>
           <small class="type-label">{{ getTypeLabel(comp) }}</small>
         </div>
       </div>
@@ -69,7 +78,7 @@
 
           <div class="journey-row next" *ngIf="comp.nextMatch as match">
             <span>NEXT MATCH</span>
-            <strong>vs {{ match.opponentTeamName }}</strong>
+            <strong>vs <a class="entity-link" [routerLink]="['/team', match.opponentTeamId]">{{ match.opponentTeamName }}</a></strong>
             <small>
               {{ match.stage }} · {{ match.venue === 'HOME' ? 'Home' : 'Away' }}
               <ng-container *ngIf="match.date"> · {{ match.date }}</ng-container>
@@ -79,7 +88,7 @@
 
           <div class="journey-row eliminated" *ngIf="comp.elimination as elimination">
             <span>ELIMINATED</span>
-            <strong *ngIf="elimination.byTeamName">by {{ elimination.byTeamName }}</strong>
+            <strong *ngIf="elimination.byTeamName">by <a class="entity-link" [routerLink]="['/team', elimination.byTeamId]">{{ elimination.byTeamName }}</a></strong>
             <strong *ngIf="!elimination.byTeamName">via group table</strong>
             <small>
               {{ elimination.stage }}
@@ -108,7 +117,7 @@
         </div>
       </div>
 
-    </div>
+    </article>
 
   </div>
 </div>

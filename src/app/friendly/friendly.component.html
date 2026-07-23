@@ -110,10 +110,12 @@
           <span class="day-num">{{ getDayLabel(match.day) }}</span>
         </div>
         <div class="match-teams" [ngClass]="getResultClass(match)">
-          <span class="team-home" [class.our-team]="match.homeTeamId === teamId">{{ match.homeTeamName }}</span>
+          <a class="team-home team-link" [class.our-team]="match.homeTeamId === teamId"
+             [routerLink]="['/team', match.homeTeamId]" (click)="$event.stopPropagation()">{{ match.homeTeamName }}</a>
           <span class="match-score" *ngIf="match.status === 'COMPLETED'">{{ match.homeGoals }} - {{ match.awayGoals }}</span>
           <span class="match-vs" *ngIf="match.status !== 'COMPLETED'">vs</span>
-          <span class="team-away" [class.our-team]="match.awayTeamId === teamId">{{ match.awayTeamName }}</span>
+          <a class="team-away team-link" [class.our-team]="match.awayTeamId === teamId"
+             [routerLink]="['/team', match.awayTeamId]" (click)="$event.stopPropagation()">{{ match.awayTeamName }}</a>
         </div>
         <div class="match-venue">{{ getVenue(match) }}</div>
         <div class="match-status">

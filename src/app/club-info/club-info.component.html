@@ -1,344 +1,210 @@
-<div class="club-container" *ngIf="club">
-  
-    <div class="club-header">
-      <div class="logo-section">
-        <app-team-crest
-          [teamId]="club.id"
-          [teamName]="club.name"
-          [color1]="club.color1"
-          [color2]="club.color2"
-          [size]="82">
-        </app-team-crest>
-      </div>
-      
-      <div class="title-section">
-        <h1>{{ club.name | uppercase }}</h1>
-        <div class="subtitle">
-          <span>{{ club.division }}</span>
-          <span class="id-tag">(ID: {{ club.id }})</span>
-        </div>
-      </div>
-  
-      <div class="club-navbar">
-          <button class="nav-btn" 
-                  [class.active]="activeTab === 'overview'" 
-                  (click)="switchTab('overview')">
-              Overview
-          </button>
-          <button class="nav-btn" 
-                  [class.active]="activeTab === 'squad'" 
-                  (click)="switchTab('squad')">
-              Squad
-          </button>
-          <button class="nav-btn"
-                  [class.active]="activeTab === 'tactics'"
-                  (click)="switchTab('tactics')">
-              Tactics
-          </button>
-          <button class="nav-btn"
-                  [class.active]="activeTab === 'stats'"
-                  (click)="switchTab('stats')">
-              Stats
-          </button>
-          <button class="nav-btn"
-                  [class.active]="activeTab === 'matches'"
-                  (click)="switchTab('matches')">
-              Matches
-          </button>
-          <button class="nav-btn" (click)="goToTransfers()">
-              Transfers <span style="font-size: 0.8em; opacity: 0.7;">↗</span>
-          </button>
-      </div>
-  
-      <div class="reputation-section">
-          <span class="label">Reputation</span>
-          <span class="stars">{{ getReputationStars(club.reputation) }}</span>
-      </div>
+<div *ngIf="loading" class="page-state loading-screen" role="status" aria-live="polite">
+  <div class="spinner" aria-hidden="true"></div>
+  <span>Loading club data…</span>
+</div>
+
+<section *ngIf="!loading && errorMessage" class="page-state error-state" role="alert">
+  <h1>Club unavailable</h1>
+  <p>{{ errorMessage }}</p>
+  <button type="button" (click)="retry()">Retry</button>
+  <a routerLink="/home">Home</a>
+</section>
+
+<section *ngIf="!loading && !errorMessage && emptyMessage" class="page-state">
+  <h1>No club data</h1>
+  <p>{{ emptyMessage }}</p>
+  <button type="button" (click)="retry()">Retry</button>
+  <a routerLink="/home">Home</a>
+</section>
+
+<div class="club-container" *ngIf="!loading && !errorMessage && !emptyMessage && club">
+  <div class="club-header">
+    <div class="logo-section">
+      <app-team-crest [teamId]="club.id" [teamName]="club.name"
+        [color1]="club.color1" [color2]="club.color2" [size]="82">
+      </app-team-crest>
     </div>
-  
-    <div class="content-wrapper">
 
-        <div class="info-grid tab-content" *ngIf="activeTab === 'overview'">
-        
-        <div class="column left-col">
-            
-            <div class="fm-panel">
-                <div class="panel-header">CLUB DETAILS</div>
-                <div class="details-grid">
-                    <div class="detail-item">
-                        <span class="label">Nation</span>
-                        <span class="val">{{ club.nation }}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="label">Year Founded</span>
-                        <span class="val">{{ club.foundedYear }}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="label">Status</span>
-                        <span class="val">{{ club.status }}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="label">Nickname</span>
-                        <span class="val">{{ club.nickname }}</span>
-                    </div>
-                </div>
-            </div>
-    
-            <div class="fm-panel transfer-panel">
-                <div class="panel-header">TRANSFER STATUS</div>
-                <div class="finance-summary">
-                    <div class="fin-row">
-                        <span>Transfer Budget</span>
-                        <span class="money">€{{ club.transferBudget | number }}</span>
-                    </div>
-                    <div class="fin-row">
-                        <span>Wage Budget</span>
-                        <span class="money">€{{ club.wageBudget | number }} p/w</span>
-                    </div>
-                </div>
-                <div class="panel-actions">
-                    <button class="action-btn full-width" (click)="goToTransfers()">
-                        View Transfer History >
-                    </button>
-                </div>
-            </div>
-    
-            <div class="fm-panel">
-                <div class="panel-header">KEY PEOPLE</div>
-                <div class="people-list">
-                    <div class="person-row">
-                        <span class="role">Manager</span>
-                        <div class="person-info">
-                            <div class="face-icon">👔</div>
-                            <a *ngIf="currentManager?.managerId; else vacantManager"
-                               class="p-name manager-link"
-                               [routerLink]="['/manager-profile', currentManager?.managerId]"
-                               [attr.aria-label]="'Open manager profile for ' + club.managerName">
-                                {{ club.managerName }}
-                            </a>
-                            <ng-template #vacantManager>
-                                <span class="p-name vacant-role">Vacant</span>
-                            </ng-template>
-                        </div>
-                    </div>
-                    <div class="person-row">
-                        <span class="role">Captain</span>
-                        <div class="person-info">
-                            <div class="face-icon">©️</div>
-                            <span class="p-name">{{ club.captainName }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-    
-            <div class="fm-panel">
-                <div class="panel-header">RIVALRIES</div>
-                <div class="rivals-section">
-                    <div class="rival-group">
-                        <span class="r-label">Derbies</span>
-                        <span class="r-val">{{ club.derbies.join(', ') }}</span>
-                    </div>
-                    <div class="rival-group">
-                        <span class="r-label">Fierce Rivals</span>
-                        <span class="r-val">{{ club.rivals.join(', ') }}</span>
-                    </div>
-                </div>
-            </div>
-    
-        </div>
-    
-        <div class="column right-col">
-            
-            <div class="fm-panel">
-                <div class="panel-header clickable-header" (click)="goToHistory()">
-                    HONOURS <span class="arrow">➤</span>
-                </div>
-                
-                <div class="trophy-cabinet" *ngIf="club.trophies.length > 0; else noTrophies">
-                    <div class="trophy-item clickable-item" 
-                        *ngFor="let t of club.trophies"
-                        (click)="goToCompetition(t.competitionId)">
-                        
-                        <div class="cup-icon" 
-                            [class.gold]="t.level === 'National'" 
-                            [class.silver]="t.level === 'Cup'">
-                            🏆
-                        </div>
-                        
-                        <div class="trophy-details">
-                            <span class="t-name">{{ t.name }}</span>
-                            <span class="t-count badge">x{{ t.count }}</span>
-                        </div>
-                    </div>
-                </div>
-                <ng-template #noTrophies>
-                    <div class="no-data">No major trophies won yet.</div>
-                </ng-template>
-            </div>
-    
-            <div class="fm-panel">
-                <div class="panel-header">KITS</div>
-                <div class="kits-container">
-                    <div class="kit-box" *ngFor="let kit of club.kits">
-                        <div class="t-shirt">
-                            <div class="shoulders" [style.background-color]="kit.primaryColor"></div>
-                            <div class="body" 
-                                [style.background-color]="kit.primaryColor"
-                                [class.striped]="kit.pattern === 'stripes'"
-                                [style.border-color]="kit.secondaryColor">
-                                <span class="sponsor">FM24</span>
-                            </div>
-                            <div class="sleeves" [style.background-color]="kit.primaryColor"></div>
-                        </div>
-                        <span class="kit-label">{{ kit.type }}</span>
-                    </div>
-                </div>
-            </div>
-    
-            <div class="fm-panel">
-                <div class="panel-header clickable-header" (click)="goToStadium()">
-                    STADIUM <span class="arrow">&#10148;</span>
-                </div>
-                <div class="stadium-content">
-                    <div class="stadium-name">{{ stadiumData?.stadiumName || club.stadiumName }}</div>
-                    <div class="stadium-grid">
-                        <div class="s-item">
-                            <span class="s-label">Capacity</span>
-                            <span class="s-val">{{ (stadiumEffectiveCapacity || club.capacity) | number }}</span>
-                        </div>
-                        <div class="s-item">
-                            <span class="s-label">Expansion</span>
-                            <span class="s-val">Lv {{ stadiumData?.expansionLevel || 0 }}</span>
-                        </div>
-                        <div class="s-item">
-                            <span class="s-label">Revenue Boost</span>
-                            <span class="s-val">x{{ (stadiumRevenueMultiplier || 1).toFixed(2) }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-    
-            <div class="fm-panel">
-                <div class="panel-header">HISTORY</div>
-                <div class="history-text">
-                    {{ club.historyDescription }}
-                </div>
-                <div class="legends-section">
-                    <div class="panel-header sub">LEGENDS & ICONS</div>
-                    <div class="legends-list">
-                        <span *ngFor="let l of club.legends" class="legend-tag">{{ l }}</span>
-                        <span *ngFor="let i of club.icons" class="icon-tag">{{ i }}</span>
-                    </div>
-                </div>
-            </div>
-    
-        </div>
-    
-        </div>
-        <div class="tab-content" *ngIf="activeTab === 'squad'">
-            <app-squad [teamId]="teamId"></app-squad>
-        </div>
+    <div class="title-section">
+      <h1>{{ club.name | uppercase }}</h1>
+      <div class="subtitle membership-summary" *ngIf="hasActiveMemberships; else noMembershipHeader">
+        <a *ngFor="let competition of domesticLeagues"
+          [routerLink]="competitionLink(competition)">{{ competition.name || 'Unnamed competition' }}</a>
+        <a *ngFor="let competition of domesticCups"
+          [routerLink]="competitionLink(competition)">{{ competition.name || 'Unnamed competition' }}</a>
+        <a *ngFor="let competition of europeanCompetitions"
+          [routerLink]="competitionLink(competition)">{{ competition.name || 'Unnamed competition' }}</a>
+        <a *ngFor="let competition of otherCompetitions"
+          [routerLink]="competitionLink(competition)">{{ competition.name || 'Unnamed competition' }}</a>
+      </div>
+      <ng-template #noMembershipHeader>
+        <div class="subtitle">No active competition membership</div>
+      </ng-template>
+      <span class="id-tag">ID: {{ club.id }}</span>
+    </div>
 
-        <div class="tab-content" *ngIf="activeTab === 'tactics'">
-            <app-tactics4 [teamId]="teamId"></app-tactics4>
-        </div>
-
-        <div class="tab-content" *ngIf="activeTab === 'matches'">
-            <app-fixtures [teamIdInput]="teamId"></app-fixtures>
-        </div>
-
-        <div class="tab-content" *ngIf="activeTab === 'stats'">
-            <div class="fm-panel">
-                <div class="panel-header">PER-COMPETITION RECORD</div>
-                <div class="stats-competition-filter" *ngIf="competitionOptions.length > 0">
-                    <div class="stats-filter-heading">
-                        <div>
-                            <span class="stats-filter-label">COMPETITIONS</span>
-                            <span class="stats-filter-help">Choose one or more competitions to include.</span>
-                        </div>
-                        <span class="stats-filter-count">
-                            {{ selectedCompetitionIds.size }}/{{ competitionOptions.length }} selected
-                            · {{ filteredCompetitionBreakdown.length }} records
-                        </span>
-                    </div>
-                    <div class="stats-filter-actions" role="group" aria-label="Filter team statistics by competition">
-                        <button type="button" class="competition-filter-chip all-chip"
-                                [class.active]="allCompetitionsSelected"
-                                [attr.aria-pressed]="allCompetitionsSelected"
-                                (click)="selectAllCompetitions()">
-                            All competitions
-                        </button>
-                        <button type="button" class="competition-filter-chip"
-                                *ngFor="let option of competitionOptions"
-                                [class.active]="isCompetitionSelected(option.competitionId)"
-                                [attr.aria-pressed]="isCompetitionSelected(option.competitionId)"
-                                (click)="toggleCompetition(option.competitionId)">
-                            <span class="chip-check" aria-hidden="true">
-                                {{ isCompetitionSelected(option.competitionId) ? '✓' : '' }}
-                            </span>
-                            <span>{{ option.competitionName }}</span>
-                            <small>{{ competitionTypeLabel(option.competitionTypeId) }}</small>
-                        </button>
-                        <button type="button" class="clear-filter-btn"
-                                [disabled]="selectedCompetitionIds.size === 0"
-                                (click)="clearCompetitionSelection()">
-                            Clear
-                        </button>
-                    </div>
-                </div>
-                <div class="stats-table-scroll" *ngIf="filteredCompetitionBreakdown.length > 0">
-                <table class="comp-breakdown-table">
-                    <thead>
-                        <tr>
-                            <th>Competition</th>
-                            <th>Type</th>
-                            <th>Season</th>
-                            <th>Pos</th>
-                            <th>P</th>
-                            <th>W</th>
-                            <th>D</th>
-                            <th>L</th>
-                            <th>GF</th>
-                            <th>GA</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let line of filteredCompetitionBreakdown">
-                            <td class="comp-name-cell">{{ line.competitionName }}</td>
-                            <td>{{ competitionTypeLabel(line.competitionTypeId) }}</td>
-                            <td>{{ line.seasonNumber }}</td>
-                            <td class="position-cell">
-                                <!-- League position is meaningful ONLY on league rows (type 1/3). -->
-                                <span *ngIf="line.leaguePosition != null" class="position-badge"
-                                      [class.pos-1]="line.leaguePosition === 1">
-                                    {{ line.leaguePosition }}
-                                </span>
-                                <span *ngIf="line.leaguePosition == null">-</span>
-                            </td>
-                            <td>{{ line.matches }}</td>
-                            <td>{{ line.wins }}</td>
-                            <td>{{ line.draws }}</td>
-                            <td>{{ line.losses }}</td>
-                            <td>{{ line.goalsFor }}</td>
-                            <td>{{ line.goalsAgainst }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-                </div>
-                <div *ngIf="competitionBreakdown.length === 0" class="empty-state">
-                    No competition records yet for this club.
-                </div>
-                <div *ngIf="competitionBreakdown.length > 0 && selectedCompetitionIds.size === 0"
-                     class="empty-state filter-empty-state">
-                    Select at least one competition to view its records.
-                    <button type="button" (click)="selectAllCompetitions()">Show all competitions</button>
-                </div>
-            </div>
-        </div>
-
+    <div class="club-navbar">
+      <button class="nav-btn" [class.active]="activeTab === 'overview'" (click)="switchTab('overview')">Overview</button>
+      <button class="nav-btn" [class.active]="activeTab === 'squad'" (click)="switchTab('squad')">Squad</button>
+      <button class="nav-btn" [class.active]="activeTab === 'tactics'" (click)="switchTab('tactics')">Tactics</button>
+      <button class="nav-btn" [class.active]="activeTab === 'stats'" (click)="switchTab('stats')">Stats</button>
+      <button class="nav-btn" [class.active]="activeTab === 'matches'" (click)="switchTab('matches')">Matches</button>
+      <button class="nav-btn" (click)="goToTransfers()">Transfers ↗</button>
     </div>
   </div>
-  
-  <div *ngIf="loading" class="loading-screen">
-      <div class="spinner"></div>
+
+  <div class="content-wrapper">
+    <div class="info-grid tab-content" *ngIf="activeTab === 'overview'">
+      <div class="column left-col">
+        <div class="fm-panel">
+          <div class="panel-header">ACTIVE COMPETITIONS</div>
+          <div class="membership-groups" *ngIf="hasActiveMemberships; else noMemberships">
+            <div class="membership-group" *ngIf="domesticLeagues.length">
+              <span class="label">LEAGUES</span>
+              <a *ngFor="let competition of domesticLeagues" [routerLink]="competitionLink(competition)">
+                {{ competition.name || 'Unnamed competition' }}
+              </a>
+            </div>
+            <div class="membership-group" *ngIf="domesticCups.length">
+              <span class="label">CUPS</span>
+              <a *ngFor="let competition of domesticCups" [routerLink]="competitionLink(competition)">
+                {{ competition.name || 'Unnamed competition' }}
+              </a>
+            </div>
+            <div class="membership-group" *ngIf="europeanCompetitions.length">
+              <span class="label">EUROPE</span>
+              <a *ngFor="let competition of europeanCompetitions" [routerLink]="competitionLink(competition)">
+                {{ competition.name || 'Unnamed competition' }}
+              </a>
+            </div>
+            <div class="membership-group" *ngIf="otherCompetitions.length">
+              <span class="label">OTHER</span>
+              <a *ngFor="let competition of otherCompetitions" [routerLink]="competitionLink(competition)">
+                {{ competition.name || 'Unnamed competition' }}
+              </a>
+            </div>
+          </div>
+          <ng-template #noMemberships>
+            <div class="no-data">No active competition membership.</div>
+          </ng-template>
+        </div>
+
+        <div class="fm-panel">
+          <div class="panel-header">CLUB DETAILS</div>
+          <div class="details-grid">
+            <div class="detail-item"><span class="label">Nation</span><span class="val">N/A</span></div>
+            <div class="detail-item"><span class="label">Year Founded</span><span class="val">N/A</span></div>
+            <div class="detail-item"><span class="label">Status</span><span class="val">N/A</span></div>
+            <div class="detail-item"><span class="label">Nickname</span><span class="val">N/A</span></div>
+          </div>
+        </div>
+
+        <div class="fm-panel">
+          <div class="panel-header">KEY PEOPLE</div>
+          <div class="people-list">
+            <div class="person-row">
+              <span class="role">Manager</span>
+              <a *ngIf="currentManager?.managerId; else vacantManager"
+                class="p-name manager-link" [routerLink]="['/manager-profile', currentManager?.managerId]">
+                {{ currentManager?.managerName || 'Unknown' }}
+              </a>
+              <ng-template #vacantManager><span class="p-name vacant-role">Vacant</span></ng-template>
+            </div>
+          </div>
+        </div>
+
+        <div class="fm-panel transfer-panel">
+          <div class="panel-header">TRANSFER STATUS</div>
+          <div class="finance-summary">
+            <div class="fin-row"><span>Transfer Budget</span><span>N/A</span></div>
+            <div class="fin-row"><span>Wage Budget</span><span>N/A</span></div>
+          </div>
+          <div class="panel-actions">
+            <button class="action-btn full-width" (click)="goToTransfers()">View Transfer History</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="column right-col">
+        <div class="fm-panel">
+          <a class="panel-header panel-header-link" [routerLink]="['/team-history', teamId]">HONOURS <span>➤</span></a>
+          <div class="trophy-cabinet" *ngIf="club.trophies.length > 0; else noTrophies">
+            <a class="trophy-item" *ngFor="let trophy of club.trophies"
+              [routerLink]="competitionStatLink(trophy)">
+              <div class="cup-icon" [class.gold]="trophy.level === 'National'" [class.silver]="trophy.level === 'Cup'">🏆</div>
+              <div class="trophy-details">
+                <span class="t-name">{{ trophy.name || 'Unnamed competition' }}</span>
+                <span class="t-count badge">×{{ trophy.count }}</span>
+              </div>
+            </a>
+          </div>
+          <ng-template #noTrophies><div class="no-data">No major trophies recorded.</div></ng-template>
+        </div>
+
+        <div class="fm-panel">
+          <a class="panel-header panel-header-link" routerLink="/stadium">STADIUM <span>➤</span></a>
+          <div class="stadium-content">
+            <div class="stadium-name">{{ stadiumData?.stadiumName || 'N/A' }}</div>
+            <div class="stadium-grid">
+              <div class="s-item"><span class="s-label">Capacity</span><span class="s-val">{{ stadiumEffectiveCapacity == null ? 'N/A' : (stadiumEffectiveCapacity | number) }}</span></div>
+              <div class="s-item"><span class="s-label">Expansion</span><span class="s-val">{{ stadiumData?.expansionLevel == null ? 'N/A' : stadiumData.expansionLevel }}</span></div>
+              <div class="s-item"><span class="s-label">Revenue Boost</span><span class="s-val">{{ stadiumRevenueMultiplier == null ? 'N/A' : ('×' + stadiumRevenueMultiplier.toFixed(2)) }}</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fm-panel">
+          <div class="panel-header">DATA AVAILABILITY</div>
+          <div class="history-text">Captains, rivals, kits, history and reputation are not available from the current club API.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" *ngIf="activeTab === 'squad'"><app-squad [teamId]="teamId"></app-squad></div>
+    <div class="tab-content" *ngIf="activeTab === 'tactics'"><app-tactics4 [teamId]="teamId"></app-tactics4></div>
+    <div class="tab-content" *ngIf="activeTab === 'matches'"><app-fixtures [teamIdInput]="teamId"></app-fixtures></div>
+
+    <div class="tab-content" *ngIf="activeTab === 'stats'">
+      <div class="fm-panel">
+        <div class="panel-header">PER-COMPETITION RECORD</div>
+        <div class="stats-competition-filter" *ngIf="competitionOptions.length > 0">
+          <div class="stats-filter-heading">
+            <div><span class="stats-filter-label">COMPETITIONS</span><span class="stats-filter-help">Choose one or more competitions to include.</span></div>
+            <span class="stats-filter-count">{{ selectedCompetitionIds.size }}/{{ competitionOptions.length }} selected · {{ filteredCompetitionBreakdown.length }} records</span>
+          </div>
+          <div class="stats-filter-actions" role="group" aria-label="Filter team statistics by competition">
+            <button type="button" class="competition-filter-chip all-chip" [class.active]="allCompetitionsSelected"
+              [attr.aria-pressed]="allCompetitionsSelected" (click)="selectAllCompetitions()">All competitions</button>
+            <div class="competition-filter-option" *ngFor="let option of competitionOptions" [class.active]="isCompetitionSelected(option.competitionId)">
+              <button type="button" class="competition-filter-toggle"
+                [attr.aria-label]="(isCompetitionSelected(option.competitionId) ? 'Exclude ' : 'Include ') + option.competitionName"
+                [attr.aria-pressed]="isCompetitionSelected(option.competitionId)" (click)="toggleCompetition(option.competitionId)">
+                {{ isCompetitionSelected(option.competitionId) ? '✓' : '+' }}
+              </button>
+              <a [routerLink]="competitionStatLink(option)">{{ option.competitionName }} <small>{{ competitionTypeLabel(option.competitionTypeId) }}</small></a>
+            </div>
+            <button type="button" class="clear-filter-btn" [disabled]="selectedCompetitionIds.size === 0" (click)="clearCompetitionSelection()">Clear</button>
+          </div>
+        </div>
+        <div class="stats-table-scroll" *ngIf="filteredCompetitionBreakdown.length > 0">
+          <table class="comp-breakdown-table">
+            <thead><tr><th>Competition</th><th>Type</th><th>Season</th><th>Pos</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let line of filteredCompetitionBreakdown">
+                <td class="comp-name-cell"><a [routerLink]="competitionStatLink(line)">{{ line.competitionName }}</a></td>
+                <td>{{ competitionTypeLabel(line.competitionTypeId) }}</td><td>{{ line.seasonNumber }}</td>
+                <td class="position-cell"><span *ngIf="line.leaguePosition != null" class="position-badge" [class.pos-1]="line.leaguePosition === 1">{{ line.leaguePosition }}</span><span *ngIf="line.leaguePosition == null">—</span></td>
+                <td>{{ line.matches }}</td><td>{{ line.wins }}</td><td>{{ line.draws }}</td><td>{{ line.losses }}</td><td>{{ line.goalsFor }}</td><td>{{ line.goalsAgainst }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div *ngIf="competitionBreakdown.length === 0" class="empty-state">No competition records yet for this club.</div>
+        <div *ngIf="competitionBreakdown.length > 0 && selectedCompetitionIds.size === 0" class="empty-state filter-empty-state">
+          Select at least one competition to view its records.
+          <button type="button" (click)="selectAllCompetitions()">Show all competitions</button>
+        </div>
+      </div>
+    </div>
   </div>
+</div>

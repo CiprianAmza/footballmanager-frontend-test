@@ -174,7 +174,7 @@ export class SquadPlannerComponent implements OnInit {
   }
 
   setTab(tab: string) {
-    this.activeTab = tab;
+    if (tab === 'current') this.activeTab = tab;
   }
 
   // Helper for star display (array for ngFor)

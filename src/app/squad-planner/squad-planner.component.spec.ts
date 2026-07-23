@@ -1,23 +1,11 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { SquadPlannerComponent } from './squad-planner.component';
 
-describe('SquadPlannerComponent', () => {
-  let component: SquadPlannerComponent;
-  let fixture: ComponentFixture<SquadPlannerComponent>;
-
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [ SquadPlannerComponent ]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(SquadPlannerComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-  });
-
-  it('should create', () => {
-    expect(component).toBeTruthy();
+describe('SquadPlannerComponent Phase 1A', () => {
+  it('does not activate unsupported future-season plans', () => {
+    const component = new SquadPlannerComponent({} as any, {} as any);
+    component.setTab('next');
+    expect(component.activeTab).toBe('current');
+    component.setTab('after');
+    expect(component.activeTab).toBe('current');
   });
 });

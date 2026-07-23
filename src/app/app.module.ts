@@ -47,13 +47,11 @@ import { BoardroomAssetsComponent } from './boardroom/boardroom-assets.component
 import { BoardroomOwnershipComponent } from './boardroom/boardroom-ownership.component';
 import { ScoutingComponent } from './scouting/scouting.component';
 import { SquadPlannerComponent } from './squad-planner/squad-planner.component';
-import { DynamicsComponent } from './dynamics/dynamics.component';
 import { CommonModule } from '@angular/common';
 import { CompetitionsListComponent } from './competition-list/competition-list.component';
 import { FinancesComponent } from './finances/finances.component';
 import { CupOverviewComponent } from './competition/cup-overview/cup-overview.component';
 import { ClubInfoComponent } from './club-info/club-info.component';
-import { DevCenterComponent } from './dev-center/dev-center.component';
 import { TrainingComponent } from './training/training.component';
 import { MedicalCentreComponent } from './medical-centre/medical-centre.component';
 import { StaffComponent } from './staff/staff.component';
@@ -96,6 +94,8 @@ import { WealthRankingsComponent } from './economy/wealth-rankings.component';
 import { PublicEconomyProfileComponent } from './economy/public-economy-profile.component';
 import { MarketComponent } from './market/market.component';
 import { PortfolioComponent } from './market/portfolio.component';
+import { FeatureUnavailableComponent } from './feature-unavailable/feature-unavailable.component';
+import { NotFoundComponent } from './not-found/not-found.component';
 
 @NgModule({
   declarations: [
@@ -116,6 +116,8 @@ import { PortfolioComponent } from './market/portfolio.component';
     PublicEconomyProfileComponent,
     MarketComponent,
     PortfolioComponent,
+    FeatureUnavailableComponent,
+    NotFoundComponent,
     CompetitionComponent,
     TacticDisplayComponent,
     CompetitionComponent,
@@ -158,12 +160,10 @@ import { PortfolioComponent } from './market/portfolio.component';
     BoardroomOwnershipComponent,
     ScoutingComponent,
     SquadPlannerComponent,
-    DynamicsComponent,
     CompetitionsListComponent,
     FinancesComponent,
     CupOverviewComponent,
     ClubInfoComponent,
-    DevCenterComponent,
     TrainingComponent,
     MedicalCentreComponent,
     StaffComponent,

@@ -16,6 +16,9 @@ export class PlayerComponent implements OnInit {
 
     playerId: number;
     playerView: any;
+    loading: boolean = true;
+    errorMessage: string = '';
+    emptyMessage: string = '';
     majorAwardSummary: any = { goldenBoots: 0, ballonDors: 0, awards: [] };
 
     // Tab Management (Default: Overview)
@@ -84,7 +87,7 @@ export class PlayerComponent implements OnInit {
 
     ngOnInit(): void {
         this.route.params.subscribe(params => {
-            this.playerId = params['playerId'];
+            this.playerId = Number(params['playerId']);
             // Reset state on player change
             this.majorAwardSummary = { goldenBoots: 0, ballonDors: 0, awards: [] };
             this.activeTab = 'overview';
@@ -97,6 +100,9 @@ export class PlayerComponent implements OnInit {
             this.showFormDetails = false;
             this.roleSuitabilities = [];
             this.roleSuitabilitiesLoaded = false;
+            this.playerView = null;
+            this.errorMessage = '';
+            this.emptyMessage = '';
             this.maxSeason = this.teamService.currentSeason;
             this.selectedSeason = this.maxSeason;
             this.fetchData();
@@ -117,9 +123,25 @@ export class PlayerComponent implements OnInit {
     }
 
     fetchData() {
+        if (!Number.isFinite(this.playerId) || this.playerId <= 0) {
+            this.loading = false;
+            this.errorMessage = 'This player link is invalid.';
+            return;
+        }
+        this.loading = true;
+        this.errorMessage = '';
+        this.emptyMessage = '';
         this.http.get(urlApp + `/humans/${this.playerId}`)
-            .subscribe((data: any) => {
+            .subscribe({
+              next: (data: any) => {
+                if (!data) {
+                    this.playerView = null;
+                    this.loading = false;
+                    this.emptyMessage = 'No player data is available for this profile.';
+                    return;
+                }
                 this.playerView = data;
+                this.loading = false;
                 this.editorWillNeverLeave = !!data.willNeverLeave;
                 this.currentSeason = this.teamService.currentSeason;
                 if (data.wage) {
@@ -134,7 +156,43 @@ export class PlayerComponent implements OnInit {
                 if (this.isOwnPlayer()) {
                     this.fetchRenewalDemand();
                 }
+              },
+              error: (error) => {
+                this.playerView = null;
+                this.loading = false;
+                this.emptyMessage = '';
+                this.errorMessage = error?.status === 404
+                    ? 'Player not found.'
+                    : 'Player data could not be loaded. Check the connection and try again.';
+              }
             });
+    }
+
+    retry(): void {
+        this.fetchData();
+        this.fetchMajorAwards();
+    }
+
+    get shirtNumberLabel(): number | string {
+        return this.playerView?.shirtNumber ?? '—';
+    }
+
+    get positionLabel(): string {
+        return this.playerView?.position || 'Unknown';
+    }
+
+    get ratingLabel(): number | string {
+        return this.playerView?.rating ?? '—';
+    }
+
+    get preferredFootLabel(): string {
+        return this.playerView?.preferredFoot || 'Unknown';
+    }
+
+    competitionLink(competition: { competitionId: number; competitionTypeId?: number | null }): any[] {
+        return competition.competitionTypeId === 4 || competition.competitionTypeId === 5
+            ? ['/european-rounds', competition.competitionId, this.teamService.currentSeason]
+            : ['/comp', competition.competitionId];
     }
 
     saveWillNeverLeave(): void {
@@ -341,6 +399,8 @@ export class PlayerComponent implements OnInit {
                         const entry: any = entries[0];
                         // Build competition rows and totals
                         const competitions = (entry.competitionEntries || []).map((c: any) => ({
+                            competitionId: c.competitionId,
+                            competitionTypeId: c.competitionTypeId ?? c.typeId ?? null,
                             name: c.competitionName || 'Unknown',
                             games: c.games || 0,
                             subApps: c.gamesAsSubstitute || 0,
