@@ -189,7 +189,6 @@ export class HomeComponent implements OnInit, OnDestroy {
         },
         error: (err) => console.error('Error loading current season:', err)
       });
-
   }
 
   private loadPlayerStats(teamId: number, seasonNumber: number): void {
