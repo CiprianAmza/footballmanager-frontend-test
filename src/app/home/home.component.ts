@@ -63,27 +63,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   // Board requests (GET /game/boardRequests/{teamId}): BoardRequest entity
   boardRequests: any[] = [];
 
-  // Team Talk (expanded)
-  teamTalkUsed: boolean = false;
-  teamTalkResult: string = '';
-  teamTalkLoading: boolean = false;
-  teamTalkPlayerReactions: any[] = [];
-  showPlayerReactions: boolean = false;
-  teamTalkPhase: string = 'PRE_MATCH';
-  teamTalkPhases: string[] = ['PRE_MATCH', 'HALF_TIME', 'POST_MATCH'];
-  matchContext: string = '';
-  teamTalkOptions: any[] = [];
-  loadingTalkOptions: boolean = false;
-  phasesUsed: Set<string> = new Set();
-
-  // Individual Player Talks
-  showIndividualTalk: boolean = false;
-  individualTalkOptions: any[] = [];
-  individualTalkLoading: boolean = false;
-  individualTalkResult: string = '';
-  selectedTalkPlayerId: number | null = null;
-  squadPlayers: any[] = [];
-
   // Finance summary
   transferBudget: number = 0;
   totalFinances: number = 0;
@@ -211,8 +190,6 @@ export class HomeComponent implements OnInit, OnDestroy {
         error: (err) => console.error('Error loading current season:', err)
       });
 
-    // Reload team talk status
-    this.loadTeamTalkStatus();
   }
 
   private loadPlayerStats(teamId: number, seasonNumber: number): void {
@@ -319,147 +296,6 @@ export class HomeComponent implements OnInit, OnDestroy {
       case 'european_round': return 'EUROPE';
       default: return 'OTHER';
     }
-  }
-
-  loadTeamTalkStatus(): void {
-    this.http.get<any>(urlApp + '/competition/teamTalkStatus')
-      .subscribe({
-        next: (status) => {
-          this.teamTalkUsed = status.used;
-          this.phasesUsed = new Set();
-          if (status.used) this.phasesUsed.add('PRE_MATCH');
-        },
-        error: (err) => console.error('Error loading team talk status:', err)
-      });
-    this.loadSquadPlayers();
-    this.loadTeamTalkOptions();
-    this.loadIndividualTalkOptions();
-  }
-
-  loadSquadPlayers(): void {
-    const teamId = this.teamService.teamId;
-    this.http.get<any[]>(urlApp + `/tactic/getPlayers/${teamId}`).subscribe({
-      next: (data) => this.squadPlayers = data,
-      error: () => this.squadPlayers = []
-    });
-  }
-
-  setTeamTalkPhase(phase: string): void {
-    this.teamTalkPhase = phase;
-    this.teamTalkResult = '';
-    this.teamTalkPlayerReactions = [];
-    this.showPlayerReactions = false;
-    this.loadTeamTalkOptions();
-  }
-
-  loadTeamTalkOptions(): void {
-    this.loadingTalkOptions = true;
-    const contextParam = this.matchContext ? `?matchContext=${this.matchContext}` : '';
-    this.http.get<any[]>(urlApp + `/competition/teamTalkOptions/${this.teamTalkPhase}${contextParam}`)
-      .subscribe({
-        next: (options) => {
-          this.teamTalkOptions = options;
-          this.loadingTalkOptions = false;
-        },
-        error: () => {
-          this.teamTalkOptions = [];
-          this.loadingTalkOptions = false;
-        }
-      });
-  }
-
-  setMatchContext(context: string): void {
-    this.matchContext = context;
-    this.loadTeamTalkOptions();
-  }
-
-  giveExpandedTeamTalk(type: string): void {
-    if (this.phasesUsed.has(this.teamTalkPhase) || this.teamTalkLoading) return;
-
-    this.teamTalkLoading = true;
-    this.teamTalkResult = '';
-    this.teamTalkPlayerReactions = [];
-    this.showPlayerReactions = false;
-
-    this.http.post<any>(urlApp + '/competition/teamTalkExpanded', {
-      phase: this.teamTalkPhase,
-      type,
-      matchContext: this.matchContext || null
-    }).subscribe({
-      next: (response) => {
-        this.teamTalkLoading = false;
-        if (response.success) {
-          this.phasesUsed.add(this.teamTalkPhase);
-          if (this.teamTalkPhase === 'PRE_MATCH') this.teamTalkUsed = true;
-          this.teamTalkResult = response.message;
-          this.teamTalkPlayerReactions = response.playerReactions || [];
-        } else {
-          this.teamTalkResult = response.message;
-        }
-      },
-      error: (err) => {
-        this.teamTalkLoading = false;
-        this.teamTalkResult = 'Failed to deliver team talk.';
-        console.error('Error giving team talk:', err);
-      }
-    });
-  }
-
-  togglePlayerReactions(): void {
-    this.showPlayerReactions = !this.showPlayerReactions;
-  }
-
-  getPhaseLabel(phase: string): string {
-    switch (phase) {
-      case 'PRE_MATCH': return 'Pre-Match';
-      case 'HALF_TIME': return 'Half-Time';
-      case 'POST_MATCH': return 'Post-Match';
-      default: return phase;
-    }
-  }
-
-  getReactionClass(reaction: string): string {
-    switch (reaction) {
-      case 'Fired Up':
-      case 'Motivated': return 'reaction-positive';
-      case 'Pleased': return 'reaction-ok';
-      case 'Neutral': return 'reaction-neutral';
-      case 'Unhappy':
-      case 'Furious': return 'reaction-negative';
-      default: return '';
-    }
-  }
-
-  // Individual Player Talks
-  loadIndividualTalkOptions(): void {
-    this.http.get<any[]>(urlApp + '/competition/playerTalkOptions').subscribe({
-      next: (options) => this.individualTalkOptions = options,
-      error: () => this.individualTalkOptions = []
-    });
-  }
-
-  giveIndividualTalk(type: string): void {
-    if (!this.selectedTalkPlayerId || this.individualTalkLoading) return;
-    this.individualTalkLoading = true;
-    this.individualTalkResult = '';
-
-    this.http.post<any>(urlApp + '/competition/playerTalk', {
-      playerId: this.selectedTalkPlayerId,
-      type
-    }).subscribe({
-      next: (response) => {
-        this.individualTalkLoading = false;
-        if (response.success) {
-          this.individualTalkResult = response.message;
-        } else {
-          this.individualTalkResult = response.message;
-        }
-      },
-      error: () => {
-        this.individualTalkLoading = false;
-        this.individualTalkResult = 'Failed to deliver individual talk.';
-      }
-    });
   }
 
   getFormClass(char: string): string {
