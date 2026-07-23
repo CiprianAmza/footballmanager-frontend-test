@@ -97,9 +97,23 @@ export class GameSetupComponent implements OnInit {
       },
       error: (err) => {
         console.error('Setup error:', err);
-        this.error = 'Failed to save setup. Please try again.';
+        this.error = this.setupErrorMessage(err);
         this.submitting = false;
       }
     });
+  }
+
+  private setupErrorMessage(err: any): string {
+    const backendError = err?.error?.error;
+    if (typeof backendError === 'string' && backendError.trim()) {
+      return backendError.trim();
+    }
+    if (typeof err?.error === 'string' && err.error.trim()) {
+      return err.error.trim();
+    }
+    if (err?.status === 401) {
+      return 'Your session has expired. Please log in again.';
+    }
+    return 'Failed to save setup. Please try again.';
   }
 }
