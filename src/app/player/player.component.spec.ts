@@ -42,6 +42,23 @@ describe('PlayerComponent Phase 1A', () => {
     expect(component.teamLabel).toBe('Orbit FC');
   });
 
+  it('shows the Stay Forward badge only from the explicit API flag', () => {
+    const component = createComponent(() => of({}));
+
+    for (const playerView of [
+      {},
+      { name: 'Kvekrpur' },
+      { name: 'Kvekrpur', stayForward: false },
+      { name: 'Kvekrpur', stayForward: null }
+    ]) {
+      component.playerView = playerView;
+      expect(component.hasStayForwardTrait()).toBeFalse();
+    }
+
+    component.playerView = { name: 'Kvekrpur', stayForward: true };
+    expect(component.hasStayForwardTrait()).toBeTrue();
+  });
+
   it('exposes loading success and retryable not-found states', () => {
     const success = createComponent((url: string) => {
       if (url.includes('/humans/7')) return of({ id: 7, name: 'Keeper', teamId: 1, position: 'GK' });

@@ -198,6 +198,10 @@ export class PlayerComponent implements OnInit {
         return this.teamRoute ? (this.playerView?.teamName || 'Unknown Club') : 'No club';
     }
 
+    hasStayForwardTrait(): boolean {
+        return this.playerView?.stayForward === true;
+    }
+
     competitionLink(competition: { competitionId: number; competitionTypeId?: number | null }): any[] {
         return competition.competitionTypeId === 4 || competition.competitionTypeId === 5
             ? ['/european-rounds', competition.competitionId, this.teamService.currentSeason]

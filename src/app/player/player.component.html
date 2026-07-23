@@ -52,6 +52,9 @@
           <span class="nation-text" *ngIf="playerView.nationName"> · {{ playerView.nationName }}</span>
           <a class="fm-link card-link" [routerLink]="['/card', playerView.id]" style="margin-left:10px;">🎴 Card</a>
         </div>
+        <div class="profile-trait-badges" *ngIf="hasStayForwardTrait()">
+          <span class="profile-trait-badge stay-forward-badge">Stay Forward</span>
+        </div>
         <div class="major-award-badges"
              *ngIf="majorAwardSummary.goldenBoots > 0 || majorAwardSummary.ballonDors > 0">
           <a class="major-award-badge golden-boot-badge" routerLink="/awards/golden-boot"

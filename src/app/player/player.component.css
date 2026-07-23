@@ -36,6 +36,32 @@
 
 .bottom-row { font-size: 1.1em; color: #dcdcdc; font-weight: 300; }
 
+.profile-trait-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.profile-trait-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 29px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  color: #fff;
+  font-size: .74rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .22);
+}
+
+.stay-forward-badge {
+  background: linear-gradient(135deg, #0f766e, #2563eb);
+}
+
 .major-award-badges {
   display: flex;
   flex-wrap: wrap;
