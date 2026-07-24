@@ -285,6 +285,68 @@ describe('Tactics4Component chairman mandate mode', () => {
     }
   });
 
+  it('materializes persistent locks for different prerequisite response orders', () => {
+    const orders = [
+      ['players', 'formations', 'mandate', 'layout'],
+      ['formations', 'layout', 'players', 'mandate']
+    ];
+    for (const order of orders) {
+      const built = build('chairman-mandate');
+      const players = new Subject<any[]>();
+      const formations = new Subject<any[]>();
+      const layout = new Subject<any[]>();
+      let playerRequests = 0;
+      let layoutRequests = 0;
+      built.http.get.and.callFake((url: string) => {
+        if (url.includes('/tactic/getPlayers/')) return playerRequests++ === 0 ? players.asObservable() : of([]);
+        if (url.includes('/tactic/getAllPossibleTactics/')) return formations.asObservable();
+        if (url.includes('/tactic/formationLayout/')) return layoutRequests++ === 0 ? layout.asObservable() : of([{ index: 1 }]);
+        return of({});
+      });
+      const mandate = new Subject<any>();
+      built.mandateApi.tacticalMandate.and.returnValue(mandate.asObservable());
+      built.component.ngOnInit();
+      if (order[0] === 'layout') built.component.setFormationIndices('442');
+      for (const prerequisite of order) {
+        if (prerequisite === 'players') players.next([{ id: 42, name: 'Player', rating: 10, position: 'MC' }]);
+        if (prerequisite === 'formations') formations.next([{ tacticName: '442', totalRating: 0 }]);
+        if (prerequisite === 'layout') {
+          if (layoutRequests === 0) built.component.setFormationIndices('442');
+          layout.next([{ index: 1 }]);
+        }
+        if (prerequisite === 'mandate') mandate.next({ teamId: 10, requiredFormation: '442', lockedSlots: [{ positionIndex: 1, playerId: 42 }], version: 1 });
+      }
+      expect(built.component.fieldPositions[1].player?.id).toBe(42);
+      expect(built.component.chairmanInvalidLocks).toEqual([]);
+    }
+  });
+
+  it('reconciles and materializes locks after Players failure and retry', () => {
+    const built = build('chairman-mandate');
+    const playersFailed = new Subject<any[]>();
+    const playersRetry = new Subject<any[]>();
+    const formations = new Subject<any[]>();
+    const mandate = new Subject<any>();
+    let playerRequests = 0;
+    built.http.get.and.callFake((url: string) => {
+      if (url.includes('/tactic/getPlayers/')) return (playerRequests++ === 0 ? playersFailed : playersRetry).asObservable();
+      if (url.includes('/tactic/getAllPossibleTactics/')) return formations.asObservable();
+      if (url.includes('/tactic/formationLayout/')) return of([{ index: 1 }]);
+      return of({});
+    });
+    built.mandateApi.tacticalMandate.and.returnValue(mandate.asObservable());
+    built.component.ngOnInit();
+    formations.next([{ tacticName: '442', totalRating: 0 }]);
+    mandate.next({ teamId: 10, requiredFormation: '442', lockedSlots: [{ positionIndex: 1, playerId: 42 }], version: 1 });
+    playersFailed.error(new Error('temporary players failure'));
+    expect(built.component.playersError).toContain('Players could not be loaded');
+
+    built.component.retryPlayers();
+    playersRetry.next([{ id: 42, name: 'Player', rating: 10, position: 'MC' }]);
+    expect(built.component.fieldPositions[1].player?.id).toBe(42);
+    expect(built.component.chairmanInvalidLocks).toEqual([]);
+  });
+
   it('represents a loaded version-zero mandate as an explicit empty state', () => {
     const built = build('chairman-mandate');
     built.component.chairmanModeRequested = true;

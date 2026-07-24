@@ -70,6 +70,8 @@ describe('AppComponent', () => {
     auth.careerRole = 'MANAGER';
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelectorAll('.continue-btn').length).toBe(1);
+    expect(root.querySelectorAll('.fast-forward-btn').length).toBe(1);
     expect(root.querySelector('.continue-btn')?.textContent).toContain('CONTINUE');
     expect(root.querySelector('.fast-forward-btn')?.textContent).toContain('FAST FORWARD');
     expect(root.querySelector('.chairman-save-load')).toBeNull();
@@ -80,6 +82,8 @@ describe('AppComponent', () => {
     auth.careerRole = 'CHAIRMAN';
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelectorAll('.continue-btn').length).toBe(1);
+    expect(root.querySelectorAll('.fast-forward-btn').length).toBe(1);
     expect(root.querySelector('.continue-btn')?.textContent).toContain('CONTINUE');
     expect(root.querySelector('.fast-forward-btn')?.textContent).toContain('FAST FORWARD');
     expect(root.querySelector('.chairman-save-load')?.textContent).toContain('Save Game');
