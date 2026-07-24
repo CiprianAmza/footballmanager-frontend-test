@@ -109,6 +109,8 @@ export class Tactics4Component implements OnInit, OnChanges {
   chairmanError = '';
   chairmanSuccess = '';
   chairmanReadOnly = false;
+  chairmanLoaded = false;
+  chairmanControlDenied = false;
   chairmanInvalidLocks: TacticalMandateSlot[] = [];
   private chairmanRequestId = 0;
   private chairmanSubscription?: Subscription;
@@ -148,6 +150,10 @@ export class Tactics4Component implements OnInit, OnChanges {
   get chairmanFormationOptions(): { key: string; label: string }[] {
     return this.formationOptions.length ? this.formationOptions
       : Object.keys(this.PRETTY).map(key => ({ key, label: this.PRETTY[key] }));
+  }
+
+  get chairmanHasRestrictions(): boolean {
+    return this.chairmanRequiredFormation !== null || this.chairmanLocks.length > 0;
   }
 
   // ... (restul variabilelor de state rămân la fel) ...
@@ -360,6 +366,13 @@ export class Tactics4Component implements OnInit, OnChanges {
     this.chairmanError = preserveError;
     this.chairmanSuccess = '';
     this.chairmanReadOnly = true;
+    this.chairmanLoaded = false;
+    this.chairmanControlDenied = false;
+    this.chairmanMandate = null;
+    this.chairmanRequiredFormation = null;
+    this.chairmanFormationEnabled = false;
+    this.chairmanLocks = [];
+    this.chairmanInvalidLocks = [];
     this.chairmanSubscription = forkJoin({
       players: this.http.get<Player[]>(urlApp + `/tactic/getPlayers/${this.teamId}`),
       tactics: this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/getAllPossibleTactics/${this.teamId}`),
@@ -382,13 +395,17 @@ export class Tactics4Component implements OnInit, OnChanges {
         this.applyChairmanLocksToField();
         this.chairmanLoading = false;
         this.chairmanReadOnly = false;
+        this.chairmanLoaded = true;
+        this.chairmanControlDenied = false;
         this.chairmanError = preserveError;
       },
       error: error => {
         if (generation !== this.loadGeneration || requestId !== this.chairmanRequestId) return;
         this.chairmanLoading = false;
+        this.chairmanReadOnly = true;
+        this.chairmanLoaded = false;
         this.chairmanError = this.mapChairmanError(error);
-        this.chairmanReadOnly = this.isControlError(error);
+        this.chairmanControlDenied = this.isControlError(error);
       }
     });
   }
@@ -550,6 +567,14 @@ export class Tactics4Component implements OnInit, OnChanges {
     return this.chairmanLocks.some(lock => lock.playerId === playerId);
   }
 
+  unlockChairmanLock(positionIndex: number, event?: Event): void {
+    event?.stopPropagation();
+    if (!this.isChairmanMode || !this.canEdit) return;
+    this.chairmanLocks = this.chairmanLocks.filter(lock => lock.positionIndex !== positionIndex);
+    this.updateChairmanInvalidLocks();
+    this.chairmanError = '';
+  }
+
   isChairmanDragLocked(positionIndex: number, playerId?: number): boolean {
     return this.isChairmanSlotLocked(positionIndex) || (!!playerId && this.isChairmanPlayerLocked(playerId));
   }
@@ -600,7 +625,10 @@ export class Tactics4Component implements OnInit, OnChanges {
         if (this.errorCode(error) === 'TACTICAL_MANDATE_STALE') {
           this.loadChairmanMandateData(this.loadGeneration, this.mapChairmanError(error));
         }
-        if (this.isControlError(error)) this.chairmanReadOnly = true;
+        if (this.isControlError(error)) {
+          this.chairmanReadOnly = true;
+          this.chairmanControlDenied = true;
+        }
       }
     });
   }
@@ -750,9 +778,32 @@ export class Tactics4Component implements OnInit, OnChanges {
       this.chairmanError = '';
       this.chairmanSuccess = '';
       this.chairmanReadOnly = this.isChairmanMode;
+      this.chairmanLoaded = false;
+      this.chairmanControlDenied = false;
       this.managerTacticSnapshot = null;
       this.bestPossibleTacticSnapshot = null;
+      this.managerName = 'Manager';
+      this.managerTacticSource = 'MANAGER_PREFERENCE';
+      this.tacticalViewMode = 'manager';
+      this.selectedTactic = '442';
+      this.selectedOptions = {
+        mentality: 'Balanced', possession: 'Standard', passing: 'Normal', tempo: 'Standard',
+        timeWasting: 'Sometimes', defensiveLine: 'Standard', pressing: 'Low', width: 'Balanced',
+        dribbling: 'Standard', foulFrequency: 'Normal', foulHardness: 'Medium',
+        tempoFragmentation: 'Normal', widePlay: 'Shoot', transition: 'Balanced'
+      };
+      this.teamColor1 = '#d63031';
+      this.teamColor2 = '#ffffff';
+      this.teamRatingMin = 0;
+      this.teamRatingMax = 0;
+      this.penaltyTakerId = null;
+      this.freeKickTakerId = null;
+      this.cornerTakerLeftId = null;
+      this.cornerTakerRightId = null;
+      this.suggestedSetPieces = null;
+      this.activeModal = null;
       this.selectedCard = null;
+      this.cardLoading = false;
   }
   isPlayerSelected(playerId: number): boolean { return this.selectedPlayers.has(playerId); }
   askAssistant(): void {

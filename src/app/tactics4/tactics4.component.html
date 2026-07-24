@@ -68,17 +68,23 @@
       {{ chairmanSaving ? 'SAVING…' : 'SAVE CHAIRMAN MANDATE' }}
     </button>
     <span class="mandate-version">Version {{ chairmanMandate?.version ?? 0 }}</span>
-    <p class="mandate-error" *ngIf="chairmanError">{{ chairmanError }}</p>
+    <p class="mandate-error" *ngIf="chairmanError && !chairmanControlDenied">{{ chairmanError }}</p>
+    <p class="mandate-error" *ngIf="chairmanError && chairmanControlDenied">{{ chairmanError }}</p>
     <p class="mandate-success" *ngIf="chairmanSuccess">{{ chairmanSuccess }}</p>
     <p class="mandate-loading" *ngIf="chairmanLoading">Loading chairman mandate…</p>
-    <p class="mandate-empty" *ngIf="!chairmanLoading && !chairmanError && !chairmanMandate">No mandate data is available.</p>
+    <p class="mandate-empty" *ngIf="chairmanLoaded && !chairmanLoading && !chairmanError && !chairmanHasRestrictions">No tactical restrictions are set.</p>
+    <p class="mandate-loaded" *ngIf="chairmanLoaded && chairmanHasRestrictions && !chairmanLoading">Tactical restrictions are active.</p>
     <button class="lab-btn ghost" type="button" *ngIf="chairmanError && !chairmanLoading"
             (click)="retryChairmanMandate()">RETRY</button>
-    <p class="mandate-readonly" *ngIf="chairmanReadOnly">This club is no longer controlled by you. Editing is disabled.</p>
+    <p class="mandate-readonly" *ngIf="chairmanControlDenied">This club is no longer controlled by you. Editing is disabled.</p>
     <div class="mandate-lock-summary">
       <strong>Locked players ({{ chairmanLocks.length }}/11)</strong>
       <span *ngIf="!chairmanLocks.length">None</span>
-      <span *ngFor="let lock of chairmanLocks">{{ chairmanLockLabel(lock) }}</span>
+      <span class="mandate-lock-row" *ngFor="let lock of chairmanLocks">
+        {{ chairmanLockLabel(lock) }}
+        <button *ngIf="canEdit" type="button" class="lab-btn ghost mandate-unlock"
+                (click)="unlockChairmanLock(lock.positionIndex, $event)">UNLOCK</button>
+      </span>
     </div>
   </section>
 

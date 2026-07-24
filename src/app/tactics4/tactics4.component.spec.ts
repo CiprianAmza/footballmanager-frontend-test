@@ -205,16 +205,95 @@ describe('Tactics4Component chairman mandate mode', () => {
     expect(component.managerName).toBe('new');
   });
 
-  it('leaves Chairman loading read-only on GET failure and retries exactly once', () => {
+  it('resets manager context before switching to Chairman and ignores late manager data', () => {
+    const mode$ = new Subject<any>();
+    const managerPlayers = new Subject<any[]>();
+    const managerTactics = new Subject<any[]>();
+    const managerView = new Subject<any>();
+    const http = jasmine.createSpyObj('HttpClient', ['get', 'post']);
+    http.get.and.callFake((url: string) => {
+      if (url.includes('/tactic/getPlayers/20')) return managerPlayers.asObservable();
+      if (url.includes('/tactic/getAllPossibleTactics/20')) return managerTactics.asObservable();
+      if (url.includes('/tactic/teamView/20')) return managerView.asObservable();
+      if (url.includes('/tactic/getPlayers/30')) return of([{ id: 30, name: 'Chairman player', rating: 90, position: 'GK' }]);
+      if (url.includes('/tactic/getAllPossibleTactics/30')) return of([{ tacticName: '433', totalRating: 0 }]);
+      if (url.includes('/tactic/formationLayout/433')) return of([]);
+      return of({});
+    });
+    const mandateApi = jasmine.createSpyObj('ChairmanClubService', ['tacticalMandate', 'saveTacticalMandate']);
+    mandateApi.tacticalMandate.and.returnValue(of({ teamId: 30, requiredFormation: '433', lockedSlots: [], version: 1 }));
+    const route = { queryParamMap: mode$.asObservable(), params: of(convertToParamMap({ teamId: '20' })) } as any;
+    const component = new Tactics4Component(route, http, { teamId: 20 } as any,
+      { tierColor: () => '#fff' } as any, { getLockState: () => of({}) } as any,
+      { isAuthenticated: false } as any, { isLoggedIn: true, careerRole: 'CHAIRMAN', chairmanEnabled: true } as any,
+      mandateApi);
+    component.teamId = 20;
+    component.ngOnInit();
+    mode$.next(convertToParamMap({}));
+    component.teamId = 30;
+    mode$.next(convertToParamMap({ mode: 'chairman-mandate' }));
+
+    managerPlayers.next([{ id: 20, name: 'late manager player', rating: 99, position: 'GK' }]);
+    managerPlayers.complete(); managerTactics.next([{ tacticName: '442', totalRating: 0 }]); managerTactics.complete();
+    managerView.next({ managerName: 'late manager' }); managerView.complete();
+
+    expect(component.players.map(player => player.id)).toEqual([30]);
+    expect(component.managerName).toBe('Manager');
+    expect(component.selectedTactic).toBe('433');
+    expect(component.chairmanMandate?.teamId).toBe(30);
+  });
+
+  it('keeps a technical GET failure read-only and retries before allowing versioned PUT', () => {
     const built = build('chairman-mandate');
     built.component.chairmanModeRequested = true;
     built.mandateApi.tacticalMandate.and.returnValues(
-      throwError(() => ({ error: { code: 'CLUB_NOT_FOUND', message: 'missing' } })),
-      of({ teamId: 10, requiredFormation: null, lockedSlots: [], version: 0 }));
-    built.component.chairmanReadOnly = true;
-    built.component.chairmanMandate = null;
-    built.component.retryChairmanMandate();
-    expect(built.mandateApi.tacticalMandate).toHaveBeenCalledTimes(1);
+      throwError(() => ({ status: 500, message: 'server down' })),
+      of({ teamId: 10, requiredFormation: null, lockedSlots: [], version: 7 }));
+    built.component.ngOnInit();
+
+    expect(built.component.chairmanMandate).toBeNull();
+    expect(built.component.chairmanReadOnly).toBeTrue();
+    expect(built.component.chairmanControlDenied).toBeFalse();
     expect(built.component.canEdit).toBeFalse();
+    built.component.saveChairmanMandate();
+    expect(built.mandateApi.saveTacticalMandate).not.toHaveBeenCalled();
+
+    built.component.retryChairmanMandate();
+    expect(built.mandateApi.tacticalMandate).toHaveBeenCalledTimes(2);
+    expect(built.component.chairmanMandate?.version).toBe(7);
+    expect(built.component.chairmanReadOnly).toBeFalse();
+    expect(built.component.canEdit).toBeTrue();
+    built.component.saveChairmanMandate();
+    expect(built.mandateApi.saveTacticalMandate).toHaveBeenCalledWith(10,
+      jasmine.objectContaining({ expectedVersion: 7 }));
+  });
+
+  it('represents a loaded version-zero mandate as an explicit empty state', () => {
+    const built = build('chairman-mandate');
+    built.component.chairmanModeRequested = true;
+    built.component.chairmanMandate = { teamId: 10, requiredFormation: null, lockedSlots: [], version: 0 } as any;
+    built.component.chairmanRequiredFormation = null;
+    built.component.chairmanLocks = [];
+    built.component.chairmanLoaded = true;
+    expect(built.component.chairmanHasRestrictions).toBeFalse();
+    expect(built.component.chairmanMandate).not.toBeNull();
+  });
+
+  it('unlocks an absent-player lock by position without changing other locks', () => {
+    const built = build('chairman-mandate');
+    built.component.chairmanModeRequested = true;
+    built.component.teamId = 10;
+    built.component.chairmanReadOnly = false;
+    built.component.chairmanMandate = { teamId: 10, requiredFormation: null,
+      lockedSlots: [{ positionIndex: 5, playerId: 999 }, { positionIndex: 6, playerId: 7 }], version: 2 } as any;
+    built.component.chairmanLocks = [{ positionIndex: 5, playerId: 999 }, { positionIndex: 6, playerId: 7 }];
+    built.component.players = [{ id: 7, name: 'Other', rating: 70, position: 'MC' } as any];
+
+    expect(built.component.chairmanLockLabel({ positionIndex: 5, playerId: 999 })).toBe('Slot 5 · Player 999');
+    built.component.unlockChairmanLock(5);
+    expect(built.component.chairmanLocks).toEqual([{ positionIndex: 6, playerId: 7 }]);
+    built.component.saveChairmanMandate();
+    expect(built.mandateApi.saveTacticalMandate).toHaveBeenCalledWith(10,
+      jasmine.objectContaining({ lockedSlots: [{ positionIndex: 6, playerId: 7 }] }));
   });
 });
