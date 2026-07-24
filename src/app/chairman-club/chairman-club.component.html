@@ -198,13 +198,20 @@
           </div>
           <article class="panel treasury-panel">
             <h2>Controlled club treasury</h2>
+            <div class="treasury-balances">
+              <span>Personal available cash <strong>{{ money(dashboard.personalAvailableCash?.amount) }}</strong></span>
+              <span>Club treasury <strong>{{ money(dashboard.treasury.balance.amount) }}</strong></span>
+              <span *ngIf="direction === 'WITHDRAWAL'">Maximum distributable withdrawal <strong>{{ money(dashboard.treasury.distributableCash.amount) }}</strong></span>
+            </div>
             <div class="transfer-form">
-              <select [(ngModel)]="direction" aria-label="Transfer direction"><option value="INJECTION">Injection</option><option value="WITHDRAWAL">Withdrawal</option></select>
+              <select [(ngModel)]="direction" aria-label="Transfer direction"><option value="INJECTION">Inject funds into club</option><option value="WITHDRAWAL">Withdraw distributable funds</option></select>
               <input type="number" min="1" step="1" [(ngModel)]="amount" placeholder="Amount" aria-label="Transfer amount">
-              <button type="button" (click)="transfer()" [disabled]="inFlight !== null || dashboard.treasury.withdrawalRestricted && direction === 'WITHDRAWAL'">
-                {{ inFlight === 'transfer' ? 'Posting…' : 'Post mirrored transfer' }}
+              <button type="button" (click)="confirmTransfer()" [disabled]="inFlight !== null || dashboard.treasury.withdrawalRestricted && direction === 'WITHDRAWAL'">
+                {{ inFlight === 'transfer' ? 'Posting…' : (direction === 'INJECTION' ? 'Inject funds into club' : 'Withdraw distributable funds') }}
               </button>
             </div>
+            <p class="transfer-confirmation" *ngIf="pendingTransferConfirmation">{{ pendingTransferConfirmation }}</p>
+            <p class="notice error" *ngIf="actionError && inFlight !== 'quote'">{{ actionError }}</p>
           </article>
         </ng-container>
       </ng-container>

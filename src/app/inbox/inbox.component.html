@@ -8,7 +8,7 @@
         <button class="mark-all-btn" (click)="markAllRead()" title="Mark all as read">Mark all read</button>
       </div>
       <div class="filter-bar">
-        <button *ngFor="let cat of categories | slice:0:(chairmanMode ? 1 : categories.length)"
+        <button *ngFor="let cat of categories"
                 class="filter-btn"
                 [class.active]="activeFilter === cat"
                 [ngClass]="'filter-' + cat"

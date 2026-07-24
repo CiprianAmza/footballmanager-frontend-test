@@ -37,6 +37,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   dashboardError = '';
   actionError = '';
   message = '';
+  pendingTransferConfirmation = '';
   inFlight: 'quote' | 'execute' | 'transfer' | null = null;
 
   private requestedTeamId: number | null = null;
@@ -238,6 +239,17 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
         if (this.isCurrentAction(requestId, teamId)) this.fail(error, action);
       }
     });
+  }
+
+  confirmTransfer(): void {
+    const amount = Number(this.amount);
+    if (!this.selectedClub || !this.dashboard || !Number.isSafeInteger(amount) || amount <= 0) return;
+    const destination = this.direction === 'INJECTION' ? this.selectedClub.name : 'your personal account';
+    this.pendingTransferConfirmation = `${this.direction === 'INJECTION' ? 'Inject' : 'Withdraw'} ${this.money(amount)} ${this.direction === 'INJECTION' ? 'into' : 'from'} ${destination}?`;
+    if (typeof window !== 'undefined' && window.confirm(this.pendingTransferConfirmation)) {
+      this.pendingTransferConfirmation = '';
+      this.transfer();
+    }
   }
 
   money(value: number | undefined): string {
@@ -461,7 +473,9 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   private typedActionError(error: any): string {
     const code = this.errorCode(error);
     const messages: { [key: string]: string } = {
-      INSUFFICIENT_FUNDS: 'Insufficient personal cash for this takeover.',
+      INSUFFICIENT_FUNDS: this.inFlight === 'transfer'
+        ? (this.direction === 'INJECTION' ? 'Insufficient personal cash to inject this amount.' : 'The club does not have enough distributable funds.')
+        : 'Insufficient personal cash for this takeover.',
       TAKEOVER_QUOTE_STALE: 'The club valuation or ownership changed. Request a new quote.',
       TAKEOVER_QUOTE_EXPIRED: 'The takeover quote expired. Request a new quote.',
       TAKEOVER_QUOTE_USED: 'This takeover quote has already been used. Request a new quote.',

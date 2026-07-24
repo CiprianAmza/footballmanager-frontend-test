@@ -69,6 +69,7 @@ export interface ChairmanClubDashboard {
   capTable: ClubCapTableView;
   treasury: ClubTreasuryView;
   controlledByPrincipal: boolean;
+  personalAvailableCash?: Money;
 }
 
 export interface ChairmanCommandCentreView {

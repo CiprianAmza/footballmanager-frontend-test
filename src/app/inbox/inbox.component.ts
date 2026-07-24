@@ -38,7 +38,9 @@ export class InboxComponent implements OnInit {
   error = '';
   get chairmanMode(): boolean { return this.authService.careerRole === 'CHAIRMAN'; }
 
-  categories: string[] = ['all', 'JOB_OFFER', 'CAREER', 'match_result', 'league_news', 'transfer', 'european_prize', 'board', 'discipline', 'season_end', 'european'];
+  categories: string[] = ['all', 'JOB_OFFER', 'CAREER', 'match_result', 'league_news', 'transfer', 'european_prize', 'board', 'discipline', 'season_end', 'european',
+    'CHAIRMAN_WELCOME', 'CONTROL_ACQUIRED', 'TREASURY_TRANSFER', 'TACTICAL_MANDATE_UPDATED',
+    'TRADER_ADVISER_HIRED', 'TRADER_ADVICE_AVAILABLE', 'CONTROLLED_CLUB_MATCH_RESULT'];
 
   constructor(
     private http: HttpClient,
@@ -200,6 +202,13 @@ export class InboxComponent implements OnInit {
       case 'facility': return 'Facility';
       case 'JOB_OFFER': return 'Job Offer';
       case 'CAREER': return 'Career';
+      case 'CHAIRMAN_WELCOME': return 'Chairman Welcome';
+      case 'CONTROL_ACQUIRED': return 'Control Acquired';
+      case 'TREASURY_TRANSFER': return 'Treasury Transfer';
+      case 'TACTICAL_MANDATE_UPDATED': return 'Tactical Mandate';
+      case 'TRADER_ADVISER_HIRED': return 'Trader Adviser Hired';
+      case 'TRADER_ADVICE_AVAILABLE': return 'Trader Advice';
+      case 'CONTROLLED_CLUB_MATCH_RESULT': return 'Controlled Club Match';
       default: return category;
     }
   }

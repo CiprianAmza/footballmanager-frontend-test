@@ -77,6 +77,7 @@
     <button class="lab-btn ghost" type="button" *ngIf="chairmanError && !chairmanLoading"
             (click)="retryChairmanMandate()">RETRY</button>
     <p class="mandate-error" *ngIf="playersError">{{ playersError }}</p>
+    <button class="lab-btn ghost" type="button" *ngIf="playersError" (click)="retryPlayers()">RETRY PLAYERS</button>
     <p class="mandate-error" *ngIf="formationsError">{{ formationsError }}</p>
     <button class="lab-btn ghost" type="button" *ngIf="formationsError" (click)="retryFormations()">RETRY FORMATIONS</button>
     <p class="mandate-readonly" *ngIf="chairmanControlDenied">This club is no longer controlled by you. Editing is disabled.</p>
