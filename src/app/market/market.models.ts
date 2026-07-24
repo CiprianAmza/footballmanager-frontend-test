@@ -2,11 +2,13 @@ import { Money } from '../economy/economy.models';
 
 export type MarketInstrumentType = 'COMPANY' | 'CLUB';
 export type MarketTradeSide = 'BUY' | 'SELL';
+export type MarketRiskClass = 'SAFE_COMPANY' | 'SPECULATIVE' | 'CLUB_EQUITY';
+export type AdviceAction = 'BUY' | 'SELL' | 'HOLD';
 
 export interface MarketInstrumentView {
   id: number; code: string; type: MarketInstrumentType; teamId?: number;
   name: string; price: Money; totalSupply: number; availableSupply: number;
-  dailyLimitBps: number; weeklyLimitBps: number; algorithmVersion: string;
+  riskClass: MarketRiskClass; dailyLimitBps: number; weeklyLimitBps: number; algorithmVersion: string;
   underlyingClubValuation?: Money; clubValuationVersion?: string;
 }
 export interface MarketPriceView {
@@ -15,7 +17,7 @@ export interface MarketPriceView {
 }
 export interface PortfolioPositionView {
   instrumentId: number; code: string; type: MarketInstrumentType; teamId?: number;
-  name: string; quantity: number; costBasis: Money; marketValue: Money; unrealizedGain: Money;
+  name: string; riskClass: MarketRiskClass; quantity: number; costBasis: Money; marketValue: Money; unrealizedGain: Money;
 }
 export interface PortfolioView {
   positions: PortfolioPositionView[]; totalCostBasis: Money; marketValue: Money;
@@ -29,4 +31,27 @@ export interface MarketTradeView {
 }
 export interface MarketTradePage {
   content: MarketTradeView[]; page: number; size: number; totalElements: number; totalPages: number;
+}
+export interface MarketGameDateView { season: number; day: number; }
+export interface AdviserHireOptionView {
+  optionCode: string; adviserName: string; skill: number; reputation: number;
+  salaryPerDay: Money; durationDays: number; modelVersion: string;
+}
+export interface AdviserContractView {
+  contractId: number; adviserCode: string; adviserName: string; skill: number; reputation: number;
+  salaryPerDay: Money; startDate: MarketGameDateView; endDate: MarketGameDateView;
+  status: string; terminationReason?: string | null; modelVersion: string; replayed: boolean;
+}
+export interface AdviserDashboardView {
+  currentDate: MarketGameDateView; currentContract?: AdviserContractView | null; hireOptions: AdviserHireOptionView[];
+}
+export interface AdviceView {
+  recommendationId: number; instrumentId: number; instrumentCode: string; instrumentName: string;
+  action: AdviceAction; riskClass: MarketRiskClass; season: number; day: number; horizonDays: number;
+  confidence: number; risk: number; trailingReturn: number; observedVolatility: number;
+  explanation: string; modelVersion: string; replayed: boolean;
+}
+export interface MarketApiError {
+  code: string;
+  message: string;
 }

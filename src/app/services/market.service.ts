@@ -3,8 +3,8 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { urlApp } from '../app.component';
 import {
-  MarketInstrumentView, MarketPriceView, MarketTradePage, MarketTradeSide,
-  MarketTradeView, PortfolioView
+  AdviserContractView, AdviserDashboardView, AdviceView, MarketInstrumentView,
+  MarketPriceView, MarketTradePage, MarketTradeSide, MarketTradeView, PortfolioView
 } from '../market/market.models';
 
 @Injectable({ providedIn: 'root' })
@@ -28,5 +28,15 @@ export class MarketService {
         idempotencyKey: string): Observable<MarketTradeView> {
     return this.http.post<MarketTradeView>(urlApp + '/api/me/trades',
       { instrumentId, side, quantity, idempotencyKey });
+  }
+  adviserDashboard(): Observable<AdviserDashboardView> {
+    return this.http.get<AdviserDashboardView>(urlApp + '/api/me/market-adviser');
+  }
+  hireAdviser(optionCode: string, idempotencyKey: string): Observable<AdviserContractView> {
+    return this.http.post<AdviserContractView>(urlApp + '/api/me/market-adviser/hire',
+      { optionCode, idempotencyKey });
+  }
+  requestAdvice(instrumentId: number): Observable<AdviceView> {
+    return this.http.post<AdviceView>(urlApp + `/api/market/instruments/${instrumentId}/advice`, {});
   }
 }

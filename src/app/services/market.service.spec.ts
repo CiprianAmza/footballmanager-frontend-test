@@ -24,6 +24,16 @@ describe('MarketService', () => {
     request.flush({});
   });
 
+  it('submits only server-owned adviser hire fields', () => {
+    service.hireAdviser('VETERAN', 'hire-key').subscribe();
+    const request = http.expectOne(urlApp + '/api/me/market-adviser/hire');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ optionCode: 'VETERAN', idempotencyKey: 'hire-key' });
+    expect(request.request.body.salaryPerDay).toBeUndefined();
+    expect(request.request.body.profileId).toBeUndefined();
+    request.flush({});
+  });
+
   it('uses market, portfolio, history and trade-history endpoints', () => {
     service.instruments().subscribe();
     http.expectOne(urlApp + '/api/market/instruments').flush([]);
@@ -36,5 +46,12 @@ describe('MarketService', () => {
     const trades = http.expectOne(request => request.url === urlApp + '/api/me/trades');
     expect(trades.request.params.get('page')).toBe('2'); expect(trades.request.params.get('size')).toBe('20');
     trades.flush({ content: [] });
+    service.adviserDashboard().subscribe();
+    http.expectOne(urlApp + '/api/me/market-adviser').flush({ hireOptions: [] });
+    service.requestAdvice(4).subscribe();
+    const advice = http.expectOne(urlApp + '/api/market/instruments/4/advice');
+    expect(advice.request.method).toBe('POST');
+    expect(advice.request.body).toEqual({});
+    advice.flush({});
   });
 });
