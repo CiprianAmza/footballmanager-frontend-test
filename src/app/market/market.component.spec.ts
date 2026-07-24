@@ -114,4 +114,67 @@ describe('MarketComponent', () => {
 
     expect(component.advice).toEqual(advice);
   });
+
+  it('ignores late history success and error for a previously selected instrument', () => {
+    const pendingA = new Subject<any[]>();
+    const pendingB = new Subject<any[]>();
+    const instrumentB: MarketInstrumentView = { ...instrument, id: 8, code: 'SPEC', riskClass: 'SPECULATIVE' };
+    market.history.and.callFake(id => id === 7 ? pendingA : pendingB);
+
+    component.showHistory(instrument);
+    component.showHistory(instrumentB);
+    pendingA.error({ error: { message: 'old failure' } });
+    expect(component.selected?.id).toBe(8);
+    expect(component.historyError).toBe('');
+
+    pendingB.next([{ season: 1, day: 2, closePrice: instrument.price, previousClose: instrument.price,
+      weeklyAnchorPrice: instrument.price, dailyChangeBps: 10, algorithmVersion: 'market-v1', id: 1 }]);
+    pendingB.complete();
+    expect(component.history.length).toBe(1);
+    expect(component.selected?.id).toBe(8);
+  });
+
+  it('ignores late advice responses for an instrument that is no longer selected', () => {
+    component.adviser = {
+      ...adviser,
+      currentContract: {
+        contractId: 1, adviserCode: 'VETERAN', adviserName: 'Veteran Trader',
+        skill: 90, reputation: 92, salaryPerDay: { amount: 20000, currency: 'EUR', minorUnitScale: 0 },
+        startDate: { season: 1, day: 1 }, endDate: { season: 2, day: 1 },
+        status: 'ACTIVE', terminationReason: null, modelVersion: 'advice-v1', replayed: false
+      }
+    };
+    const pending = new Subject<AdviceView>();
+    const instrumentB: MarketInstrumentView = { ...instrument, id: 8, code: 'SPEC', riskClass: 'SPECULATIVE' };
+    market.requestAdvice.and.returnValue(pending);
+    component.selected = instrument;
+
+    component.requestAdvice();
+    component.showHistory(instrumentB);
+    pending.next({
+      recommendationId: 10, instrumentId: 7, instrumentCode: 'SAFE', instrumentName: 'Safe Co',
+      action: 'BUY', riskClass: 'SAFE_COMPANY', season: 1, day: 12, horizonDays: 6,
+      confidence: 0.62, risk: 0.18, trailingReturn: 0.03, observedVolatility: 0.01,
+      explanation: 'Old response', modelVersion: 'advice-v1', replayed: false
+    });
+    pending.complete();
+
+    expect(component.selected?.id).toBe(8);
+    expect(component.advice).toBeNull();
+  });
+
+  it('refreshes selected state from the fresh market row and requests history once after trade', () => {
+    const original = { ...instrument };
+    const refreshed = { ...instrument, price: { amount: 120, currency: 'EUR', minorUnitScale: 0 }, availableSupply: 9 };
+    market.instruments.and.returnValues(of([original]), of([refreshed]));
+    market.history.calls.reset();
+    market.trade.and.returnValue(of({ side: 'BUY', quantity: 1, code: 'SAFE', unitPrice: instrument.price } as MarketTradeView));
+    component.selected = original;
+    component.quantities[7] = 1;
+
+    component.execute(original, 'BUY');
+
+    expect(market.history).toHaveBeenCalledTimes(1);
+    expect(component.selected).toEqual(refreshed);
+  });
 });

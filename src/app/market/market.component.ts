@@ -27,6 +27,8 @@ export class MarketComponent implements OnInit {
   flagOff = false;
   private readonly pendingKeys = new Map<string, string>();
   private readonly pendingHireKeys = new Map<string, string>();
+  private historyRequestId = 0;
+  private adviceRequestId = 0;
 
   constructor(private market: MarketService, private auth: AuthService) {}
 
@@ -57,12 +59,15 @@ export class MarketComponent implements OnInit {
     this.flagOff = false;
     this.market.instruments().subscribe({
       next: rows => {
+        const selectedId = this.selected?.id ?? rows[0]?.id ?? null;
         this.instruments = rows;
         rows.forEach(row => this.quantities[row.id] ||= 1);
-        if (!this.selected || !rows.some(row => row.id === this.selected?.id)) {
-          this.selected = rows[0] ?? null;
-          if (this.selected) this.showHistory(this.selected);
-          else this.history = [];
+        this.selected = selectedId === null ? null : rows.find(row => row.id === selectedId) ?? rows[0] ?? null;
+        if (this.selected) {
+          this.showHistory(this.selected);
+        } else {
+          this.history = [];
+          this.historyError = '';
         }
         this.loading = false;
       },
@@ -99,12 +104,15 @@ export class MarketComponent implements OnInit {
     this.historyLoading = true;
     this.historyError = '';
     this.advice = null;
+    const requestId = ++this.historyRequestId;
     this.market.history(instrument.id).subscribe({
       next: rows => {
+        if (requestId !== this.historyRequestId || this.selected?.id !== instrument.id) return;
         this.history = rows;
         this.historyLoading = false;
       },
       error: error => {
+        if (requestId !== this.historyRequestId || this.selected?.id !== instrument.id) return;
         this.historyLoading = false;
         this.historyError = this.readError(error)?.message || 'Price history could not be loaded.';
       }
@@ -127,7 +135,6 @@ export class MarketComponent implements OnInit {
         this.pendingKeys.delete(operation);
         this.message = `${result.side === 'BUY' ? 'Bought' : 'Sold'} ${result.quantity} ${result.code} shares at ${this.money(result.unitPrice.amount)}.`;
         this.load();
-        if (this.selected?.id === instrument.id) this.showHistory(instrument);
       },
       error: error => this.error = this.readError(error)?.message || 'Trade failed. Retry uses the same safe key.'
     });
@@ -156,11 +163,19 @@ export class MarketComponent implements OnInit {
     if (!this.selected || this.adviceLoading || !this.isChairman) return;
     this.adviceLoading = true;
     this.adviserError = '';
-    this.market.requestAdvice(this.selected.id).pipe(
+    const instrumentId = this.selected.id;
+    const requestId = ++this.adviceRequestId;
+    this.market.requestAdvice(instrumentId).pipe(
       finalize(() => this.adviceLoading = false)
     ).subscribe({
-      next: advice => this.advice = advice,
-      error: error => this.adviserError = this.readError(error)?.message || 'Advice request failed.'
+      next: advice => {
+        if (requestId !== this.adviceRequestId || this.selected?.id !== instrumentId) return;
+        this.advice = advice;
+      },
+      error: error => {
+        if (requestId !== this.adviceRequestId || this.selected?.id !== instrumentId) return;
+        this.adviserError = this.readError(error)?.message || 'Advice request failed.';
+      }
     });
   }
 
