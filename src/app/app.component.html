@@ -218,12 +218,6 @@
       <button class="job-offer-action">Review</button>
     </div>
 
-    <div *ngIf="simulationStopMessage" class="simulation-stop-banner" role="status" aria-live="polite">
-      <span class="simulation-stop-icon">!</span>
-      <span class="simulation-stop-text">{{ simulationStopMessage }}</span>
-      <button type="button" class="simulation-stop-dismiss" (click)="dismissSimulationStop()" aria-label="Dismiss message">×</button>
-    </div>
-
     <!-- Game Top Bar -->
     <ng-container *ngTemplateOutlet="chairmanGameWorldControls"></ng-container>
     <ng-container *ngTemplateOutlet="chairmanSimulationStatus"></ng-container>

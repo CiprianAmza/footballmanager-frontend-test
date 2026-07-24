@@ -67,6 +67,7 @@ describe('AppComponent', () => {
 
   it('renders the common simulation shell for a manager', () => {
     const fixture = TestBed.createComponent(AppComponent);
+    fixture.componentInstance.simulationStopMessage = 'Simulation stopped';
     auth.careerRole = 'MANAGER';
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
@@ -74,11 +75,13 @@ describe('AppComponent', () => {
     expect(root.querySelectorAll('.fast-forward-btn').length).toBe(1);
     expect(root.querySelector('.continue-btn')?.textContent).toContain('CONTINUE');
     expect(root.querySelector('.fast-forward-btn')?.textContent).toContain('FAST FORWARD');
+    expect(root.querySelectorAll('.simulation-stop-banner').length).toBe(1);
     expect(root.querySelector('.chairman-save-load')).toBeNull();
   });
 
   it('renders the common simulation shell plus Save/Load for a chairman', () => {
     const fixture = TestBed.createComponent(AppComponent);
+    fixture.componentInstance.simulationStopMessage = 'Simulation stopped';
     auth.careerRole = 'CHAIRMAN';
     fixture.detectChanges();
     const root = fixture.nativeElement as HTMLElement;
@@ -86,6 +89,7 @@ describe('AppComponent', () => {
     expect(root.querySelectorAll('.fast-forward-btn').length).toBe(1);
     expect(root.querySelector('.continue-btn')?.textContent).toContain('CONTINUE');
     expect(root.querySelector('.fast-forward-btn')?.textContent).toContain('FAST FORWARD');
+    expect(root.querySelectorAll('.simulation-stop-banner').length).toBe(1);
     expect(root.querySelector('.chairman-save-load')?.textContent).toContain('Save Game');
     expect(root.querySelector('.chairman-save-load')?.textContent).toContain('Load Game');
   });
