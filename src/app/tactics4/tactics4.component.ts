@@ -392,11 +392,11 @@ export class Tactics4Component implements OnInit, OnChanges {
     this.chairmanLocks = [];
     this.chairmanInvalidLocks = [];
     this.chairmanSubscription.add(this.http.get<Player[]>(urlApp + `/tactic/getPlayers/${this.teamId}`).subscribe({
-      next: players => { if (current() && playersRequestId === this.playersRequestId) { this.players = (players || []).map(p => ({ ...p, condition: p.condition ?? 95, sharpness: p.sharpness ?? 88 })).sort((a, b) => b.rating - a.rating); this.computeTeamRatingRange(); this.playersLoading = false; } },
+      next: players => { if (current() && playersRequestId === this.playersRequestId) { this.players = (players || []).map(p => ({ ...p, condition: p.condition ?? 95, sharpness: p.sharpness ?? 88 })).sort((a, b) => b.rating - a.rating); this.computeTeamRatingRange(); this.playersLoading = false; this.reconcileChairmanPrerequisites(); } },
       error: () => { if (current() && playersRequestId === this.playersRequestId) { this.playersLoading = false; this.playersError = 'Players could not be loaded.'; } }
     }));
     this.chairmanSubscription.add(this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/getAllPossibleTactics/${this.teamId}`).subscribe({
-      next: tactics => { if (current() && formationsRequestId === this.formationsCatalogRequestId) { this.formationOptions = (tactics || []).map(t => ({ key: t.tacticName, label: this.PRETTY[t.tacticName] || t.tacticName })); this.formationsLoading = false; } },
+      next: tactics => { if (current() && formationsRequestId === this.formationsCatalogRequestId) { this.formationOptions = (tactics || []).map(t => ({ key: t.tacticName, label: this.PRETTY[t.tacticName] || t.tacticName })); this.formationsLoading = false; this.reconcileChairmanPrerequisites(); } },
       error: () => { if (current() && formationsRequestId === this.formationsCatalogRequestId) { this.formationsLoading = false; this.formationsError = 'Formations could not be loaded.'; } }
     }));
     this.chairmanSubscription.add(this.chairmanApi.tacticalMandate(this.teamId).subscribe({
@@ -415,6 +415,7 @@ export class Tactics4Component implements OnInit, OnChanges {
         this.chairmanLoaded = true;
         this.chairmanControlDenied = false;
         this.chairmanError = preserveError;
+        this.reconcileChairmanPrerequisites();
       },
       error: error => { if (current()) { this.mandateLoading = false; this.chairmanLoading = false; this.chairmanReadOnly = true; this.chairmanLoaded = false; this.chairmanError = this.mapChairmanError(error); this.mandateError = this.chairmanError; this.chairmanControlDenied = this.isControlError(error); } }
     }));
@@ -449,6 +450,14 @@ export class Tactics4Component implements OnInit, OnChanges {
     this.cornerTakerRightId = data.cornerTakerRightId ?? null;
     this.setFormationIndices(this.selectedTactic);
     this.mapSavedPlayersToField(data.formationDataList || []);
+  }
+
+  /** Reconciles the Chairman field whenever any prerequisite arrives. */
+  private reconcileChairmanPrerequisites(): void {
+    if (!this.isChairmanMode) return;
+    if (!this.selectedTactic && this.formationOptions.length) this.selectedTactic = this.formationOptions[0].key;
+    this.applyChairmanLocksToField();
+    this.updateChairmanInvalidLocks();
   }
 
   // ... (Restul clasei e la fel) ...
@@ -518,7 +527,7 @@ export class Tactics4Component implements OnInit, OnChanges {
           next: (cells) => {
             if (requestId !== this.formationRequestId) return;
             this.allowedIndexes = (cells || []).map(c => c.index);
-            if (this.isChairmanMode) this.applyChairmanLocksToField();
+            if (this.isChairmanMode) this.reconcileChairmanPrerequisites();
           },
           error: (err) => console.error('Error loading formation layout', err)
       });
@@ -547,8 +556,7 @@ export class Tactics4Component implements OnInit, OnChanges {
         this.chairmanLocks = this.copyLocks(mandate.lockedSlots || []);
         this.selectedTactic = mandate.requiredFormation || this.formationOptions[0]?.key || '442';
         this.setFormationIndices(this.selectedTactic);
-        this.applyChairmanLocksToField();
-        this.updateChairmanInvalidLocks();
+        this.reconcileChairmanPrerequisites();
         this.mandateLoading = false;
         this.chairmanLoading = false;
         this.chairmanReadOnly = false;
@@ -572,7 +580,7 @@ export class Tactics4Component implements OnInit, OnChanges {
     this.playersLoading = true;
     this.playersError = '';
     this.http.get<Player[]>(urlApp + `/tactic/getPlayers/${this.teamId}`).subscribe({
-      next: players => { if (generation === this.loadGeneration && requestId === this.playersRequestId) { this.players = (players || []).map(p => ({ ...p, condition: p.condition ?? 95, sharpness: p.sharpness ?? 88 })).sort((a, b) => b.rating - a.rating); this.computeTeamRatingRange(); this.playersLoading = false; } },
+      next: players => { if (generation === this.loadGeneration && requestId === this.playersRequestId) { this.players = (players || []).map(p => ({ ...p, condition: p.condition ?? 95, sharpness: p.sharpness ?? 88 })).sort((a, b) => b.rating - a.rating); this.computeTeamRatingRange(); this.playersLoading = false; this.reconcileChairmanPrerequisites(); } },
       error: () => { if (generation === this.loadGeneration && requestId === this.playersRequestId) { this.playersLoading = false; this.playersError = 'Players could not be loaded.'; } }
     });
   }
@@ -588,6 +596,7 @@ export class Tactics4Component implements OnInit, OnChanges {
         if (generation !== this.loadGeneration || requestId !== this.formationsCatalogRequestId) return;
         this.formationOptions = (tactics || []).map(t => ({ key: t.tacticName, label: this.PRETTY[t.tacticName] || t.tacticName }));
         this.formationsLoading = false;
+        this.reconcileChairmanPrerequisites();
       },
       error: () => { if (generation === this.loadGeneration && requestId === this.formationsCatalogRequestId) { this.formationsLoading = false; this.formationsError = 'Formations could not be loaded.'; } }
     });

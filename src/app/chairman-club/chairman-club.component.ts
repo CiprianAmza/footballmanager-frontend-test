@@ -244,8 +244,9 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   confirmTransfer(): void {
     const amount = Number(this.amount);
     if (!this.selectedClub || !this.dashboard || !Number.isSafeInteger(amount) || amount <= 0) return;
-    const destination = this.direction === 'INJECTION' ? this.selectedClub.name : 'your personal account';
-    this.pendingTransferConfirmation = `${this.direction === 'INJECTION' ? 'Inject' : 'Withdraw'} ${this.money(amount)} ${this.direction === 'INJECTION' ? 'into' : 'from'} ${destination}?`;
+    this.pendingTransferConfirmation = this.direction === 'INJECTION'
+      ? `Source: personal available cash. Destination: ${this.selectedClub.name}. Inject ${this.money(amount)}?`
+      : `Source: ${this.selectedClub.name} distributable treasury. Destination: personal account. Withdraw ${this.money(amount)}?`;
     if (typeof window !== 'undefined' && window.confirm(this.pendingTransferConfirmation)) {
       this.pendingTransferConfirmation = '';
       this.transfer();
@@ -486,7 +487,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
       IDEMPOTENCY_KEY_REUSED: 'The previous operation key no longer matches this request. Retry safely.',
       CLUB_CONTROL_REQUIRED: 'Control of this club is no longer available. Refresh the club list.',
       WITHDRAWAL_RESTRICTED: 'This club withdrawal is currently restricted.',
-      INSUFFICIENT_DISTRIBUTABLE_CASH: 'The club does not have enough distributable cash for this withdrawal.',
+      INSUFFICIENT_DISTRIBUTABLE_CASH: 'The club does not have enough distributable funds.',
       CHAIRMAN_REQUIRED: 'A Chairman career is required for this action.',
       CLUB_NOT_FOUND: 'The selected club no longer exists.'
     };

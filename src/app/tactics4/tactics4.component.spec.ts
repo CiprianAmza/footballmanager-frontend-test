@@ -268,6 +268,23 @@ describe('Tactics4Component chairman mandate mode', () => {
       jasmine.objectContaining({ expectedVersion: 7 }));
   });
 
+  it('reconciles Chairman locks after each prerequisite regardless of response order', () => {
+    const built = build('chairman-mandate');
+    const component = built.component as any;
+    component.isChairmanMode = true;
+    component.formationOptions = [{ key: '442', label: '4-4-2' }];
+    component.selectedTactic = '';
+    component.applyChairmanLocksToField = jasmine.createSpy('applyLocks');
+    component.updateChairmanInvalidLocks = jasmine.createSpy('invalidLocks');
+
+    for (const prerequisite of ['players', 'formations', 'layout', 'mandate']) {
+      component.reconcileChairmanPrerequisites();
+      expect(component.selectedTactic).toBe('442', prerequisite);
+      expect(component.applyChairmanLocksToField).toHaveBeenCalled();
+      expect(component.updateChairmanInvalidLocks).toHaveBeenCalled();
+    }
+  });
+
   it('represents a loaded version-zero mandate as an explicit empty state', () => {
     const built = build('chairman-mandate');
     built.component.chairmanModeRequested = true;

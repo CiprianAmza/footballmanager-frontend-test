@@ -315,6 +315,34 @@ describe('ChairmanClubComponent', () => {
     expect(api.commandCentre.calls.count()).toBe(initialCentreCalls + 1);
   });
 
+  it('confirms injection with the personal-account source and club-treasury destination', () => {
+    api.clubs.and.returnValue(of([club(7, true, true)]));
+    start();
+    component.amount = 500;
+    component.direction = 'INJECTION';
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    component.confirmTransfer();
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      'Source: personal available cash. Destination: 7 FC. Inject 500?');
+    expect(api.transfer).toHaveBeenCalledWith(7, 'INJECTION', 500, jasmine.any(String));
+  });
+
+  it('confirms withdrawal with the club distributable source and personal-account destination', () => {
+    api.clubs.and.returnValue(of([club(7, true, true)]));
+    start();
+    component.amount = 125;
+    component.direction = 'WITHDRAWAL';
+    spyOn(window, 'confirm').and.returnValue(true);
+
+    component.confirmTransfer();
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      'Source: 7 FC distributable treasury. Destination: personal account. Withdraw 125?');
+    expect(api.transfer).toHaveBeenCalledWith(7, 'WITHDRAWAL', 125, jasmine.any(String));
+  });
+
   it('ignores a stale dashboard after switching clubs', () => {
     const first = new Subject<ChairmanClubDashboard>();
     const second = new Subject<ChairmanClubDashboard>();

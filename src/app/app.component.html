@@ -4,7 +4,8 @@
 
 <ng-template #gameApplication>
 <ng-template #chairmanGameWorldControls><div class="game-top-bar chairman-game-controls">
-  <button class="continue-btn" (click)="advanceGame()" [disabled]="advancing || fastForwardRunning">{{ advancing ? 'Processing...' : 'CONTINUE' }}</button>
+  <button class="continue-btn" (click)="advanceGame()" [disabled]="advancing || fastForwardRunning || (authService.careerRole === 'MANAGER' && pendingOffers.length > 0)"
+          [title]="pendingOffers.length > 0 ? 'Resolve your job offer(s) first' : ''">{{ fastForwardRunning ? 'FAST-FORWARDING' : (advancing ? 'Processing...' : (pendingOffers.length > 0 ? 'OFFER PENDING' : 'CONTINUE')) }}</button>
   <button class="fast-forward-btn" type="button" (click)="openFastForward()" [disabled]="advancing">{{ fastForwardRunning ? (fastForwardJob?.percent + '%') : 'FAST FORWARD' }}</button>
   <div class="date-info"><span class="day-date">{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }}</span><span class="day-phase">{{ teamService.currentPhase }} - {{ teamService.seasonPhase }}</span></div>
   <div class="season-info">Season {{ teamService.currentSeason }}</div>
@@ -20,7 +21,8 @@
       <span class="fast-forward-kicker">UNATTENDED SIMULATION</span><h2 id="chairman-fast-forward-title">Fast-forward seasons</h2>
       <p>The backend advances the shared football world without browser delays.</p>
       <div class="fast-forward-fields"><label><span>Seasons</span><input type="number" min="1" max="100" [(ngModel)]="fastForwardSeasons"></label><label><span>Days per progress chunk</span><input type="number" min="1" max="30" [(ngModel)]="fastForwardChunkDays"></label></div>
-      <button class="fast-forward-start" type="button" (click)="startFastForward()" [disabled]="fastForwardStarting">{{ fastForwardStarting ? 'STARTING…' : 'START FAST FORWARD' }}</button>
+      <div class="fast-forward-note" [class.warning]="authService.careerRole === 'MANAGER' && !teamService.alwaysContinue">{{ authService.careerRole === 'MANAGER' && !teamService.alwaysContinue ? 'Enable Always Continue in Staff → Responsibilities before starting.' : 'The shared world can run unattended.' }}</div>
+      <button class="fast-forward-start" type="button" (click)="startFastForward()" [disabled]="fastForwardStarting || (authService.careerRole === 'MANAGER' && !teamService.alwaysContinue)">{{ fastForwardStarting ? 'STARTING…' : 'START FAST FORWARD' }}</button>
     </ng-container>
     <ng-template #chairmanFastForwardProgress><span class="fast-forward-kicker">{{ fastForwardJob?.status }}</span><h2>{{ fastForwardJob?.message }}</h2><p>{{ fastForwardJob?.message }}</p>
       <div class="fast-forward-track" role="progressbar" [attr.aria-valuenow]="fastForwardJob?.percent" aria-valuemin="0" aria-valuemax="100"><span [style.width.%]="fastForwardJob?.percent || 0"></span></div>
@@ -223,6 +225,9 @@
     </div>
 
     <!-- Game Top Bar -->
+    <ng-container *ngTemplateOutlet="chairmanGameWorldControls"></ng-container>
+    <ng-container *ngTemplateOutlet="chairmanSimulationStatus"></ng-container>
+    <ng-container *ngTemplateOutlet="chairmanFastForwardDialog"></ng-container>
     <ng-template #gameWorldControls><div class="game-top-bar">
       <button class="continue-btn" (click)="advanceGame()"
               [disabled]="advancing || fastForwardRunning || pendingOffers.length > 0"
