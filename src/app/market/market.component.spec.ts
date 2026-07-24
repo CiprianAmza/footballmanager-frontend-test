@@ -166,7 +166,7 @@ describe('MarketComponent', () => {
   it('refreshes selected state from the fresh market row and requests history once after trade', () => {
     const original = { ...instrument };
     const refreshed = { ...instrument, price: { amount: 120, currency: 'EUR', minorUnitScale: 0 }, availableSupply: 9 };
-    market.instruments.and.returnValues(of([original]), of([refreshed]));
+    market.instruments.and.returnValue(of([refreshed]));
     market.history.calls.reset();
     market.trade.and.returnValue(of({ side: 'BUY', quantity: 1, code: 'SAFE', unitPrice: instrument.price } as MarketTradeView));
     component.selected = original;
