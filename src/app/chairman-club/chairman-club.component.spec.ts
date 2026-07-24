@@ -127,6 +127,45 @@ describe('ChairmanClubComponent', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Club treasury');
   });
 
+  it('refreshes selectedClub when the same team loses canonical control', () => {
+    api.clubs.and.returnValues(of([club(7, true, true)]), of([club(7, false, true)]));
+    start();
+    expect(component.dashboard).not.toBeNull();
+    component.retryClubs();
+    expect(component.selectedClub?.controlledByPrincipal).toBeFalse();
+    expect(component.dashboard).toBeNull();
+    expect(component.quote).toBeNull();
+  });
+
+  it('refreshes selectedClub when the same team gains canonical control', () => {
+    api.clubs.and.returnValues(of([club(7, false, true)]), of([club(7, true, true)]));
+    start();
+    component.retryClubs();
+    expect(component.selectedClub?.controlledByPrincipal).toBeTrue();
+    expect(api.dashboard).toHaveBeenCalledWith(7);
+  });
+
+  it('canonicalizes a requested team absent from the current scope', () => {
+    routeParams.next(convertToParamMap({ teamId: '99' }));
+    api.clubs.and.returnValue(of([club(7), club(8, true, true)]));
+    start();
+
+    expect(component.selectedTeamId).toBe(8);
+    expect(router.navigate).toHaveBeenCalledWith(['/chairman/clubs', 8], {
+      queryParams: { scope: 'ALL' }, replaceUrl: true
+    });
+  });
+
+  it('canonicalizes an invalid scope query to ALL with replaceUrl', () => {
+    routeQuery.next(convertToParamMap({ scope: 'BROKEN' }));
+    start();
+
+    expect(component.scope).toBe('ALL');
+    expect(router.navigate).toHaveBeenCalledWith([], jasmine.objectContaining({
+      queryParams: { scope: 'ALL' }, replaceUrl: true
+    }));
+  });
+
   it('requests a dashboard only for a controlled club', () => {
     api.clubs.and.returnValue(of([club(8, true, true)]));
     routeParams.next(convertToParamMap({ teamId: '8' }));
@@ -146,6 +185,36 @@ describe('ChairmanClubComponent', () => {
     first.next(dashboard(7));
     expect(component.selectedTeamId).toBe(8);
     expect(component.dashboard?.teamId).toBe(8);
+  });
+
+  it('ignores late quote, execute and transfer results after club selection changes', () => {
+    const quotePending = new Subject<TakeoverQuoteView>();
+    api.quote.and.returnValue(quotePending.asObservable());
+    start();
+    component.requestQuote();
+    routeParams.next(convertToParamMap({ teamId: '8' }));
+    quotePending.next(quote(7));
+    expect(component.quote).toBeNull();
+
+    component.selectedClub = club(8, false, true);
+    component.selectedTeamId = 8;
+    const executePending = new Subject<TakeoverExecutionView>();
+    api.execute.and.returnValue(executePending.asObservable());
+    component.quote = quote(8);
+    component.executeTakeover();
+    routeParams.next(convertToParamMap({ teamId: '7' }));
+    executePending.next(execution(8));
+    expect(component.message).toBe('');
+
+    component.selectedClub = club(8, true, true);
+    component.selectedTeamId = 8;
+    const transferPending = new Subject<any>();
+    api.transfer.and.returnValue(transferPending.asObservable());
+    component.amount = 500;
+    component.transfer();
+    routeParams.next(convertToParamMap({ teamId: '7' }));
+    transferPending.next({ teamId: 8, direction: 'INJECTION', amount: money(500) });
+    expect(component.amount).toBe(500);
   });
 
   it('renders canonical competition links, holdings and no hardcoded competition name', () => {
@@ -173,6 +242,59 @@ describe('ChairmanClubComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/chairman/clubs', 7], { queryParams: { scope: 'ALL' } });
   });
 
+  it('rejects an execute request when the quote belongs to another club', () => {
+    start();
+    component.quote = quote(8);
+    component.executeTakeover();
+
+    expect(api.execute).not.toHaveBeenCalled();
+    expect(component.quote).toBeNull();
+    expect(component.actionError).toContain('different club');
+  });
+
+  it('ignores an execute response with a mismatched quote id', () => {
+    start();
+    component.quote = quote(7);
+    api.execute.and.returnValue(of({ ...execution(7), quoteId: 'wrong-quote' }));
+    component.executeTakeover();
+
+    expect(component.actionError).toContain('did not match');
+    expect(component.quote?.quoteId).toBe('q-7');
+    expect(api.dashboard).toHaveBeenCalledTimes(0);
+  });
+
+  it('ignores a treasury response with a mismatched amount', () => {
+    api.clubs.and.returnValue(of([club(7, true, true)]));
+    start();
+    component.amount = 500;
+    api.transfer.and.returnValue(of({
+      teamId: 7, direction: 'INJECTION', amount: money(499)
+    } as any));
+    component.transfer();
+
+    expect(component.amount).toBe(500);
+    expect(component.message).toBe('');
+    expect(component.actionError).toContain('did not match');
+    expect(api.dashboard).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks duplicate quote and transfer submissions', () => {
+    const quotePending = new Subject<TakeoverQuoteView>();
+    api.quote.and.returnValue(quotePending.asObservable());
+    start();
+    component.requestQuote();
+    component.requestQuote();
+    expect(api.quote).toHaveBeenCalledTimes(1);
+    quotePending.next(quote(7));
+    quotePending.complete();
+
+    api.transfer.and.returnValue(of({ teamId: 8, direction: 'INJECTION', amount: money(1) } as any));
+    component.amount = 500;
+    component.transfer();
+    component.transfer();
+    expect(api.transfer).not.toHaveBeenCalled();
+  });
+
   it('maps stale quote errors and clears the quote and its key', () => {
     api.quote.and.returnValue(throwError(() => ({ error: { code: 'TAKEOVER_QUOTE_STALE' } })));
     start();
@@ -192,6 +314,40 @@ describe('ChairmanClubComponent', () => {
     const firstKey = api.quote.calls.argsFor(0)[1];
     component.requestQuote();
     expect(api.quote.calls.argsFor(1)[1]).toBe(firstKey);
+  });
+
+  it('rotates the affected key after an idempotency mismatch', () => {
+    api.quote.and.returnValues(
+      throwError(() => ({ error: { code: 'IDEMPOTENCY_KEY_REUSED', message: 'mismatch' } })),
+      of(quote(7)));
+    start();
+    component.requestQuote();
+    const firstKey = api.quote.calls.argsFor(0)[1];
+    component.requestQuote();
+    expect(api.quote.calls.argsFor(1)[1]).not.toBe(firstKey);
+  });
+
+  it('preserves an unknown API error message', () => {
+    api.quote.and.returnValue(throwError(() => ({ error: { code: 'NEW_CODE', message: 'Server says no' } })));
+    start();
+    component.requestQuote();
+    expect(component.actionError).toBe('Server says no');
+  });
+
+  it('retries catalog and dashboard errors', () => {
+    api.clubs.and.returnValues(
+      throwError(() => ({ error: { message: 'catalog unavailable' } })), of([club(7, true, true)]));
+    start();
+    expect(component.clubsError).toBe('catalog unavailable');
+    component.retryClubs();
+    expect(component.selectedClub?.teamId).toBe(7);
+
+    api.dashboard.and.returnValues(
+      throwError(() => ({ error: { message: 'dashboard unavailable' } })), of(dashboard(7)));
+    component.retryDashboard();
+    expect(component.dashboardError).toBe('dashboard unavailable');
+    component.retryDashboard();
+    expect(component.dashboard?.teamId).toBe(7);
   });
 
   it('uses distinct empty messages for each catalog scope', () => {

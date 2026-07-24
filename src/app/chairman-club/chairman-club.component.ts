@@ -48,6 +48,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   private clubsSubscription?: Subscription;
   private dashboardSubscription?: Subscription;
   private actionSubscription?: Subscription;
+  private canonicalizedRouteKey = '';
 
   constructor(private clubsApi: ChairmanClubService,
               private route: ActivatedRoute,
@@ -62,6 +63,9 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     this.querySubscription = this.route.queryParamMap.subscribe(params => {
       const value = params.get('scope');
       const nextScope = this.isScope(value) ? value : 'ALL';
+      if (value !== null && !this.isScope(value)) {
+        this.normalizeScopeUrl();
+      }
       if (nextScope !== this.scope || !this.clubsLoaded) {
         this.scope = nextScope;
         this.invalidateForScopeChange();
@@ -157,6 +161,11 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
       || this.quote.status !== 'OPEN') return;
     const teamId = this.selectedClub.teamId;
     const takeoverQuote = this.quote;
+    if (takeoverQuote.teamId !== teamId) {
+      this.quote = null;
+      this.actionError = 'The takeover quote belongs to a different club. Request a new quote.';
+      return;
+    }
     const action = `execute:${takeoverQuote.quoteId}`;
     const requestId = ++this.actionRequestId;
     this.inFlight = 'execute';
@@ -167,8 +176,8 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: value => {
         if (!this.isCurrentAction(requestId, teamId)) return;
-        if (value.teamId !== teamId) {
-          this.actionError = 'Takeover response did not match the selected club.';
+        if (value.teamId !== teamId || value.quoteId !== takeoverQuote.quoteId) {
+          this.actionError = 'Takeover response did not match the submitted club or quote.';
           return;
         }
         this.retryKeys.delete(action);
@@ -189,6 +198,8 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
       || amount <= 0 || this.inFlight) return;
     const teamId = this.selectedClub.teamId;
     const action = `transfer:${teamId}:${this.direction}:${amount}`;
+    const submittedDirection = this.direction;
+    const submittedAmount = amount;
     const requestId = ++this.actionRequestId;
     this.inFlight = 'transfer';
     this.actionError = '';
@@ -198,9 +209,14 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: value => {
         if (!this.isCurrentAction(requestId, teamId)) return;
+        if (value.teamId !== teamId || value.direction !== submittedDirection
+          || value.amount?.amount !== submittedAmount) {
+          this.actionError = 'Treasury response did not match the submitted club, direction or amount.';
+          return;
+        }
         this.retryKeys.delete(action);
         this.amount = null;
-        this.message = `${value.direction === 'INJECTION' ? 'Injection' : 'Withdrawal'} completed.`;
+        this.message = `${submittedDirection === 'INJECTION' ? 'Injection' : 'Withdrawal'} completed.`;
         this.loadDashboard(teamId);
       },
       error: error => {
@@ -267,10 +283,48 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   private applyRouteSelection(): void {
     if (!this.clubs.length) return;
     const requested = this.requestedTeamId;
-    const preferred = requested !== null && this.clubs.some(club => club.teamId === requested)
-      ? requested
-      : (this.clubs.find(club => club.controlledByPrincipal)?.teamId || this.clubs[0].teamId);
-    if (this.selectedTeamId !== preferred || !this.selectedClub) this.selectClub(preferred, false);
+    const requestedClub = requested === null ? undefined
+      : this.clubs.find(club => club.teamId === requested);
+    const preferred = requestedClub?.teamId
+      || this.clubs.find(club => club.controlledByPrincipal)?.teamId
+      || this.clubs[0].teamId;
+    const current = this.clubs.find(club => club.teamId === preferred);
+    if (!current) return;
+    const changedTeam = this.selectedTeamId !== preferred;
+    if (changedTeam) {
+      this.dashboard = null;
+      this.quote = null;
+      this.dashboardError = '';
+      this.dashboardLoading = false;
+    }
+    this.selectedTeamId = preferred;
+    this.selectedClub = current;
+    if (!requestedClub && requested !== null) {
+      const key = `${this.scope}:${requested}:${preferred}`;
+      if (this.canonicalizedRouteKey !== key) {
+        this.canonicalizedRouteKey = key;
+        this.router.navigate(['/chairman/clubs', preferred], {
+          queryParams: { scope: this.scope }, replaceUrl: true
+        });
+      }
+    }
+    if (!current.controlledByPrincipal) {
+      if (changedTeam) this.invalidateSelectionRequests();
+      else {
+        ++this.dashboardRequestId;
+        ++this.actionRequestId;
+        this.dashboardSubscription?.unsubscribe();
+        this.actionSubscription?.unsubscribe();
+        this.inFlight = null;
+      }
+      this.dashboard = null;
+      this.quote = null;
+      this.dashboardLoading = false;
+      this.dashboardError = '';
+      return;
+    }
+    if (changedTeam) this.invalidateSelectionRequests();
+    if (!this.dashboard && !this.dashboardLoading) this.loadDashboard(preferred);
   }
 
   private loadDashboard(teamId: number): void {
@@ -343,9 +397,11 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
 
   private fail(error: any, action: string): void {
     const code = this.errorCode(error);
-    this.actionError = this.typedActionError(code);
+    this.actionError = this.typedActionError(error);
     if (code === 'TAKEOVER_QUOTE_STALE' || code === 'TAKEOVER_QUOTE_EXPIRED'
-      || code === 'PROTECTED_MINORITY') {
+      || code === 'TAKEOVER_QUOTE_USED' || code === 'TAKEOVER_QUOTE_NOT_FOUND'
+      || code === 'TAKEOVER_QUOTE_TEAM_MISMATCH' || code === 'PROTECTED_MINORITY'
+      || code === 'ALREADY_FULL_OWNER') {
       this.quote = null;
       this.retryKeys.delete(`quote:${this.selectedTeamId}`);
       this.retryKeys.delete(action);
@@ -369,16 +425,25 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
 
   private errorCode(error: any): string { return error?.error?.code || ''; }
 
-  private typedActionError(code: string): string {
+  private typedActionError(error: any): string {
+    const code = this.errorCode(error);
     const messages: { [key: string]: string } = {
       INSUFFICIENT_FUNDS: 'Insufficient personal cash for this takeover.',
       TAKEOVER_QUOTE_STALE: 'The club valuation or ownership changed. Request a new quote.',
       TAKEOVER_QUOTE_EXPIRED: 'The takeover quote expired. Request a new quote.',
+      TAKEOVER_QUOTE_USED: 'This takeover quote has already been used. Request a new quote.',
+      TAKEOVER_QUOTE_NOT_FOUND: 'This takeover quote is no longer available. Request a new quote.',
+      TAKEOVER_QUOTE_TEAM_MISMATCH: 'This takeover quote belongs to another club. Request a new quote.',
       PROTECTED_MINORITY: 'This takeover cannot proceed while another user owns protected shares.',
+      ALREADY_FULL_OWNER: 'You already own all issued shares in this club.',
       IDEMPOTENCY_KEY_REUSED: 'The previous operation key no longer matches this request. Retry safely.',
-      CLUB_CONTROL_REQUIRED: 'Control of this club is no longer available. Refresh the club list.'
+      CLUB_CONTROL_REQUIRED: 'Control of this club is no longer available. Refresh the club list.',
+      WITHDRAWAL_RESTRICTED: 'This club withdrawal is currently restricted.',
+      INSUFFICIENT_DISTRIBUTABLE_CASH: 'The club does not have enough distributable cash for this withdrawal.',
+      CHAIRMAN_REQUIRED: 'A Chairman career is required for this action.',
+      CLUB_NOT_FOUND: 'The selected club no longer exists.'
     };
-    return messages[code] || this.errorMessage({ error: { message: 'Club operation failed.' } });
+    return messages[code] || this.errorMessage(error);
   }
 
   private errorMessage(error: any): string {
@@ -387,5 +452,14 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
 
   private isScope(value: string | null | undefined): value is ClubCatalogScope {
     return value === 'ALL' || value === 'HELD' || value === 'CONTROLLED';
+  }
+
+  private normalizeScopeUrl(): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { scope: 'ALL' },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
   }
 }

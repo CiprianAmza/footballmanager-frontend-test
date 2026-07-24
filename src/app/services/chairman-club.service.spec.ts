@@ -50,4 +50,18 @@ describe('ChairmanClubService', () => {
     expect(execute.request.body).toEqual({ quoteId: 'quote-id', idempotencyKey: 'execute-key' });
     execute.flush({});
   });
+
+  it('posts the treasury transfer body exactly and sends no actor ids', () => {
+    service.transfer(7, 'WITHDRAWAL', 123, 'transfer-key').subscribe();
+    const request = http.expectOne(urlApp + '/api/clubs/7/treasury-transfers');
+
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      direction: 'WITHDRAWAL', amount: 123, idempotencyKey: 'transfer-key'
+    });
+    expect(request.request.body.accountId).toBeUndefined();
+    expect(request.request.body.profileId).toBeUndefined();
+    expect(request.request.body.ownerId).toBeUndefined();
+    request.flush({});
+  });
 });
