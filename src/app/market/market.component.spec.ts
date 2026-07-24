@@ -177,4 +177,57 @@ describe('MarketComponent', () => {
     expect(market.history).toHaveBeenCalledTimes(1);
     expect(component.selected).toEqual(refreshed);
   });
+
+  it('keeps inactive contract details visible while allowing replacement hire options', () => {
+    component.adviser = {
+      ...adviser,
+      currentContract: {
+        contractId: 2,
+        adviserCode: 'ANALYST',
+        adviserName: 'Market Analyst',
+        skill: 45,
+        reputation: 35,
+        salaryPerDay: { amount: 2500, currency: 'EUR', minorUnitScale: 0 },
+        startDate: { season: 1, day: 1 },
+        endDate: { season: 1, day: 90 },
+        status: 'CONTRACT_COMPLETED',
+        terminationReason: 'CONTRACT_COMPLETED',
+        modelVersion: 'advice-v1',
+        replayed: false
+      }
+    };
+
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Market Analyst');
+    expect(text).toContain('Status reason: CONTRACT_COMPLETED');
+    expect(text).toContain('Hire adviser');
+  });
+
+  it('hides replacement hire options while an active contract exists', () => {
+    component.adviser = {
+      ...adviser,
+      currentContract: {
+        contractId: 3,
+        adviserCode: 'VETERAN',
+        adviserName: 'Veteran Trader',
+        skill: 90,
+        reputation: 92,
+        salaryPerDay: { amount: 20000, currency: 'EUR', minorUnitScale: 0 },
+        startDate: { season: 1, day: 1 },
+        endDate: { season: 2, day: 1 },
+        status: 'ACTIVE',
+        terminationReason: null,
+        modelVersion: 'advice-v1',
+        replayed: false
+      }
+    };
+
+    fixture.detectChanges();
+
+    const text = fixture.nativeElement.textContent;
+    expect(text).toContain('Veteran Trader');
+    expect(text).not.toContain('Hire adviser');
+  });
 });

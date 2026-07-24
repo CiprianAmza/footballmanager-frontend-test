@@ -95,7 +95,7 @@
             <p>Only chairman careers can hire a trader adviser or request investment advice.</p>
           </div>
 
-          <div class="options" *ngIf="isChairman && !currentContract">
+          <div class="options" *ngIf="isChairman && !hasActiveContract">
             <article class="option-card" *ngFor="let option of hireOptions; trackBy: trackOption">
               <h3>{{ option.adviserName }}</h3>
               <p>{{ money(option.salaryPerDay.amount) }} per day · {{ option.durationDays }} days</p>
