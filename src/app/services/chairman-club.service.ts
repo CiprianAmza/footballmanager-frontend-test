@@ -1,9 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { HttpParams } from '@angular/common/http';
 import { urlApp } from '../app.component';
 import {
-  ChairmanClubDashboard, ChairmanClubSummary, ClubCashTransferDirection,
+  ChairmanClubDashboard, ChairmanClubSummary, ClubCatalogScope, ClubCashTransferDirection,
   TakeoverExecutionView, TakeoverQuoteView, TreasuryTransferView
 } from '../chairman-club/chairman-club.models';
 
@@ -11,8 +12,9 @@ import {
 export class ChairmanClubService {
   constructor(private http: HttpClient) {}
 
-  clubs(): Observable<ChairmanClubSummary[]> {
-    return this.http.get<ChairmanClubSummary[]>(urlApp + '/api/clubs');
+  clubs(scope: ClubCatalogScope = 'ALL'): Observable<ChairmanClubSummary[]> {
+    const params = new HttpParams().set('scope', scope);
+    return this.http.get<ChairmanClubSummary[]>(urlApp + '/api/clubs', { params });
   }
 
   dashboard(teamId: number): Observable<ChairmanClubDashboard> {

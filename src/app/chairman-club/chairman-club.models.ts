@@ -1,5 +1,7 @@
 import { Money } from '../economy/economy.models';
 
+export type ClubCatalogScope = 'ALL' | 'HELD' | 'CONTROLLED';
+
 export interface ClubValuationView {
   formulaVersion: string;
   stateVersion: string;
@@ -48,9 +50,15 @@ export interface ClubTreasuryView {
 export interface ChairmanClubSummary {
   teamId: number;
   name: string;
+  competitionId: number;
+  competitionName: string | null;
   valuation: Money;
   controllingProfileId: number | null;
   controllingDisplayName: string | null;
+  principalShares: number;
+  principalStakeBps: number;
+  principalEquityValue: Money;
+  heldByPrincipal: boolean;
   controlledByPrincipal: boolean;
 }
 

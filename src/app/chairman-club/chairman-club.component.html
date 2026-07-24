@@ -1,102 +1,134 @@
 <section class="club-page">
   <header class="club-header">
-    <div><span class="eyebrow">CHAIRMAN CLUB DESK</span><h1>Club acquisition & treasury</h1></div>
-    <select *ngIf="clubs.length" [ngModel]="selectedTeamId"
-            (ngModelChange)="selectClub($event)" aria-label="Select club">
-      <option *ngFor="let club of clubs; trackBy: trackClub" [ngValue]="club.teamId">
-        {{ club.name }} · {{ money(club.valuation.amount) }}
-      </option>
-    </select>
+    <div>
+      <span class="eyebrow">CHAIRMAN CLUB DESK</span>
+      <h1>Club market</h1>
+      <p>Public club information, holdings and canonical control.</p>
+    </div>
+    <nav class="scope-tabs" aria-label="Club views">
+      <button *ngFor="let item of scopes" type="button"
+              [class.active]="scope === item.value" [attr.aria-current]="scope === item.value ? 'page' : null"
+              (click)="selectScope(item.value)">{{ item.label }}</button>
+    </nav>
   </header>
 
-  <p class="notice error" *ngIf="error">{{ error }}</p>
+  <p class="notice error" *ngIf="actionError">{{ actionError }}</p>
   <p class="notice success" *ngIf="message">{{ message }}</p>
-  <p *ngIf="clubsLoading">Loading available clubs…</p>
 
+  <p class="loading" *ngIf="clubsLoading">Loading {{ scope === 'ALL' ? 'club market' : scope === 'HELD' ? 'holdings' : 'controlled clubs' }}…</p>
   <article class="panel empty-state" *ngIf="!clubsLoading && clubsError">
     <h2>Clubs could not be loaded</h2>
     <p>{{ clubsError }}</p>
-    <button type="button" (click)="retryClubs()">Retry clubs</button>
+    <button type="button" (click)="retryClubs()">Retry</button>
+  </article>
+  <article class="panel empty-state" *ngIf="!clubsLoading && !clubsError && clubs.length === 0">
+    <h2>{{ scope === 'ALL' ? 'No clubs are available.' : scope === 'HELD' ? 'You do not currently hold shares in any club.' : 'You do not currently control a club.' }}</h2>
+    <button type="button" (click)="retryClubs()">Retry</button>
   </article>
 
-  <article class="panel empty-state"
-           *ngIf="!clubsLoading && !clubsError && clubs.length === 0">
-    <h2>No clubs are available</h2>
-    <p>There are no club instruments available to this chairman yet.</p>
-    <button type="button" (click)="retryClubs()">Check again</button>
-  </article>
+  <div class="club-layout" *ngIf="!clubsLoading && !clubsError && clubs.length">
+    <aside class="club-list panel">
+      <h2>{{ scope === 'ALL' ? 'Club Market' : scope === 'HELD' ? 'My Holdings' : 'My Clubs' }}</h2>
+      <button class="club-row" *ngFor="let club of clubs; trackBy: trackClub" type="button"
+              [class.selected]="club.teamId === selectedTeamId" (click)="selectClub(club.teamId)">
+        <span><strong>{{ club.name }}</strong><small>{{ club.competitionName || 'Competition unavailable' }}</small></span>
+        <span class="club-value">{{ money(club.valuation.amount) }}</span>
+      </button>
+    </aside>
 
-  <p *ngIf="!clubsLoading && loading">Loading canonical club state…</p>
-
-  <article class="panel empty-state" *ngIf="!clubsLoading && dashboardError">
-    <h2>Club dashboard could not be loaded</h2>
-    <p>{{ dashboardError }}</p>
-    <button type="button" (click)="retryDashboard()">Retry dashboard</button>
-  </article>
-
-  <ng-container *ngIf="dashboard && !loading && !dashboardError">
-    <div class="summary-grid">
-      <article><span>Canonical valuation</span><strong>{{ money(dashboard.valuation.totalValue.amount) }}</strong><small>{{ dashboard.valuation.formulaVersion }}</small></article>
-      <article><span>Treasury</span><strong>{{ money(dashboard.treasury.balance.amount) }}</strong><small>Club-side retained cash</small></article>
-      <article><span>Distributable</span><strong>{{ money(dashboard.treasury.distributableCash.amount) }}</strong><small>After reserve and obligations</small></article>
-      <article><span>Control</span><strong>{{ dashboard.capTable.controllingDisplayName || 'No controller' }}</strong><small>Threshold {{ percent(dashboard.capTable.controlThresholdBps) }}</small></article>
-    </div>
-
-    <div class="club-columns">
-      <article class="panel">
-        <h2>Valuation breakdown</h2>
-        <dl>
-          <div><dt>Squad market value</dt><dd>{{ money(dashboard.valuation.squadMarketValue.amount) }}</dd></div>
-          <div><dt>Cash minus debt/obligations</dt><dd>{{ money(dashboard.valuation.netCash.amount) }}</dd></div>
-          <div><dt>Stadium & facilities</dt><dd>{{ money(dashboard.valuation.stadiumFacilitiesValue.amount) }}</dd></div>
-          <div><dt>Reputation & brand</dt><dd>{{ money(dashboard.valuation.reputationBrandValue.amount) }}</dd></div>
-          <div><dt>Recent performance ({{ percent(dashboard.valuation.recentPerformanceBps) }})</dt><dd>{{ money(dashboard.valuation.recentPerformanceValue.amount) }}</dd></div>
-        </dl>
-        <small class="version">State {{ dashboard.valuation.stateVersion.slice(0, 16) }}…</small>
-      </article>
-
-      <article class="panel">
-        <h2>Cap table</h2>
-        <p>{{ dashboard.capTable.issuedShares | number }} issued · {{ dashboard.capTable.freeFloat | number }} free float</p>
-        <div class="holding" *ngFor="let holding of dashboard.capTable.holdings; trackBy: trackHolding">
-          <span><b>{{ holding.displayName }}</b><small *ngIf="holding.protectedUser">protected user shareholder</small></span>
-          <span>{{ holding.quantity | number }} · {{ percent(holding.stakeBps) }}</span>
-          <b>{{ money(holding.equityValue.amount) }}</b>
+    <main class="club-detail" *ngIf="selectedClub as club">
+      <article class="panel public-summary">
+        <div class="detail-heading">
+          <div>
+            <span class="eyebrow">PUBLIC CLUB SUMMARY</span>
+            <h2><a [routerLink]="['/team', club.teamId]">{{ club.name }}</a></h2>
+            <p *ngIf="club.competitionName; else unavailableCompetition">
+              <a *ngIf="club.competitionId > 0; else plainCompetition"
+                 [routerLink]="['/competition', club.competitionId]">{{ club.competitionName }}</a>
+              <ng-template #plainCompetition>{{ club.competitionName }}</ng-template>
+            </p>
+            <ng-template #unavailableCompetition><p>Competition unavailable</p></ng-template>
+          </div>
+          <div class="status-badges">
+            <span class="badge" [class.success-badge]="club.heldByPrincipal">{{ club.heldByPrincipal ? 'Held' : 'Not held' }}</span>
+            <span class="badge" [class.success-badge]="club.controlledByPrincipal">{{ club.controlledByPrincipal ? 'Controlled' : 'Not controlled' }}</span>
+          </div>
         </div>
-        <p *ngIf="!dashboard.capTable.holdings.length">All issued shares remain in free float.</p>
+        <div class="summary-grid">
+          <article><span>Estimated value</span><strong>{{ money(club.valuation.amount) }}</strong></article>
+          <article><span>Public controller</span><strong>{{ club.controllingDisplayName || 'No controller' }}</strong></article>
+          <article><span>Your shares</span><strong>{{ club.principalShares | number }}</strong></article>
+          <article><span>Your stake</span><strong>{{ percent(club.principalStakeBps) }}</strong></article>
+          <article><span>Your equity value</span><strong>{{ money(club.principalEquityValue.amount) }}</strong></article>
+        </div>
       </article>
-    </div>
 
-    <div class="club-columns">
-      <article class="panel">
-        <h2>Full takeover</h2>
-        <p>Price and premium are owned by the server. Protected user minority shares are never confiscated.</p>
-        <button type="button" (click)="requestQuote()" [disabled]="inFlight !== null || dashboard.controlledByPrincipal">
-          {{ inFlight === 'quote' ? 'Quoting…' : 'Request takeover quote' }}
+      <article class="panel takeover" *ngIf="!club.controlledByPrincipal">
+        <h2>Take over this club</h2>
+        <p>Request a server-priced quote before confirming. Valuation, premium and total are never calculated in the browser.</p>
+        <button type="button" (click)="requestQuote()" [disabled]="inFlight !== null">
+          {{ inFlight === 'quote' ? 'Requesting quote…' : 'Request takeover quote' }}
         </button>
-        <div class="quote" *ngIf="quote">
-          <p><b>{{ quote.sharesToAcquire | number }}</b> shares at {{ money(quote.unitPrice.amount) }}</p>
-          <p>Premium {{ percent(quote.premiumBps) }} · total <b>{{ money(quote.totalConsideration.amount) }}</b></p>
-          <button type="button" (click)="executeTakeover()" [disabled]="inFlight !== null">{{ inFlight === 'execute' ? 'Executing…' : 'Execute atomically' }}</button>
-        </div>
-      </article>
-
-      <article class="panel">
-        <h2>Treasury transfer</h2>
-        <dl>
-          <div><dt>Protected reserve</dt><dd>{{ money(dashboard.treasury.protectedReserve.amount) }}</dd></div>
-          <div><dt>Due obligations</dt><dd>{{ money(dashboard.treasury.dueObligations.amount) }}</dd></div>
-          <div><dt>Debt</dt><dd>{{ money(dashboard.treasury.debt.amount) }}</dd></div>
-        </dl>
-        <div class="transfer-form">
-          <select [(ngModel)]="direction" aria-label="Transfer direction"><option value="INJECTION">Injection</option><option value="WITHDRAWAL">Withdrawal</option></select>
-          <input type="number" min="1" step="1" [(ngModel)]="amount" placeholder="Amount" aria-label="Transfer amount">
-          <button type="button" (click)="transfer()" [disabled]="inFlight !== null || !dashboard.controlledByPrincipal || dashboard.treasury.withdrawalRestricted && direction === 'WITHDRAWAL'">
-            {{ inFlight === 'transfer' ? 'Posting…' : 'Post mirrored transfer' }}
+        <div class="quote" *ngIf="quote as currentQuote">
+          <dl>
+            <div><dt>Shares to acquire</dt><dd>{{ currentQuote.sharesToAcquire | number }}</dd></div>
+            <div><dt>Unit price</dt><dd>{{ money(currentQuote.unitPrice.amount) }}</dd></div>
+            <div><dt>Premium</dt><dd>{{ percent(currentQuote.premiumBps) }}</dd></div>
+            <div><dt>Total consideration</dt><dd>{{ money(currentQuote.totalConsideration.amount) }}</dd></div>
+            <div><dt>Expires absolute day</dt><dd>{{ currentQuote.expiresAbsoluteDay }}</dd></div>
+          </dl>
+          <button type="button" (click)="executeTakeover()" [disabled]="inFlight !== null">
+            {{ inFlight === 'execute' ? 'Executing takeover…' : 'Execute takeover' }}
           </button>
         </div>
-        <small *ngIf="!dashboard.controlledByPrincipal">Take controlling ownership to operate this treasury.</small>
       </article>
-    </div>
-  </ng-container>
+
+      <ng-container *ngIf="club.controlledByPrincipal">
+        <p class="loading" *ngIf="dashboardLoading">Loading private club dashboard…</p>
+        <article class="panel empty-state" *ngIf="!dashboardLoading && dashboardError">
+          <h2>Private dashboard unavailable</h2>
+          <p>{{ dashboardError }}</p>
+          <button type="button" (click)="retryDashboard()">Retry dashboard</button>
+        </article>
+        <ng-container *ngIf="dashboard && !dashboardLoading && !dashboardError">
+          <div class="summary-grid private-grid">
+            <article><span>Club treasury</span><strong>{{ money(dashboard.treasury.balance.amount) }}</strong></article>
+            <article><span>Debt</span><strong>{{ money(dashboard.treasury.debt.amount) }}</strong></article>
+            <article><span>Protected reserve</span><strong>{{ money(dashboard.treasury.protectedReserve.amount) }}</strong></article>
+            <article><span>Due obligations</span><strong>{{ money(dashboard.treasury.dueObligations.amount) }}</strong></article>
+          </div>
+          <div class="detail-columns">
+            <article class="panel">
+              <h2>Canonical valuation</h2>
+              <dl>
+                <div><dt>Squad market value</dt><dd>{{ money(dashboard.valuation.squadMarketValue.amount) }}</dd></div>
+                <div><dt>Net cash</dt><dd>{{ money(dashboard.valuation.netCash.amount) }}</dd></div>
+                <div><dt>Stadium & facilities</dt><dd>{{ money(dashboard.valuation.stadiumFacilitiesValue.amount) }}</dd></div>
+                <div><dt>Reputation & brand</dt><dd>{{ money(dashboard.valuation.reputationBrandValue.amount) }}</dd></div>
+              </dl>
+            </article>
+            <article class="panel">
+              <h2>Ownership</h2>
+              <p>{{ dashboard.capTable.issuedShares | number }} issued · {{ dashboard.capTable.freeFloat | number }} free float</p>
+              <div class="holding" *ngFor="let holding of dashboard.capTable.holdings; trackBy: trackHolding">
+                <span><b>{{ holding.displayName }}</b><small *ngIf="holding.protectedUser">protected user shareholder</small></span>
+                <span>{{ holding.quantity | number }} · {{ percent(holding.stakeBps) }}</span>
+                <b>{{ money(holding.equityValue.amount) }}</b>
+              </div>
+            </article>
+          </div>
+          <article class="panel treasury-panel">
+            <h2>Controlled club treasury</h2>
+            <div class="transfer-form">
+              <select [(ngModel)]="direction" aria-label="Transfer direction"><option value="INJECTION">Injection</option><option value="WITHDRAWAL">Withdrawal</option></select>
+              <input type="number" min="1" step="1" [(ngModel)]="amount" placeholder="Amount" aria-label="Transfer amount">
+              <button type="button" (click)="transfer()" [disabled]="inFlight !== null || dashboard.treasury.withdrawalRestricted && direction === 'WITHDRAWAL'">
+                {{ inFlight === 'transfer' ? 'Posting…' : 'Post mirrored transfer' }}
+              </button>
+            </div>
+          </article>
+        </ng-container>
+      </ng-container>
+    </main>
+  </div>
 </section>
