@@ -39,10 +39,10 @@ describe('PortfolioComponent', () => {
 
   it('enters flag-off state when the backend reports Regent disabled', () => {
     market.portfolio.and.returnValue(throwError(() => ({
-      error: { code: 'REGENT_FEATURE_DISABLED', message: 'Regent off' }
+      error: { code: 'CHAIRMAN_FEATURE_DISABLED', message: 'Chairman mode off' }
     })));
     fixture.detectChanges();
     expect(component.flagOff).toBeTrue();
-    expect(component.error).toBe('Regent off');
+    expect(component.error).toBe('Chairman mode off');
   });
 });

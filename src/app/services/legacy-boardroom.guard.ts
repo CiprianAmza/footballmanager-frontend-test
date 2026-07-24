@@ -15,7 +15,7 @@ export class LegacyBoardroomGuard implements CanActivate {
   canActivate(): UrlTree {
     const canUseEconomy = this.auth.isLoggedIn
       && this.auth.careerRole === 'CHAIRMAN'
-      && this.auth.regentEnabled;
+      && this.auth.chairmanEnabled;
     return this.router.parseUrl(canUseEconomy ? '/economy' : '/home');
   }
 }

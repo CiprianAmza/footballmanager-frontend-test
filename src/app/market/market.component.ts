@@ -89,7 +89,7 @@ export class MarketComponent implements OnInit {
       error: error => {
         this.adviserLoading = false;
         const apiError = this.readError(error);
-        if (apiError?.code === 'REGENT_FEATURE_DISABLED') {
+        if (apiError?.code === 'CHAIRMAN_FEATURE_DISABLED') {
           this.flagOff = true;
           this.adviserError = apiError.message;
           return;
@@ -211,7 +211,7 @@ export class MarketComponent implements OnInit {
 
   private handlePageError(error: unknown, fallback: string): void {
     const apiError = this.readError(error);
-    if (apiError?.code === 'REGENT_FEATURE_DISABLED') {
+    if (apiError?.code === 'CHAIRMAN_FEATURE_DISABLED') {
       this.flagOff = true;
       this.error = apiError.message;
       return;

@@ -16,7 +16,7 @@ export interface AuthResponse {
   careerRole?: CareerRole;
   profileId?: number;
   roles?: string[];
-  regentEnabled?: boolean;
+  chairmanEnabled?: boolean;
   error?: string;
 }
 
@@ -57,8 +57,8 @@ export class AuthService {
     return this.user?.careerRole ?? null;
   }
 
-  get regentEnabled(): boolean {
-    return this.user?.regentEnabled === true;
+  get chairmanEnabled(): boolean {
+    return this.user?.chairmanEnabled === true;
   }
 
   login(username: string, password: string): Observable<AuthResponse> {

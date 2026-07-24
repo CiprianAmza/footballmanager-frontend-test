@@ -5,7 +5,7 @@ import { ChairmanRegentGuard } from './chairman-regent.guard';
 
 describe('ChairmanRegentGuard', () => {
   it('requires authenticated chairman identity and the REGENT flag', () => {
-    const auth = { isLoggedIn: true, regentEnabled: true, careerRole: 'CHAIRMAN' };
+    const auth = { isLoggedIn: true, chairmanEnabled: true, careerRole: 'CHAIRMAN' };
     const router = { parseUrl: jasmine.createSpy('parseUrl').and.returnValue('blocked') };
     TestBed.configureTestingModule({ providers: [ChairmanRegentGuard,
       { provide: AuthService, useValue: auth }, { provide: Router, useValue: router }] });

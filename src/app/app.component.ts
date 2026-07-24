@@ -183,7 +183,7 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
       if (!this.authService.sessionChecked || !user) return;
       this.teamService.checkSetup();
       if (user.careerRole === 'MANAGER') this.careerService.refresh();
-      if (user.careerRole === 'CHAIRMAN' && user.regentEnabled
+      if (user.careerRole === 'CHAIRMAN' && user.chairmanEnabled
           && (this.router.url === '/' || this.router.url === '/home')) {
         this.router.navigate(['/economy']);
       }
@@ -499,7 +499,7 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
       this.http.post(urlApp + '/api/career/chairman/setup', {}).subscribe({
         next: () => {
           this.teamService.checkSetup();
-          if (this.authService.regentEnabled) this.router.navigate(['/economy']);
+          if (this.authService.chairmanEnabled) this.router.navigate(['/economy']);
         },
         error: () => this.teamService.checkSetup()
       });

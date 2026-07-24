@@ -47,13 +47,13 @@
 <app-game-setup *ngIf="authService.isLoggedIn && teamService.setupChecked && !teamService.setupComplete"
                 (setupComplete)="onSetupComplete($event)"></app-game-setup>
 
-<section class="chairman-phase-zero" *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'CHAIRMAN' && !authService.regentEnabled">
+<section class="chairman-phase-zero" *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'CHAIRMAN' && !authService.chairmanEnabled">
   <h1>Chairman career created</h1>
   <p>Your secure chairman identity is ready. Boardroom and economy features remain disabled until their reviewed rollout phase.</p>
   <button type="button" (click)="logout()">Logout</button>
 </section>
 
-<div class="chairman-phase-one" *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'CHAIRMAN' && authService.regentEnabled">
+<div class="chairman-phase-one" *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'CHAIRMAN' && authService.chairmanEnabled">
   <nav class="chairman-nav">
     <strong>REGENT</strong><a routerLink="/economy" routerLinkActive="active">My economy</a>
     <a routerLink="/market" routerLinkActive="active">Market</a>
@@ -78,10 +78,10 @@
       <a routerLink="/home" routerLinkActive="active">Home</a>
       <a routerLink="/inbox" routerLinkActive="active">Inbox</a>
       <a href="javascript:void(0)" (click)="openMyManager()">My Manager</a>
-      <a routerLink="/economy" routerLinkActive="active" *ngIf="authService.regentEnabled">Personal Economy</a>
-      <a routerLink="/market" routerLinkActive="active" *ngIf="authService.regentEnabled">Market</a>
-      <a routerLink="/portfolio" routerLinkActive="active" *ngIf="authService.regentEnabled">Portfolio</a>
-      <a routerLink="/wealth-rankings" routerLinkActive="active" *ngIf="authService.regentEnabled">Wealth Rankings</a>
+      <a routerLink="/economy" routerLinkActive="active" *ngIf="authService.chairmanEnabled">Personal Economy</a>
+      <a routerLink="/market" routerLinkActive="active" *ngIf="authService.chairmanEnabled">Market</a>
+      <a routerLink="/portfolio" routerLinkActive="active" *ngIf="authService.chairmanEnabled">Portfolio</a>
+      <a routerLink="/wealth-rankings" routerLinkActive="active" *ngIf="authService.chairmanEnabled">Wealth Rankings</a>
     </div>
 
     <div class="border"></div>

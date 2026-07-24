@@ -39,10 +39,10 @@ describe('AuthService', () => {
     expect(login.request.headers.has('X-User-Id')).toBeFalse();
     expect(login.request.headers.get('X-XSRF-TOKEN')).toBe('csrf');
     expect(login.request.body).toEqual({ username: 'alice', password: 'correct-password' });
-    login.flush({ success: true, userId: 1, username: 'alice', careerRole: 'MANAGER', regentEnabled: true });
+    login.flush({ success: true, userId: 1, username: 'alice', careerRole: 'MANAGER', chairmanEnabled: true });
 
     expect(service.currentUserId).toBe(1);
-    expect(service.regentEnabled).toBeTrue();
+    expect(service.chairmanEnabled).toBeTrue();
     expect(localStorage.getItem('fm_user')).not.toContain('alice');
   });
 

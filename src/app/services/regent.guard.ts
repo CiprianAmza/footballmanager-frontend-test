@@ -6,7 +6,7 @@ import { AuthService } from './auth.service';
 export class RegentGuard implements CanActivate {
   constructor(private auth: AuthService, private router: Router) {}
   canActivate(): boolean | UrlTree {
-    return this.auth.isLoggedIn && this.auth.regentEnabled
+    return this.auth.isLoggedIn && this.auth.chairmanEnabled
       ? true : this.router.parseUrl('/home');
   }
 }

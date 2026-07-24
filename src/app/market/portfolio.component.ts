@@ -36,7 +36,7 @@ export class PortfolioComponent implements OnInit {
       error: error => {
         this.loading = false;
         const apiError = this.readError(error);
-        if (apiError?.code === 'REGENT_FEATURE_DISABLED') {
+        if (apiError?.code === 'CHAIRMAN_FEATURE_DISABLED') {
           this.flagOff = true;
           this.error = apiError.message;
           return;

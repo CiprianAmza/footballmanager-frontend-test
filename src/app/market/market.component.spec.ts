@@ -68,11 +68,11 @@ describe('MarketComponent', () => {
 
   it('surfaces feature-flag-off state from the API', () => {
     market.instruments.and.returnValue(throwError(() => ({
-      error: { code: 'REGENT_FEATURE_DISABLED', message: 'Regent off' }
+      error: { code: 'CHAIRMAN_FEATURE_DISABLED', message: 'Chairman mode off' }
     })));
     component.load();
     expect(component.flagOff).toBeTrue();
-    expect(component.error).toBe('Regent off');
+    expect(component.error).toBe('Chairman mode off');
   });
 
   it('reuses the same hire key when retrying the same failed adviser hire', () => {
