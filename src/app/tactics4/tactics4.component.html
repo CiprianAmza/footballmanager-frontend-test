@@ -70,6 +70,10 @@
     <span class="mandate-version">Version {{ chairmanMandate?.version ?? 0 }}</span>
     <p class="mandate-error" *ngIf="chairmanError">{{ chairmanError }}</p>
     <p class="mandate-success" *ngIf="chairmanSuccess">{{ chairmanSuccess }}</p>
+    <p class="mandate-loading" *ngIf="chairmanLoading">Loading chairman mandate…</p>
+    <p class="mandate-empty" *ngIf="!chairmanLoading && !chairmanError && !chairmanMandate">No mandate data is available.</p>
+    <button class="lab-btn ghost" type="button" *ngIf="chairmanError && !chairmanLoading"
+            (click)="retryChairmanMandate()">RETRY</button>
     <p class="mandate-readonly" *ngIf="chairmanReadOnly">This club is no longer controlled by you. Editing is disabled.</p>
     <div class="mandate-lock-summary">
       <strong>Locked players ({{ chairmanLocks.length }}/11)</strong>
@@ -78,7 +82,7 @@
     </div>
   </section>
 
-  <div class="access-strip" *ngIf="isExternalTeam">
+  <div class="access-strip" *ngIf="isExternalTeam && !isChairmanMode">
     <div class="access-copy">
       <span class="access-badge" [class.admin]="isAdminEditingExternalTeam">
         {{ isAdminEditingExternalTeam ? 'FEDERATION ADMIN · EDIT MODE' : 'OPPOSITION SCOUT · READ ONLY' }}
@@ -301,7 +305,7 @@
 
                  <div *ngIf="cell.player" class="node"
                       [class.locked-slot]="isSlotLocked(cell.positionIndex, cell.player.position)"
-                      [attr.draggable]="canEdit && !isSlotLocked(cell.positionIndex, cell.player.position) ? 'true' : null"
+                    [attr.draggable]="canEdit && !isSlotLocked(cell.positionIndex, cell.player.position) && !isChairmanDragLocked(cell.positionIndex, cell.player.id) ? 'true' : null"
                       (dragstart)="drag($event, cell.player)">
                     <span class="lock-badge" *ngIf="isSlotLocked(cell.positionIndex, cell.player.position)"
                           title="Locked by the owner">&#128274;</span>
@@ -311,7 +315,7 @@
                             [attr.aria-label]="isChairmanSlotLocked(cell.positionIndex) ? 'Unlock slot' : 'Lock player in slot'">
                       {{ isChairmanSlotLocked(cell.positionIndex) ? '🔒' : '＋' }}
                     </button>
-                    <button *ngIf="canEdit" class="node-plus mono" title="Roles & Instructions"
+                    <button *ngIf="canEdit && !isChairmanMode" class="node-plus mono" title="Roles & Instructions"
                             (click)="openPlayerPanel(cell, $event)">+</button>
                     <div *ngIf="pitchView === 'tokens'" class="node-disc"
                          (click)="openPlayerCard(cell.player.id)"
@@ -366,7 +370,7 @@
       </div>
 
       <!-- SUBS BENCH -->
-      <div class="bench">
+      <div class="bench" *ngIf="!isChairmanMode">
         <div class="bench-label mono">SUBSTITUTES</div>
         <div class="bench-row">
           <div *ngFor="let sub of substitutes; let i = index"
@@ -374,7 +378,7 @@
                (dragover)="allowDrop($event)"
                (drop)="dropSubstitute($event, i)">
                <div *ngIf="sub.player" class="node mini"
-                    [attr.draggable]="canEdit ? 'true' : null" (dragstart)="drag($event, sub.player)">
+                    [attr.draggable]="canEdit && !isChairmanPlayerLocked(sub.player.id) ? 'true' : null" (dragstart)="drag($event, sub.player)">
                   <div class="node-disc gray"></div>
                   <div class="nt-name small">{{ sub.player.name }}</div>
                </div>
@@ -399,7 +403,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let player of players"
-                [attr.draggable]="canEdit ? 'true' : null"
+                [attr.draggable]="canEdit && !(isChairmanMode && isChairmanPlayerLocked(player.id)) ? 'true' : null"
                 (dragstart)="drag($event, player)"
                 [class.picked]="isPlayerSelected(player.id)">
               <td class="c-sel">
