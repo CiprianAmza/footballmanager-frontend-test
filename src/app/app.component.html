@@ -59,9 +59,21 @@
     <a routerLink="/market" routerLinkActive="active">Market</a>
     <a routerLink="/portfolio" routerLinkActive="active">Portfolio</a>
     <a routerLink="/chairman/clubs" routerLinkActive="active">My clubs</a>
+    <a routerLink="/overview" routerLinkActive="active">Overview</a>
+    <a routerLink="/competition-list" routerLinkActive="active">Competitions</a>
+    <a routerLink="/coefficients" routerLinkActive="active">Coefficients</a>
+    <a routerLink="/all-time-champions" routerLinkActive="active">All-time champions</a>
+    <a routerLink="/stats/scorers" routerLinkActive="active">Top scorers</a>
+    <a routerLink="/inbox" routerLinkActive="active">Inbox</a>
     <a routerLink="/wealth-rankings" routerLinkActive="active">Wealth rankings</a>
     <span>{{ authService.currentUsername }}</span><button type="button" (click)="logout()">Logout</button>
   </nav>
+  <div class="game-top-bar chairman-game-controls">
+    <button class="continue-btn" (click)="advanceGame()" [disabled]="advancing || fastForwardRunning">{{ advancing ? 'Processing...' : 'CONTINUE' }}</button>
+    <button class="fast-forward-btn" type="button" (click)="openFastForward()" [disabled]="advancing">FAST FORWARD</button>
+    <div class="date-info"><span class="day-date">{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }}</span><span class="day-phase">{{ teamService.currentPhase }} - {{ teamService.seasonPhase }}</span></div>
+    <div class="season-info">Season {{ teamService.currentSeason }}</div>
+  </div>
   <main class="chairman-content"><router-outlet></router-outlet></main>
 </div>
 

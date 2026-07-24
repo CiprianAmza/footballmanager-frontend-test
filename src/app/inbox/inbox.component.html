@@ -8,7 +8,7 @@
         <button class="mark-all-btn" (click)="markAllRead()" title="Mark all as read">Mark all read</button>
       </div>
       <div class="filter-bar">
-        <button *ngFor="let cat of categories"
+        <button *ngFor="let cat of categories | slice:0:(chairmanMode ? 1 : categories.length)"
                 class="filter-btn"
                 [class.active]="activeFilter === cat"
                 [ngClass]="'filter-' + cat"
@@ -45,6 +45,8 @@
   </div>
 
   <div class="message-viewer">
+    <div *ngIf="loading" class="empty-state">Loading inbox…</div>
+    <div *ngIf="error" class="empty-state">{{ error }} <button (click)="loadMessages(); loadUnreadCount()">Retry</button></div>
 
     <div *ngIf="selectedMessage; else noMessage" class="viewer-content">
 

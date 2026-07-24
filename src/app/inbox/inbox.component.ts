@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { TeamService } from '../services/team.service';
 import { CareerService, JobOffer } from '../services/career.service';
 import { urlApp } from '../app.component';
+import { AuthService } from '../services/auth.service';
 
 interface ManagerInbox {
   id: number;
@@ -33,19 +34,23 @@ export class InboxComponent implements OnInit {
   offersById: { [offerId: number]: JobOffer } = {};
   offerActionInFlight: boolean = false;
   offerActionMessage: string = '';
+  loading = false;
+  error = '';
+  get chairmanMode(): boolean { return this.authService.careerRole === 'CHAIRMAN'; }
 
   categories: string[] = ['all', 'JOB_OFFER', 'CAREER', 'match_result', 'league_news', 'transfer', 'european_prize', 'board', 'discipline', 'season_end', 'european'];
 
   constructor(
     private http: HttpClient,
     private teamService: TeamService,
-    public careerService: CareerService
+    public careerService: CareerService,
+    public authService: AuthService
   ) {}
 
   ngOnInit(): void {
     this.loadMessages();
     this.loadUnreadCount();
-    this.loadPendingOffers();
+    if (!this.chairmanMode) this.loadPendingOffers();
   }
 
   loadPendingOffers(): void {
@@ -115,22 +120,22 @@ export class InboxComponent implements OnInit {
   }
 
   loadMessages(): void {
-    const teamId = this.teamService.teamId;
-    this.http.get<ManagerInbox[]>(`${urlApp}/inbox/messages/${teamId}`).subscribe({
+    this.loading = true; this.error = '';
+    this.http.get<ManagerInbox[]>(`${urlApp}/inbox/me`).subscribe({
       next: (data) => {
+        this.loading = false;
         this.messages = data;
         this.applyFilter();
         if (this.filteredMessages.length > 0) {
           this.selectMessage(this.filteredMessages[0]);
         }
       },
-      error: (err) => console.error('Error loading inbox messages:', err)
+      error: () => { this.loading = false; this.error = 'Inbox could not be loaded.'; }
     });
   }
 
   loadUnreadCount(): void {
-    const teamId = this.teamService.teamId;
-    this.http.get<number>(`${urlApp}/inbox/unreadCount/${teamId}`).subscribe({
+    this.http.get<number>(`${urlApp}/inbox/me/unreadCount`).subscribe({
       next: (count) => this.unreadCount = count,
       error: (err) => console.error('Error loading unread count:', err)
     });
@@ -144,7 +149,7 @@ export class InboxComponent implements OnInit {
   }
 
   markAsRead(msg: ManagerInbox): void {
-    this.http.post(`${urlApp}/inbox/markRead/${msg.id}`, {}).subscribe({
+    this.http.post(`${urlApp}/inbox/me/${msg.id}/read`, {}).subscribe({
       next: () => {
         msg.isRead = true;
         this.unreadCount = this.messages.filter(m => !m.isRead).length;
@@ -154,8 +159,7 @@ export class InboxComponent implements OnInit {
   }
 
   markAllRead(): void {
-    const teamId = this.teamService.teamId;
-    this.http.post(`${urlApp}/inbox/markAllRead/${teamId}`, {}).subscribe({
+    this.http.post(`${urlApp}/inbox/me/markAllRead`, {}).subscribe({
       next: () => {
         this.messages.forEach(m => m.isRead = true);
         this.unreadCount = 0;

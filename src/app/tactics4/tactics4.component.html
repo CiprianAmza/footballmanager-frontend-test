@@ -76,6 +76,9 @@
     <p class="mandate-loaded" *ngIf="chairmanLoaded && chairmanHasRestrictions && !chairmanLoading">Tactical restrictions are active.</p>
     <button class="lab-btn ghost" type="button" *ngIf="chairmanError && !chairmanLoading"
             (click)="retryChairmanMandate()">RETRY</button>
+    <p class="mandate-error" *ngIf="playersError">{{ playersError }}</p>
+    <p class="mandate-error" *ngIf="formationsError">{{ formationsError }}</p>
+    <button class="lab-btn ghost" type="button" *ngIf="formationsError" (click)="retryFormations()">RETRY FORMATIONS</button>
     <p class="mandate-readonly" *ngIf="chairmanControlDenied">This club is no longer controlled by you. Editing is disabled.</p>
     <div class="mandate-lock-summary">
       <strong>Locked players ({{ chairmanLocks.length }}/11)</strong>

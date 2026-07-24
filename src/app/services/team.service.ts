@@ -94,6 +94,9 @@ export class TeamService {
         if (result.careerRole === 'CHAIRMAN') {
           this.teamIdSubject.next(0);
           this.setupCompleteSubject.next(true);
+          this.managerFiredSubject.next(false);
+          this.loadCurrentSeason();
+          this.loadGameState();
           return;
         }
         if (result.setupComplete && result.freeAgent) {

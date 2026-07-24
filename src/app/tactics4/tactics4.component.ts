@@ -118,6 +118,12 @@ export class Tactics4Component implements OnInit, OnChanges {
   private loadGeneration = 0;
   private formationRequestId = 0;
   private queryModeSubscription?: Subscription;
+  playersLoading = false;
+  playersError = '';
+  formationsLoading = false;
+  formationsError = '';
+  mandateLoading = false;
+  mandateError = '';
 
   tacticalViewMode: 'manager' | 'best' = 'manager';
   managerName: string = 'Manager';
@@ -362,6 +368,14 @@ export class Tactics4Component implements OnInit, OnChanges {
   private loadChairmanMandateData(generation = this.loadGeneration, preserveError = ''): void {
     const requestId = ++this.chairmanRequestId;
     this.chairmanSubscription?.unsubscribe();
+    this.chairmanSubscription = new Subscription();
+    const current = () => generation === this.loadGeneration && requestId === this.chairmanRequestId;
+    this.playersLoading = true;
+    this.formationsLoading = true;
+    this.mandateLoading = true;
+    this.playersError = '';
+    this.formationsError = '';
+    this.mandateError = '';
     this.chairmanLoading = true;
     this.chairmanError = preserveError;
     this.chairmanSuccess = '';
@@ -373,41 +387,33 @@ export class Tactics4Component implements OnInit, OnChanges {
     this.chairmanFormationEnabled = false;
     this.chairmanLocks = [];
     this.chairmanInvalidLocks = [];
-    this.chairmanSubscription = forkJoin({
-      players: this.http.get<Player[]>(urlApp + `/tactic/getPlayers/${this.teamId}`),
-      tactics: this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/getAllPossibleTactics/${this.teamId}`),
-      mandate: this.chairmanApi.tacticalMandate(this.teamId)
-    }).subscribe({
-      next: response => {
-        if (generation !== this.loadGeneration || requestId !== this.chairmanRequestId) return;
-        this.players = (response.players || []).map(p => ({ ...p, condition: p.condition ?? 95, sharpness: p.sharpness ?? 88 }))
-          .sort((a, b) => b.rating - a.rating);
-        this.computeTeamRatingRange();
-        this.formationOptions = (response.tactics || []).map(t => ({
-          key: t.tacticName, label: this.PRETTY[t.tacticName] || t.tacticName
-        }));
-        this.chairmanMandate = response.mandate;
-        this.chairmanRequiredFormation = response.mandate.requiredFormation;
-        this.chairmanFormationEnabled = response.mandate.requiredFormation !== null;
-        this.chairmanLocks = this.copyLocks(response.mandate.lockedSlots || []);
+    this.chairmanSubscription.add(this.http.get<Player[]>(urlApp + `/tactic/getPlayers/${this.teamId}`).subscribe({
+      next: players => { if (current()) { this.players = (players || []).map(p => ({ ...p, condition: p.condition ?? 95, sharpness: p.sharpness ?? 88 })).sort((a, b) => b.rating - a.rating); this.computeTeamRatingRange(); this.playersLoading = false; } },
+      error: () => { if (current()) { this.playersLoading = false; this.playersError = 'Players could not be loaded.'; } }
+    }));
+    this.chairmanSubscription.add(this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/getAllPossibleTactics/${this.teamId}`).subscribe({
+      next: tactics => { if (current()) { this.formationOptions = (tactics || []).map(t => ({ key: t.tacticName, label: this.PRETTY[t.tacticName] || t.tacticName })); this.formationsLoading = false; } },
+      error: () => { if (current()) { this.formationsLoading = false; this.formationsError = 'Formations could not be loaded.'; } }
+    }));
+    this.chairmanSubscription.add(this.chairmanApi.tacticalMandate(this.teamId).subscribe({
+      next: mandate => {
+        if (!current()) return;
+        this.chairmanMandate = mandate;
+        this.chairmanRequiredFormation = mandate.requiredFormation;
+        this.chairmanFormationEnabled = mandate.requiredFormation !== null;
+        this.chairmanLocks = this.copyLocks(mandate.lockedSlots || []);
         this.selectedTactic = this.chairmanRequiredFormation || this.formationOptions[0]?.key || '442';
         this.setFormationIndices(this.selectedTactic);
         this.applyChairmanLocksToField();
+        this.mandateLoading = false;
         this.chairmanLoading = false;
         this.chairmanReadOnly = false;
         this.chairmanLoaded = true;
         this.chairmanControlDenied = false;
         this.chairmanError = preserveError;
       },
-      error: error => {
-        if (generation !== this.loadGeneration || requestId !== this.chairmanRequestId) return;
-        this.chairmanLoading = false;
-        this.chairmanReadOnly = true;
-        this.chairmanLoaded = false;
-        this.chairmanError = this.mapChairmanError(error);
-        this.chairmanControlDenied = this.isControlError(error);
-      }
-    });
+      error: error => { if (current()) { this.mandateLoading = false; this.chairmanLoading = false; this.chairmanReadOnly = true; this.chairmanLoaded = false; this.chairmanError = this.mapChairmanError(error); this.mandateError = this.chairmanError; this.chairmanControlDenied = this.isControlError(error); } }
+    }));
   }
 
   switchTacticalView(mode: 'manager' | 'best'): void {
@@ -522,8 +528,50 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
 
   retryChairmanMandate(): void {
-    if (!this.isChairmanMode || this.chairmanLoading) return;
-    this.loadChairmanMandateData(this.loadGeneration);
+    if (!this.isChairmanMode || this.mandateLoading) return;
+    const generation = this.loadGeneration;
+    const requestId = ++this.chairmanRequestId;
+    this.mandateLoading = true;
+    this.chairmanLoading = true;
+    this.mandateError = '';
+    this.chairmanApi.tacticalMandate(this.teamId).subscribe({
+      next: mandate => {
+        if (generation !== this.loadGeneration || requestId !== this.chairmanRequestId) return;
+        this.chairmanMandate = mandate;
+        this.chairmanRequiredFormation = mandate.requiredFormation;
+        this.chairmanFormationEnabled = mandate.requiredFormation !== null;
+        this.chairmanLocks = this.copyLocks(mandate.lockedSlots || []);
+        this.selectedTactic = mandate.requiredFormation || this.formationOptions[0]?.key || '442';
+        this.mandateLoading = false;
+        this.chairmanLoading = false;
+        this.chairmanReadOnly = false;
+        this.chairmanLoaded = true;
+        this.chairmanError = '';
+      },
+      error: error => {
+        if (generation !== this.loadGeneration || requestId !== this.chairmanRequestId) return;
+        this.mandateLoading = false;
+        this.chairmanLoading = false;
+        this.chairmanReadOnly = true;
+        this.chairmanError = this.mandateError = this.mapChairmanError(error);
+      }
+    });
+  }
+
+  retryFormations(): void {
+    if (!this.isChairmanMode) return;
+    this.formationsLoading = true;
+    this.formationsError = '';
+    const generation = this.loadGeneration;
+    const requestId = ++this.formationRequestId;
+    this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/getAllPossibleTactics/${this.teamId}`).subscribe({
+      next: tactics => {
+        if (generation !== this.loadGeneration || requestId !== this.formationRequestId) return;
+        this.formationOptions = (tactics || []).map(t => ({ key: t.tacticName, label: this.PRETTY[t.tacticName] || t.tacticName }));
+        this.formationsLoading = false;
+      },
+      error: () => { if (generation === this.loadGeneration && requestId === this.formationRequestId) { this.formationsLoading = false; this.formationsError = 'Formations could not be loaded.'; } }
+    });
   }
 
   toggleChairmanFormation(): void {
