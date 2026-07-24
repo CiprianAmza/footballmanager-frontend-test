@@ -58,6 +58,9 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     this.routeSubscription = this.route.paramMap.subscribe(params => {
       const requested = Number(params.get('teamId'));
       this.requestedTeamId = Number.isSafeInteger(requested) && requested > 0 ? requested : null;
+      if (this.requestedTeamId === null || this.clubs.some(club => club.teamId === this.requestedTeamId)) {
+        this.canonicalizedRouteKey = '';
+      }
       if (this.clubsLoaded) this.applyRouteSelection();
     });
     this.querySubscription = this.route.queryParamMap.subscribe(params => {
@@ -290,6 +293,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
       || this.clubs[0].teamId;
     const current = this.clubs.find(club => club.teamId === preferred);
     if (!current) return;
+    if (requestedClub || requested === null) this.canonicalizedRouteKey = '';
     const changedTeam = this.selectedTeamId !== preferred;
     if (changedTeam) {
       this.dashboard = null;

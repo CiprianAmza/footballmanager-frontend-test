@@ -7,7 +7,7 @@ import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
 import { ChairmanClubService } from '../services/chairman-club.service';
 import {
   ChairmanClubDashboard, ChairmanClubSummary, ClubCatalogScope, TakeoverExecutionView,
-  TakeoverQuoteView
+  TakeoverQuoteView, TreasuryTransferView
 } from './chairman-club.models';
 import { ChairmanClubComponent } from './chairman-club.component';
 
@@ -49,6 +49,12 @@ describe('ChairmanClubComponent', () => {
     executionId: `e-${teamId}`, quoteId: `q-${teamId}`, teamId, sharesAcquired: 60,
     unitPrice: money(2), totalConsideration: money(120), cashBalanceAfter: money(800),
     quantityAfter: 60, season: 1, day: 1, replayed: false
+  });
+  const treasuryTransfer = (teamId: number, direction: 'INJECTION' | 'WITHDRAWAL',
+                            amount: number): TreasuryTransferView => ({
+    transferId: `t-${teamId}`, teamId, direction, amount: money(amount),
+    personalBalanceAfter: money(500), clubBalanceAfter: money(600), distributableBefore: money(700),
+    correlationId: `c-${teamId}`, season: 1, day: 1, replayed: false
   });
 
   beforeEach(async () => {
@@ -166,6 +172,24 @@ describe('ChairmanClubComponent', () => {
     }));
   });
 
+  it('canonicalizes the same invalid team again after the route becomes valid', () => {
+    routeParams.next(convertToParamMap({ teamId: '99' }));
+    api.clubs.and.returnValue(of([club(7), club(8, true, true)]));
+    start();
+    expect(router.navigate).toHaveBeenCalledTimes(1);
+    expect((router.navigate as jasmine.Spy).calls.mostRecent().args).toEqual([
+      ['/chairman/clubs', 8], { queryParams: { scope: 'ALL' }, replaceUrl: true }
+    ]);
+
+    routeParams.next(convertToParamMap({ teamId: '8' }));
+    routeParams.next(convertToParamMap({ teamId: '99' }));
+
+    expect(router.navigate).toHaveBeenCalledTimes(2);
+    expect((router.navigate as jasmine.Spy).calls.mostRecent().args).toEqual([
+      ['/chairman/clubs', 8], { queryParams: { scope: 'ALL' }, replaceUrl: true }
+    ]);
+  });
+
   it('requests a dashboard only for a controlled club', () => {
     api.clubs.and.returnValue(of([club(8, true, true)]));
     routeParams.next(convertToParamMap({ teamId: '8' }));
@@ -255,7 +279,7 @@ describe('ChairmanClubComponent', () => {
   it('ignores an execute response with a mismatched quote id', () => {
     start();
     component.quote = quote(7);
-    api.execute.and.returnValue(of({ ...execution(7), quoteId: 'wrong-quote' }));
+    api.execute.and.returnValue(of({ ...execution(7), teamId: 99, quoteId: 'wrong-quote' }));
     component.executeTakeover();
 
     expect(component.actionError).toContain('did not match');
@@ -269,7 +293,7 @@ describe('ChairmanClubComponent', () => {
     component.amount = 500;
     api.transfer.and.returnValue(of({
       teamId: 7, direction: 'INJECTION', amount: money(499)
-    } as any));
+    } as TreasuryTransferView));
     component.transfer();
 
     expect(component.amount).toBe(500);
@@ -278,7 +302,7 @@ describe('ChairmanClubComponent', () => {
     expect(api.dashboard).toHaveBeenCalledTimes(1);
   });
 
-  it('blocks duplicate quote and transfer submissions', () => {
+  it('blocks duplicate quote submissions', () => {
     const quotePending = new Subject<TakeoverQuoteView>();
     api.quote.and.returnValue(quotePending.asObservable());
     start();
@@ -287,12 +311,23 @@ describe('ChairmanClubComponent', () => {
     expect(api.quote).toHaveBeenCalledTimes(1);
     quotePending.next(quote(7));
     quotePending.complete();
+  });
 
-    api.transfer.and.returnValue(of({ teamId: 8, direction: 'INJECTION', amount: money(1) } as any));
+  it('blocks duplicate transfer submissions and releases inFlight after valid completion', () => {
+    const transferPending = new Subject<TreasuryTransferView>();
+    api.clubs.and.returnValue(of([club(7, true, true)]));
+    api.transfer.and.returnValue(transferPending.asObservable());
+    start();
+
     component.amount = 500;
+    component.direction = 'INJECTION';
     component.transfer();
     component.transfer();
-    expect(api.transfer).not.toHaveBeenCalled();
+    expect(api.transfer).toHaveBeenCalledTimes(1);
+    expect(component.inFlight).toBe('transfer');
+    transferPending.next(treasuryTransfer(7, 'INJECTION', 500));
+    transferPending.complete();
+    expect(component.inFlight).toBeNull();
   });
 
   it('maps stale quote errors and clears the quote and its key', () => {
