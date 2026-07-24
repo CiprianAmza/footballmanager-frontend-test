@@ -700,3 +700,32 @@
   z-index: 20;
   pointer-events: none;
 }
+.chairman-mandate-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto auto auto;
+  gap: .75rem 1rem;
+  align-items: end;
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid rgba(58, 197, 141, .45);
+  background: rgba(16, 32, 28, .82);
+}
+.chairman-mandate-panel h2 { margin: .2rem 0; }
+.chairman-mandate-panel p { margin: .25rem 0 0; color: #a9bbb5; }
+.mandate-toggle, .mandate-formation { display: flex; flex-direction: column; gap: .3rem; color: #d9eee6; }
+.mandate-formation select { min-width: 8rem; }
+.mandate-version { color: #a9bbb5; font-family: monospace; }
+.mandate-error, .mandate-success, .mandate-readonly { grid-column: 1 / -1; }
+.mandate-error { color: #ff9b9b !important; }
+.mandate-success { color: #7ee6b6 !important; }
+.mandate-readonly { color: #ffd27d !important; }
+.mandate-lock-summary { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .45rem .8rem; color: #d9eee6; }
+.mandate-lock-summary span { padding: .2rem .45rem; border: 1px solid rgba(126, 230, 182, .35); border-radius: 3px; }
+.chairman-lock-button { position: absolute; top: -1.2rem; right: -1.2rem; z-index: 3; border: 0; background: #10201c; color: #7ee6b6; cursor: pointer; }
+.chairman-lock-button.active { color: #ffd27d; }
+.chairman-mode .pitch-col { grid-column: 1 / -1; }
+@media (max-width: 900px) {
+  .chairman-mandate-panel { grid-template-columns: 1fr 1fr; }
+  .chairman-mandate-panel > :first-child, .mandate-error, .mandate-success,
+  .mandate-readonly, .mandate-lock-summary { grid-column: 1 / -1; }
+}

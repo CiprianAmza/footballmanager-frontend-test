@@ -108,6 +108,9 @@
                 </span>
                 <span *ngIf="!centre.primaryCompetition">Competition unavailable</span>
               </div>
+              <a *ngIf="canOpenTacticalMandate" class="mandate-link"
+                 [routerLink]="['/tactics', centre.teamId]"
+                 [queryParams]="{ mode: 'chairman-mandate' }">Tactical mandate</a>
             </div>
             <div class="command-grid">
               <article>

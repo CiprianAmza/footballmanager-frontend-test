@@ -5,7 +5,8 @@ import { HttpParams } from '@angular/common/http';
 import { urlApp } from '../app.component';
 import {
   ChairmanClubDashboard, ChairmanClubSummary, ChairmanCommandCentreView, ClubCatalogScope,
-  ClubCashTransferDirection, TakeoverExecutionView, TakeoverQuoteView, TreasuryTransferView
+  ClubCashTransferDirection, TakeoverExecutionView, TakeoverQuoteView, TreasuryTransferView,
+  TacticalMandateUpdate, TacticalMandateView
 } from '../chairman-club/chairman-club.models';
 
 @Injectable({ providedIn: 'root' })
@@ -25,6 +26,16 @@ export class ChairmanClubService {
   commandCentre(teamId: number): Observable<ChairmanCommandCentreView> {
     return this.http.get<ChairmanCommandCentreView>(
       urlApp + `/api/clubs/${teamId}/chairman-command-centre`);
+  }
+
+  tacticalMandate(teamId: number): Observable<TacticalMandateView> {
+    return this.http.get<TacticalMandateView>(
+      urlApp + `/api/clubs/${teamId}/tactical-mandate`);
+  }
+
+  saveTacticalMandate(teamId: number, body: TacticalMandateUpdate): Observable<TacticalMandateView> {
+    return this.http.put<TacticalMandateView>(
+      urlApp + `/api/clubs/${teamId}/tactical-mandate`, body);
   }
 
   quote(teamId: number, idempotencyKey: string): Observable<TakeoverQuoteView> {

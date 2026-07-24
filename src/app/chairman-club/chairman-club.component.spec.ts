@@ -10,6 +10,7 @@ import {
   TakeoverQuoteView, TreasuryTransferView
 } from './chairman-club.models';
 import { ChairmanClubComponent } from './chairman-club.component';
+import { AuthService } from '../services/auth.service';
 
 describe('ChairmanClubComponent', () => {
   let fixture: ComponentFixture<ChairmanClubComponent>;
@@ -88,6 +89,7 @@ describe('ChairmanClubComponent', () => {
       imports: [CommonModule, FormsModule, RouterTestingModule],
       providers: [
         { provide: ChairmanClubService, useValue: api },
+        { provide: AuthService, useValue: { isLoggedIn: true, careerRole: 'CHAIRMAN', chairmanEnabled: true } },
         { provide: ActivatedRoute, useValue: {
           paramMap: routeParams.asObservable(), queryParamMap: routeQuery.asObservable()
         } },
@@ -212,6 +214,21 @@ describe('ChairmanClubComponent', () => {
     start();
     expect(api.dashboard).toHaveBeenCalledWith(8);
     expect(fixture.nativeElement.textContent).toContain('Club treasury');
+  });
+
+  it('shows Tactical mandate only for the controlled club', () => {
+    api.clubs.and.returnValue(of([club(8, true, true)]));
+    start();
+    const link = fixture.nativeElement.querySelector('a.mandate-link') as HTMLAnchorElement;
+    expect(link).not.toBeNull();
+    expect(link.textContent).toContain('Tactical mandate');
+    expect(link.getAttribute('href')).toContain('/tactics/8');
+    expect(link.getAttribute('href')).toContain('mode=chairman-mandate');
+
+    api.clubs.and.returnValue(of([club(8, false, true)]));
+    component.retryClubs();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a.mandate-link')).toBeNull();
   });
 
   it('loads dashboard and command centre as one private pair and commits only after both succeed', () => {

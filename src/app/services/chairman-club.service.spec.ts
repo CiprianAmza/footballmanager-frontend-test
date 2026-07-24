@@ -50,6 +50,44 @@ describe('ChairmanClubService', () => {
     request.flush({});
   });
 
+  it('reads the tactical mandate by route team id without actor ids', () => {
+    service.tacticalMandate(7).subscribe();
+    const request = http.expectOne(urlApp + '/api/clubs/7/tactical-mandate');
+    expect(request.request.method).toBe('GET');
+    expect(request.request.body).toBeNull();
+    expect(request.request.params.keys()).toEqual([]);
+    request.flush({ teamId: 7, requiredFormation: null, lockedSlots: [], version: 0 });
+  });
+
+  it('serializes the tactical mandate PUT body exactly', () => {
+    const body = {
+      requiredFormation: '433',
+      lockedSlots: [{ positionIndex: 1, playerId: 42 }],
+      expectedVersion: 3
+    };
+    service.saveTacticalMandate(7, body).subscribe();
+    const request = http.expectOne(urlApp + '/api/clubs/7/tactical-mandate');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toEqual(body);
+    expect(request.request.body.profileId).toBeUndefined();
+    expect(request.request.body.accountId).toBeUndefined();
+    request.flush({ teamId: 7, ...body, version: 4 });
+  });
+
+  [0, 11].forEach(lockCount => {
+    it(`serializes exactly ${lockCount} tactical locks`, () => {
+      const lockedSlots = Array.from({ length: lockCount }, (_, index) => ({
+        positionIndex: index, playerId: 100 + index
+      }));
+      const body = { requiredFormation: lockCount ? '442' : null, lockedSlots, expectedVersion: 0 };
+      service.saveTacticalMandate(7, body).subscribe();
+      const request = http.expectOne(urlApp + '/api/clubs/7/tactical-mandate');
+      expect(request.request.body).toEqual(body);
+      expect(request.request.body.lockedSlots.length).toBe(lockCount);
+      request.flush({ teamId: 7, ...body, version: 1 });
+    });
+  });
+
   it('keeps takeover endpoints server-priced and actor-free', () => {
     service.quote(7, 'quote-key').subscribe();
     const quote = http.expectOne(urlApp + '/api/clubs/7/takeover-quotes');

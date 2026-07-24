@@ -1,4 +1,5 @@
-<div class="lab-shell" [class.read-only]="isReadOnly" [class.admin-edit]="isAdminEditingExternalTeam">
+<div class="lab-shell" [class.read-only]="isReadOnly" [class.admin-edit]="isAdminEditingExternalTeam"
+     [class.chairman-mode]="isChairmanMode">
 
   <!-- ===================== HEADER STRIP ===================== -->
   <div class="lab-topbar">
@@ -32,7 +33,7 @@
         </div>
       </div>
     </div>
-    <div class="lab-actions" *ngIf="canEdit">
+    <div class="lab-actions" *ngIf="canEdit && !isChairmanMode">
       <button class="lab-btn ghost" (click)="askAssistant()">ASK ASSISTANT</button>
       <button class="lab-btn danger"
               (click)="removeAll()"
@@ -43,6 +44,39 @@
       <button class="lab-btn solid" (click)="saveData()">SAVE</button>
     </div>
   </div>
+
+  <section class="chairman-mandate-panel" *ngIf="isChairmanMode" aria-label="Chairman tactical mandate">
+    <div>
+      <span class="eyebrow">CHAIRMAN MODE</span>
+      <h2>Tactical mandate</h2>
+      <p>Impose a formation and lock exact starting positions. Manager preferences are not changed.</p>
+    </div>
+    <label class="mandate-toggle">
+      <input type="checkbox" [(ngModel)]="chairmanFormationEnabled"
+             [disabled]="!canEdit" (change)="toggleChairmanFormation()">
+      <span>Impose formation</span>
+    </label>
+    <label class="mandate-formation">
+      <span>Formation</span>
+      <select [(ngModel)]="selectedTactic" [disabled]="!canEdit || !chairmanFormationEnabled"
+              (change)="onChairmanFormationChanged()">
+        <option *ngFor="let option of chairmanFormationOptions" [ngValue]="option.key">{{ option.label }}</option>
+      </select>
+    </label>
+    <button class="lab-btn solid" type="button" (click)="saveChairmanMandate()"
+            [disabled]="!canEdit || chairmanSaving || chairmanLoading">
+      {{ chairmanSaving ? 'SAVING…' : 'SAVE CHAIRMAN MANDATE' }}
+    </button>
+    <span class="mandate-version">Version {{ chairmanMandate?.version ?? 0 }}</span>
+    <p class="mandate-error" *ngIf="chairmanError">{{ chairmanError }}</p>
+    <p class="mandate-success" *ngIf="chairmanSuccess">{{ chairmanSuccess }}</p>
+    <p class="mandate-readonly" *ngIf="chairmanReadOnly">This club is no longer controlled by you. Editing is disabled.</p>
+    <div class="mandate-lock-summary">
+      <strong>Locked players ({{ chairmanLocks.length }}/11)</strong>
+      <span *ngIf="!chairmanLocks.length">None</span>
+      <span *ngFor="let lock of chairmanLocks">{{ chairmanLockLabel(lock) }}</span>
+    </div>
+  </section>
 
   <div class="access-strip" *ngIf="isExternalTeam">
     <div class="access-copy">
@@ -66,7 +100,7 @@
   <div class="lab-grid">
 
     <!-- LEFT: WIDGET COLUMN (option control-boxes as gauges/cards) -->
-    <div class="lab-col widgets">
+    <div class="lab-col widgets" *ngIf="!isChairmanMode">
 
       <!-- FORMATION + MENTALITY card -->
       <div class="widget card-pick" (click)="openModal('formation')">
@@ -271,6 +305,12 @@
                       (dragstart)="drag($event, cell.player)">
                     <span class="lock-badge" *ngIf="isSlotLocked(cell.positionIndex, cell.player.position)"
                           title="Locked by the owner">&#128274;</span>
+                    <button *ngIf="isChairmanMode" class="chairman-lock-button"
+                            [class.active]="isChairmanSlotLocked(cell.positionIndex)"
+                            (click)="toggleChairmanLock(cell.positionIndex, $event)"
+                            [attr.aria-label]="isChairmanSlotLocked(cell.positionIndex) ? 'Unlock slot' : 'Lock player in slot'">
+                      {{ isChairmanSlotLocked(cell.positionIndex) ? '🔒' : '＋' }}
+                    </button>
                     <button *ngIf="canEdit" class="node-plus mono" title="Roles & Instructions"
                             (click)="openPlayerPanel(cell, $event)">+</button>
                     <div *ngIf="pitchView === 'tokens'" class="node-disc"

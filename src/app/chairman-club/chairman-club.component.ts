@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { ChairmanClubService } from '../services/chairman-club.service';
+import { AuthService } from '../services/auth.service';
 import {
   ChairmanClubDashboard, ChairmanClubSummary, ChairmanCommandCentreView, ClubCatalogScope,
   ClubCashTransferDirection, TakeoverQuoteView
@@ -53,7 +54,13 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
 
   constructor(private clubsApi: ChairmanClubService,
               private route: ActivatedRoute,
-              private router: Router) {}
+              private router: Router,
+              private authService: AuthService) {}
+
+  get canOpenTacticalMandate(): boolean {
+    return this.authService.isLoggedIn && this.authService.careerRole === 'CHAIRMAN'
+      && this.authService.chairmanEnabled === true && this.selectedClub?.controlledByPrincipal === true;
+  }
 
   ngOnInit(): void {
     this.routeSubscription = this.route.paramMap.subscribe(params => {

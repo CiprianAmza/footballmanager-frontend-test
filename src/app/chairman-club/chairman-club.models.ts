@@ -166,6 +166,27 @@ export interface ChairmanOwnershipSummary {
   controlled: boolean;
 }
 
+export interface TacticalMandateSlot {
+  positionIndex: number;
+  playerId: number;
+}
+
+export interface TacticalMandateView {
+  teamId: number;
+  requiredFormation: string | null;
+  lockedSlots: TacticalMandateSlot[];
+  version: number;
+  updatedByProfileId: number;
+  updatedSeason: number;
+  updatedGameDay: number;
+}
+
+export interface TacticalMandateUpdate {
+  requiredFormation: string | null;
+  lockedSlots: TacticalMandateSlot[];
+  expectedVersion: number;
+}
+
 export interface TakeoverQuoteView {
   quoteId: string;
   teamId: number;
