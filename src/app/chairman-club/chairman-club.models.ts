@@ -71,6 +71,101 @@ export interface ChairmanClubDashboard {
   controlledByPrincipal: boolean;
 }
 
+export interface ChairmanCommandCentreView {
+  teamId: number;
+  teamName: string;
+  color1: string | null;
+  color2: string | null;
+  stadium: ChairmanStadiumView;
+  primaryCompetition: ChairmanCompetitionView | null;
+  manager: ChairmanManagerView | null;
+  staff: ChairmanStaffSummary;
+  standing: ChairmanStandingView | null;
+  recentForm: string[];
+  nextFixtures: ChairmanFixtureView[];
+  squad: ChairmanSquadSummary;
+  finances: ChairmanFinanceSummary;
+  ownership: ChairmanOwnershipSummary;
+  season: number;
+  currentDay: number;
+  currentPhase: string | null;
+}
+
+export interface ChairmanStadiumView { name: string | null; capacity: number; }
+
+export interface ChairmanCompetitionView {
+  competitionId: number;
+  competitionName: string;
+  competitionTypeId: number;
+}
+
+export interface ChairmanManagerView {
+  managerId: number;
+  managerName: string | null;
+  age: number;
+  contractEndSeason: number;
+  wage: number;
+}
+
+export interface ChairmanStaffSummary {
+  managers: number;
+  coaches: number;
+  scouts: number;
+  totalStaff: number;
+}
+
+export interface ChairmanStandingView {
+  position: number;
+  totalTeams: number;
+  games: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
+}
+
+export interface ChairmanFixtureView {
+  competitionId: number;
+  competitionName: string;
+  seasonNumber: number;
+  roundNumber: number;
+  teamId1: number;
+  teamId2: number;
+  opponentTeamId: number;
+  opponentTeamName: string;
+  homeOrAway: string;
+  day: number;
+  dateDisplay: string;
+  status: string;
+}
+
+export interface ChairmanSquadSummary {
+  playerCount: number;
+  averageAge: number;
+  injuredPlayers: number;
+  suspendedPlayers: number;
+}
+
+export interface ChairmanFinanceSummary {
+  valuation: ClubValuationView;
+  treasury: ClubTreasuryView;
+  transferBudget: number;
+  wageBudget: number;
+  recentIncome: number;
+  recentExpenses: number;
+}
+
+export interface ChairmanOwnershipSummary {
+  principalProfileId: number;
+  shares: number;
+  stakeBps: number;
+  equityValue: Money;
+  controlled: boolean;
+}
+
 export interface TakeoverQuoteView {
   quoteId: string;
   teamId: number;

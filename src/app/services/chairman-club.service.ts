@@ -4,8 +4,8 @@ import { Observable } from 'rxjs';
 import { HttpParams } from '@angular/common/http';
 import { urlApp } from '../app.component';
 import {
-  ChairmanClubDashboard, ChairmanClubSummary, ClubCatalogScope, ClubCashTransferDirection,
-  TakeoverExecutionView, TakeoverQuoteView, TreasuryTransferView
+  ChairmanClubDashboard, ChairmanClubSummary, ChairmanCommandCentreView, ClubCatalogScope,
+  ClubCashTransferDirection, TakeoverExecutionView, TakeoverQuoteView, TreasuryTransferView
 } from '../chairman-club/chairman-club.models';
 
 @Injectable({ providedIn: 'root' })
@@ -20,6 +20,11 @@ export class ChairmanClubService {
   dashboard(teamId: number): Observable<ChairmanClubDashboard> {
     return this.http.get<ChairmanClubDashboard>(
       urlApp + `/api/clubs/${teamId}/chairman-dashboard`);
+  }
+
+  commandCentre(teamId: number): Observable<ChairmanCommandCentreView> {
+    return this.http.get<ChairmanCommandCentreView>(
+      urlApp + `/api/clubs/${teamId}/chairman-command-centre`);
   }
 
   quote(teamId: number, idempotencyKey: string): Observable<TakeoverQuoteView> {

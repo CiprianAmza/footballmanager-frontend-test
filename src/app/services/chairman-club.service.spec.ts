@@ -39,6 +39,17 @@ describe('ChairmanClubService', () => {
     request.flush([]);
   });
 
+  it('requests the command centre by route team id without actor ids', () => {
+    service.commandCentre(7).subscribe();
+    const request = http.expectOne(urlApp + '/api/clubs/7/chairman-command-centre');
+
+    expect(request.request.method).toBe('GET');
+    expect(request.request.urlWithParams).toBe(urlApp + '/api/clubs/7/chairman-command-centre');
+    expect(request.request.body).toBeNull();
+    expect(request.request.params.keys()).toEqual([]);
+    request.flush({});
+  });
+
   it('keeps takeover endpoints server-priced and actor-free', () => {
     service.quote(7, 'quote-key').subscribe();
     const quote = http.expectOne(urlApp + '/api/clubs/7/takeover-quotes');

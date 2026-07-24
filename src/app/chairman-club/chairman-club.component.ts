@@ -1,11 +1,11 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { ChairmanClubService } from '../services/chairman-club.service';
 import {
-  ChairmanClubDashboard, ChairmanClubSummary, ClubCatalogScope, ClubCashTransferDirection,
-  TakeoverQuoteView
+  ChairmanClubDashboard, ChairmanClubSummary, ChairmanCommandCentreView, ClubCatalogScope,
+  ClubCashTransferDirection, TakeoverQuoteView
 } from './chairman-club.models';
 
 @Component({
@@ -25,6 +25,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   selectedTeamId: number | null = null;
   selectedClub: ChairmanClubSummary | null = null;
   dashboard: ChairmanClubDashboard | null = null;
+  commandCentre: ChairmanCommandCentreView | null = null;
   quote: TakeoverQuoteView | null = null;
   direction: ClubCashTransferDirection = 'INJECTION';
   amount: number | null = null;
@@ -40,13 +41,13 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   private requestedTeamId: number | null = null;
   private clubsLoaded = false;
   private clubsRequestId = 0;
-  private dashboardRequestId = 0;
+  private privateDataRequestId = 0;
   private actionRequestId = 0;
   private retryKeys = new Map<string, string>();
   private routeSubscription?: Subscription;
   private querySubscription?: Subscription;
   private clubsSubscription?: Subscription;
-  private dashboardSubscription?: Subscription;
+  private privateDataSubscription?: Subscription;
   private actionSubscription?: Subscription;
   private canonicalizedRouteKey = '';
 
@@ -81,7 +82,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     this.routeSubscription?.unsubscribe();
     this.querySubscription?.unsubscribe();
     this.clubsSubscription?.unsubscribe();
-    this.dashboardSubscription?.unsubscribe();
+    this.privateDataSubscription?.unsubscribe();
     this.actionSubscription?.unsubscribe();
   }
 
@@ -98,7 +99,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
 
   retryDashboard(): void {
     if (this.selectedClub?.controlledByPrincipal && this.selectedTeamId !== null) {
-      this.loadDashboard(this.selectedTeamId);
+      this.loadPrivateData(this.selectedTeamId);
     }
   }
 
@@ -111,8 +112,10 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     if (changed) {
       this.invalidateSelectionRequests();
       this.dashboard = null;
+      this.commandCentre = null;
       this.quote = null;
       this.dashboardError = '';
+      this.dashboardLoading = false;
       this.actionError = '';
       this.message = '';
     }
@@ -123,10 +126,12 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
         queryParams: { scope: this.scope }
       });
     }
-    if (club.controlledByPrincipal && (changed || !this.dashboard)) {
-      this.loadDashboard(targetTeamId);
+    if (club.controlledByPrincipal && !this.dashboardLoading
+      && (changed || !this.dashboard || !this.commandCentre)) {
+      this.loadPrivateData(targetTeamId);
     } else if (!club.controlledByPrincipal) {
       this.dashboard = null;
+      this.commandCentre = null;
       this.dashboardLoading = false;
       this.dashboardError = '';
     }
@@ -220,7 +225,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
         this.retryKeys.delete(action);
         this.amount = null;
         this.message = `${submittedDirection === 'INJECTION' ? 'Injection' : 'Withdrawal'} completed.`;
-        this.loadDashboard(teamId);
+        this.loadPrivateData(teamId);
       },
       error: error => {
         if (this.isCurrentAction(requestId, teamId)) this.fail(error, action);
@@ -255,15 +260,17 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
             this.selectedTeamId = confirmed?.teamId || null;
             this.actionError = 'Takeover completed but canonical control was not confirmed.';
             this.dashboard = null;
+            this.commandCentre = null;
             return;
           }
           this.selectedTeamId = afterTakeoverTeamId;
           this.selectedClub = confirmed;
           this.dashboard = null;
+          this.commandCentre = null;
           this.router.navigate(['/chairman/clubs', afterTakeoverTeamId], {
             queryParams: { scope: this.scope }
           });
-          this.loadDashboard(afterTakeoverTeamId);
+          this.loadPrivateData(afterTakeoverTeamId);
           return;
         }
         if (!clubs.length) {
@@ -297,6 +304,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     const changedTeam = this.selectedTeamId !== preferred;
     if (changedTeam) {
       this.dashboard = null;
+      this.commandCentre = null;
       this.quote = null;
       this.dashboardError = '';
       this.dashboardLoading = false;
@@ -315,58 +323,71 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     if (!current.controlledByPrincipal) {
       if (changedTeam) this.invalidateSelectionRequests();
       else {
-        ++this.dashboardRequestId;
+        ++this.privateDataRequestId;
         ++this.actionRequestId;
-        this.dashboardSubscription?.unsubscribe();
+        this.privateDataSubscription?.unsubscribe();
         this.actionSubscription?.unsubscribe();
         this.inFlight = null;
       }
       this.dashboard = null;
+      this.commandCentre = null;
       this.quote = null;
       this.dashboardLoading = false;
       this.dashboardError = '';
       return;
     }
     if (changedTeam) this.invalidateSelectionRequests();
-    if (!this.dashboard && !this.dashboardLoading) this.loadDashboard(preferred);
+    if ((!this.dashboard || !this.commandCentre) && !this.dashboardLoading) {
+      this.loadPrivateData(preferred);
+    }
   }
 
-  private loadDashboard(teamId: number): void {
+  private loadPrivateData(teamId: number): void {
     const club = this.clubs.find(value => value.teamId === teamId);
     if (!club?.controlledByPrincipal) return;
-    const requestId = ++this.dashboardRequestId;
-    this.dashboardSubscription?.unsubscribe();
+    const requestId = ++this.privateDataRequestId;
+    this.privateDataSubscription?.unsubscribe();
     this.dashboardLoading = true;
     this.dashboardError = '';
-    this.dashboardSubscription = this.clubsApi.dashboard(teamId).subscribe({
+    this.privateDataSubscription = forkJoin({
+      dashboard: this.clubsApi.dashboard(teamId),
+      commandCentre: this.clubsApi.commandCentre(teamId)
+    }).subscribe({
       next: value => {
-        if (requestId !== this.dashboardRequestId || this.selectedTeamId !== teamId) return;
-        if (value.teamId !== teamId) {
+        if (requestId !== this.privateDataRequestId || this.selectedTeamId !== teamId) return;
+        if (value.dashboard.teamId !== teamId || value.commandCentre.teamId !== teamId
+          || !value.commandCentre.ownership?.controlled) {
           this.dashboard = null;
+          this.commandCentre = null;
           this.dashboardLoading = false;
-          this.dashboardError = 'Dashboard response did not match the selected club.';
+          this.dashboardError = !value.commandCentre.ownership?.controlled
+            ? 'Command centre ownership did not confirm canonical control.'
+            : 'Private club data did not match the selected club.';
           return;
         }
-        this.dashboard = value;
+        this.dashboard = value.dashboard;
+        this.commandCentre = value.commandCentre;
         this.dashboardLoading = false;
       },
       error: error => {
-        if (requestId !== this.dashboardRequestId || this.selectedTeamId !== teamId) return;
+        if (requestId !== this.privateDataRequestId || this.selectedTeamId !== teamId) return;
         this.dashboard = null;
+        this.commandCentre = null;
         this.dashboardLoading = false;
-        this.dashboardError = this.errorMessage(error);
+        this.dashboardError = this.privateErrorMessage(error);
         if (this.errorCode(error) === 'CLUB_CONTROL_REQUIRED') this.loadClubs();
       }
     });
   }
 
   private invalidateForScopeChange(): void {
-    ++this.dashboardRequestId;
+    ++this.privateDataRequestId;
     ++this.actionRequestId;
-    this.dashboardSubscription?.unsubscribe();
+    this.privateDataSubscription?.unsubscribe();
     this.actionSubscription?.unsubscribe();
     this.inFlight = null;
     this.dashboard = null;
+    this.commandCentre = null;
     this.quote = null;
     this.selectedTeamId = null;
     this.selectedClub = null;
@@ -375,9 +396,9 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   }
 
   private invalidateSelectionRequests(): void {
-    ++this.dashboardRequestId;
+    ++this.privateDataRequestId;
     ++this.actionRequestId;
-    this.dashboardSubscription?.unsubscribe();
+    this.privateDataSubscription?.unsubscribe();
     this.actionSubscription?.unsubscribe();
     this.inFlight = null;
   }
@@ -387,6 +408,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     this.selectedTeamId = null;
     this.selectedClub = null;
     this.dashboard = null;
+    this.commandCentre = null;
     this.quote = null;
     this.dashboardLoading = false;
   }
@@ -452,6 +474,17 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
 
   private errorMessage(error: any): string {
     return error?.error?.message || error?.message || 'Club operation failed.';
+  }
+
+  private privateErrorMessage(error: any): string {
+    const messages: { [key: string]: string } = {
+      GAME_STATE_UNAVAILABLE: 'The game calendar is not available yet. Retry after world initialization completes.',
+      CAP_TABLE_INVALID: 'The club ownership state is inconsistent and cannot be displayed.',
+      CHAIRMAN_REQUIRED: 'A Chairman career is required to view this private club data.',
+      CLUB_CONTROL_REQUIRED: 'Control of this club is no longer available. Refresh the club list.',
+      CLUB_NOT_FOUND: 'The selected club no longer exists.'
+    };
+    return messages[this.errorCode(error)] || this.errorMessage(error);
   }
 
   private isScope(value: string | null | undefined): value is ClubCatalogScope {

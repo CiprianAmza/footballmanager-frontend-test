@@ -36,7 +36,9 @@
       </button>
     </aside>
 
-    <main class="club-detail" *ngIf="selectedClub as club">
+    <main class="club-detail" *ngIf="selectedClub as club"
+          [style.--club-color1]="commandCentre?.color1 || '#3ac58d'"
+          [style.--club-color2]="commandCentre?.color2 || '#10201c'">
       <article class="panel public-summary">
         <div class="detail-heading">
           <div>
@@ -84,13 +86,87 @@
       </article>
 
       <ng-container *ngIf="club.controlledByPrincipal">
-        <p class="loading" *ngIf="dashboardLoading">Loading private club dashboard…</p>
+        <p class="loading" *ngIf="dashboardLoading">Loading private club command centre…</p>
         <article class="panel empty-state" *ngIf="!dashboardLoading && dashboardError">
           <h2>Private dashboard unavailable</h2>
           <p>{{ dashboardError }}</p>
-          <button type="button" (click)="retryDashboard()">Retry dashboard</button>
+          <button type="button" (click)="retryDashboard()">Retry</button>
         </article>
-        <ng-container *ngIf="dashboard && !dashboardLoading && !dashboardError">
+        <ng-container *ngIf="dashboard && commandCentre && !dashboardLoading && !dashboardError">
+          <article class="panel command-centre" *ngIf="commandCentre as centre">
+            <div class="command-header">
+              <div>
+                <span class="eyebrow">CHAIRMAN COMMAND CENTRE</span>
+                <h2><a [routerLink]="['/team', centre.teamId]">{{ centre.teamName }}</a></h2>
+                <p>Season {{ centre.season }} · Day {{ centre.currentDay }} · {{ centre.currentPhase || 'Phase unavailable' }}</p>
+              </div>
+              <div class="command-meta">
+                <span>{{ centre.stadium.name || 'Stadium unavailable' }}</span>
+                <span>{{ centre.stadium.capacity | number }} seats</span>
+                <span *ngIf="centre.primaryCompetition as competition">
+                  <a [routerLink]="['/competition', competition.competitionId]">{{ competition.competitionName }}</a>
+                </span>
+                <span *ngIf="!centre.primaryCompetition">Competition unavailable</span>
+              </div>
+            </div>
+            <div class="command-grid">
+              <article>
+                <h3>Manager & staff</h3>
+                <ng-container *ngIf="centre.manager as manager; else noManager">
+                  <a [routerLink]="['/manager-profile', manager.managerId]"><strong>{{ manager.managerName || 'Manager' }}</strong></a>
+                  <p>Age {{ manager.age }} · Wage {{ money(manager.wage) }} · Contract through season {{ manager.contractEndSeason }}</p>
+                </ng-container>
+                <ng-template #noManager><p>No manager appointed</p></ng-template>
+                <p>{{ centre.staff.managers }} managers · {{ centre.staff.coaches }} coaches ·
+                  {{ centre.staff.scouts }} scouts · {{ centre.staff.totalStaff }} total staff</p>
+              </article>
+              <article>
+                <h3>League standing</h3>
+                <ng-container *ngIf="centre.standing as standing; else noStanding">
+                  <strong>{{ standing.position }} / {{ standing.totalTeams }}</strong>
+                  <p>P {{ standing.games }} · W {{ standing.wins }} · D {{ standing.draws }} · L {{ standing.losses }}</p>
+                  <p>GF {{ standing.goalsFor }} · GA {{ standing.goalsAgainst }} · GD {{ standing.goalDifference }} · {{ standing.points }} pts</p>
+                </ng-container>
+                <ng-template #noStanding><p>No league standing is available for this club.</p></ng-template>
+              </article>
+              <article>
+                <h3>Recent form</h3>
+                <div class="form-row" *ngIf="centre.recentForm.length; else noForm">
+                  <span class="form-result" *ngFor="let result of centre.recentForm">{{ result }}</span>
+                </div>
+                <ng-template #noForm><p>No recent form is available.</p></ng-template>
+              </article>
+              <article>
+                <h3>Squad summary</h3>
+                <p>{{ centre.squad.playerCount }} players · Average age {{ centre.squad.averageAge | number:'1.0-2' }}</p>
+                <p>{{ centre.squad.injuredPlayers }} injured · {{ centre.squad.suspendedPlayers }} suspended</p>
+              </article>
+            </div>
+            <article class="fixtures-panel">
+              <div class="section-heading"><h3>Next fixtures</h3><a [routerLink]="['/fixtures', centre.teamId]">Full fixtures</a></div>
+              <div class="fixture-row" *ngFor="let fixture of centre.nextFixtures">
+                <span>Day {{ fixture.day }} · {{ fixture.dateDisplay }}</span>
+                <span>{{ fixture.homeOrAway }}</span>
+                <a [routerLink]="['/team', fixture.opponentTeamId]">{{ fixture.opponentTeamName }}</a>
+                <a [routerLink]="['/competition', fixture.competitionId]">{{ fixture.competitionName }}</a>
+                <span>Round {{ fixture.roundNumber }}</span>
+              </div>
+              <p *ngIf="!centre.nextFixtures.length">No upcoming fixtures are available.</p>
+            </article>
+            <article class="finance-panel">
+              <h3>Command centre finances & ownership</h3>
+              <div class="summary-grid private-grid">
+                <article><span>Total valuation</span><strong>{{ money(centre.finances.valuation.totalValue.amount) }}</strong></article>
+                <article><span>Treasury</span><strong>{{ money(centre.finances.treasury.balance.amount) }}</strong></article>
+                <article><span>Debt</span><strong>{{ money(centre.finances.valuation.debt.amount) }}</strong></article>
+                <article><span>Transfer budget</span><strong>{{ money(centre.finances.transferBudget) }}</strong></article>
+                <article><span>Wage budget</span><strong>{{ money(centre.finances.wageBudget) }}</strong></article>
+                <article><span>Income · last 30 days</span><strong>{{ money(centre.finances.recentIncome) }}</strong></article>
+                <article><span>Expenses · last 30 days</span><strong>{{ money(centre.finances.recentExpenses) }}</strong></article>
+                <article><span>Ownership</span><strong>{{ centre.ownership.shares | number }} · {{ percent(centre.ownership.stakeBps) }}</strong><small>{{ money(centre.ownership.equityValue.amount) }} equity</small></article>
+              </div>
+            </article>
+          </article>
           <div class="summary-grid private-grid">
             <article><span>Club treasury</span><strong>{{ money(dashboard.treasury.balance.amount) }}</strong></article>
             <article><span>Debt</span><strong>{{ money(dashboard.treasury.debt.amount) }}</strong></article>

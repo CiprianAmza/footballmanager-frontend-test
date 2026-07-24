@@ -6,7 +6,7 @@ import { RouterTestingModule } from '@angular/router/testing';
 import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
 import { ChairmanClubService } from '../services/chairman-club.service';
 import {
-  ChairmanClubDashboard, ChairmanClubSummary, ClubCatalogScope, TakeoverExecutionView,
+  ChairmanClubDashboard, ChairmanClubSummary, ChairmanCommandCentreView, ClubCatalogScope, TakeoverExecutionView,
   TakeoverQuoteView, TreasuryTransferView
 } from './chairman-club.models';
 import { ChairmanClubComponent } from './chairman-club.component';
@@ -39,6 +39,21 @@ describe('ChairmanClubComponent', () => {
       protectedReserve: money(3), dueObligations: money(0), distributableCash: money(17),
       withdrawalRestricted: false }
   });
+  const commandCentre = (teamId: number, controlled = true): ChairmanCommandCentreView => ({
+    teamId, teamName: `${teamId} FC`, color1: '#123456', color2: '#abcdef',
+    stadium: { name: 'Command Stadium', capacity: 42000 },
+    primaryCompetition: { competitionId: 22, competitionName: 'Real League', competitionTypeId: 1 },
+    manager: { managerId: 12, managerName: 'Manager', age: 44, contractEndSeason: 3, wage: 1000 },
+    staff: { managers: 1, coaches: 2, scouts: 1, totalStaff: 4 },
+    standing: { position: 2, totalTeams: 18, games: 10, wins: 7, draws: 2, losses: 1,
+      goalsFor: 20, goalsAgainst: 8, goalDifference: 12, points: 23 },
+    recentForm: ['W', 'D', 'W'], nextFixtures: [],
+    squad: { playerCount: 25, averageAge: 24.5, injuredPlayers: 1, suspendedPlayers: 0 },
+    finances: { valuation: dashboard(teamId).valuation, treasury: dashboard(teamId).treasury,
+      transferBudget: 1000, wageBudget: 2000, recentIncome: 300, recentExpenses: 100 },
+    ownership: { principalProfileId: 5, shares: 60, stakeBps: 6000, equityValue: money(60), controlled },
+    season: 1, currentDay: 10, currentPhase: 'MORNING'
+  });
   const quote = (teamId: number): TakeoverQuoteView => ({
     quoteId: `q-${teamId}`, teamId, sharesToAcquire: 60, unitPrice: money(2), premiumBps: 2000,
     totalConsideration: money(120), valuationFormulaVersion: 'club-valuation-v1',
@@ -59,9 +74,10 @@ describe('ChairmanClubComponent', () => {
 
   beforeEach(async () => {
     api = jasmine.createSpyObj<ChairmanClubService>('ChairmanClubService',
-      ['clubs', 'dashboard', 'quote', 'execute', 'transfer']);
+      ['clubs', 'dashboard', 'commandCentre', 'quote', 'execute', 'transfer']);
     api.clubs.and.returnValue(of([club(7), club(8, true, true)]));
     api.dashboard.and.callFake(teamId => of(dashboard(teamId)));
+    api.commandCentre.and.callFake(teamId => of(commandCentre(teamId)));
     api.quote.and.callFake(teamId => of(quote(teamId)));
     api.execute.and.callFake(teamId => of(execution(teamId)));
     api.transfer.and.returnValue(of({} as any));
@@ -198,6 +214,90 @@ describe('ChairmanClubComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Club treasury');
   });
 
+  it('loads dashboard and command centre as one private pair and commits only after both succeed', () => {
+    const dashboardPending = new Subject<ChairmanClubDashboard>();
+    const centrePending = new Subject<ChairmanCommandCentreView>();
+    api.clubs.and.returnValue(of([club(7, true, true)]));
+    api.dashboard.and.returnValue(dashboardPending.asObservable());
+    api.commandCentre.and.returnValue(centrePending.asObservable());
+    start();
+
+    expect(api.dashboard).toHaveBeenCalledTimes(1);
+    expect(api.commandCentre).toHaveBeenCalledTimes(1);
+    expect(component.dashboard).toBeNull();
+    expect(component.commandCentre).toBeNull();
+    dashboardPending.next(dashboard(7));
+    expect(component.dashboard).toBeNull();
+    centrePending.next(commandCentre(7));
+    dashboardPending.complete();
+    centrePending.complete();
+    expect(component.dashboard?.teamId).toBe(7);
+    expect(component.commandCentre?.teamId).toBe(7);
+  });
+
+  it('ignores both private responses after switching clubs', () => {
+    const firstDashboard = new Subject<ChairmanClubDashboard>();
+    const firstCentre = new Subject<ChairmanCommandCentreView>();
+    const secondDashboard = new Subject<ChairmanClubDashboard>();
+    const secondCentre = new Subject<ChairmanCommandCentreView>();
+    api.clubs.and.returnValue(of([club(7, true, true), club(8, true, true)]));
+    api.dashboard.and.callFake(teamId => teamId === 7 ? firstDashboard.asObservable() : secondDashboard.asObservable());
+    api.commandCentre.and.callFake(teamId => teamId === 7 ? firstCentre.asObservable() : secondCentre.asObservable());
+    start();
+    routeParams.next(convertToParamMap({ teamId: '8' }));
+    secondDashboard.next(dashboard(8));
+    secondCentre.next(commandCentre(8));
+    secondDashboard.complete();
+    secondCentre.complete();
+    firstDashboard.next(dashboard(7));
+    firstCentre.next(commandCentre(7));
+
+    expect(component.selectedTeamId).toBe(8);
+    expect(component.dashboard?.teamId).toBe(8);
+    expect(component.commandCentre?.teamId).toBe(8);
+  });
+
+  it('clears both private objects for mismatched or uncontrolled command centre data', () => {
+    api.clubs.and.returnValue(of([club(7, true, true)]));
+    api.commandCentre.and.returnValue(of({ ...commandCentre(7), teamId: 99 }));
+    start();
+    expect(component.dashboard).toBeNull();
+    expect(component.commandCentre).toBeNull();
+    expect(component.dashboardError).toContain('did not match');
+
+    api.commandCentre.and.returnValue(of(commandCentre(7, false)));
+    component.retryDashboard();
+    expect(component.dashboard).toBeNull();
+    expect(component.commandCentre).toBeNull();
+    expect(component.dashboardError).toContain('canonical control');
+  });
+
+  it('maps command centre typed errors to the exact private messages', () => {
+    api.clubs.and.returnValue(of([club(7, true, true)]));
+    api.commandCentre.and.returnValue(throwError(() => ({ error: { code: 'GAME_STATE_UNAVAILABLE' } })));
+    start();
+    expect(component.dashboardError).toBe(
+      'The game calendar is not available yet. Retry after world initialization completes.');
+
+    api.commandCentre.and.returnValue(throwError(() => ({ error: { code: 'CAP_TABLE_INVALID' } })));
+    component.retryDashboard();
+    expect(component.dashboardError).toBe(
+      'The club ownership state is inconsistent and cannot be displayed.');
+  });
+
+  it('reloads the dashboard and command centre pair after a valid transfer', () => {
+    api.clubs.and.returnValue(of([club(7, true, true)]));
+    api.transfer.and.returnValue(of(treasuryTransfer(7, 'INJECTION', 500)));
+    start();
+    const initialDashboardCalls = api.dashboard.calls.count();
+    const initialCentreCalls = api.commandCentre.calls.count();
+    component.amount = 500;
+    component.transfer();
+
+    expect(api.dashboard.calls.count()).toBe(initialDashboardCalls + 1);
+    expect(api.commandCentre.calls.count()).toBe(initialCentreCalls + 1);
+  });
+
   it('ignores a stale dashboard after switching clubs', () => {
     const first = new Subject<ChairmanClubDashboard>();
     const second = new Subject<ChairmanClubDashboard>();
@@ -206,6 +306,7 @@ describe('ChairmanClubComponent', () => {
     start();
     routeParams.next(convertToParamMap({ teamId: '8' }));
     second.next(dashboard(8));
+    second.complete();
     first.next(dashboard(7));
     expect(component.selectedTeamId).toBe(8);
     expect(component.dashboard?.teamId).toBe(8);
