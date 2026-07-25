@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { urlApp } from '../app.component';
+import { MULTIPLAYER_API_BASE } from '../multiplayer/multiplayer-api';
 import { MultiplayerState } from '../multiplayer/multiplayer.models';
 
 @Injectable({ providedIn: 'root' })
 export class MultiplayerRoomService {
-  private readonly base = urlApp + '/api/multiplayer';
+  private readonly base = MULTIPLAYER_API_BASE;
   constructor(private http: HttpClient) {}
   state(): Observable<MultiplayerState> { return this.http.get<MultiplayerState>(this.base + '/room/state'); }
   create(body: any): Observable<MultiplayerState> { return this.http.post<MultiplayerState>(this.base + '/room', body); }

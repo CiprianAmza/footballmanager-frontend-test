@@ -5,6 +5,7 @@ import { forkJoin, of } from 'rxjs';
 import { FastForwardStatus, TeamService } from './services/team.service';
 import { AuthService } from './services/auth.service';
 import { CareerService, JobOffer } from './services/career.service';
+import { MultiplayerRoomService } from './services/multiplayer-room.service';
 
 export const urlApp: string = "http://localhost:8086";
 @Component({
@@ -14,6 +15,8 @@ export const urlApp: string = "http://localhost:8086";
 })
 export class AppComponent implements OnDestroy, AfterViewChecked {
   title = 'footballmanagersimulator-frontend';
+  roomActive = false;
+  setRoomActive(active: boolean): void { this.roomActive = active; }
   advancing = false;
   simulationElapsedSeconds = 0;
   simulationStopMessage = '';
@@ -169,7 +172,7 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
 
   constructor(public teamService: TeamService, public authService: AuthService,
               private http: HttpClient, public careerService: CareerService,
-              private router: Router) {
+              private router: Router, private multiplayerRoomService: MultiplayerRoomService) {
     this.teamService.lastEvents$.subscribe(events => this.lastEvents = events);
     // Watch pending job offers — banner + modal auto-react
     this.careerService.pendingOffers$.subscribe(offers => {
@@ -518,6 +521,11 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
 
   advanceGame(): void {
     if (this.advancing || this.fastForwardRunning) return;
+    if (this.roomActive) {
+      this.advancing = true;
+      this.multiplayerRoomService.continue().subscribe({ next: state => { this.advancing = false; this.teamService.loadGameState(); }, error: () => this.advancing = false });
+      return;
+    }
     this.clearAutoAdvanceTimer();
     this.simulationStopMessage = '';
     this.advancing = true;

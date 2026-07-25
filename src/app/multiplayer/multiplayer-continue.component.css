@@ -1,0 +1,2 @@
+.multiplayer-continue { display:flex; gap:.55rem; align-items:center; flex-wrap:wrap; padding:.5rem .8rem; background:#172033; color:#e5e7eb; border-radius:8px; }
+.multiplayer-continue button { padding:.45rem .65rem; cursor:pointer; } .multiplayer-continue small { color:#fca5a5; }

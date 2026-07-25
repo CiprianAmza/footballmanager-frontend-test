@@ -4,7 +4,7 @@
 
 <ng-template #gameApplication>
 <a *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'MANAGER'" routerLink="/multiplayer" class="multiplayer-entry-link">Multiplayer room</a>
-<ng-template #chairmanGameWorldControls><div class="game-top-bar chairman-game-controls">
+<ng-template #chairmanGameWorldControls><div class="game-top-bar chairman-game-controls" *ngIf="!roomActive">
   <button class="continue-btn" (click)="advanceGame()" [disabled]="advancing || fastForwardRunning || (authService.careerRole === 'MANAGER' && pendingOffers.length > 0)"
           [title]="pendingOffers.length > 0 ? 'Resolve your job offer(s) first' : ''">{{ fastForwardRunning ? 'FAST-FORWARDING' : (advancing ? 'Processing...' : (pendingOffers.length > 0 ? 'OFFER PENDING' : 'CONTINUE')) }}</button>
   <button class="fast-forward-btn" type="button" (click)="openFastForward()" [disabled]="advancing">{{ fastForwardRunning ? (fastForwardJob?.percent + '%') : 'FAST FORWARD' }}</button>
@@ -221,6 +221,7 @@
 
     <!-- Game Top Bar -->
     <ng-container *ngTemplateOutlet="chairmanGameWorldControls"></ng-container>
+    <app-multiplayer-continue (activeChange)="setRoomActive($event)"></app-multiplayer-continue>
     <ng-container *ngTemplateOutlet="chairmanSimulationStatus"></ng-container>
     <ng-container *ngTemplateOutlet="chairmanFastForwardDialog"></ng-container>
     <!-- The backend currently advances synchronously, so this is intentionally

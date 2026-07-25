@@ -98,6 +98,7 @@ import { FeatureUnavailableComponent } from './feature-unavailable/feature-unava
 import { NotFoundComponent } from './not-found/not-found.component';
 import { ChairmanClubComponent } from './chairman-club/chairman-club.component';
 import { MultiplayerRoomComponent } from './multiplayer/multiplayer-room.component';
+import { MultiplayerContinueComponent } from './multiplayer/multiplayer-continue.component';
 
 @NgModule({
   declarations: [
@@ -122,6 +123,7 @@ import { MultiplayerRoomComponent } from './multiplayer/multiplayer-room.compone
     NotFoundComponent,
     ChairmanClubComponent,
     MultiplayerRoomComponent,
+    MultiplayerContinueComponent,
     CompetitionComponent,
     TacticDisplayComponent,
     CompetitionComponent,
