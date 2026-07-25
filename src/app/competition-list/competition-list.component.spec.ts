@@ -1,9 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
+import { of } from 'rxjs';
 
 import { urlApp } from '../app.component';
+import { AuthService } from '../services/auth.service';
+import { ChairmanClubService } from '../services/chairman-club.service';
 import { TeamService } from '../services/team.service';
 import { CompetitionsListComponent } from './competition-list.component';
 
@@ -14,15 +18,23 @@ describe('CompetitionsListComponent', () => {
   let router: Router;
 
   const teamService = { teamId: 6, currentSeason: 3 };
+  const authService = { careerRole: 'MANAGER' };
+  const chairmanClubService = jasmine.createSpyObj<ChairmanClubService>('ChairmanClubService', ['clubs']);
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [CompetitionsListComponent],
-      imports: [HttpClientTestingModule, RouterTestingModule],
+      imports: [FormsModule, HttpClientTestingModule, RouterTestingModule],
       providers: [
-        { provide: TeamService, useValue: teamService }
+        { provide: TeamService, useValue: teamService },
+        { provide: AuthService, useValue: authService },
+        { provide: ChairmanClubService, useValue: chairmanClubService }
       ]
     }).compileComponents();
+
+    authService.careerRole = 'MANAGER';
+    teamService.teamId = 6;
+    chairmanClubService.clubs.calls.reset();
 
     fixture = TestBed.createComponent(CompetitionsListComponent);
     component = fixture.componentInstance;
@@ -85,5 +97,27 @@ describe('CompetitionsListComponent', () => {
     expect(component.errorMessage).toContain('could not be loaded');
     expect((fixture.nativeElement as HTMLElement).querySelector('.error-state button')?.textContent)
       .toContain('Retry');
+  });
+
+  it('loads the controlled club competitions for a chairman instead of requesting team zero', () => {
+    authService.careerRole = 'CHAIRMAN';
+    teamService.teamId = 0;
+    chairmanClubService.clubs.and.returnValue(of([{
+      teamId: 19,
+      name: 'Shadows',
+      controlledByPrincipal: true
+    } as any]));
+
+    fixture.detectChanges();
+
+    expect(chairmanClubService.clubs).toHaveBeenCalledOnceWith('CONTROLLED');
+    const request = httpController.expectOne(urlApp + '/competition/getTeamCompetitions/19');
+    expect(request.request.method).toBe('GET');
+    request.flush([{ competitionId: 3, typeId: 1, name: 'Gallactick League' }]);
+    fixture.detectChanges();
+
+    expect(component.selectedTeamId).toBe(19);
+    expect(component.selectedTeamName).toBe('Shadows');
+    expect(component.competitions.length).toBe(1);
   });
 });

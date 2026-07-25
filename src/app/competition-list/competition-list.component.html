@@ -2,7 +2,16 @@
 
   <div class="page-header">
     <h1>COMPETITIONS</h1>
-    <span class="subtitle">Your Team's Competitions</span>
+    <span class="subtitle">{{ chairmanView && selectedTeamName ? selectedTeamName + "'s Competitions" : "Your Team's Competitions" }}</span>
+  </div>
+
+  <div class="club-context" *ngIf="chairmanView && controlledClubs.length > 0">
+    <label for="chairman-competition-club">Controlled club</label>
+    <select id="chairman-competition-club" [ngModel]="selectedTeamId"
+            (ngModelChange)="selectChairmanClub($event)">
+      <option *ngFor="let club of controlledClubs" [ngValue]="club.teamId">{{ club.name }}</option>
+    </select>
+    <a *ngIf="selectedTeamId" [routerLink]="['/team', selectedTeamId]">Open club</a>
   </div>
 
   <div class="page-state" *ngIf="loading" role="status" aria-live="polite">Loading competitions…</div>
@@ -11,7 +20,7 @@
     <button type="button" (click)="loadCompetitions()">Retry</button>
   </div>
   <div class="page-state" *ngIf="!loading && !errorMessage && competitions.length === 0">
-    No active competition memberships for this team.
+    {{ emptyMessage || 'No active competition memberships for this team.' }}
   </div>
 
   <div class="cards-grid" *ngIf="!loading && !errorMessage && competitions.length > 0">

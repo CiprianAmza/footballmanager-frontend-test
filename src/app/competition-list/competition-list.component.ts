@@ -1,7 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { urlApp } from '../app.component';
+import { ChairmanClubSummary } from '../chairman-club/chairman-club.models';
+import { AuthService } from '../services/auth.service';
+import { ChairmanClubService } from '../services/chairman-club.service';
 import { TeamService } from '../services/team.service';
 
 interface CompetitionData {
@@ -61,10 +64,20 @@ interface CompetitionData {
 export class CompetitionsListComponent implements OnInit {
 
   competitions: CompetitionData[] = [];
+  controlledClubs: ChairmanClubSummary[] = [];
+  selectedTeamId: number | null = null;
+  selectedTeamName = '';
+  chairmanView = false;
   loading = true;
   errorMessage = '';
+  emptyMessage = '';
 
-  constructor(private http: HttpClient, private teamService: TeamService, private router: Router) {}
+  constructor(private http: HttpClient,
+              private teamService: TeamService,
+              private router: Router,
+              private route: ActivatedRoute,
+              private authService: AuthService,
+              private chairmanClubService: ChairmanClubService) {}
 
   openCompetition(comp: CompetitionData): void {
     if (comp.typeId === 4 || comp.typeId === 5) {
@@ -81,17 +94,85 @@ export class CompetitionsListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.chairmanView = this.authService.careerRole === 'CHAIRMAN';
     this.loadCompetitions();
   }
 
   loadCompetitions(): void {
     this.loading = true;
     this.errorMessage = '';
-    const teamId = this.teamService.teamId;
+    this.emptyMessage = '';
+    if (this.chairmanView) {
+      this.loadChairmanClubContext();
+      return;
+    }
+    this.loadTeamCompetitions(this.teamService.teamId);
+  }
+
+  selectChairmanClub(teamId: number | string): void {
+    const normalizedTeamId = Number(teamId);
+    const club = this.controlledClubs.find(item => item.teamId === normalizedTeamId);
+    if (!club || normalizedTeamId === this.selectedTeamId) return;
+
+    this.selectedTeamId = club.teamId;
+    this.selectedTeamName = club.name;
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { teamId: club.teamId },
+      queryParamsHandling: 'merge',
+      replaceUrl: true
+    });
+    this.loading = true;
+    this.errorMessage = '';
+    this.emptyMessage = '';
+    this.loadTeamCompetitions(club.teamId);
+  }
+
+  private loadChairmanClubContext(): void {
+    this.chairmanClubService.clubs('CONTROLLED').subscribe({
+      next: clubs => {
+        this.controlledClubs = (clubs || [])
+          .filter(club => club.controlledByPrincipal && Number.isSafeInteger(club.teamId) && club.teamId > 0)
+          .sort((left, right) => left.name.localeCompare(right.name) || left.teamId - right.teamId);
+        if (this.controlledClubs.length === 0) {
+          this.selectedTeamId = null;
+          this.selectedTeamName = '';
+          this.competitions = [];
+          this.loading = false;
+          this.emptyMessage = 'You do not currently control a club. Acquire control to view a club\'s competitions.';
+          return;
+        }
+
+        const requestedTeamId = Number(this.route.snapshot.queryParamMap.get('teamId'));
+        const selectedClub = this.controlledClubs.find(club => club.teamId === requestedTeamId)
+          || this.controlledClubs[0];
+        this.selectedTeamId = selectedClub.teamId;
+        this.selectedTeamName = selectedClub.name;
+        this.loadTeamCompetitions(selectedClub.teamId);
+      },
+      error: () => {
+        this.controlledClubs = [];
+        this.competitions = [];
+        this.loading = false;
+        this.errorMessage = 'Controlled clubs could not be loaded. Check the connection and try again.';
+      }
+    });
+  }
+
+  private loadTeamCompetitions(teamId: number): void {
+    if (!Number.isSafeInteger(teamId) || teamId <= 0) {
+      this.competitions = [];
+      this.loading = false;
+      this.emptyMessage = 'No active club is selected.';
+      return;
+    }
     this.http.get<CompetitionData[]>(urlApp + `/competition/getTeamCompetitions/${teamId}`).subscribe({
       next: data => {
         this.competitions = this.dedupe(data || []);
         this.loading = false;
+        if (this.competitions.length === 0) {
+          this.emptyMessage = `No active competition memberships are available for ${this.selectedTeamName || 'this team'}.`;
+        }
       },
       error: () => {
         this.competitions = [];
