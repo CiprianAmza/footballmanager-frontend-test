@@ -96,4 +96,43 @@ describe('AppComponent', () => {
     expect(root.querySelector('.chairman-save-load')?.textContent).toContain('Save Game');
     expect(root.querySelector('.chairman-save-load')?.textContent).toContain('Load Game');
   });
+
+  it('uses the authoritative live formation instead of inferring it from natural positions', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    app.lineupPreviewData = {
+      homeTeamId: 1,
+      awayTeamId: 2,
+      homeFormation: '4231',
+      awayFormation: '4411',
+      players: [
+        { teamId: 1, position: 'GK' },
+        { teamId: 1, position: 'DC' },
+        { teamId: 1, position: 'AMC' },
+        { teamId: 1, position: 'ST' }
+      ]
+    };
+
+    expect(app.formationOf(1)).toBe('4-2-3-1');
+    expect(app.formationOf(2)).toBe('4-4-1-1');
+  });
+
+  it('carries authoritative formations into the interactive lineup preview', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance as any;
+
+    const preview = app.buildLineupFromMatch({
+      homeTeamId: 1,
+      awayTeamId: 2,
+      homeTeamName: 'Home',
+      awayTeamName: 'Away',
+      homeFormation: '352',
+      awayFormation: '433',
+      homePitch: [{ playerId: 10, position: 'ST' }],
+      awayPitch: [{ playerId: 20, position: 'DC' }]
+    });
+
+    expect(preview.homeFormation).toBe('352');
+    expect(preview.awayFormation).toBe('433');
+  });
 });

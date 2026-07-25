@@ -2046,8 +2046,23 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
     ];
   }
 
-  /** "4-4-2" style formation label, derived from how the 11 players bin. */
+  /** Formation label from the authoritative backend kickoff contract. The row-count
+   *  fallback exists only for older cached payloads that predate that contract. */
   formationOf(teamId: number): string {
+    const authoritative = teamId === this.lineupPreviewData?.homeTeamId
+      ? this.lineupPreviewData?.homeFormation
+      : teamId === this.lineupPreviewData?.awayTeamId
+        ? this.lineupPreviewData?.awayFormation
+        : null;
+    if (authoritative) {
+      const labels: { [key: string]: string } = {
+        '442': '4-4-2', '433': '4-3-3', '343': '3-4-3', '451': '4-5-1', '352': '3-5-2',
+        '4231': '4-2-3-1', '4141': '4-1-4-1', '4411': '4-4-1-1', '4321': '4-3-2-1',
+        '4222': '4-2-2-2', '3421': '3-4-2-1', '532': '5-3-2', '5212': '5-2-1-2',
+        '541': '5-4-1', '3511': '3-5-1-1'
+      };
+      return labels[authoritative] || authoritative;
+    }
     const rows = this.lineupRows(teamId);
     const def = rows.find(r => r.row === 'DEF')?.players.length ?? 0;
     const mid = rows.find(r => r.row === 'MID')?.players.length ?? 0;
@@ -2127,6 +2142,8 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
           awayTeamId: data.awayTeamId,
           homeTeamName: data.homeTeamName,
           awayTeamName: data.awayTeamName,
+          homeFormation: data.homeFormation,
+          awayFormation: data.awayFormation,
           players: first.players,
           homeKit,
           awayKit
@@ -2146,6 +2163,8 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
       awayTeamId: data.awayTeamId,
       homeTeamName: data.homeTeamName,
       awayTeamName: data.awayTeamName,
+      homeFormation: data.homeFormation,
+      awayFormation: data.awayFormation,
       players: [...home, ...away],
       homeKit: null,
       awayKit: null
