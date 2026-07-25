@@ -3,6 +3,7 @@
 </ng-container>
 
 <ng-template #gameApplication>
+<a *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'MANAGER'" routerLink="/multiplayer" class="multiplayer-entry-link">Multiplayer room</a>
 <ng-template #chairmanGameWorldControls><div class="game-top-bar chairman-game-controls">
   <button class="continue-btn" (click)="advanceGame()" [disabled]="advancing || fastForwardRunning || (authService.careerRole === 'MANAGER' && pendingOffers.length > 0)"
           [title]="pendingOffers.length > 0 ? 'Resolve your job offer(s) first' : ''">{{ fastForwardRunning ? 'FAST-FORWARDING' : (advancing ? 'Processing...' : (pendingOffers.length > 0 ? 'OFFER PENDING' : 'CONTINUE')) }}</button>

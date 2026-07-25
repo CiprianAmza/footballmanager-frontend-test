@@ -1,0 +1,3 @@
+.multiplayer-room { margin: 1rem auto; max-width: 760px; padding: 1rem; border: 1px solid #334155; border-radius: 12px; background: #111827; color: #e5e7eb; }
+.room-entry, .controls, .lobby { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.room-entry input { padding: .55rem; } button { padding: .55rem .8rem; cursor: pointer; } .roster { margin: 1rem 0; line-height: 1.8; } .error { color: #fca5a5; }

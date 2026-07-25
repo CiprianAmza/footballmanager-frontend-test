@@ -97,6 +97,7 @@ import { PortfolioComponent } from './market/portfolio.component';
 import { FeatureUnavailableComponent } from './feature-unavailable/feature-unavailable.component';
 import { NotFoundComponent } from './not-found/not-found.component';
 import { ChairmanClubComponent } from './chairman-club/chairman-club.component';
+import { MultiplayerRoomComponent } from './multiplayer/multiplayer-room.component';
 
 @NgModule({
   declarations: [
@@ -120,6 +121,7 @@ import { ChairmanClubComponent } from './chairman-club/chairman-club.component';
     FeatureUnavailableComponent,
     NotFoundComponent,
     ChairmanClubComponent,
+    MultiplayerRoomComponent,
     CompetitionComponent,
     TacticDisplayComponent,
     CompetitionComponent,

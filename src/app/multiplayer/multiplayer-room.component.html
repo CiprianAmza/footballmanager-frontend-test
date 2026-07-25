@@ -1,0 +1,9 @@
+<section class="multiplayer-room">
+  <h2>Multiplayer room</h2>
+  <p class="error" *ngIf="error">{{ error }}</p>
+  <div *ngIf="!state" class="room-entry"><input [(ngModel)]="password" type="password" placeholder="Room password"><button (click)="create()">Create room</button><button (click)="join()">Join room</button></div>
+  <ng-container *ngIf="state as s"><p>Season {{ s.season }}, day {{ s.day }} · {{ s.votes }}/{{ s.totalPlayers }} votes · {{ countdown }}</p><div class="roster"><div *ngFor="let member of s.members">Manager {{ member.userId }} · Club {{ member.teamId }} · {{ member.ready ? 'Ready' : 'Not ready' }} <span *ngIf="member.fastForwardEnabled">· FF</span></div></div>
+    <div *ngIf="s.status === 'LOBBY'" class="lobby"><button (click)="ready()">{{ me()?.ready ? 'Unready' : 'Ready' }}</button><button *ngIf="s.hostUserId === me()?.userId" (click)="start()">Start</button><button *ngIf="s.hostUserId === me()?.userId" (click)="saveSettings()">Save settings</button></div>
+    <div *ngIf="s.status === 'ACTIVE'" class="controls"><button (click)="continueDay()">CONTINUE — {{ s.votes }}/{{ s.totalPlayers }}</button><button (click)="fastForward()">{{ me()?.fastForwardEnabled ? 'FAST FORWARD ACTIVE' : 'FAST FORWARD' }}</button><span *ngIf="s.allFastForward">RAPID FAST FORWARD</span></div>
+  </ng-container>
+</section>

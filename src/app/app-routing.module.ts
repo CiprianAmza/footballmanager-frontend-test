@@ -78,8 +78,10 @@ import { FeatureUnavailableComponent } from './feature-unavailable/feature-unava
 import { NotFoundComponent } from './not-found/not-found.component';
 import { ChairmanClubComponent } from './chairman-club/chairman-club.component';
 import { ChairmanRegentGuard } from './services/chairman-regent.guard';
+import { MultiplayerRoomComponent } from './multiplayer/multiplayer-room.component';
 
 export const APP_ROUTES: Routes = [
+  { path: 'multiplayer', component: MultiplayerRoomComponent },
   { path: 'economy', component: EconomyDashboardComponent, canActivate: [RegentGuard] },
   { path: 'market', component: MarketComponent, canActivate: [RegentGuard] },
   { path: 'portfolio', component: PortfolioComponent, canActivate: [RegentGuard] },
