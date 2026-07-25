@@ -15,10 +15,12 @@ describe('AppComponent', () => {
     isLoggedIn: true,
     careerRole: 'MANAGER',
     chairmanEnabled: true,
-    currentUsername: 'test-user'
+    currentUsername: 'test-user',
+    sessionRestored$: of(null)
   } as any;
   const team = {
     setupComplete: true,
+    setupComplete$: of(true),
     setupChecked: true,
     lastEvents$: of([]),
     dayOfWeek: 'Monday', dateDisplay: '1 Jan', currentPhase: 'MORNING',
@@ -28,6 +30,7 @@ describe('AppComponent', () => {
   const career = { pendingOffers$: of([]), refresh: jasmine.createSpy('refresh') } as any;
 
   beforeEach(async () => {
+    auth.careerRole = 'MANAGER';
     await TestBed.configureTestingModule({
       imports: [
         RouterTestingModule

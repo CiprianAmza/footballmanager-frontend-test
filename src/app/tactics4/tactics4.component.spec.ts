@@ -271,7 +271,8 @@ describe('Tactics4Component chairman mandate mode', () => {
   it('reconciles Chairman locks after each prerequisite regardless of response order', () => {
     const built = build('chairman-mandate');
     const component = built.component as any;
-    component.isChairmanMode = true;
+    built.component.ngOnInit();
+    expect(component.isChairmanMode).toBeTrue();
     component.formationOptions = [{ key: '442', label: '4-4-2' }];
     component.selectedTactic = '';
     component.applyChairmanLocksToField = jasmine.createSpy('applyLocks');

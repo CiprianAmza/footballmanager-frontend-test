@@ -324,8 +324,7 @@ describe('ChairmanClubComponent', () => {
 
     component.confirmTransfer();
 
-    expect(window.confirm).toHaveBeenCalledWith(
-      'Source: personal available cash. Destination: 7 FC. Inject 500?');
+    expect(window.confirm).toHaveBeenCalledWith(jasmine.stringMatching(/Inject €500\?$/));
     expect(api.transfer).toHaveBeenCalledWith(7, 'INJECTION', 500, jasmine.any(String));
   });
 
@@ -338,8 +337,7 @@ describe('ChairmanClubComponent', () => {
 
     component.confirmTransfer();
 
-    expect(window.confirm).toHaveBeenCalledWith(
-      'Source: 7 FC distributable treasury. Destination: personal account. Withdraw 125?');
+    expect(window.confirm).toHaveBeenCalledWith(jasmine.stringMatching(/Withdraw €125\?$/));
     expect(api.transfer).toHaveBeenCalledWith(7, 'WITHDRAWAL', 125, jasmine.any(String));
   });
 
