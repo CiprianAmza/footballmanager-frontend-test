@@ -71,7 +71,7 @@
           <tbody>
             <tr *ngFor="let player of filteredPlayers">
               <td class="player-cell">
-                <a [routerLink]="['/player', player.id]" class="fm-link">{{ player.name }}</a>
+                <a [routerLink]="['/player', player.id]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ player.name }}</a>
               </td>
               <td><span class="position-badge">{{ player.position }}</span></td>
               <td>{{ player.age }}</td>
@@ -136,7 +136,7 @@
                 class="grouped-offer-row" [class.offer-group-start]="first" [class.offer-group-end]="last">
               <td class="player-cell grouped-player-cell" *ngIf="first" [attr.rowspan]="group.offers.length">
                 <span class="player-hover-card">
-                  <a [routerLink]="['/player', group.player.playerId]" class="fm-link player-hover-link">
+                  <a [routerLink]="['/player', group.player.playerId]" [queryParams]="{ actingTeamId: teamId }" class="fm-link player-hover-link">
                     {{ group.player.playerName }} <span class="player-info-icon" aria-hidden="true">i</span>
                   </a>
                   <small class="offer-count-label">
@@ -211,7 +211,7 @@
           <tbody>
             <tr *ngFor="let offer of outgoingOffers">
               <td class="player-cell">
-                <a [routerLink]="['/player', offer.playerId]" class="fm-link">{{ offer.playerName }}</a>
+                <a [routerLink]="['/player', offer.playerId]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ offer.playerName }}</a>
               </td>
               <td><a [routerLink]="['/team', offer.toTeamId]" class="fm-link">{{ offer.toTeamName }}</a></td>
               <td class="money-cell text-right">{{ formatCurrency(offer.offerAmount) }}</td>
@@ -257,7 +257,7 @@
             <tbody>
               <tr *ngFor="let player of boughtPlayers">
                 <td class="player-cell">
-                  <a [routerLink]="['/player', player.playerId]" class="fm-link">{{ player.playerName }}</a>
+                  <a [routerLink]="['/player', player.playerId]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ player.playerName }}</a>
                 </td>
                 <td>
                   <a [routerLink]="['/team', player.sellTeamId]" class="fm-link">{{ player.sellTeamName }}</a>
@@ -289,7 +289,7 @@
             <tbody>
               <tr *ngFor="let player of soldPlayers">
                 <td class="player-cell">
-                  <a [routerLink]="['/player', player.playerId]" class="fm-link">{{ player.playerName }}</a>
+                  <a [routerLink]="['/player', player.playerId]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ player.playerName }}</a>
                 </td>
                 <td>
                   <a [routerLink]="['/team', player.buyTeamId]" class="fm-link">{{ player.buyTeamName }}</a>
@@ -334,7 +334,7 @@
             <tbody>
               <tr *ngFor="let loan of loansIn">
                 <td class="player-cell">
-                  <a [routerLink]="['/player', loan.playerId]" class="fm-link">{{ loan.playerName }}</a>
+                  <a [routerLink]="['/player', loan.playerId]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ loan.playerName }}</a>
                 </td>
                 <td><a [routerLink]="['/team', loan.parentTeamId]" class="fm-link">{{ loan.parentTeamName }}</a></td>
                 <td>Season {{ loan.seasonNumber }}</td>
@@ -387,7 +387,7 @@
             <tbody>
               <tr *ngFor="let loan of loansOut">
                 <td class="player-cell">
-                  <a [routerLink]="['/player', loan.playerId]" class="fm-link">{{ loan.playerName }}</a>
+                  <a [routerLink]="['/player', loan.playerId]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ loan.playerName }}</a>
                 </td>
                 <td><a [routerLink]="['/team', loan.loanTeamId]" class="fm-link">{{ loan.loanTeamName }}</a></td>
                 <td>Season {{ loan.seasonNumber }}</td>
@@ -443,7 +443,7 @@
             <tbody>
               <tr *ngFor="let loan of loanHistoryIn">
                 <td class="player-cell">
-                  <a [routerLink]="['/player', loan.playerId]" class="fm-link">{{ loan.playerName }}</a>
+                  <a [routerLink]="['/player', loan.playerId]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ loan.playerName }}</a>
                 </td>
                 <td><a [routerLink]="['/team', loan.parentTeamId]" class="fm-link">{{ loan.parentTeamName }}</a></td>
                 <td class="money-cell text-right">{{ formatCurrency(loan.loanFee) }}</td>
@@ -477,7 +477,7 @@
             <tbody>
               <tr *ngFor="let loan of loanHistoryOut">
                 <td class="player-cell">
-                  <a [routerLink]="['/player', loan.playerId]" class="fm-link">{{ loan.playerName }}</a>
+                  <a [routerLink]="['/player', loan.playerId]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ loan.playerName }}</a>
                 </td>
                 <td><a [routerLink]="['/team', loan.loanTeamId]" class="fm-link">{{ loan.loanTeamName }}</a></td>
                 <td class="money-cell text-right">{{ formatCurrency(loan.loanFee) }}</td>
@@ -528,7 +528,7 @@
           <tbody>
             <tr *ngFor="let agent of filteredFreeAgents">
               <td class="player-cell">
-                <a [routerLink]="['/player', agent.id]" class="fm-link">{{ agent.name }}</a>
+                <a [routerLink]="['/player', agent.id]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ agent.name }}</a>
               </td>
               <td><span class="position-badge">{{ agent.position }}</span></td>
               <td>{{ agent.age }}</td>
@@ -583,7 +583,7 @@
           <tbody>
             <tr *ngFor="let player of filteredPreContractPlayers">
               <td class="player-cell">
-                <a [routerLink]="['/player', player.id]" class="fm-link">{{ player.name }}</a>
+                <a [routerLink]="['/player', player.id]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ player.name }}</a>
               </td>
               <td><span class="position-badge">{{ player.position }}</span></td>
               <td>{{ player.age }}</td>

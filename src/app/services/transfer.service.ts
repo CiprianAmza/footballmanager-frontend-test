@@ -119,8 +119,8 @@ export class TransferService {
     return this.http.get<TransferOffer[]>(urlApp + `/transferOffer/history/${teamId}/${season}`);
   }
 
-  makeOffer(playerId: number, offerAmount: number): Observable<TransferOffer> {
-    return this.http.post<TransferOffer>(urlApp + `/transferOffer/makeOffer`, { playerId, offerAmount });
+  makeOffer(playerId: number, offerAmount: number, teamId: number): Observable<TransferOffer> {
+    return this.http.post<TransferOffer>(urlApp + `/transferOffer/makeOffer`, { playerId, offerAmount, teamId });
   }
 
   respondToOffer(offerId: number, action: 'accept' | 'reject' | 'counter', counterAmount?: number): Observable<TransferOffer> {
@@ -167,12 +167,12 @@ export class TransferService {
     return this.http.get<ActiveLoansResponse>(urlApp + `/loans/active/${teamId}`);
   }
 
-  makeLoanOffer(playerId: number, loanFee: number, buyOptionFee: number = 0, buyObligatory: boolean = false, parentWageContribution: number = 0): Observable<Loan> {
-    return this.http.post<Loan>(urlApp + `/loans/offer`, { playerId, loanFee, buyOptionFee, buyObligatory, parentWageContribution });
+  makeLoanOffer(playerId: number, loanFee: number, teamId: number, buyOptionFee: number = 0, buyObligatory: boolean = false, parentWageContribution: number = 0): Observable<Loan> {
+    return this.http.post<Loan>(urlApp + `/loans/offer`, { playerId, loanFee, buyOptionFee, buyObligatory, parentWageContribution, teamId });
   }
 
-  exerciseBuyOption(loanId: number): Observable<any> {
-    return this.http.post<any>(urlApp + `/loans/exerciseBuyOption/${loanId}`, {});
+  exerciseBuyOption(loanId: number, teamId: number): Observable<any> {
+    return this.http.post<any>(urlApp + `/loans/exerciseBuyOption/${loanId}`, { teamId });
   }
 
   getLoanHistory(teamId: number, season: number): Observable<ActiveLoansResponse> {
@@ -187,19 +187,19 @@ export class TransferService {
     return this.http.get<FreeAgent[]>(urlApp + `/transferOffer/freeAgents/${teamId}`);
   }
 
-  signFreeAgent(playerId: number, offeredWage: number, contractYears: number): Observable<any> {
-    return this.http.post<any>(urlApp + `/transferOffer/signFreeAgent`, { playerId, offeredWage, contractYears });
+  signFreeAgent(playerId: number, offeredWage: number, contractYears: number, teamId: number): Observable<any> {
+    return this.http.post<any>(urlApp + `/transferOffer/signFreeAgent`, { playerId, offeredWage, contractYears, teamId });
   }
 
   getPreContractAvailable(teamId: number): Observable<PreContractPlayer[]> {
     return this.http.get<PreContractPlayer[]>(urlApp + `/contract/preContractAvailable/${teamId}`);
   }
 
-  signPreContract(playerId: number, offeredWage: number, contractYears: number): Observable<any> {
-    return this.http.post<any>(urlApp + `/contract/preContract`, { playerId, offeredWage, contractYears });
+  signPreContract(playerId: number, offeredWage: number, contractYears: number, teamId: number): Observable<any> {
+    return this.http.post<any>(urlApp + `/contract/preContract`, { playerId, offeredWage, contractYears, teamId });
   }
 
-  setContractClauses(playerId: number, clauses: any): Observable<any> {
-    return this.http.post<any>(urlApp + `/contract/setClauses`, { playerId, ...clauses });
+  setContractClauses(playerId: number, clauses: any, teamId: number): Observable<any> {
+    return this.http.post<any>(urlApp + `/contract/setClauses`, { playerId, teamId, ...clauses });
   }
 }

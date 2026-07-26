@@ -55,6 +55,12 @@ dd { margin: 0; font-weight: 700; text-align: right; }
 .transfer-form button { grid-column: 1 / -1; }
 .budget-form { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(150px, .45fr) auto; gap: .65rem; align-items: center; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #29473f; }
 .budget-form small { display: block; color: #a9bbb5; margin-top: .25rem; }
+.authority-form { display: grid; gap: .75rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #29473f; }
+.authority-heading { display: flex; justify-content: space-between; gap: 1rem; align-items: start; }
+.authority-heading small { display: block; color: #a9bbb5; margin-top: .25rem; }
+.authority-form label { display: flex; gap: .65rem; align-items: center; color: #dce8e4; }
+.authority-form label input { width: 1.1rem; height: 1.1rem; }
+.authority-form button { justify-self: start; }
 .notice { padding: .75rem; border-radius: 6px; }.error { background: #55252d; }.success { background: #194936; }
 .loading { color: #a9bbb5; }.empty-state { margin-top: 1rem; text-align: center; }
 @media (max-width: 950px) { .club-layout { grid-template-columns: 1fr; }.club-list { position: static; }.summary-grid { grid-template-columns: repeat(2, 1fr); } }

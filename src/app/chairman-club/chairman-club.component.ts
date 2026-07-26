@@ -31,6 +31,8 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   direction: ClubCashTransferDirection = 'INJECTION';
   amount: number | null = null;
   transferBudgetAmount: number | null = null;
+  managerTransfersAllowed = true;
+  managerContractsAllowed = true;
 
   clubsLoading = true;
   dashboardLoading = false;
@@ -39,7 +41,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   actionError = '';
   message = '';
   pendingTransferConfirmation = '';
-  inFlight: 'quote' | 'execute' | 'transfer' | 'budget' | null = null;
+  inFlight: 'quote' | 'execute' | 'transfer' | 'budget' | 'authority' | null = null;
 
   private requestedTeamId: number | null = null;
   private clubsLoaded = false;
@@ -287,6 +289,35 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     });
   }
 
+  saveCoachAuthority(): void {
+    if (!this.selectedClub?.controlledByPrincipal || this.inFlight) return;
+    const teamId = this.selectedClub.teamId;
+    const transfersAllowed = this.managerTransfersAllowed;
+    const contractsAllowed = this.managerContractsAllowed;
+    const requestId = ++this.actionRequestId;
+    this.inFlight = 'authority';
+    this.actionError = '';
+    this.message = '';
+    this.actionSubscription?.unsubscribe();
+    this.actionSubscription = this.clubsApi.saveCoachAuthority(
+      teamId, transfersAllowed, contractsAllowed
+    ).pipe(finalize(() => this.finishAction(requestId, teamId))).subscribe({
+      next: value => {
+        if (!this.isCurrentAction(requestId, teamId)) return;
+        if (value.teamId !== teamId) {
+          this.actionError = 'Coach-authority response did not match the selected club.';
+          return;
+        }
+        this.managerTransfersAllowed = value.managerTransfersAllowed;
+        this.managerContractsAllowed = value.managerContractsAllowed;
+        this.message = 'Manager responsibilities saved.';
+      },
+      error: error => {
+        if (this.isCurrentAction(requestId, teamId)) this.fail(error, `authority:${teamId}`);
+      }
+    });
+  }
+
   money(value: number | undefined): string {
     return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR',
       maximumFractionDigits: 0 }).format(value || 0);
@@ -406,11 +437,13 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     this.dashboardError = '';
     this.privateDataSubscription = forkJoin({
       dashboard: this.clubsApi.dashboard(teamId),
-      commandCentre: this.clubsApi.commandCentre(teamId)
+      commandCentre: this.clubsApi.commandCentre(teamId),
+      coachAuthority: this.clubsApi.coachAuthority(teamId)
     }).subscribe({
       next: value => {
         if (requestId !== this.privateDataRequestId || this.selectedTeamId !== teamId) return;
         if (value.dashboard.teamId !== teamId || value.commandCentre.teamId !== teamId
+          || value.coachAuthority.teamId !== teamId
           || !value.commandCentre.ownership?.controlled) {
           this.dashboard = null;
           this.commandCentre = null;
@@ -424,6 +457,8 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
         this.dashboard = value.dashboard;
         this.commandCentre = value.commandCentre;
         this.transferBudgetAmount = value.commandCentre.finances.transferBudget;
+        this.managerTransfersAllowed = value.coachAuthority.managerTransfersAllowed;
+        this.managerContractsAllowed = value.coachAuthority.managerContractsAllowed;
         this.dashboardLoading = false;
       },
       error: error => {

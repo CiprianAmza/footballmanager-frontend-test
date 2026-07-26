@@ -309,7 +309,7 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
     if (!this.selectedPlayer || this.offerAmount <= 0) return;
     this.offerLoading = true;
 
-    this.transferService.makeOffer(this.selectedPlayer.id, this.offerAmount).subscribe({
+    this.transferService.makeOffer(this.selectedPlayer.id, this.offerAmount, this.teamId).subscribe({
       next: (result) => {
         this.offerResult = result;
         this.showOfferResult = true;
@@ -323,7 +323,7 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
         console.error('Error making offer:', err);
         this.offerLoading = false;
         this.closeOfferModal();
-        this.errorMessage = err.error || 'Failed to submit offer.';
+        this.errorMessage = this.mutationError(err, 'Failed to submit offer.');
         setTimeout(() => this.errorMessage = '', 5000);
       }
     });
@@ -333,7 +333,7 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
     if (!this.offerResult) return;
     this.offerLoading = true;
 
-    this.transferService.makeOffer(this.offerResult.playerId, this.offerResult.askingPrice).subscribe({
+    this.transferService.makeOffer(this.offerResult.playerId, this.offerResult.askingPrice, this.teamId).subscribe({
       next: (result) => {
         this.offerResult = result;
         this.offerLoading = false;
@@ -529,7 +529,7 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
     if (!this.loanPlayer || this.loanFeeAmount <= 0) return;
     this.loanLoading = true;
 
-    this.transferService.makeLoanOffer(this.loanPlayer.id, this.loanFeeAmount, this.loanBuyOptionFee, this.loanBuyObligatory, this.loanParentWageContribution).subscribe({
+    this.transferService.makeLoanOffer(this.loanPlayer.id, this.loanFeeAmount, this.teamId, this.loanBuyOptionFee, this.loanBuyObligatory, this.loanParentWageContribution).subscribe({
       next: (loan) => {
         this.loanResultMessage = loan.playerName + ' has joined on loan from ' + loan.parentTeamName + '!';
         this.loanResultSuccess = true;
@@ -539,7 +539,7 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
         }
       },
       error: (err) => {
-        this.loanResultMessage = err.error || 'Loan offer was rejected.';
+        this.loanResultMessage = this.mutationError(err, 'Loan offer was rejected.');
         this.loanResultSuccess = false;
         this.loanLoading = false;
       }
@@ -588,14 +588,14 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
     if (!confirm(`Exercise buy option for ${loan.playerName} at ${this.formatCurrency(loan.buyOptionFee)}?`)) return;
     this.buyOptionLoading[loan.id] = true;
 
-    this.transferService.exerciseBuyOption(loan.id).subscribe({
+    this.transferService.exerciseBuyOption(loan.id, this.teamId).subscribe({
       next: () => {
         this.buyOptionLoading[loan.id] = false;
         this.loadLoans();
       },
       error: (err) => {
         this.buyOptionLoading[loan.id] = false;
-        this.errorMessage = err.error || 'Failed to exercise buy option.';
+        this.errorMessage = this.mutationError(err, 'Failed to exercise buy option.');
         setTimeout(() => this.errorMessage = '', 5000);
       }
     });
@@ -641,7 +641,7 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
     if (!this.selectedFreeAgent || this.freeAgentWageOffer <= 0) return;
     this.freeAgentLoading = true;
 
-    this.transferService.signFreeAgent(this.selectedFreeAgent.id, this.freeAgentWageOffer, this.freeAgentContractYears).subscribe({
+    this.transferService.signFreeAgent(this.selectedFreeAgent.id, this.freeAgentWageOffer, this.freeAgentContractYears, this.teamId).subscribe({
       next: (res) => {
         this.freeAgentResultMessage = res.message;
         this.freeAgentResultSuccess = res.success;
@@ -651,7 +651,7 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
         }
       },
       error: (err) => {
-        this.freeAgentResultMessage = err.error?.message || err.error || 'Failed to sign free agent.';
+        this.freeAgentResultMessage = this.mutationError(err, 'Failed to sign free agent.');
         this.freeAgentResultSuccess = false;
         this.freeAgentLoading = false;
       }
@@ -698,7 +698,7 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
     if (!this.selectedPreContractPlayer || this.preContractWageOffer <= 0) return;
     this.preContractLoading = true;
 
-    this.transferService.signPreContract(this.selectedPreContractPlayer.id, this.preContractWageOffer, this.preContractContractYears).subscribe({
+    this.transferService.signPreContract(this.selectedPreContractPlayer.id, this.preContractWageOffer, this.preContractContractYears, this.teamId).subscribe({
       next: (res) => {
         this.preContractResultMessage = res.message;
         this.preContractResultSuccess = res.success;
@@ -708,7 +708,7 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
         }
       },
       error: (err) => {
-        this.preContractResultMessage = err.error?.message || err.error || 'Failed to sign pre-contract.';
+        this.preContractResultMessage = this.mutationError(err, 'Failed to sign pre-contract.');
         this.preContractResultSuccess = false;
         this.preContractLoading = false;
       }
@@ -726,6 +726,13 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
       return '\u20AC' + (amount / 1_000).toFixed(0) + 'K';
     }
     return '\u20AC' + amount.toFixed(0);
+  }
+
+  private mutationError(error: any, fallback: string): string {
+    const code = error?.error?.code;
+    if (code === 'CHAIRMAN_TRANSFER_CONTROLLED') return 'Transfers are controlled by the Chairman.';
+    if (code === 'CHAIRMAN_CONTRACT_CONTROLLED') return 'Player contracts are controlled by the Chairman.';
+    return error?.error?.message || (typeof error?.error === 'string' ? error.error : fallback);
   }
 
   getStatusClass(status: string): string {

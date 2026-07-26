@@ -239,3 +239,9 @@ export interface TransferBudgetView {
   maximumTransferBudget: number;
   clubFinances: number;
 }
+
+export interface CoachAuthorityView {
+  teamId: number;
+  managerTransfersAllowed: boolean;
+  managerContractsAllowed: boolean;
+}

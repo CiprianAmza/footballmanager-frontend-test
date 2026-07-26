@@ -180,6 +180,20 @@
                   {{ inFlight === 'budget' ? 'Saving budget…' : 'Set transfer budget' }}
                 </button>
               </div>
+              <div class="authority-form">
+                <div class="authority-heading">
+                  <div>
+                    <strong>Manager responsibilities</strong>
+                    <small>Off means Chairman only. On means both the Chairman and manager may act.</small>
+                  </div>
+                  <a [routerLink]="['/transfers', centre.teamId, centre.season]">Open transfer centre</a>
+                </div>
+                <label><input type="checkbox" [(ngModel)]="managerTransfersAllowed"> Manager may make transfer and loan offers</label>
+                <label><input type="checkbox" [(ngModel)]="managerContractsAllowed"> Manager may offer and renew player contracts</label>
+                <button type="button" (click)="saveCoachAuthority()" [disabled]="inFlight !== null">
+                  {{ inFlight === 'authority' ? 'Saving responsibilities…' : 'Save manager responsibilities' }}
+                </button>
+              </div>
             </article>
           </article>
           <div class="summary-grid private-grid">

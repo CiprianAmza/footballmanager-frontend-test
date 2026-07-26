@@ -6,6 +6,7 @@ import { forkJoin } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { TeamService } from '../services/team.service';
 import { AdminService } from '../services/admin.service';
+import { AuthService } from '../services/auth.service';
 
 @Component({
     selector: 'player',
@@ -82,6 +83,7 @@ export class PlayerComponent implements OnInit {
         private route: ActivatedRoute,
         private router: Router,
         private teamService: TeamService,
+        private authService: AuthService,
         public adminService: AdminService
     ) { }
 
@@ -265,7 +267,12 @@ export class PlayerComponent implements OnInit {
     }
 
     isOwnPlayer(): boolean {
-        return this.playerView && this.playerView.teamId === this.teamService.teamId;
+        if (!this.playerView) return false;
+        if (this.playerView.teamId === this.teamService.teamId) return true;
+        const actingTeamId = Number(this.route.snapshot.queryParamMap.get('actingTeamId'));
+        return this.authService.careerRole === 'CHAIRMAN'
+            && Number.isSafeInteger(actingTeamId) && actingTeamId > 0
+            && this.playerView.teamId === actingTeamId;
     }
 
     // Grouped attributes for FM-style display
@@ -330,6 +337,7 @@ export class PlayerComponent implements OnInit {
     submitRenewal() {
         const body = {
             playerId: this.playerId,
+            teamId: this.playerView.teamId,
             contractYears: this.renewYears,
             newWage: this.renewWage
         };
@@ -364,7 +372,7 @@ export class PlayerComponent implements OnInit {
     }
 
     submitClauses() {
-        const body: any = { playerId: this.playerId };
+        const body: any = { playerId: this.playerId, teamId: this.playerView.teamId };
         if (this.clauseReleaseClause > 0) body.releaseClause = this.clauseReleaseClause;
         if (this.clauseSellOnPercentage > 0) body.sellOnPercentage = this.clauseSellOnPercentage;
         if (this.clauseOptionalExtensionYears > 0) body.optionalExtensionYears = this.clauseOptionalExtensionYears;
