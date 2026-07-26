@@ -16,7 +16,7 @@ export class MultiplayerRoomComponent implements OnInit, OnDestroy {
   refresh(): void { this.room.state().subscribe({ next: s => { this.applyState(s); }, error: e => { if (e.status !== 404) this.error = this.typedError(e); } }); }
   create(): void { this.error = ''; this.room.create({ password: this.password, ...this.settings }).subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   join(): void { this.error = ''; this.room.join(this.password).subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
-  ready(): void { this.room.ready(!this.me()?.ready).subscribe({ next: s => this.state = s, error: e => this.error = this.typedError(e) }); }
+  ready(): void { this.room.ready(!this.me()?.ready).subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   saveSettings(): void { this.room.settings(this.settings).subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   start(): void { this.room.start().subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   continueDay(): void { this.room.continue().subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }

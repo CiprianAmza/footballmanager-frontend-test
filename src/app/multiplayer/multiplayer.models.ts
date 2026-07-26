@@ -7,5 +7,5 @@ export interface MultiplayerState {
   dayDeadline?: string; majorityDeadline?: string; effectiveDeadline?: string; fastForwardCount: number; allFastForward: boolean;
   season: number; day: number; blocker: { code: string; message?: string };
   liveMatchKey?: string; liveMatchInteractive?: boolean;
-  rapidStatus?: 'IDLE' | 'RUNNING' | 'CANCEL_PENDING'; rapidCurrentAbsoluteDay?: number; rapidTargetAbsoluteDay?: number; rapidCancelPending?: boolean;
+  rapidStatus?: 'IDLE' | 'RUNNING' | 'CANCEL_PENDING'; rapidCurrentSeason?: number; rapidCurrentDay?: number; rapidTargetSeason?: number; rapidTargetDay?: number; rapidCancelPending?: boolean;
 }
