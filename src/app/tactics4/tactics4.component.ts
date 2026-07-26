@@ -93,6 +93,8 @@ interface TeamTacticViewResponse {
     managerTacticSource: 'SAVED' | 'MANAGER_PREFERENCE';
     managerTactic: SavedTactic;
     bestPossibleTactic: SavedTactic;
+    chairmanRequiredFormation?: string | null;
+    chairmanLockedSlots?: TacticalMandateSlot[];
 }
 
 @Component({
@@ -137,6 +139,8 @@ export class Tactics4Component implements OnInit, OnChanges {
   managerTacticSource: 'SAVED' | 'MANAGER_PREFERENCE' = 'MANAGER_PREFERENCE';
   managerTacticSnapshot: SavedTactic | null = null;
   bestPossibleTacticSnapshot: SavedTactic | null = null;
+  managerChairmanRequiredFormation: string | null = null;
+  managerChairmanLocks: TacticalMandateSlot[] = [];
 
   get isExternalTeam(): boolean {
     return !!this.teamId && this.teamId !== this.teamService.teamId;
@@ -259,7 +263,17 @@ export class Tactics4Component implements OnInit, OnChanges {
 
   /** A pitch cell is locked when the owner revoked XI picking or pinned this slot. */
   isSlotLocked(positionIndex: number, position?: string): boolean {
-    return !this.isAdminEditingExternalTeam && this.lockState.isSlotLocked(positionIndex, position);
+    if (this.isAdminEditingExternalTeam) return false;
+    return this.lockState.isSlotLocked(positionIndex, position)
+      || (!this.isChairmanMode && this.managerChairmanLocks.some(lock => lock.positionIndex === positionIndex));
+  }
+
+  isManagerChairmanPlayerLocked(playerId: number): boolean {
+    return !this.isChairmanMode && this.managerChairmanLocks.some(lock => lock.playerId === playerId);
+  }
+
+  get managerFormationRequiredByChairman(): boolean {
+    return !this.isChairmanMode && this.managerChairmanRequiredFormation !== null;
   }
 
   ngOnInit(): void {
@@ -345,7 +359,7 @@ export class Tactics4Component implements OnInit, OnChanges {
     this.dataSubscription = forkJoin({
       players: this.http.get<Player[]>(urlApp + `/tactic/getPlayers/${this.teamId}`),
       teamView: this.http.get<TeamTacticViewResponse>(urlApp + `/tactic/teamView/${this.teamId}`),
-      tactics: this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/getAllPossibleTactics/${this.teamId}`)
+      tactics: this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/formationCatalog/${this.teamId}`)
     }).subscribe({
       next: (response) => {
          if (generation !== this.loadGeneration) return;
@@ -362,6 +376,8 @@ export class Tactics4Component implements OnInit, OnChanges {
          this.managerTacticSource = response.teamView?.managerTacticSource || 'MANAGER_PREFERENCE';
          this.managerTacticSnapshot = response.teamView?.managerTactic || null;
          this.bestPossibleTacticSnapshot = response.teamView?.bestPossibleTactic || null;
+         this.managerChairmanRequiredFormation = response.teamView?.chairmanRequiredFormation || null;
+         this.managerChairmanLocks = this.copyLocks(response.teamView?.chairmanLockedSlots || []);
          this.tacticalViewMode = 'manager';
          const initial = this.managerTacticSnapshot || this.bestPossibleTacticSnapshot;
          if (initial) this.applyTacticSnapshot(initial);
@@ -400,9 +416,9 @@ export class Tactics4Component implements OnInit, OnChanges {
       next: players => { if (current() && playersRequestId === this.playersRequestId) { this.players = (players || []).map(p => ({ ...p, condition: p.condition ?? 95, sharpness: p.sharpness ?? 88 })).sort((a, b) => b.rating - a.rating); this.computeTeamRatingRange(); this.playersLoading = false; this.reconcileChairmanPrerequisites(); } },
       error: () => { if (current() && playersRequestId === this.playersRequestId) { this.playersLoading = false; this.playersError = 'Players could not be loaded.'; } }
     }));
-    this.chairmanSubscription.add(this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/getAllPossibleTactics/${this.teamId}`).subscribe({
+    this.chairmanSubscription.add(this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/formationCatalog/${this.teamId}`).subscribe({
       next: tactics => { if (current() && formationsRequestId === this.formationsCatalogRequestId) { this.formationOptions = (tactics || []).map(t => ({ key: t.tacticName, label: this.PRETTY[t.tacticName] || t.tacticName })); this.formationsLoading = false; this.reconcileChairmanPrerequisites(); } },
-      error: () => { if (current() && formationsRequestId === this.formationsCatalogRequestId) { this.formationsLoading = false; this.formationsError = 'Formations could not be loaded.'; } }
+      error: () => { if (current() && formationsRequestId === this.formationsCatalogRequestId) { this.useFallbackFormationCatalog(); this.formationsLoading = false; this.formationsError = ''; this.reconcileChairmanPrerequisites(); } }
     }));
     this.chairmanSubscription.add(this.chairmanApi.tacticalMandate(this.teamId).subscribe({
       next: mandate => {
@@ -487,6 +503,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
   openModal(type: string): void {
     if (!this.canEdit || this.isChairmanMode) return;
+    if (type === 'formation' && this.managerFormationRequiredByChairman) return;
     this.activeModal = type;
   }
   closeModal(): void { this.activeModal = null; }
@@ -688,15 +705,19 @@ export class Tactics4Component implements OnInit, OnChanges {
     this.formationsError = '';
     const generation = this.loadGeneration;
     const requestId = ++this.formationsCatalogRequestId;
-    this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/getAllPossibleTactics/${this.teamId}`).subscribe({
+    this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/formationCatalog/${this.teamId}`).subscribe({
       next: tactics => {
         if (generation !== this.loadGeneration || requestId !== this.formationsCatalogRequestId) return;
         this.formationOptions = (tactics || []).map(t => ({ key: t.tacticName, label: this.PRETTY[t.tacticName] || t.tacticName }));
         this.formationsLoading = false;
         this.reconcileChairmanPrerequisites();
       },
-      error: () => { if (generation === this.loadGeneration && requestId === this.formationsCatalogRequestId) { this.formationsLoading = false; this.formationsError = 'Formations could not be loaded.'; } }
+      error: () => { if (generation === this.loadGeneration && requestId === this.formationsCatalogRequestId) { this.useFallbackFormationCatalog(); this.formationsLoading = false; this.formationsError = ''; this.reconcileChairmanPrerequisites(); } }
     });
+  }
+
+  private useFallbackFormationCatalog(): void {
+    this.formationOptions = Object.keys(this.PRETTY).map(key => ({ key, label: this.PRETTY[key] }));
   }
 
   toggleChairmanFormation(): void {
@@ -862,6 +883,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   drag(event: DragEvent, player: Player): void {
       if (!this.canEdit) return;
       if (this.isChairmanMode && this.isChairmanPlayerLocked(player.id)) return;
+      if (this.isManagerChairmanPlayerLocked(player.id)) return;
       if (event.dataTransfer) event.dataTransfer.setData('player', JSON.stringify(player));
   }
   drop(event: DragEvent, positionIndex: number): void {
@@ -874,6 +896,7 @@ export class Tactics4Component implements OnInit, OnChanges {
       if (playerData) {
           const player = JSON.parse(playerData) as Player;
           if (this.isChairmanMode && this.isChairmanPlayerLocked(player.id)) return;
+          if (this.isManagerChairmanPlayerLocked(player.id)) return;
           this.removePlayerFromCurrentPosition(player.id);
           const targetSpot = this.fieldPositions[positionIndex];
           if (targetSpot.player) this.selectedPlayers.delete(targetSpot.player.id);
@@ -890,6 +913,7 @@ export class Tactics4Component implements OnInit, OnChanges {
       if (playerData) {
           const player = JSON.parse(playerData) as Player;
           if (this.isChairmanMode && this.isChairmanPlayerLocked(player.id)) return;
+          if (this.isManagerChairmanPlayerLocked(player.id)) return;
           this.removePlayerFromCurrentPosition(player.id);
           const targetSpot = this.substitutes[subIndex];
           if (targetSpot.player) this.selectedPlayers.delete(targetSpot.player.id);
@@ -955,6 +979,8 @@ export class Tactics4Component implements OnInit, OnChanges {
       this.chairmanControlDenied = false;
       this.managerTacticSnapshot = null;
       this.bestPossibleTacticSnapshot = null;
+      this.managerChairmanRequiredFormation = null;
+      this.managerChairmanLocks = [];
       this.managerName = 'Manager';
       this.managerTacticSource = 'MANAGER_PREFERENCE';
       this.tacticalViewMode = 'manager';

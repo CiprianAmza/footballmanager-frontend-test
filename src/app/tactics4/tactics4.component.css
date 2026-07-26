@@ -128,6 +128,20 @@
   letter-spacing: .8px;
   cursor: pointer;
 }
+
+.chairman-tactic-notice {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 18px;
+  border-bottom: 1px solid rgba(241, 196, 15, .5);
+  background: rgba(241, 196, 15, .1);
+  color: var(--fm-text-dim, #aab0c3);
+  font-size: .82em;
+}
+.chairman-tactic-notice strong { color: #f6d657; }
+.widget.card-pick.chairman-required { cursor: not-allowed; border-color: rgba(241, 196, 15, .55); }
 .tactical-view-switch button.active {
   color: #101424;
   background: var(--fm-accent, #f1c40f);

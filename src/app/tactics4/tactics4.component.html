@@ -92,6 +92,11 @@
     </div>
   </section>
 
+  <div class="chairman-tactic-notice" *ngIf="managerFormationRequiredByChairman">
+    <strong>Tactic required by chairman.</strong>
+    <span>The required formation is {{ managerChairmanRequiredFormation && (PRETTY[managerChairmanRequiredFormation] || managerChairmanRequiredFormation) }}. You may still select every unlocked player.</span>
+  </div>
+
   <div class="access-strip" *ngIf="isExternalTeam && !isChairmanMode">
     <div class="access-copy">
       <span class="access-badge" [class.admin]="isAdminEditingExternalTeam">
@@ -117,7 +122,9 @@
     <div class="lab-col widgets" *ngIf="!isChairmanMode">
 
       <!-- FORMATION + MENTALITY card -->
-      <div class="widget card-pick" (click)="openModal('formation')">
+      <div class="widget card-pick" [class.chairman-required]="managerFormationRequiredByChairman"
+           [attr.title]="managerFormationRequiredByChairman ? 'Tactic required by chairman.' : null"
+           (click)="openModal('formation')">
         <div class="w-head"><span class="w-title">FORMATION</span><span class="w-chevron">▸</span></div>
         <div class="w-bignum mono">{{ selectedTactic }}</div>
       </div>
@@ -388,7 +395,7 @@
                (dragover)="allowDrop($event)"
                (drop)="dropSubstitute($event, i)">
                <div *ngIf="sub.player" class="node mini"
-                    [attr.draggable]="canEdit && !isChairmanPlayerLocked(sub.player.id) ? 'true' : null" (dragstart)="drag($event, sub.player)">
+                    [attr.draggable]="canEdit && !isChairmanPlayerLocked(sub.player.id) && !isManagerChairmanPlayerLocked(sub.player.id) ? 'true' : null" (dragstart)="drag($event, sub.player)">
                   <div class="node-disc gray"></div>
                   <div class="nt-name small">{{ sub.player.name }}</div>
                </div>
@@ -413,7 +420,7 @@
           </thead>
           <tbody>
             <tr *ngFor="let player of players"
-                [attr.draggable]="canEdit && !(isChairmanMode && isChairmanPlayerLocked(player.id)) ? 'true' : null"
+                [attr.draggable]="canEdit && !(isChairmanMode && isChairmanPlayerLocked(player.id)) && !isManagerChairmanPlayerLocked(player.id) ? 'true' : null"
                 (dragstart)="drag($event, player)"
                 [class.picked]="isPlayerSelected(player.id)">
               <td class="c-sel">
