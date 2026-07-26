@@ -3,7 +3,7 @@ import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/cor
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { urlApp } from '../app.component';
-import { forkJoin, Subscription } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { TeamService } from '../services/team.service';
 import { RatingTierService } from '../services/rating-tier.service';
 import { CoachPermissionsService, CoachLockState } from '../services/coach-permissions.service';
@@ -97,6 +97,12 @@ interface TeamTacticViewResponse {
     chairmanLockedSlots?: TacticalMandateSlot[];
 }
 
+interface EditorMandateResponse {
+    teamId: number;
+    requiredFormation: string | null;
+    lockedSlots: TacticalMandateSlot[];
+}
+
 @Component({
   selector: 'app-tactics4',
   templateUrl: './tactics4.component.html',
@@ -141,6 +147,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   bestPossibleTacticSnapshot: SavedTactic | null = null;
   managerChairmanRequiredFormation: string | null = null;
   managerChairmanLocks: TacticalMandateSlot[] = [];
+  private managerInitialSnapshotApplied = false;
 
   get isExternalTeam(): boolean {
     return !!this.teamId && this.teamId !== this.teamService.teamId;
@@ -264,8 +271,10 @@ export class Tactics4Component implements OnInit, OnChanges {
   /** A pitch cell is locked when the owner revoked XI picking or pinned this slot. */
   isSlotLocked(positionIndex: number, position?: string): boolean {
     if (this.isAdminEditingExternalTeam) return false;
-    return this.lockState.isSlotLocked(positionIndex, position)
-      || (!this.isChairmanMode && this.managerChairmanLocks.some(lock => lock.positionIndex === positionIndex));
+    if (!this.isChairmanMode && this.hasCanonicalManagerMandate) {
+      return this.managerChairmanLocks.some(lock => lock.positionIndex === positionIndex);
+    }
+    return this.lockState.isSlotLocked(positionIndex, position);
   }
 
   isManagerChairmanPlayerLocked(playerId: number): boolean {
@@ -274,6 +283,10 @@ export class Tactics4Component implements OnInit, OnChanges {
 
   get managerFormationRequiredByChairman(): boolean {
     return !this.isChairmanMode && this.managerChairmanRequiredFormation !== null;
+  }
+
+  private get hasCanonicalManagerMandate(): boolean {
+    return this.managerChairmanRequiredFormation !== null || this.managerChairmanLocks.length > 0;
   }
 
   ngOnInit(): void {
@@ -343,49 +356,155 @@ export class Tactics4Component implements OnInit, OnChanges {
     }
     // Boardroom permissions: which XI slots are locked (or whether the coach
     // may pick the XI at all). Drives lock icons + drag-disable on the pitch.
-    this.coachPermissions.getLockState(this.teamId).subscribe(state => {
+    this.dataSubscription = new Subscription();
+    this.dataSubscription.add(this.coachPermissions.getLockState(this.teamId).subscribe(state => {
       if (generation === this.loadGeneration) this.lockState = state;
-    });
+    }));
 
     // Team metadata for branding the shirts
-    this.http.get<any>(urlApp + `/teams/info/${this.teamId}`).subscribe({
+    this.dataSubscription.add(this.http.get<any>(urlApp + `/teams/info/${this.teamId}`).subscribe({
       next: (info) => {
         if (generation !== this.loadGeneration) return;
         if (info?.color1) this.teamColor1 = this.normalizeColor(info.color1);
         if (info?.color2) this.teamColor2 = this.normalizeColor(info.color2);
       }
-    });
+    }));
 
-    this.dataSubscription = forkJoin({
-      players: this.http.get<Player[]>(urlApp + `/tactic/getPlayers/${this.teamId}`),
-      teamView: this.http.get<TeamTacticViewResponse>(urlApp + `/tactic/teamView/${this.teamId}`),
-      tactics: this.http.get<{ tacticName: string; totalRating: number }[]>(urlApp + `/tactic/formationCatalog/${this.teamId}`)
-    }).subscribe({
-      next: (response) => {
-         if (generation !== this.loadGeneration) return;
-         // ... logica existentă ...
-         this.players = response.players.map(p => ({...p, condition: 95, sharpness: 88})).sort((a, b) => b.rating - a.rating);
-         this.computeTeamRatingRange();
-         // Drive the formation list from the backend (best-fit first). KEY is saved/sent,
-         // pretty label is display-only.
-         this.formationOptions = (response.tactics || []).map(t => ({
-             key: t.tacticName,
-             label: this.PRETTY[t.tacticName] || t.tacticName
-         }));
-         this.managerName = response.teamView?.managerName || 'No appointed manager';
-         this.managerTacticSource = response.teamView?.managerTacticSource || 'MANAGER_PREFERENCE';
-         this.managerTacticSnapshot = response.teamView?.managerTactic || null;
-         this.bestPossibleTacticSnapshot = response.teamView?.bestPossibleTactic || null;
-         this.managerChairmanRequiredFormation = response.teamView?.chairmanRequiredFormation || null;
-         this.managerChairmanLocks = this.copyLocks(response.teamView?.chairmanLockedSlots || []);
-         this.tacticalViewMode = 'manager';
-         const initial = this.managerTacticSnapshot || this.bestPossibleTacticSnapshot;
-         if (initial) this.applyTacticSnapshot(initial);
+    // These editor read models are deliberately independent. A slow/heavy scouting view must
+    // never discard a successfully loaded squad, formation layout or Chairman mandate.
+    const playersRequestId = ++this.playersRequestId;
+    this.playersLoading = true;
+    this.dataSubscription.add(this.http.get<Player[]>(urlApp + `/tactic/getPlayers/${this.teamId}`).subscribe({
+      next: players => {
+        if (generation !== this.loadGeneration || playersRequestId !== this.playersRequestId) return;
+        this.players = (players || [])
+          .map(player => ({ ...player, condition: player.condition ?? 95, sharpness: player.sharpness ?? 88 }))
+          .sort((left, right) => right.rating - left.rating);
+        this.computeTeamRatingRange();
+        this.playersLoading = false;
+        this.applyManagerTacticWhenReady();
       },
-      error: (err) => {
-        if (generation === this.loadGeneration) console.error("Error loading tactic data", err);
+      error: error => {
+        if (generation !== this.loadGeneration || playersRequestId !== this.playersRequestId) return;
+        this.playersLoading = false;
+        this.playersError = 'Players could not be loaded.';
+        console.error('Error loading players', error);
       }
+    }));
+
+    const catalogRequestId = ++this.formationsCatalogRequestId;
+    this.formationsLoading = true;
+    this.dataSubscription.add(this.http.get<{ tacticName: string; totalRating: number }[]>(
+      urlApp + `/tactic/formationCatalog/${this.teamId}`
+    ).subscribe({
+      next: tactics => {
+        if (generation !== this.loadGeneration || catalogRequestId !== this.formationsCatalogRequestId) return;
+        this.formationOptions = (tactics || []).map(tactic => ({
+          key: tactic.tacticName,
+          label: this.PRETTY[tactic.tacticName] || tactic.tacticName
+        }));
+        if (!this.formationOptions.length) this.useFallbackFormationCatalog();
+        this.formationsLoading = false;
+      },
+      error: error => {
+        if (generation !== this.loadGeneration || catalogRequestId !== this.formationsCatalogRequestId) return;
+        this.useFallbackFormationCatalog();
+        this.formationsLoading = false;
+        console.error('Error loading formation catalog; using local catalog', error);
+      }
+    }));
+
+    this.mandateLoading = true;
+    this.dataSubscription.add(this.http.get<EditorMandateResponse>(
+      urlApp + `/tactic/editorMandate/${this.teamId}`
+    ).subscribe({
+      next: mandate => {
+        if (generation !== this.loadGeneration) return;
+        const previousRequiredFormation = this.managerChairmanRequiredFormation;
+        this.managerChairmanRequiredFormation = mandate?.requiredFormation || null;
+        this.managerChairmanLocks = this.copyLocks(mandate?.lockedSlots || []);
+        this.mandateLoading = false;
+        if (this.managerChairmanRequiredFormation
+          && previousRequiredFormation !== this.managerChairmanRequiredFormation) {
+          this.managerInitialSnapshotApplied = false;
+        }
+        this.applyManagerTacticWhenReady();
+        this.applyManagerChairmanLocksToField();
+      },
+      error: error => {
+        if (generation !== this.loadGeneration) return;
+        this.mandateLoading = false;
+        this.mandateError = 'Chairman restrictions could not be loaded.';
+        console.error('Error loading Chairman editor mandate', error);
+      }
+    }));
+
+    // The direct saved/effective tactic is the primary editor snapshot and is much cheaper than
+    // the complete scouting comparison.
+    this.dataSubscription.add(this.http.get<SavedTactic | null>(
+      urlApp + `/tactic/getFormation/${this.teamId}`
+    ).subscribe({
+      next: tactic => {
+        if (generation !== this.loadGeneration) return;
+        if (tactic) this.managerTacticSnapshot = tactic;
+        this.applyManagerTacticWhenReady();
+      },
+      error: error => console.error('Error loading saved tactic', error)
+    }));
+
+    // Optional metadata/best-XI comparison. Its failure cannot blank the editor.
+    this.dataSubscription.add(this.http.get<TeamTacticViewResponse>(
+      urlApp + `/tactic/teamView/${this.teamId}`
+    ).subscribe({
+      next: teamView => {
+        if (generation !== this.loadGeneration) return;
+        this.managerName = teamView?.managerName || 'No appointed manager';
+        this.managerTacticSource = teamView?.managerTacticSource || 'MANAGER_PREFERENCE';
+        if (!this.managerTacticSnapshot) this.managerTacticSnapshot = teamView?.managerTactic || null;
+        this.bestPossibleTacticSnapshot = teamView?.bestPossibleTactic || null;
+        if (!this.hasCanonicalManagerMandate) {
+          this.managerChairmanRequiredFormation = teamView?.chairmanRequiredFormation || null;
+          this.managerChairmanLocks = this.copyLocks(teamView?.chairmanLockedSlots || []);
+        }
+        this.applyManagerTacticWhenReady();
+        this.applyManagerChairmanLocksToField();
+      },
+      error: error => console.error('Optional tactic comparison could not be loaded', error)
+    }));
+  }
+
+  private applyManagerTacticWhenReady(): void {
+    if (this.isChairmanMode || this.players.length === 0 || this.managerInitialSnapshotApplied) return;
+    const source = this.managerTacticSnapshot || this.bestPossibleTacticSnapshot;
+    if (!source) {
+      if (this.allowedIndexes.length === 0) {
+        this.selectedTactic = this.managerChairmanRequiredFormation || this.formationOptions[0]?.key || '442';
+        this.setFormationIndices(this.selectedTactic);
+      }
+      return;
+    }
+    this.managerInitialSnapshotApplied = true;
+    this.applyTacticSnapshot({
+      ...source,
+      tactic: this.managerChairmanRequiredFormation || source.tactic
     });
+    this.applyManagerChairmanLocksToField();
+  }
+
+  private applyManagerChairmanLocksToField(): void {
+    if (this.isChairmanMode || this.players.length === 0 || this.managerChairmanLocks.length === 0) return;
+    for (const lock of this.managerChairmanLocks) {
+      const player = this.players.find(value => value.id === lock.playerId);
+      const target = this.fieldPositions[lock.positionIndex];
+      if (!player || !target) continue;
+      this.removePlayerFromCurrentPosition(player.id);
+      if (target.player && target.player.id !== player.id) this.selectedPlayers.delete(target.player.id);
+      target.player = player;
+      target.role = null;
+      target.duty = null;
+      target.instructions = [];
+      this.selectedPlayers.add(player.id);
+    }
   }
 
   private loadChairmanMandateData(generation = this.loadGeneration, preserveError = ''): void {
@@ -450,7 +569,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
 
   private applyTacticSnapshot(data: SavedTactic): void {
-    this.selectedTactic = data.tactic || this.formationOptions[0]?.key || '442';
+    this.selectedTactic = this.managerChairmanRequiredFormation || data.tactic || this.formationOptions[0]?.key || '442';
     this.selectedOptions.mentality = data.mentality || 'Balanced';
     this.selectedOptions.possession = data.inPossession || 'Standard';
     this.selectedOptions.tempo = data.tempo || 'Standard';
@@ -471,6 +590,7 @@ export class Tactics4Component implements OnInit, OnChanges {
     this.cornerTakerRightId = data.cornerTakerRightId ?? null;
     this.setFormationIndices(this.selectedTactic);
     this.mapSavedPlayersToField(data.formationDataList || []);
+    this.applyManagerChairmanLocksToField();
   }
 
   /** Reconciles the Chairman field whenever any prerequisite arrives. */
@@ -946,6 +1066,21 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
   removeAll(): void {
       if (!this.canEdit) return;
+      if (!this.isChairmanMode && this.hasCanonicalManagerMandate) {
+          this.fieldPositions.forEach(position => {
+              if (this.managerChairmanLocks.some(lock => lock.positionIndex === position.positionIndex)) return;
+              if (position.player) this.selectedPlayers.delete(position.player.id);
+              position.player = null;
+              position.role = null;
+              position.duty = null;
+              position.instructions = [];
+          });
+          this.substitutes.forEach(position => {
+              if (position.player) this.selectedPlayers.delete(position.player.id);
+              position.player = null;
+          });
+          return;
+      }
       this.clearLineupState();
   }
 
@@ -981,6 +1116,7 @@ export class Tactics4Component implements OnInit, OnChanges {
       this.bestPossibleTacticSnapshot = null;
       this.managerChairmanRequiredFormation = null;
       this.managerChairmanLocks = [];
+      this.managerInitialSnapshotApplied = false;
       this.managerName = 'Manager';
       this.managerTacticSource = 'MANAGER_PREFERENCE';
       this.tacticalViewMode = 'manager';

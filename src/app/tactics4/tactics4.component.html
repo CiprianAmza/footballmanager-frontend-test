@@ -97,6 +97,12 @@
     <span>The required formation is {{ managerChairmanRequiredFormation && (PRETTY[managerChairmanRequiredFormation] || managerChairmanRequiredFormation) }}. You may still select every unlocked player.</span>
   </div>
 
+  <div class="chairman-tactic-notice" *ngIf="!isChairmanMode && (playersError || mandateError)">
+    <strong>{{ playersError || mandateError }}</strong>
+    <span>The rest of the tactic editor remains available.</span>
+    <button class="lab-btn ghost" type="button" (click)="loadData()">RETRY</button>
+  </div>
+
   <div class="access-strip" *ngIf="isExternalTeam && !isChairmanMode">
     <div class="access-copy">
       <span class="access-badge" [class.admin]="isAdminEditingExternalTeam">
