@@ -668,7 +668,7 @@
     <div class="modal-overlay goal-anim-overlay" *ngIf="showGoalAnimation && goalAnimationData" (click)="$event.stopPropagation()">
       <div class="goal-anim-modal">
         <div class="ga-header">
-          <span class="ga-anim-type" *ngIf="goalAnimationData.animationType !== 'OPEN_PLAY'">{{ goalAnimationData.animationType === 'PENALTY' ? 'PENALTY' : 'FREE KICK' }}</span>
+          <span class="ga-anim-type" *ngIf="goalAnimationData.animationType !== 'OPEN_PLAY'">{{ goalAnimationData.animationType === 'FREE_KICK' ? 'FREE KICK' : goalAnimationData.animationType }}</span>
           <span class="ga-scorer-name">{{ goalAnimationData.scorerName }}</span>
           <span class="ga-minute">{{ formatMatchMinute(goalAnimationData.minute, goalAnimationData.firstHalfStoppage) }}</span>
         </div>

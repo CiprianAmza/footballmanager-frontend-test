@@ -1133,13 +1133,11 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
       if (current) {
         const minute = current.minute;
         const anim = this.animationsAtMinute(this.liveMatchData, minute)[0];
-        // Animation that the user opted into (GOAL always; SAVE/MISS only in
-        // KEY_MOMENTS) → play the modal. Covers goal / shot_saved / shot_wide
-        // events — we previously gated this to eventType==='goal', which
-        // silently broke save+miss animations in KEY_MOMENTS mode.
+        // Play every V3 shot outcome selected by the local highlight filter.
         const isShotEvent = current.eventType === 'goal'
                          || current.eventType === 'shot_saved'
-                         || current.eventType === 'shot_wide';
+                         || current.eventType === 'shot_wide'
+                         || current.eventType === 'shot_blocked';
         if (anim && isShotEvent && this.playAnimationsAtMinute(this.liveMatchData, minute)) {
           return;
         }
@@ -1157,15 +1155,14 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
 
   /** Returns true for any "shot attempt" commentary line that should be
    *  briefly held back from the feed. Covers events with a stored animation
-   *  that won't actually play (GOALS_ONLY default + SAVE/MISS outcome) AND
-   *  shot_blocked events that the backend doesn't even register an animation
-   *  for. Without this, instant-reveal of these lines would telegraph
+   *  that won't actually play because of the viewer's highlight setting.
+   *  Without this, instant-reveal of these lines would telegraph
    *  "no goal here" before the user has any reason to expect one. */
   private isSuspenseShot(event: any, anim: any): boolean {
     if (!event) return false;
     const t = event.eventType;
     // Animation exists but skipped → save/miss case
-    if (anim && (t === 'shot_saved' || t === 'shot_wide' || t === 'goal')
+    if (anim && (t === 'shot_saved' || t === 'shot_wide' || t === 'shot_blocked' || t === 'goal')
         && !this.shouldPlayAnimation(anim.outcome)) {
       return true;
     }
@@ -2017,9 +2014,11 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
           .filter((animation: any) => Number(animation?.minute) === Number(minute))
           .sort((left: any, right: any) => Number(left?.slotIndex ?? 0) - Number(right?.slotIndex ?? 0))
       : [];
-    if (canonical.length > 0) return canonical;
     const legacy = data?.goalAnimations?.[minute];
-    return legacy ? [legacy] : [];
+    // Never make the two transport boundaries mutually exclusive. During a rolling
+    // upgrade or a flag-off replay a legacy moment can legitimately share a minute with
+    // one or more V3 moments; all of them must play sequentially.
+    return legacy ? [...canonical, legacy] : canonical;
   }
 
   private animationKey(animation: any): string {
@@ -2247,15 +2246,16 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
 
   /**
    * Read the cached match-highlights setting and decide if the given outcome
-   * should produce a 2D animation. Falls back to GOALS_ONLY for users who
-   * haven't visited the Staff page yet (so the setting hasn't been pulled).
+   * should produce a 2D animation. The default is the most comprehensive option:
+   * backend data is shared by all multiplayer viewers and must never be narrowed by
+   * whichever user's preference happened to be read first.
    */
   private shouldPlayAnimation(outcome: string | undefined): boolean {
     const level = (localStorage.getItem('fm_matchHighlightsLevel') as
-        'NONE' | 'GOALS_ONLY' | 'KEY_MOMENTS' | null) || 'GOALS_ONLY';
+        'NONE' | 'GOALS_ONLY' | 'KEY_MOMENTS' | null) || 'KEY_MOMENTS';
     if (level === 'NONE') return false;
     if (level === 'GOALS_ONLY') return outcome === 'GOAL';
-    return outcome === 'GOAL' || outcome === 'SAVE' || outcome === 'MISS';
+    return outcome === 'GOAL' || outcome === 'SAVE' || outcome === 'MISS' || outcome === 'BLOCKED';
   }
 
   private startGoalAnimationPlayback(): void {
@@ -2508,7 +2508,8 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
     if (this.goalAnimationEventText) {
       ctx.save();
       const evtText = this.goalAnimationEventText;
-      const isBigEvent = evtText === 'GOAL!' || evtText === 'SAVED!' || evtText === 'MISSED!';
+      const isBigEvent = evtText === 'GOAL!' || evtText === 'SAVED!'
+        || evtText === 'MISSED!' || evtText === 'BLOCKED!';
       ctx.font = isBigEvent ? 'bold 36px sans-serif' : 'bold 18px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -2523,6 +2524,10 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
       } else if (evtText === 'MISSED!') {
         ctx.fillStyle = '#95a5a6';
         ctx.shadowColor = '#95a5a6';
+        ctx.shadowBlur = 12;
+      } else if (evtText === 'BLOCKED!') {
+        ctx.fillStyle = '#e67e22';
+        ctx.shadowColor = '#e67e22';
         ctx.shadowBlur = 12;
       } else {
         ctx.fillStyle = 'rgba(255,255,255,0.8)';
@@ -2699,12 +2704,14 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
       'SHOT': 'SHOT!',
       'GOAL': 'GOAL!',
       'SAVE': 'SAVED!',
-      'MISS': 'MISSED!'
+      'MISS': 'MISSED!',
+      'BLOCKED': 'BLOCKED!'
     };
     this.goalAnimationEventText = labels[type] || type;
 
     if (this.goalAnimationEventTimer) clearTimeout(this.goalAnimationEventTimer);
-    const duration = (type === 'GOAL' || type === 'SAVE' || type === 'MISS') ? 2000 : 600;
+    const duration = (type === 'GOAL' || type === 'SAVE' || type === 'MISS' || type === 'BLOCKED')
+      ? 2000 : 600;
     this.goalAnimationEventTimer = setTimeout(() => {
       this.goalAnimationEventText = '';
     }, duration);
@@ -2736,7 +2743,10 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
     if (this.goalAnimationData) {
       this.goalAnimationFrameIndex = this.goalAnimationData.totalFrames || 150;
       const outcome = this.goalAnimationData.outcome;
-      this.goalAnimationEventText = outcome === 'SAVE' ? 'SAVED!' : outcome === 'MISS' ? 'MISSED!' : 'GOAL!';
+      this.goalAnimationEventText = outcome === 'SAVE' ? 'SAVED!'
+        : outcome === 'MISS' ? 'MISSED!'
+        : outcome === 'BLOCKED' ? 'BLOCKED!'
+        : 'GOAL!';
       this.renderGoalFrame();
     }
   }
