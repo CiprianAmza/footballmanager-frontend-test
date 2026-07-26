@@ -2375,22 +2375,10 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // Vertical stripe in the team's secondary colour — gives the circles a
-      // shirt-like feel and helps tell two same-family teams apart when the
-      // primary colours happen to be close (e.g. light vs darker blue).
-      // Skipped for GKs and ball carrier (their highlight already stands out).
-      const secondary = isGK
-        ? null
-        : (teamKit.outfieldSecondary || teamKit.outfieldBorder);
-      if (secondary && !isBallCarrier) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(px, py, radius, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.fillStyle = secondary;
-        ctx.fillRect(px - 2, py - radius, 4, radius * 2);
-        ctx.restore();
-      }
+      // Keep every outfield marker in one solid team colour. The backend has
+      // already resolved kit clashes (including use of the away/secondary kit),
+      // so adding a second stripe here makes one side look like several teams.
+      // Goalkeepers remain deliberately distinct through their dedicated kit.
 
       // Shirt number — pick black/white based on fill brightness so the
       // number stays legible on yellow/white kits.
