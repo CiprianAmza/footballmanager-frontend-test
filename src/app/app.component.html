@@ -221,7 +221,7 @@
 
     <!-- Game Top Bar -->
     <ng-container *ngTemplateOutlet="chairmanGameWorldControls"></ng-container>
-    <app-multiplayer-continue (activeChange)="setRoomActive($event)"></app-multiplayer-continue>
+    <app-multiplayer-continue (activeChange)="setRoomActive($event)" (liveMatchKeyChange)="resumeMultiplayerLiveMatch($event)"></app-multiplayer-continue>
     <ng-container *ngTemplateOutlet="chairmanSimulationStatus"></ng-container>
     <ng-container *ngTemplateOutlet="chairmanFastForwardDialog"></ng-container>
     <!-- The backend currently advances synchronously, so this is intentionally

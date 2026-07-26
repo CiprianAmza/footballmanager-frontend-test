@@ -2,8 +2,10 @@ export interface MultiplayerMember { userId: number; teamId: number; ready: bool
 export interface MultiplayerState {
   currentUserId: number; currentMember: MultiplayerMember | null;
   status: 'LOBBY' | 'ACTIVE' | 'CLOSED'; roomId: number; hostUserId: number;
-  continueThresholdPercent: number; dayTimeoutSeconds: number; majorityTimeoutSeconds: number; maxPlayers: number;
+  continueThresholdPercent: number; dayTimeoutSeconds: number; majorityTimeoutSeconds: number; maxPlayers: number; forceContinue: boolean;
   members: MultiplayerMember[]; votes: number; totalPlayers: number; requiredVotes: number; currentUserVoted: boolean;
   dayDeadline?: string; majorityDeadline?: string; effectiveDeadline?: string; fastForwardCount: number; allFastForward: boolean;
   season: number; day: number; blocker: { code: string; message?: string };
+  liveMatchKey?: string; liveMatchInteractive?: boolean;
+  rapidStatus?: 'IDLE' | 'RUNNING' | 'CANCEL_PENDING'; rapidCurrentAbsoluteDay?: number; rapidTargetAbsoluteDay?: number; rapidCancelPending?: boolean;
 }

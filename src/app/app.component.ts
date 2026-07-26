@@ -17,6 +17,12 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
   title = 'footballmanagersimulator-frontend';
   roomActive = false;
   setRoomActive(active: boolean): void { this.roomActive = active; }
+  resumeMultiplayerLiveMatch(event: { key: string; interactive: boolean }): void {
+    if (!event?.key || this.liveMatchKey === event.key && this.showLiveMatch) return;
+    this.liveMatchInteractive = event.interactive;
+    this.liveMatchCommitted = false;
+    this.fetchLiveMatch(event.key);
+  }
   advancing = false;
   simulationElapsedSeconds = 0;
   simulationStopMessage = '';
