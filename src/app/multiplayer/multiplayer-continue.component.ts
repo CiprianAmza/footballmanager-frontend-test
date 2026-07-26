@@ -25,7 +25,9 @@ export class MultiplayerContinueComponent implements OnInit, OnDestroy {
     this.lastDay = nextState.day;
     this.state = nextState;
     this.error = '';
-    this.activeChange.emit(nextState.status === 'ACTIVE');
+    // A lobby already owns the shared world. Hide the legacy single-player
+    // Continue/Fast Forward controls until the room is left or closed.
+    this.activeChange.emit(nextState.status === 'LOBBY' || nextState.status === 'ACTIVE');
     this.updateCountdowns();
     if (changedDay) this.teamService.loadGameState();
     if (nextState.liveMatchKey && nextState.liveMatchKey !== previousKey) {

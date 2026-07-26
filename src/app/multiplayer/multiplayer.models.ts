@@ -1,7 +1,7 @@
 export interface MultiplayerMember { userId: number; teamId: number | null; ready: boolean; fastForwardEnabled: boolean; }
 export interface MultiplayerState {
   currentUserId: number; currentMember: MultiplayerMember | null;
-  status: 'LOBBY' | 'ACTIVE' | 'CLOSED'; roomId: number; hostUserId: number;
+  status: 'LOBBY' | 'ACTIVE' | 'CLOSED'; roomId: number; name: string; hostUserId: number;
   continueThresholdPercent: number; dayTimeoutSeconds: number; majorityTimeoutSeconds: number; maxPlayers: number; forceContinue: boolean;
   members: MultiplayerMember[]; votes: number; totalPlayers: number; requiredVotes: number; currentUserVoted: boolean;
   dayDeadline?: string; majorityDeadline?: string; effectiveDeadline?: string; fastForwardCount: number; allFastForward: boolean;

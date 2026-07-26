@@ -8,7 +8,7 @@ import { MultiplayerState } from './multiplayer.models';
 @Component({ selector: 'app-multiplayer-room', templateUrl: './multiplayer-room.component.html', styleUrls: ['./multiplayer-room.component.css'] })
 export class MultiplayerRoomComponent implements OnInit, OnDestroy {
   state: MultiplayerState | null = null; password = ''; error = ''; message = ''; countdown = '';
-  settings = { continueThresholdPercent: 50, dayTimeoutSeconds: 300, majorityTimeoutSeconds: 60, maxPlayers: 2, forceContinue: false };
+  settings = { name: 'My Football Room', continueThresholdPercent: 50, dayTimeoutSeconds: 300, majorityTimeoutSeconds: 60, maxPlayers: 2, forceContinue: false };
   private sub?: Subscription;
   constructor(private room: MultiplayerRoomService) {}
   ngOnInit(): void { this.sub = timer(0, 1000).pipe(exhaustMap(() => this.room.state().pipe(catchError(e => { if (e.status === 404) { this.state = null; this.error = ''; } else this.error = this.typedError(e); return EMPTY; })))).subscribe(s => { this.applyState(s); this.countdown = this.remaining(); }); }
@@ -23,7 +23,7 @@ export class MultiplayerRoomComponent implements OnInit, OnDestroy {
   continueDay(): void { this.room.continue().subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   fastForward(): void { this.room.fastForward(!this.me()?.fastForwardEnabled).subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   me() { return this.state?.currentMember || this.state?.members.find(m => m.userId === this.state?.currentUserId); }
-  private applyState(s: MultiplayerState): void { this.state = s; this.error = ''; this.settings = { continueThresholdPercent: s.continueThresholdPercent, dayTimeoutSeconds: s.dayTimeoutSeconds, majorityTimeoutSeconds: s.majorityTimeoutSeconds, maxPlayers: s.maxPlayers, forceContinue: s.forceContinue }; }
+  private applyState(s: MultiplayerState): void { this.state = s; this.error = ''; this.settings = { name: s.name, continueThresholdPercent: s.continueThresholdPercent, dayTimeoutSeconds: s.dayTimeoutSeconds, majorityTimeoutSeconds: s.majorityTimeoutSeconds, maxPlayers: s.maxPlayers, forceContinue: s.forceContinue }; }
   remaining(): string { const deadline = this.state?.effectiveDeadline; if (!deadline) return ''; const seconds = Math.max(0, Math.floor((Date.parse(deadline) - Date.now()) / 1000)); return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`; }
   private typedError(e: HttpErrorResponse): string { return e.error?.message || e.error?.detail || e.error?.error || ({ 401: 'Parolă greșită', 409: 'Camera este plină sau jocul a pornit', 403: 'Acțiune permisă doar hostului' } as any)[e.status] || 'Operația multiplayer a eșuat'; }
 }
