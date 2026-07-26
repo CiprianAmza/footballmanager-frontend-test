@@ -14,7 +14,7 @@ export class MultiplayerContinueComponent implements OnInit, OnDestroy {
   private lastSeason = 0; private lastDay = 0;
   private poll?: Subscription;
   constructor(private room: MultiplayerRoomService, private teamService: TeamService) {}
-  ngOnInit(): void { this.poll = timer(1000, 1000).pipe(exhaustMap(() => this.room.state().pipe(catchError(e => { if (e.status === 404) { this.state = null; this.activeChange.emit(false); } else this.error = e.error?.message || 'Multiplayer unavailable'; return EMPTY; })))).subscribe(s => this.applyState(s)); }
+  ngOnInit(): void { this.poll = timer(0, 1000).pipe(exhaustMap(() => this.room.state().pipe(catchError(e => { if (e.status === 404) { this.state = null; this.error = ''; this.activeChange.emit(false); } else this.error = e.error?.message || e.error?.error || 'Multiplayer unavailable'; return EMPTY; })))).subscribe(s => this.applyState(s)); }
   ngOnDestroy(): void { this.poll?.unsubscribe(); }
   continueDay(): void { if (this.busy || !this.state) return; this.busy = true; this.room.continue().subscribe({ next: s => { this.busy = false; this.applyState(s); }, error: e => { this.busy = false; this.error = e.error?.message || 'Continue failed'; } }); }
   toggleFastForward(): void { if (!this.state || this.busy) return; this.busy = true; const enabled = !this.state.currentMember?.fastForwardEnabled; this.room.fastForward(enabled, this.ffSeasons).subscribe({ next: s => { this.busy = false; this.applyState(s); }, error: e => { this.busy = false; this.error = e.error?.message || 'Fast Forward failed'; } }); }
@@ -24,6 +24,7 @@ export class MultiplayerContinueComponent implements OnInit, OnDestroy {
     this.lastSeason = nextState.season;
     this.lastDay = nextState.day;
     this.state = nextState;
+    this.error = '';
     this.activeChange.emit(nextState.status === 'ACTIVE');
     this.updateCountdowns();
     if (changedDay) this.teamService.loadGameState();
