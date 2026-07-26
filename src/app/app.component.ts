@@ -2518,8 +2518,11 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
         ctx.shadowColor = '#f1c40f';
         ctx.shadowBlur = 20;
       } else if (evtText === 'SAVED!') {
-        ctx.fillStyle = '#e74c3c';
-        ctx.shadowColor = '#e74c3c';
+        // A save is a successful goalkeeper action, not an error/goal state.
+        // Keep it visually distinct from GOAL (yellow), MISS (grey) and
+        // BLOCKED (orange), while remaining readable over the green pitch.
+        ctx.fillStyle = '#38bdf8';
+        ctx.shadowColor = '#0ea5e9';
         ctx.shadowBlur = 16;
       } else if (evtText === 'MISSED!') {
         ctx.fillStyle = '#95a5a6';
