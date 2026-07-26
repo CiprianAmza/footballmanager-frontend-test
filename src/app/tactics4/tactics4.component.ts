@@ -997,7 +997,8 @@ export class Tactics4Component implements OnInit, OnChanges {
       MANDATED_PLAYER_NOT_ELIGIBLE: 'A mandated player is not eligible.',
       TACTICAL_MANDATE_STALE: 'The mandate changed elsewhere. Your editor was refreshed; reapply your changes manually.'
     };
-    return messages[code] || error?.error?.message || error?.message || 'The tactical mandate could not be loaded or saved.';
+    return messages[code] || error?.error?.message || error?.error?.error
+      || error?.message || 'The tactical mandate could not be loaded or saved.';
   }
   allowDrop(event: DragEvent): void { if (this.canEdit) event.preventDefault(); }
   drag(event: DragEvent, player: Player): void {
