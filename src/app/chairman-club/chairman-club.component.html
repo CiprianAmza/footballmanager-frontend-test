@@ -168,6 +168,18 @@
                 <article><span>Expenses · last 30 days</span><strong>{{ money(centre.finances.recentExpenses) }}</strong></article>
                 <article><span>Ownership</span><strong>{{ centre.ownership.shares | number }} · {{ percent(centre.ownership.stakeBps) }}</strong><small>{{ money(centre.ownership.equityValue.amount) }} equity</small></article>
               </div>
+              <div class="budget-form">
+                <div>
+                  <strong>Chairman transfer allocation</strong>
+                  <small>The manager cannot spend more than this club budget. Maximum: {{ money(centre.finances.treasury.balance.amount) }}.</small>
+                </div>
+                <input type="number" min="0" step="1" [(ngModel)]="transferBudgetAmount"
+                       [max]="centre.finances.treasury.balance.amount" aria-label="Chairman transfer budget">
+                <button type="button" (click)="saveTransferBudget()"
+                        [disabled]="inFlight !== null || transferBudgetAmount === null || transferBudgetAmount < 0">
+                  {{ inFlight === 'budget' ? 'Saving budget…' : 'Set transfer budget' }}
+                </button>
+              </div>
             </article>
           </article>
           <div class="summary-grid private-grid">

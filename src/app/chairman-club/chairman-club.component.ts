@@ -30,6 +30,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   quote: TakeoverQuoteView | null = null;
   direction: ClubCashTransferDirection = 'INJECTION';
   amount: number | null = null;
+  transferBudgetAmount: number | null = null;
 
   clubsLoading = true;
   dashboardLoading = false;
@@ -38,7 +39,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   actionError = '';
   message = '';
   pendingTransferConfirmation = '';
-  inFlight: 'quote' | 'execute' | 'transfer' | null = null;
+  inFlight: 'quote' | 'execute' | 'transfer' | 'budget' | null = null;
 
   private requestedTeamId: number | null = null;
   private clubsLoaded = false;
@@ -121,6 +122,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
       this.invalidateSelectionRequests();
       this.dashboard = null;
       this.commandCentre = null;
+      this.transferBudgetAmount = null;
       this.quote = null;
       this.dashboardError = '';
       this.dashboardLoading = false;
@@ -253,6 +255,38 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     }
   }
 
+  saveTransferBudget(): void {
+    const amount = Number(this.transferBudgetAmount);
+    if (!this.selectedClub?.controlledByPrincipal || !this.commandCentre
+      || !Number.isSafeInteger(amount) || amount < 0 || this.inFlight) return;
+    const teamId = this.selectedClub.teamId;
+    const requestId = ++this.actionRequestId;
+    this.inFlight = 'budget';
+    this.actionError = '';
+    this.message = '';
+    this.actionSubscription?.unsubscribe();
+    this.actionSubscription = this.clubsApi.setTransferBudget(teamId, amount).pipe(
+      finalize(() => this.finishAction(requestId, teamId))
+    ).subscribe({
+      next: value => {
+        if (!this.isCurrentAction(requestId, teamId)) return;
+        if (value.teamId !== teamId || value.transferBudget !== amount) {
+          this.actionError = 'Transfer-budget response did not match the selected club or amount.';
+          return;
+        }
+        this.transferBudgetAmount = value.transferBudget;
+        this.commandCentre = {
+          ...this.commandCentre!,
+          finances: { ...this.commandCentre!.finances, transferBudget: value.transferBudget }
+        };
+        this.message = `Transfer budget saved: ${this.money(value.transferBudget)}.`;
+      },
+      error: error => {
+        if (this.isCurrentAction(requestId, teamId)) this.fail(error, `budget:${teamId}`);
+      }
+    });
+  }
+
   money(value: number | undefined): string {
     return new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'EUR',
       maximumFractionDigits: 0 }).format(value || 0);
@@ -287,6 +321,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
           this.selectedClub = confirmed;
           this.dashboard = null;
           this.commandCentre = null;
+          this.transferBudgetAmount = null;
           this.router.navigate(['/chairman/clubs', afterTakeoverTeamId], {
             queryParams: { scope: this.scope }
           });
@@ -379,6 +414,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
           || !value.commandCentre.ownership?.controlled) {
           this.dashboard = null;
           this.commandCentre = null;
+          this.transferBudgetAmount = null;
           this.dashboardLoading = false;
           this.dashboardError = !value.commandCentre.ownership?.controlled
             ? 'Command centre ownership did not confirm canonical control.'
@@ -387,12 +423,14 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
         }
         this.dashboard = value.dashboard;
         this.commandCentre = value.commandCentre;
+        this.transferBudgetAmount = value.commandCentre.finances.transferBudget;
         this.dashboardLoading = false;
       },
       error: error => {
         if (requestId !== this.privateDataRequestId || this.selectedTeamId !== teamId) return;
         this.dashboard = null;
         this.commandCentre = null;
+        this.transferBudgetAmount = null;
         this.dashboardLoading = false;
         this.dashboardError = this.privateErrorMessage(error);
         if (this.errorCode(error) === 'CLUB_CONTROL_REQUIRED') this.loadClubs();
@@ -408,6 +446,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     this.inFlight = null;
     this.dashboard = null;
     this.commandCentre = null;
+    this.transferBudgetAmount = null;
     this.quote = null;
     this.selectedTeamId = null;
     this.selectedClub = null;
@@ -429,6 +468,7 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     this.selectedClub = null;
     this.dashboard = null;
     this.commandCentre = null;
+    this.transferBudgetAmount = null;
     this.quote = null;
     this.dashboardLoading = false;
   }
@@ -488,6 +528,8 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
       CLUB_CONTROL_REQUIRED: 'Control of this club is no longer available. Refresh the club list.',
       WITHDRAWAL_RESTRICTED: 'This club withdrawal is currently restricted.',
       INSUFFICIENT_DISTRIBUTABLE_CASH: 'The club does not have enough distributable funds.',
+      TRANSFER_BUDGET_INVALID: 'Transfer budget must be zero or a positive whole amount.',
+      TRANSFER_BUDGET_EXCEEDS_CLUB_FUNDS: 'Transfer budget cannot exceed the club treasury.',
       CHAIRMAN_REQUIRED: 'A Chairman career is required for this action.',
       CLUB_NOT_FOUND: 'The selected club no longer exists.'
     };

@@ -232,3 +232,10 @@ export interface TreasuryTransferView {
   day: number;
   replayed: boolean;
 }
+
+export interface TransferBudgetView {
+  teamId: number;
+  transferBudget: number;
+  maximumTransferBudget: number;
+  clubFinances: number;
+}

@@ -6,7 +6,7 @@ import { urlApp } from '../app.component';
 import {
   ChairmanClubDashboard, ChairmanClubSummary, ChairmanCommandCentreView, ClubCatalogScope,
   ClubCashTransferDirection, TakeoverExecutionView, TakeoverQuoteView, TreasuryTransferView,
-  TacticalMandateUpdate, TacticalMandateView
+  TacticalMandateUpdate, TacticalMandateView, TransferBudgetView
 } from '../chairman-club/chairman-club.models';
 
 @Injectable({ providedIn: 'root' })
@@ -54,5 +54,10 @@ export class ChairmanClubService {
     return this.http.post<TreasuryTransferView>(
       urlApp + `/api/clubs/${teamId}/treasury-transfers`,
       { direction, amount, idempotencyKey });
+  }
+
+  setTransferBudget(teamId: number, amount: number): Observable<TransferBudgetView> {
+    return this.http.put<TransferBudgetView>(
+      urlApp + `/api/clubs/${teamId}/transfer-budget`, { amount });
   }
 }
