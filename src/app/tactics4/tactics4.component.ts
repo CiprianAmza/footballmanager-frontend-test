@@ -44,6 +44,11 @@ interface PositionedPlayer {
     instructions: string[];
 }
 
+interface FormationCell {
+    index: number;
+    position: string;
+}
+
 interface RoleDef {
     name: string;
     duties: string[];
@@ -523,14 +528,106 @@ export class Tactics4Component implements OnInit, OnChanges {
       if (!this.isChairmanMode) this.clearLineupState();
       this.allowedIndexes = [];
       if (!tactic) return;
-      this.http.get<{ index: number; position: string }[]>(urlApp + `/tactic/formationLayout/${tactic}`).subscribe({
+      this.http.get<FormationCell[]>(urlApp + `/tactic/formationLayout/${tactic}`).subscribe({
           next: (cells) => {
             if (requestId !== this.formationRequestId) return;
             this.allowedIndexes = (cells || []).map(c => c.index);
-            if (this.isChairmanMode) this.reconcileChairmanPrerequisites();
+            if (this.isChairmanMode) {
+              this.reconcileChairmanFormation(cells || []);
+              this.reconcileChairmanPrerequisites();
+            }
           },
           error: (err) => console.error('Error loading formation layout', err)
       });
+  }
+
+  /** Keep the Chairman XI coherent when the imposed shape changes. Players on
+   * cells that do not exist in the new formation are moved to the closest free
+   * compatible slot; exact Chairman locks follow the player to that slot. */
+  private reconcileChairmanFormation(layout: FormationCell[]): void {
+    const validIndexes = new Set(layout.map(cell => cell.index));
+    const positionsByIndex = new Map(layout.map(cell => [cell.index, cell.position]));
+    const occupied = new Set<number>();
+    const displaced: { from: number; state: PositionedPlayer }[] = [];
+
+    for (const cell of this.fieldPositions) {
+      if (!cell.player) continue;
+      if (validIndexes.has(cell.positionIndex)) {
+        occupied.add(cell.positionIndex);
+        continue;
+      }
+      displaced.push({
+        from: cell.positionIndex,
+        state: {
+          positionIndex: cell.positionIndex,
+          player: cell.player,
+          role: cell.role,
+          duty: cell.duty,
+          instructions: [...cell.instructions]
+        }
+      });
+      cell.player = null;
+      cell.role = null;
+      cell.duty = null;
+      cell.instructions = [];
+    }
+
+    displaced.sort((left, right) => {
+      const leftLocked = this.isChairmanPlayerLocked(left.state.player!.id) ? 0 : 1;
+      const rightLocked = this.isChairmanPlayerLocked(right.state.player!.id) ? 0 : 1;
+      return leftLocked - rightLocked || left.from - right.from;
+    });
+
+    for (const moved of displaced) {
+      const player = moved.state.player!;
+      const target = layout
+        .filter(cell => !occupied.has(cell.index))
+        .sort((left, right) => {
+          const leftScore = this.formationPositionScore(player.position, positionsByIndex.get(left.index) || '');
+          const rightScore = this.formationPositionScore(player.position, positionsByIndex.get(right.index) || '');
+          return leftScore - rightScore
+            || Math.abs(left.index - moved.from) - Math.abs(right.index - moved.from)
+            || left.index - right.index;
+        })[0];
+
+      if (!target) {
+        this.selectedPlayers.delete(player.id);
+        this.chairmanLocks = this.chairmanLocks.filter(lock => lock.playerId !== player.id);
+        continue;
+      }
+
+      const targetCell = this.fieldPositions[target.index];
+      targetCell.player = player;
+      targetCell.role = moved.state.role;
+      targetCell.duty = moved.state.duty;
+      targetCell.instructions = [...moved.state.instructions];
+      occupied.add(target.index);
+      this.chairmanLocks = this.chairmanLocks.map(lock =>
+        lock.playerId === player.id ? { ...lock, positionIndex: target.index } : lock);
+    }
+
+    this.chairmanLocks = [...this.chairmanLocks]
+      .sort((left, right) => left.positionIndex - right.positionIndex || left.playerId - right.playerId);
+  }
+
+  private formationPositionScore(playerPosition: string, slotPosition: string): number {
+    const player = (playerPosition || '').toUpperCase();
+    const slot = (slotPosition || '').toUpperCase();
+    if (player === slot) return 0;
+    if (this.baseFormationPosition(player) === this.baseFormationPosition(slot)) return 1;
+    if (this.formationUnit(player) === this.formationUnit(slot)) return 2;
+    return 3;
+  }
+
+  private baseFormationPosition(position: string): string {
+    return ({ AML: 'ML', AMR: 'MR', WBL: 'DL', WBR: 'DR' } as { [key: string]: string })[position] || position;
+  }
+
+  private formationUnit(position: string): string {
+    if (position === 'GK') return 'GK';
+    if (['DL', 'DC', 'DR', 'WBL', 'WBR'].includes(position)) return 'DEF';
+    if (['DM', 'ML', 'MC', 'MR', 'AML', 'AMC', 'AMR'].includes(position)) return 'MID';
+    return 'ATT';
   }
 
   onChairmanFormationChanged(): void {
