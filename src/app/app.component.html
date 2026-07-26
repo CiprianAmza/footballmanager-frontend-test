@@ -3,7 +3,7 @@
 </ng-container>
 
 <ng-template #gameApplication>
-<a *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'MANAGER'" routerLink="/multiplayer" class="multiplayer-entry-link">Multiplayer room</a>
+<a *ngIf="authService.isLoggedIn && teamService.setupComplete" routerLink="/multiplayer" class="multiplayer-entry-link">Multiplayer room</a>
 <ng-template #chairmanGameWorldControls><div class="game-top-bar chairman-game-controls" *ngIf="!roomActive">
   <button class="continue-btn" (click)="advanceGame()" [disabled]="advancing || fastForwardRunning || (authService.careerRole === 'MANAGER' && pendingOffers.length > 0)"
           [title]="pendingOffers.length > 0 ? 'Resolve your job offer(s) first' : ''">{{ fastForwardRunning ? 'FAST-FORWARDING' : (advancing ? 'Processing...' : (pendingOffers.length > 0 ? 'OFFER PENDING' : 'CONTINUE')) }}</button>
@@ -95,9 +95,11 @@
     <a routerLink="/all-time-champions" routerLinkActive="active">All-time champions</a>
     <a routerLink="/stats/scorers" routerLinkActive="active">Top scorers</a>
     <a routerLink="/inbox" routerLinkActive="active">Inbox</a>
+    <a routerLink="/multiplayer" routerLinkActive="active">Multiplayer</a>
     <a routerLink="/wealth-rankings" routerLinkActive="active">Wealth rankings</a>
     <span>{{ authService.currentUsername }}</span><button type="button" (click)="logout()">Logout</button>
   </nav>
+  <app-multiplayer-continue (activeChange)="setRoomActive($event)" (liveMatchKeyChange)="resumeMultiplayerLiveMatch($event)"></app-multiplayer-continue>
   <ng-container *ngTemplateOutlet="chairmanGameWorldControls"></ng-container>
   <ng-container *ngTemplateOutlet="chairmanSimulationStatus"></ng-container>
   <ng-container *ngTemplateOutlet="chairmanFastForwardDialog"></ng-container>

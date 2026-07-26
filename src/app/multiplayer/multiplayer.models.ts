@@ -1,4 +1,4 @@
-export interface MultiplayerMember { userId: number; teamId: number; ready: boolean; fastForwardEnabled: boolean; }
+export interface MultiplayerMember { userId: number; teamId: number | null; ready: boolean; fastForwardEnabled: boolean; }
 export interface MultiplayerState {
   currentUserId: number; currentMember: MultiplayerMember | null;
   status: 'LOBBY' | 'ACTIVE' | 'CLOSED'; roomId: number; hostUserId: number;
