@@ -14,7 +14,7 @@
                [class.suspension]="reason.type === 'SUSPENSION'">
         <span class="availability-icon">{{ reason.type === 'INJURY' ? '✚' : '▣' }}</span>
         <div>
-          <a [routerLink]="['/player', reason.playerId]" class="fm-link">{{ reason.playerName }}</a>
+          <a [routerLink]="['/player', reason.playerId]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ reason.playerName }}</a>
           <p>{{ reason.explanation }}</p>
         </div>
       </article>
@@ -28,7 +28,7 @@
       <strong>Expiring Contracts:</strong>
       {{ expiringContracts.length }} player(s) have contracts expiring soon:
       <span *ngFor="let p of expiringContracts; let last = last">
-        <a [routerLink]="['/player', p.id]" class="fm-link">{{ p.name }}</a><span *ngIf="!last">, </span>
+        <a [routerLink]="['/player', p.id]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ p.name }}</a><span *ngIf="!last">, </span>
       </span>
     </div>
   </div>
@@ -49,7 +49,7 @@
       </thead>
       <tbody>
         <tr *ngFor="let p of unhappyPlayers">
-          <td><a [routerLink]="['/player', p.id]" class="fm-link">{{ p.name }}</a></td>
+          <td><a [routerLink]="['/player', p.id]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ p.name }}</a></td>
           <td class="center"><span class="pos-badge">{{ p.position }}</span></td>
           <td class="center">{{ p.age }}</td>
           <td class="center">
@@ -145,7 +145,7 @@
 
             <td class="name-cell"> 
                 <div class="name-wrapper" (contextmenu)="onRightClick($event, index)">
-                    <a [routerLink]="['/player', player.id]" class="fm-link">{{ player.name }}</a>
+                    <a [routerLink]="['/player', player.id]" [queryParams]="{ actingTeamId: teamId }" class="fm-link">{{ player.name }}</a>
                     
                     <div class="context-menu" *ngIf="showOptions && activeIndex === index">
                         <ul>
