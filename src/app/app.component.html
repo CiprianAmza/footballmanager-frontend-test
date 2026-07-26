@@ -678,7 +678,7 @@
         <div class="ga-controls">
           <button class="ga-skip-btn" *ngIf="!goalAnimationFinished" (click)="skipGoalAnimation()">Skip</button>
           <button class="ga-skip-match-btn" (click)="skipEntireMatchFromAnimation()">Skip Match</button>
-          <button class="ga-replay-btn" *ngIf="goalAnimationFinished" (click)="replayGoalAnimation()">Replay</button>
+          <button class="ga-replay-btn" (click)="replayGoalAnimation()">Replay</button>
           <button class="ga-continue-btn" *ngIf="goalAnimationFinished" (click)="closeGoalAnimation()">Continue</button>
         </div>
       </div>

@@ -142,7 +142,12 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
   goalAnimationEventText = '';
   goalAnimationEventTimer: any = null;
   goalAnimationFinished = false;
-  goalAnimationPendingQueue: number[] = [];  // minutes to play
+  // Canonical MatchPlan animations are an ordered list, not the legacy
+  // minute-keyed map. Keep the complete payload in the queue so goals from
+  // both teams (and multiple goals in one minute) are never overwritten.
+  goalAnimationPendingQueue: any[] = [];
+  private handledGoalAnimationKeys = new Set<string>();
+  private goalAnimationScoreBefore: { home: number; away: number } | null = null;
   goalAnimationCanvasReady = false;
   // Last few ball positions for the trail effect. Rendered as fading dots
   // behind the ball so a fast pass leaves a visible streak.
@@ -1060,6 +1065,9 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
 
   fetchLiveMatch(key: string): void {
     this.liveMatchKey = key;
+    this.goalAnimationPendingQueue = [];
+    this.handledGoalAnimationKeys.clear();
+    this.goalAnimationScoreBefore = null;
     this.liveKnockoutResultText = null;
     this.resetSyntheticState();
     // Persist the in-flight match key so a browser refresh can resume the
@@ -1124,7 +1132,7 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
       const current = this.liveMatchData.timeline[this.liveCurrentIndex];
       if (current) {
         const minute = current.minute;
-        const anim = this.liveMatchData.goalAnimations?.[minute];
+        const anim = this.animationsAtMinute(this.liveMatchData, minute)[0];
         // Animation that the user opted into (GOAL always; SAVE/MISS only in
         // KEY_MOMENTS) → play the modal. Covers goal / shot_saved / shot_wide
         // events — we previously gated this to eventType==='goal', which
@@ -1132,8 +1140,7 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
         const isShotEvent = current.eventType === 'goal'
                          || current.eventType === 'shot_saved'
                          || current.eventType === 'shot_wide';
-        if (anim && isShotEvent && this.shouldPlayAnimation(anim.outcome)) {
-          this.playGoalAnimation(minute);
+        if (anim && isShotEvent && this.playAnimationsAtMinute(this.liveMatchData, minute)) {
           return;
         }
         // Anti-spoiler: events that would otherwise reveal instantly (no
@@ -1229,14 +1236,12 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
         // Important: the engine can produce TWO events in a single tick — e.g.
         // a goal at minute 94 followed immediately by the full_time marker at
         // minute 94. `state.timeline[liveCurrentIndex]` is the LAST one, which
-        // would be the full_time event in that case. We use the presence + the
-        // outcome of `state.goalAnimations[target]` to decide whether to play
-        // the animation, NOT the last event's type — otherwise the goal
-        // animation would be silently dropped whenever it shares its minute
-        // with another timeline entry (full_time, kickoff carry-over, etc.).
-        const anim = state.goalAnimations?.[target];
-        if (anim && this.shouldPlayAnimation(anim.outcome)) {
-          this.playGoalAnimation(target);
+        // would be the full_time event in that case. canonicalAnimations is
+        // the authoritative MatchPlan boundary; goalAnimations remains the
+        // legacy/cosmetic boundary. Read both, not only the legacy map, or
+        // every canonical goal is silently dropped from the visual playback.
+        const anim = this.animationsAtMinute(state, target)[0];
+        if (anim && this.playAnimationsAtMinute(state, target)) {
           return;
         }
         const last = state.timeline[this.liveCurrentIndex];
@@ -1860,14 +1865,14 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
     const cur = this.liveCurrentMinute?.homeScore ?? 0;
     if (!this.showGoalAnimation) return cur;
     if (this.goalAnimationData?.outcome !== 'GOAL') return cur;
-    const prev = this.scoreBeforeCurrentGoal();
+    const prev = this.goalAnimationScoreBefore || this.scoreBeforeCurrentGoal();
     return prev ? prev.home : cur;
   }
   get displayedAwayScore(): number {
     const cur = this.liveCurrentMinute?.awayScore ?? 0;
     if (!this.showGoalAnimation) return cur;
     if (this.goalAnimationData?.outcome !== 'GOAL') return cur;
-    const prev = this.scoreBeforeCurrentGoal();
+    const prev = this.goalAnimationScoreBefore || this.scoreBeforeCurrentGoal();
     return prev ? prev.away : cur;
   }
 
@@ -1999,17 +2004,50 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
   // ==========================================
 
   checkGoalAnimation(minute: number): boolean {
-    if (!this.liveMatchData?.goalAnimations) return false;
-    return !!this.liveMatchData.goalAnimations[minute];
+    return this.animationsAtMinute(this.liveMatchData, minute).length > 0;
   }
 
   playGoalAnimation(minute: number): void {
-    const animation = this.liveMatchData?.goalAnimations?.[minute];
+    this.playAnimationsAtMinute(this.liveMatchData, minute);
+  }
+
+  private animationsAtMinute(data: any, minute: number): any[] {
+    const canonical = Array.isArray(data?.canonicalAnimations)
+      ? data.canonicalAnimations
+          .filter((animation: any) => Number(animation?.minute) === Number(minute))
+          .sort((left: any, right: any) => Number(left?.slotIndex ?? 0) - Number(right?.slotIndex ?? 0))
+      : [];
+    if (canonical.length > 0) return canonical;
+    const legacy = data?.goalAnimations?.[minute];
+    return legacy ? [legacy] : [];
+  }
+
+  private animationKey(animation: any): string {
+    if (animation?.fixtureKey != null && animation?.slotIndex != null) {
+      return `canonical:${animation.fixtureKey}:${animation.slotIndex}`;
+    }
+    return `legacy:${animation?.minute}:${animation?.outcome}:${animation?.scorerPlayerId ?? animation?.scorerName ?? ''}`;
+  }
+
+  private playAnimationsAtMinute(data: any, minute: number): boolean {
+    const pending = this.animationsAtMinute(data, minute)
+      .filter(animation => this.shouldPlayAnimation(animation?.outcome))
+      .filter(animation => !this.handledGoalAnimationKeys.has(this.animationKey(animation)));
+    if (pending.length === 0) return false;
+
+    pending.forEach(animation => this.handledGoalAnimationKeys.add(this.animationKey(animation)));
+    const [first, ...rest] = pending;
+    this.goalAnimationPendingQueue.push(...rest);
+    this.playGoalAnimationData(first);
+    return true;
+  }
+
+  private playGoalAnimationData(animation: any): void {
     if (!animation) return;
-    if (!this.shouldPlayAnimation(animation.outcome)) return;
 
     this.stopLiveMatchTimer();
     this.goalAnimationData = animation;
+    this.goalAnimationScoreBefore = this.scoreImmediatelyBeforeAnimation(animation);
     this.goalAnimationFrameIndex = 0;
     this.goalAnimationFinished = false;
     this.goalAnimationEventText = '';
@@ -2017,6 +2055,28 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
     this.goalAnimationBallTrail = [];
     this.goalConfetti = [];
     this.showGoalAnimation = true;
+  }
+
+  private scoreImmediatelyBeforeAnimation(animation: any): { home: number; away: number } | null {
+    if (animation?.outcome !== 'GOAL') return null;
+    const goals = (this.liveMatchData?.timeline || []).filter((event: any) =>
+      event?.eventType === 'goal'
+      && Number(event?.minute) === Number(animation?.minute)
+      && Number(event?.teamId) === Number(animation?.scoringTeamId));
+    if (goals.length === 0) return null;
+
+    const sameSideCanonical = (this.liveMatchData?.canonicalAnimations || [])
+      .filter((candidate: any) => Number(candidate?.minute) === Number(animation?.minute)
+        && Number(candidate?.scoringTeamId) === Number(animation?.scoringTeamId))
+      .sort((left: any, right: any) => Number(left?.slotIndex ?? 0) - Number(right?.slotIndex ?? 0));
+    const ordinal = Math.max(0, sameSideCanonical.findIndex((candidate: any) =>
+      this.animationKey(candidate) === this.animationKey(animation)));
+    const goal = goals[Math.min(ordinal, goals.length - 1)];
+    const homeGoal = Number(animation?.scoringTeamId) === Number(this.liveMatchData?.homeTeamId);
+    return {
+      home: Math.max(0, Number(goal?.homeScore ?? 0) - (homeGoal ? 1 : 0)),
+      away: Math.max(0, Number(goal?.awayScore ?? 0) - (homeGoal ? 0 : 1))
+    };
   }
 
   /** Tear down the preview. Either fired by user input or by the auto-dismiss
@@ -2654,14 +2714,15 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
     this.stopGoalAnimation();
     this.showGoalAnimation = false;
     this.goalAnimationData = null;
+    this.goalAnimationScoreBefore = null;
     this.goalAnimationFinished = false;
     this.goalAnimationEventText = '';
     this.goalAnimationCanvasReady = false;
 
     // Check if there are more queued goal animations
     if (this.goalAnimationPendingQueue.length > 0) {
-      const nextMinute = this.goalAnimationPendingQueue.shift()!;
-      setTimeout(() => this.playGoalAnimation(nextMinute), 300);
+      const nextAnimation = this.goalAnimationPendingQueue.shift()!;
+      setTimeout(() => this.playGoalAnimationData(nextAnimation), 300);
     } else {
       // Resume live match timer
       this.startLiveMatchTimer();
@@ -2685,6 +2746,7 @@ export class AppComponent implements OnDestroy, AfterViewChecked {
     this.goalAnimationPendingQueue = [];
     this.showGoalAnimation = false;
     this.goalAnimationData = null;
+    this.goalAnimationScoreBefore = null;
     this.goalAnimationFinished = false;
     this.goalAnimationEventText = '';
     this.goalAnimationCanvasReady = false;
