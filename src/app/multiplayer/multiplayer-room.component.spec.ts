@@ -6,6 +6,7 @@ import { MultiplayerRoomComponent } from './multiplayer-room.component';
 describe('MultiplayerRoomComponent', () => {
   let fixture: ComponentFixture<MultiplayerRoomComponent>;
   beforeEach(async () => { await TestBed.configureTestingModule({ declarations: [MultiplayerRoomComponent], imports: [FormsModule, HttpClientTestingModule] }).compileComponents(); fixture = TestBed.createComponent(MultiplayerRoomComponent); fixture.detectChanges(); });
+  afterEach(() => fixture.destroy());
   it('renders a room entry', () => expect(fixture.nativeElement.textContent).toContain('Multiplayer room'));
   it('resolves the current manager from currentMember, not the host', () => {
     const component = fixture.componentInstance;

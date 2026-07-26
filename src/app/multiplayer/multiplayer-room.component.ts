@@ -19,6 +19,7 @@ export class MultiplayerRoomComponent implements OnInit, OnDestroy {
   ready(): void { this.room.ready(!this.me()?.ready).subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   saveSettings(): void { this.room.settings(this.settings).subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   start(): void { this.room.start().subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
+  leave(): void { this.room.leave().subscribe({ next: () => { this.state = null; this.message = 'Left room'; }, error: e => this.error = this.typedError(e) }); }
   continueDay(): void { this.room.continue().subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   fastForward(): void { this.room.fastForward(!this.me()?.fastForwardEnabled).subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   me() { return this.state?.currentMember || this.state?.members.find(m => m.userId === this.state?.currentUserId); }
