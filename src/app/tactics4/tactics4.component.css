@@ -723,7 +723,15 @@
 .mandate-lock-summary span { padding: .2rem .45rem; border: 1px solid rgba(126, 230, 182, .35); border-radius: 3px; }
 .chairman-lock-button { position: absolute; top: -1.2rem; right: -1.2rem; z-index: 3; border: 0; background: #10201c; color: #7ee6b6; cursor: pointer; }
 .chairman-lock-button.active { color: #ffd27d; }
-.chairman-mode .pitch-col { grid-column: 1 / -1; }
+.chairman-mode .lab-grid {
+  grid-template-columns: minmax(0, 1fr) 290px;
+}
+.chairman-mode .pitch-col {
+  grid-column: 1;
+}
+.chairman-mode .squad-col {
+  grid-column: 2;
+}
 @media (max-width: 900px) {
   .chairman-mandate-panel { grid-template-columns: 1fr 1fr; }
   .chairman-mandate-panel > :first-child, .mandate-error, .mandate-success,
