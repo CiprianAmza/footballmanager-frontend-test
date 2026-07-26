@@ -23,6 +23,13 @@ export class MultiplayerRoomComponent implements OnInit, OnDestroy {
   continueDay(): void { this.room.continue().subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   fastForward(): void { this.room.fastForward(!this.me()?.fastForwardEnabled).subscribe({ next: s => this.applyState(s), error: e => this.error = this.typedError(e) }); }
   me() { return this.state?.currentMember || this.state?.members.find(m => m.userId === this.state?.currentUserId); }
+  continueDisabled(): boolean { return !!this.state?.currentUserVoted && this.state?.cycleStatus !== 'BLOCKED'; }
+  continueLabel(): string {
+    if (!this.state) return 'CONTINUE';
+    if (this.state.cycleStatus === 'BLOCKED') return `RETRY CONTINUE — ${this.state.votes}/${this.state.totalPlayers}`;
+    if (this.state.currentUserVoted) return `VOTE RECORDED — ${this.state.votes}/${this.state.totalPlayers}`;
+    return `CONTINUE — ${this.state.votes}/${this.state.totalPlayers}`;
+  }
   private applyState(s: MultiplayerState): void { this.state = s; this.error = ''; this.settings = { name: s.name, continueThresholdPercent: s.continueThresholdPercent, dayTimeoutSeconds: s.dayTimeoutSeconds, majorityTimeoutSeconds: s.majorityTimeoutSeconds, maxPlayers: s.maxPlayers, forceContinue: s.forceContinue }; }
   remaining(): string { const deadline = this.state?.effectiveDeadline; if (!deadline) return ''; const seconds = Math.max(0, Math.floor((Date.parse(deadline) - Date.now()) / 1000)); return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`; }
   private typedError(e: HttpErrorResponse): string { return e.error?.message || e.error?.detail || e.error?.error || ({ 401: 'Parolă greșită', 409: 'Camera este plină sau jocul a pornit', 403: 'Acțiune permisă doar hostului' } as any)[e.status] || 'Operația multiplayer a eșuat'; }

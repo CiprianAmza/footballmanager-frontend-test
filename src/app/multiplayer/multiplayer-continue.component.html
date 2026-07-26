@@ -1,6 +1,7 @@
 <div class="multiplayer-continue" *ngIf="state?.status === 'ACTIVE'">
-  <button type="button" (click)="continueDay()" [disabled]="busy">CONTINUE {{ state?.votes }}/{{ state?.totalPlayers }} · {{ state?.requiredVotes }} required</button>
-  <span>Day {{ dayCountdown }}</span><span *ngIf="state?.majorityDeadline">Majority {{ majorityCountdown }}</span>
+  <button type="button" (click)="continueDay()" [disabled]="continueDisabled()">{{ continueLabel() }} · {{ state?.requiredVotes }} required</button>
+  <span class="game-date"><strong>{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }}</strong> · {{ teamService.currentPhase }} - {{ teamService.seasonPhase }} · Season {{ teamService.currentSeason }}</span>
+  <span>You are Player {{ state?.currentUserId }}</span>
   <label>Target seasons <input type="number" min="1" max="100" [(ngModel)]="ffSeasons" [disabled]="busy || !!state?.currentMember?.fastForwardEnabled"></label><button type="button" (click)="toggleFastForward()" [disabled]="busy">{{ state?.currentMember?.fastForwardEnabled ? 'FAST FORWARD ACTIVE' : 'FAST FORWARD' }} {{ state?.fastForwardCount }}/{{ state?.totalPlayers }}</button>
   <strong *ngIf="state?.allFastForward">RAPID FAST FORWARD {{ state?.rapidCurrentSeason }}/{{ state?.rapidCurrentDay }} → {{ state?.rapidTargetSeason }}/{{ state?.rapidTargetDay }}</strong><span *ngIf="state?.rapidStatus === 'CANCEL_PENDING'">Finishing current day…</span><span>Day deadline {{ dayCountdown }}</span><span *ngIf="state?.majorityDeadline">Majority deadline {{ majorityCountdown }}</span><span *ngIf="state?.blocker?.code !== 'NONE'">{{ state?.blocker?.code }} {{ state?.blocker?.message }}</span><small *ngIf="error">{{ error }}</small>
 </div>
