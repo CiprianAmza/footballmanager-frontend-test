@@ -1,0 +1,252 @@
+<div class="app">
+
+  <!-- ================= HERO ================= -->
+  <header class="hero" *ngIf="plan.analytics() as a">
+    <div class="hero-copy">
+      <span class="kicker">TRAINING</span>
+      <h1>This week's programme</h1>
+      <p>Tap any session to retune it. Everything updates live — nothing is sent to the server.</p>
+    </div>
+
+    <div class="hero-dials">
+      <div class="dial-card" *ngFor="let d of heroDials(a); trackBy: trackDial">
+        <svg viewBox="0 0 64 64" class="dial">
+          <circle cx="32" cy="32" [attr.r]="dialRadius" class="dial-track"/>
+          <circle cx="32" cy="32" [attr.r]="dialRadius" class="dial-value"
+                  [attr.stroke]="d.colour"
+                  [attr.stroke-dasharray]="dash(d.value)"
+                  [attr.stroke-dashoffset]="0"/>
+          <text x="32" y="37" class="dial-text">{{ d.value }}</text>
+        </svg>
+        <span class="dial-label">{{ d.label }}</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= SEGMENTED NAV ================= -->
+  <div class="segment-bar">
+    <div class="segment">
+      <button [class.on]="view === 'week'" (click)="view = 'week'">Week</button>
+      <button [class.on]="view === 'squad'" (click)="view = 'squad'">
+        Squad <span class="badge">{{ plan.individualCount }}</span>
+      </button>
+    </div>
+
+    <div class="quick-actions">
+      <button class="ghost" (click)="plan.undo()" [disabled]="!plan.canUndo">Undo</button>
+      <button class="ghost danger" (click)="plan.resetAll()">Reset</button>
+    </div>
+  </div>
+
+  <!-- ================= WEEK ================= -->
+  <ng-container *ngIf="view === 'week'">
+
+    <!-- preset carousel -->
+    <section class="preset-scroll">
+      <button class="preset-card" *ngFor="let p of plan.presets"
+              [class.on]="plan.activePresetId === p.id"
+              (click)="plan.applyPreset(p.id)">
+        <span class="pc-icon">{{ p.icon }}</span>
+        <span class="pc-name">{{ p.name }}</span>
+        <span class="pc-tag">{{ p.tagline }}</span>
+      </button>
+    </section>
+
+    <!-- day cards -->
+    <section class="day-scroll">
+      <article class="day-card" *ngFor="let day of week; trackBy: trackDay"
+               [class.matchday]="day.matchDay">
+
+        <header class="dc-head">
+          <div class="dc-titles">
+            <span class="dc-day">{{ day.longName }}</span>
+            <span class="dc-tag" *ngIf="day.matchDay">MATCH DAY</span>
+          </div>
+          <svg viewBox="0 0 64 64" class="dial small">
+            <circle cx="32" cy="32" [attr.r]="dialRadius" class="dial-track"/>
+            <circle cx="32" cy="32" [attr.r]="dialRadius" class="dial-value"
+                    [attr.stroke]="dialColour(plan.dayLoad(day))"
+                    [attr.stroke-dasharray]="dash(plan.dayLoad(day))"/>
+            <text x="32" y="37" class="dial-text">{{ plan.dayLoad(day) }}</text>
+          </svg>
+        </header>
+
+        <div class="dc-body">
+          <div class="chip" *ngFor="let session of day.sessions; let s = index; trackBy: trackSlot"
+               [style.--cat]="colour(session)"
+               (click)="openTuneSheet(day.dayIndex, s)">
+            <span class="chip-dot"></span>
+            <span class="chip-icon">{{ template(session).icon }}</span>
+            <span class="chip-body">
+              <span class="chip-name">{{ template(session).name }}</span>
+              <span class="chip-meta">{{ session.unit }}</span>
+            </span>
+            <span class="chip-int">{{ session.intensity }}</span>
+          </div>
+
+          <button class="chip add" *ngIf="freeSlots(day)"
+                  (click)="openDrillSheet(day.dayIndex, day.sessions.length)">
+            <span class="plus">+</span> Add session
+          </button>
+        </div>
+
+        <footer class="dc-foot">
+          <button (click)="plan.clearDay(day.dayIndex)">Clear</button>
+          <button (click)="plan.copyDay(day.dayIndex, (day.dayIndex + 1) % 7)">Copy to next</button>
+        </footer>
+      </article>
+    </section>
+
+    <!-- focus + coverage + advice -->
+    <section class="cards-row" *ngIf="plan.analytics() as a">
+      <div class="soft-card">
+        <h3>Team focus</h3>
+        <div class="pill-row">
+          <button *ngFor="let f of plan.focusOptions" [class.on]="plan.generalFocus === f"
+                  (click)="plan.setGeneralFocus(f)">{{ f }}</button>
+        </div>
+        <p class="hint">Focus tilts how the squad's attention is spread — it does not change what is scheduled.</p>
+      </div>
+
+      <div class="soft-card">
+        <h3>Coverage</h3>
+        <div class="bar-row" *ngFor="let area of plan.areas">
+          <span class="br-name">{{ area }}</span>
+          <div class="br-track"><i [style.width.%]="a.coverage[area]"></i></div>
+          <span class="br-value">{{ a.coverage[area] }}</span>
+        </div>
+      </div>
+
+      <div class="soft-card">
+        <h3>Notes from the staff</h3>
+        <div class="advice" *ngFor="let w of a.warnings" [class]="w.level">
+          <span class="advice-icon">{{ w.level === 'danger' ? '⛔' : w.level === 'warn' ? '⚠️' : 'ℹ️' }}</span>
+          <span>{{ w.text }}</span>
+        </div>
+      </div>
+    </section>
+  </ng-container>
+
+  <!-- ================= SQUAD ================= -->
+  <section class="squad" *ngIf="view === 'squad'">
+    <div class="squad-head">
+      <h3>Individual programmes</h3>
+      <span class="sample" *ngIf="plan.playersAreFallback">showing sample squad — backend unavailable</span>
+    </div>
+
+    <div class="player-card" *ngFor="let p of plan.players"
+         [class.open]="expandedPlayerId === p.id">
+      <button class="pc-summary" (click)="toggle(p)">
+        <svg viewBox="0 0 64 64" class="dial tiny">
+          <circle cx="32" cy="32" [attr.r]="dialRadius" class="dial-track"/>
+          <circle cx="32" cy="32" [attr.r]="dialRadius" class="dial-value"
+                  stroke="#7c9cff"
+                  [attr.stroke-dasharray]="dash(programmeCompleteness(p.id))"/>
+          <text x="32" y="37" class="dial-text">{{ p.position }}</text>
+        </svg>
+
+        <span class="pcs-body">
+          <span class="pcs-name">{{ p.name }}</span>
+          <span class="pcs-meta">Age {{ p.age }} · Rating {{ p.rating }}</span>
+        </span>
+
+        <span class="pcs-plan" [class.set]="plan.hasIndividualPlan(p.id)">
+          {{ plan.individualSummary(p.id) }}
+        </span>
+        <span class="pcs-gain" *ngIf="plan.projectedGain(p) > 0">+{{ plan.projectedGain(p) }}</span>
+        <span class="pcs-chevron">{{ expandedPlayerId === p.id ? '▾' : '▸' }}</span>
+      </button>
+
+      <div class="pc-detail" *ngIf="expandedPlayerId === p.id">
+        <label>Development area</label>
+        <div class="pill-row">
+          <button [class.on]="!areaOf(p.id)" (click)="plan.setIndividualArea(p.id, null)">None</button>
+          <button *ngFor="let area of plan.areas" [class.on]="areaOf(p.id) === area"
+                  (click)="plan.setIndividualArea(p.id, area)">{{ area }}</button>
+        </div>
+
+        <ng-container *ngIf="areaOf(p.id)">
+          <label>Specific attribute</label>
+          <div class="pill-row">
+            <button [class.on]="!plan.planFor(p.id).attribute"
+                    (click)="plan.setIndividualAttribute(p.id, null)">Whole area</button>
+            <button *ngFor="let attr of plan.attributesFor(areaOf(p.id))"
+                    [class.on]="plan.planFor(p.id).attribute === attr"
+                    (click)="plan.setIndividualAttribute(p.id, attr)">{{ attr }}</button>
+          </div>
+        </ng-container>
+
+        <label>Role training</label>
+        <select [value]="plan.planFor(p.id).role || ''"
+                (change)="plan.setIndividualRole(p.id, $any($event.target).value || null)">
+          <option value="">— None —</option>
+          <option *ngFor="let r of roles" [value]="r">{{ r }}</option>
+        </select>
+
+        <label>Effort</label>
+        <div class="pill-row">
+          <button *ngFor="let l of plan.effortLabels; let i = index"
+                  [class.on]="plan.planFor(p.id).effort === i"
+                  (click)="plan.setIndividualEffort(p.id, i)">{{ l }}</button>
+        </div>
+
+        <button class="ghost danger wide" (click)="plan.clearIndividual(p.id)">Clear programme</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= BOTTOM SHEET ================= -->
+  <div class="sheet-scrim" *ngIf="sheet" (click)="closeSheet()"></div>
+
+  <div class="sheet" [class.open]="!!sheet">
+    <div class="sheet-grab"></div>
+
+    <!-- drill picker -->
+    <ng-container *ngIf="sheet === 'drill'">
+      <div class="sheet-head">
+        <span>Choose a session</span>
+        <button (click)="closeSheet()">✕</button>
+      </div>
+      <input class="sheet-search" placeholder="Search drills…" [(ngModel)]="sheetQuery">
+      <div class="pill-row scroll">
+        <button *ngFor="let c of sheetCategories" [class.on]="sheetCategory === c"
+                (click)="sheetCategory = c">{{ c }}</button>
+      </div>
+      <div class="drill-list">
+        <button class="drill" *ngFor="let t of sheetResults" (click)="choose(t)"
+                [style.--cat]="plan.categoryColour(t.category)">
+          <span class="d-icon">{{ t.icon }}</span>
+          <span class="d-body">
+            <span class="d-name">{{ t.name }}</span>
+            <span class="d-blurb">{{ t.blurb }}</span>
+          </span>
+          <span class="d-int">{{ t.defaultIntensity }}</span>
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- tune -->
+    <ng-container *ngIf="sheet === 'tune' && sheetSession as session">
+      <div class="sheet-head">
+        <span>{{ sheetTemplate?.icon }} {{ sheetTemplate?.name }}</span>
+        <button (click)="closeSheet()">✕</button>
+      </div>
+      <p class="sheet-blurb">{{ sheetTemplate?.blurb }}</p>
+
+      <label class="sheet-label">Intensity <b>{{ session.intensity }}</b></label>
+      <input type="range" class="sheet-range" min="0" max="100" step="5"
+             [value]="session.intensity" (input)="onIntensity($any($event.target).value)">
+
+      <label class="sheet-label">Unit</label>
+      <div class="pill-row">
+        <button *ngFor="let u of units" [class.on]="session.unit === u" (click)="onUnit(u)">{{ u }}</button>
+      </div>
+
+      <div class="sheet-actions">
+        <button class="ghost" (click)="swapFromTune()">Change drill</button>
+        <button class="ghost danger" (click)="removeFromSheet()">Remove</button>
+      </div>
+    </ng-container>
+  </div>
+
+</div>

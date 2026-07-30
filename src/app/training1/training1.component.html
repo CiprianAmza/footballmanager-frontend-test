@@ -1,0 +1,359 @@
+<div class="lab-shell" (click)="closeDetail()">
+
+  <!-- ================= TOP BAR ================= -->
+  <div class="lab-topbar">
+    <div class="lab-brand">
+      <span class="lab-dot"></span>
+      <span class="lab-title mono">TRAINING LAB</span>
+      <span class="lab-sub mono">WEEKLY PERIODISATION</span>
+    </div>
+
+    <div class="lab-readout mono" *ngIf="plan.analytics() as a">
+      <div class="readout-cell">
+        <span class="ro-label">LOAD</span>
+        <span class="ro-value" [class]="'band-' + plan.loadBand(a.weeklyLoad)">{{ a.weeklyLoad }}</span>
+      </div>
+      <div class="readout-cell">
+        <span class="ro-label">SHARPNESS</span>
+        <span class="ro-value">{{ a.sharpness }}</span>
+      </div>
+      <div class="readout-cell">
+        <span class="ro-label">FATIGUE</span>
+        <span class="ro-value">{{ a.fatigue }}</span>
+      </div>
+      <div class="readout-cell">
+        <span class="ro-label">INJURY RISK</span>
+        <span class="ro-value" [class.warn-value]="a.injuryRisk > 55">{{ a.injuryRisk }}%</span>
+      </div>
+      <div class="readout-cell">
+        <span class="ro-label">INDIVIDUAL</span>
+        <span class="ro-value">{{ plan.individualCount }}<span class="ro-faint">/{{ plan.players.length }}</span></span>
+      </div>
+    </div>
+
+    <div class="lab-actions">
+      <button class="lab-btn ghost" (click)="plan.undo(); $event.stopPropagation()"
+              [disabled]="!plan.canUndo">UNDO</button>
+      <button class="lab-btn danger" (click)="plan.resetAll(); $event.stopPropagation()">RESET</button>
+    </div>
+  </div>
+
+  <!-- ================= TABS ================= -->
+  <div class="lab-tabs">
+    <button [class.active]="activeTab === 'week'" (click)="activeTab = 'week'">WEEK</button>
+    <button [class.active]="activeTab === 'individual'" (click)="activeTab = 'individual'">INDIVIDUAL</button>
+    <button [class.active]="activeTab === 'analysis'" (click)="activeTab = 'analysis'">ANALYSIS</button>
+
+    <div class="tab-spacer"></div>
+
+    <div class="preset-strip">
+      <span class="strip-label mono">PRESET</span>
+      <button *ngFor="let p of plan.presets"
+              class="preset-chip mono"
+              [class.active]="plan.activePresetId === p.id"
+              [title]="p.tagline"
+              (click)="plan.applyPreset(p.id); $event.stopPropagation()">
+        <span class="chip-icon">{{ p.icon }}</span>{{ p.name }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= WEEK ================= -->
+  <div class="lab-body" *ngIf="activeTab === 'week'">
+
+    <div class="week-grid">
+      <div class="day-col" *ngFor="let day of week; trackBy: trackDay"
+           [class.is-matchday]="day.matchDay">
+
+        <div class="day-head">
+          <span class="day-name mono">{{ day.dayName }}</span>
+          <span class="day-load mono" [class]="'band-' + plan.loadBand(plan.dayLoad(day))">
+            {{ plan.dayLoad(day) }}
+          </span>
+        </div>
+
+        <div class="day-bar">
+          <div class="day-bar-fill" [class]="'band-' + plan.loadBand(plan.dayLoad(day))"
+               [style.width.%]="plan.dayLoad(day)"></div>
+        </div>
+
+        <div class="slots">
+          <div class="slot"
+               *ngFor="let session of day.sessions; let s = index; trackBy: trackSlot"
+               [style.border-left-color]="colour(session)"
+               [class.active]="detailDay === day.dayIndex && detailSlot === s"
+               (click)="openDetail(day.dayIndex, s, $event)">
+            <div class="slot-icon">{{ icon(session) }}</div>
+            <div class="slot-body">
+              <span class="slot-name">{{ name(session) }}</span>
+              <span class="slot-meta mono">{{ session.unit }} · {{ session.intensity }}</span>
+            </div>
+            <button class="slot-swap mono"
+                    title="Change drill"
+                    (click)="openPicker(day.dayIndex, s); $event.stopPropagation()">⇄</button>
+          </div>
+
+          <button class="slot empty mono" *ngFor="let e of emptySlots(day)"
+                  (click)="openPicker(day.dayIndex, day.sessions.length); $event.stopPropagation()">
+            + ADD SESSION
+          </button>
+        </div>
+
+        <div class="day-foot">
+          <button class="mini-btn mono" title="Clear this day"
+                  (click)="plan.clearDay(day.dayIndex); $event.stopPropagation()">CLR</button>
+          <button class="mini-btn mono" title="Copy to the next day"
+                  (click)="plan.copyDay(day.dayIndex, (day.dayIndex + 1) % 7); $event.stopPropagation()">COPY →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- --------------- ANALYTICS RAIL --------------- -->
+    <aside class="rail" *ngIf="plan.analytics() as a" (click)="$event.stopPropagation()">
+
+      <div class="rail-block">
+        <div class="rail-title mono">LOAD CURVE</div>
+        <svg class="curve" viewBox="0 0 100 40" preserveAspectRatio="none">
+          <line x1="0" y1="20" x2="100" y2="20" class="curve-mid"/>
+          <polyline [attr.points]="plan.loadCurvePoints()" class="curve-line"/>
+        </svg>
+        <div class="curve-axis mono">
+          <span *ngFor="let d of week">{{ d.dayName.charAt(0) }}</span>
+        </div>
+      </div>
+
+      <div class="rail-block">
+        <div class="rail-title mono">TEAM FOCUS</div>
+        <div class="focus-list">
+          <button *ngFor="let f of plan.focusOptions"
+                  class="focus-row"
+                  [class.active]="plan.generalFocus === f"
+                  (click)="plan.setGeneralFocus(f)">
+            <span class="focus-dot"></span><span>{{ f }}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rail-block">
+        <div class="rail-title mono">COVERAGE</div>
+        <div class="cover-row" *ngFor="let area of plan.areas">
+          <span class="cover-name">{{ area }}</span>
+          <div class="cover-track">
+            <div class="cover-fill" [style.width.%]="a.coverage[area]"></div>
+          </div>
+          <span class="cover-val mono">{{ a.coverage[area] }}</span>
+        </div>
+      </div>
+
+      <div class="rail-block">
+        <div class="rail-title mono">NOTES</div>
+        <div class="note" *ngFor="let w of a.warnings" [class]="'note-' + w.level">{{ w.text }}</div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ================= INDIVIDUAL ================= -->
+  <div class="lab-body" *ngIf="activeTab === 'individual'">
+    <div class="ind-list">
+      <div class="ind-head mono">
+        <span>SQUAD</span>
+        <span class="ind-fallback" *ngIf="plan.playersAreFallback">SAMPLE DATA</span>
+      </div>
+      <button class="ind-row" *ngFor="let p of plan.players"
+              [class.active]="selectedPlayerId === p.id"
+              (click)="select(p); $event.stopPropagation()">
+        <span class="ind-pos mono">{{ p.position }}</span>
+        <span class="ind-name">{{ p.name }}</span>
+        <span class="ind-rating mono">{{ p.rating }}</span>
+        <span class="ind-plan mono" [class.set]="plan.hasIndividualPlan(p.id)">
+          {{ plan.individualSummary(p.id) }}
+        </span>
+      </button>
+    </div>
+
+    <section class="ind-detail" *ngIf="selectedPlayer as player" (click)="$event.stopPropagation()">
+      <header class="ind-detail-head">
+        <div>
+          <div class="ind-detail-name">{{ player.name }}</div>
+          <div class="ind-detail-sub mono">{{ player.position }} · AGE {{ player.age }} · RATING {{ player.rating }}</div>
+        </div>
+        <div class="ind-gain mono">
+          <span class="gain-label">PROJECTED / MONTH</span>
+          <span class="gain-value">+{{ plan.projectedGain(player) }}</span>
+        </div>
+      </header>
+
+      <div class="ind-field">
+        <label class="mono">DEVELOPMENT AREA</label>
+        <div class="pill-grid">
+          <button class="pill" [class.active]="!areaOf(player.id)"
+                  (click)="plan.setIndividualArea(player.id, null)">None</button>
+          <button class="pill" *ngFor="let area of plan.areas"
+                  [class.active]="areaOf(player.id) === area"
+                  (click)="plan.setIndividualArea(player.id, area)">{{ area }}</button>
+        </div>
+      </div>
+
+      <div class="ind-field" *ngIf="areaOf(player.id)">
+        <label class="mono">SPECIFIC ATTRIBUTE</label>
+        <div class="pill-grid">
+          <button class="pill" [class.active]="!plan.planFor(player.id).attribute"
+                  (click)="plan.setIndividualAttribute(player.id, null)">Whole area</button>
+          <button class="pill" *ngFor="let attr of plan.attributesFor(areaOf(player.id))"
+                  [class.active]="plan.planFor(player.id).attribute === attr"
+                  (click)="plan.setIndividualAttribute(player.id, attr)">{{ attr }}</button>
+        </div>
+      </div>
+
+      <div class="ind-field">
+        <label class="mono">ROLE TRAINING</label>
+        <select class="lab-select" [value]="plan.planFor(player.id).role || ''"
+                (change)="plan.setIndividualRole(player.id, $any($event.target).value || null)">
+          <option value="">— None —</option>
+          <option *ngFor="let r of roles" [value]="r">{{ r }}</option>
+        </select>
+      </div>
+
+      <div class="ind-field">
+        <label class="mono">EFFORT</label>
+        <div class="pill-grid">
+          <button class="pill" *ngFor="let label of plan.effortLabels; let i = index"
+                  [class.active]="plan.planFor(player.id).effort === i"
+                  (click)="plan.setIndividualEffort(player.id, i)">{{ label }}</button>
+        </div>
+      </div>
+
+      <div class="ind-note mono">
+        Priority: specific attribute → development area → role → team focus.
+      </div>
+
+      <button class="lab-btn danger wide" (click)="plan.clearIndividual(player.id)">
+        CLEAR INDIVIDUAL PLAN
+      </button>
+    </section>
+  </div>
+
+  <!-- ================= ANALYSIS ================= -->
+  <div class="lab-body analysis" *ngIf="activeTab === 'analysis'" (click)="$event.stopPropagation()">
+    <div class="metrics" *ngIf="plan.analytics() as a">
+      <div class="metric">
+        <span class="metric-label mono">WEEKLY LOAD</span>
+        <span class="metric-value mono" [class]="'band-' + plan.loadBand(a.weeklyLoad)">{{ a.weeklyLoad }}</span>
+        <div class="metric-track"><div class="metric-fill" [style.width.%]="a.weeklyLoad"></div></div>
+      </div>
+      <div class="metric">
+        <span class="metric-label mono">SHARPNESS</span>
+        <span class="metric-value mono">{{ a.sharpness }}</span>
+        <div class="metric-track"><div class="metric-fill good" [style.width.%]="a.sharpness"></div></div>
+      </div>
+      <div class="metric">
+        <span class="metric-label mono">FATIGUE</span>
+        <span class="metric-value mono">{{ a.fatigue }}</span>
+        <div class="metric-track"><div class="metric-fill warn" [style.width.%]="a.fatigue"></div></div>
+      </div>
+      <div class="metric">
+        <span class="metric-label mono">INJURY RISK</span>
+        <span class="metric-value mono">{{ a.injuryRisk }}%</span>
+        <div class="metric-track"><div class="metric-fill danger" [style.width.%]="a.injuryRisk"></div></div>
+      </div>
+      <div class="metric">
+        <span class="metric-label mono">COHESION</span>
+        <span class="metric-value mono">{{ a.cohesion }}</span>
+        <div class="metric-track"><div class="metric-fill good" [style.width.%]="a.cohesion"></div></div>
+      </div>
+      <div class="metric">
+        <span class="metric-label mono">LIGHT DAYS</span>
+        <span class="metric-value mono">{{ a.restDays }}<span class="ro-faint">/7</span></span>
+        <div class="metric-track"><div class="metric-fill" [style.width.%]="a.restDays * 14.3"></div></div>
+      </div>
+    </div>
+
+    <div class="analysis-split" *ngIf="plan.analytics() as a">
+      <div class="panel">
+        <div class="rail-title mono">DAY BY DAY</div>
+        <table class="day-table mono">
+          <tr><th>DAY</th><th>SESSIONS</th><th class="num">LOAD</th></tr>
+          <tr *ngFor="let d of week">
+            <td>{{ d.longName }}</td>
+            <td class="sessions-cell">
+              <span class="tag" *ngFor="let s of d.sessions"
+                    [style.border-color]="colour(s)">{{ name(s) }}</span>
+            </td>
+            <td class="num" [class]="'band-' + plan.loadBand(plan.dayLoad(d))">{{ plan.dayLoad(d) }}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="panel">
+        <div class="rail-title mono">WARNINGS</div>
+        <div class="note" *ngFor="let w of a.warnings" [class]="'note-' + w.level">{{ w.text }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SLOT DETAIL POPOVER ================= -->
+  <div class="detail-dock" *ngIf="detailSession as session" (click)="$event.stopPropagation()">
+    <div class="dock-head">
+      <span class="dock-icon">{{ detailTemplate?.icon }}</span>
+      <div class="dock-titles">
+        <span class="dock-name">{{ detailTemplate?.name }}</span>
+        <span class="dock-day mono">{{ week[detailDay].longName }}</span>
+      </div>
+      <button class="dock-close" (click)="closeDetail()">✕</button>
+    </div>
+
+    <p class="dock-blurb">{{ detailTemplate?.blurb }}</p>
+
+    <label class="dock-label mono">INTENSITY <b>{{ session.intensity }}</b></label>
+    <input type="range" class="dock-range" min="0" max="100" step="5"
+           [value]="session.intensity" (input)="onIntensity($any($event.target).value)">
+
+    <label class="dock-label mono">UNIT</label>
+    <div class="pill-grid">
+      <button class="pill" *ngFor="let u of units"
+              [class.active]="session.unit === u"
+              (click)="onUnit(u)">{{ u }}</button>
+    </div>
+
+    <div class="dock-actions">
+      <button class="lab-btn ghost" (click)="openPicker(detailDay, detailSlot)">CHANGE DRILL</button>
+      <button class="lab-btn danger" (click)="removeDetail()">REMOVE</button>
+    </div>
+  </div>
+
+  <!-- ================= DRILL PICKER ================= -->
+  <div class="modal-overlay" *ngIf="pickerDay !== -1" (click)="closePicker()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <span class="mono">SELECT DRILL — {{ week[pickerDay].longName }}</span>
+        <button class="dock-close" (click)="closePicker()">✕</button>
+      </div>
+
+      <input class="modal-search mono" placeholder="Filter drills, categories or areas…"
+             [(ngModel)]="pickerQuery" autofocus>
+
+      <div class="modal-body">
+        <div class="cat-group" *ngFor="let cat of plan.categories()">
+          <div class="cat-title mono" *ngIf="hasResults(cat)"
+               [style.color]="plan.categoryColour(cat)">{{ cat }}</div>
+          <div class="cat-grid">
+            <button class="drill" *ngFor="let t of results(cat)"
+                    [style.border-left-color]="plan.categoryColour(cat)"
+                    (mouseenter)="previewTemplate = t"
+                    (click)="choose(t)">
+              <span class="drill-icon">{{ t.icon }}</span>
+              <span class="drill-name">{{ t.name }}</span>
+              <span class="drill-int mono">{{ t.defaultIntensity }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-preview" *ngIf="previewTemplate as t">
+        <span class="preview-name">{{ t.icon }} {{ t.name }}</span>
+        <span class="preview-blurb">{{ t.blurb }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>

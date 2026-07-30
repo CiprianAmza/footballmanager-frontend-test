@@ -1,0 +1,245 @@
+<div class="board" (dragend)="endDrag()">
+
+  <!-- ================= MASTHEAD ================= -->
+  <header class="masthead">
+    <div class="mast-left">
+      <h1>PERIODISATION<span>BOARD</span></h1>
+      <p class="mast-sub">Drag a drill onto a day. The curve above redraws as you build the week.</p>
+    </div>
+
+    <div class="mast-stats" *ngIf="plan.analytics() as a">
+      <div class="stat"><b>{{ a.weeklyLoad }}</b><span>LOAD</span></div>
+      <div class="stat"><b>{{ a.sharpness }}</b><span>SHARP</span></div>
+      <div class="stat"><b>{{ a.fatigue }}</b><span>FATIGUE</span></div>
+      <div class="stat" [class.hot]="a.injuryRisk > 55"><b>{{ a.injuryRisk }}</b><span>RISK</span></div>
+    </div>
+
+    <div class="mast-actions">
+      <button class="board-btn" (click)="plan.undo()" [disabled]="!plan.canUndo">↶ Undo</button>
+      <button class="board-btn danger" (click)="plan.resetAll()">Reset</button>
+      <button class="board-btn" [class.on]="showIndividual"
+              (click)="showIndividual = !showIndividual">
+        Individual <b>{{ plan.individualCount }}</b>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= LOAD CURVE ================= -->
+  <section class="curve-panel">
+    <div class="curve-head">
+      <span class="curve-title">WEEKLY LOAD DISTRIBUTION</span>
+      <div class="curve-legend">
+        <span class="lg low">light</span><span class="lg medium">moderate</span>
+        <span class="lg high">hard</span><span class="lg extreme">maximal</span>
+      </div>
+    </div>
+    <div class="curve-plot">
+      <div class="grid-line" *ngFor="let g of [25, 50, 75]" [style.bottom.%]="g"></div>
+      <div class="bar-col" *ngFor="let day of week; trackBy: trackDay">
+        <div class="bar" [class]="plan.loadBand(plan.dayLoad(day))"
+             [style.height.%]="barHeight(day)">
+          <span class="bar-value">{{ plan.dayLoad(day) }}</span>
+        </div>
+        <span class="bar-label" [class.matchday]="day.matchDay">{{ day.dayName }}</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= WORKSPACE ================= -->
+  <div class="workspace">
+
+    <!-- ---------- PALETTE ---------- -->
+    <aside class="palette">
+      <div class="palette-head">DRILL LIBRARY</div>
+      <input class="palette-search" placeholder="Search drills…" [(ngModel)]="paletteQuery">
+      <div class="palette-cats">
+        <button *ngFor="let c of paletteCategories"
+                [class.on]="paletteCategory === c"
+                [style.border-color]="c === 'All' ? null : plan.categoryColour($any(c))"
+                (click)="paletteCategory = c">{{ c }}</button>
+      </div>
+
+      <div class="palette-list">
+        <div class="palette-item" *ngFor="let t of paletteItems"
+             draggable="true"
+             (dragstart)="startPaletteDrag($event, t)"
+             (dblclick)="quickAdd(t)"
+             [style.--cat]="plan.categoryColour(t.category)"
+             [title]="t.blurb + ' — double-click to drop into the first free slot'">
+          <span class="pi-icon">{{ t.icon }}</span>
+          <span class="pi-body">
+            <span class="pi-name">{{ t.name }}</span>
+            <span class="pi-cat">{{ t.category }} · {{ t.defaultIntensity }}</span>
+          </span>
+          <span class="pi-grip">⠿</span>
+        </div>
+      </div>
+
+      <div class="palette-foot">
+        Drag onto a day, or double-click to drop it in the first free slot.
+      </div>
+    </aside>
+
+    <!-- ---------- DAY COLUMNS ---------- -->
+    <div class="columns">
+      <div class="column" *ngFor="let day of week; trackBy: trackDay"
+           [class.drop-target]="dropTargetDay === day.dayIndex"
+           [class.matchday]="day.matchDay"
+           (dragover)="allowDrop($event, day.dayIndex)"
+           (dragleave)="leaveDrop(day.dayIndex)"
+           (drop)="drop($event, day.dayIndex)">
+
+        <div class="col-head">
+          <span class="col-day">{{ day.longName }}</span>
+          <span class="col-load" [class]="plan.loadBand(plan.dayLoad(day))">{{ plan.dayLoad(day) }}</span>
+        </div>
+
+        <div class="col-body">
+          <div class="block" *ngFor="let session of day.sessions; let s = index; trackBy: trackSlot"
+               draggable="true"
+               (dragstart)="startSlotDrag($event, day.dayIndex, s)"
+               (drop)="drop($event, day.dayIndex, s)"
+               [class.expanded]="expandedSlot === session.slotId"
+               [style.--cat]="colour(session)"
+               (click)="toggleSlot(session)">
+
+            <div class="block-main">
+              <span class="block-icon">{{ template(session).icon }}</span>
+              <span class="block-text">
+                <span class="block-name">{{ template(session).name }}</span>
+                <span class="block-meta">{{ session.unit }} · intensity {{ session.intensity }}</span>
+              </span>
+              <button class="block-x" title="Remove"
+                      (click)="plan.removeSession(day.dayIndex, s); $event.stopPropagation()">✕</button>
+            </div>
+
+            <div class="block-bar"><i [style.width.%]="session.intensity"></i></div>
+
+            <div class="block-edit" *ngIf="expandedSlot === session.slotId" (click)="$event.stopPropagation()">
+              <p class="block-blurb">{{ template(session).blurb }}</p>
+
+              <label>Intensity <b>{{ session.intensity }}</b></label>
+              <input type="range" min="0" max="100" step="5" [value]="session.intensity"
+                     (input)="onIntensity(day.dayIndex, s, $any($event.target).value)">
+
+              <label>Unit</label>
+              <div class="unit-row">
+                <button *ngFor="let u of units" [class.on]="session.unit === u"
+                        (click)="onUnit(day.dayIndex, s, u)">{{ u }}</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="drop-hint" *ngIf="!isFull(day)">
+            <span *ngIf="dropTargetDay !== day.dayIndex">drop a drill here</span>
+            <span class="live" *ngIf="dropTargetDay === day.dayIndex">release to add</span>
+          </div>
+          <div class="drop-hint full" *ngIf="isFull(day)">day is full — 3 sessions</div>
+        </div>
+
+        <div class="col-foot">
+          <button (click)="plan.clearDay(day.dayIndex)">clear</button>
+          <button (click)="plan.copyDay(day.dayIndex, (day.dayIndex + 1) % 7)">copy →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PRESETS + COVERAGE ================= -->
+  <section class="bottom" *ngIf="plan.analytics() as a">
+    <div class="bottom-card presets">
+      <h3>TEMPLATES</h3>
+      <div class="preset-row">
+        <button class="preset" *ngFor="let p of plan.presets"
+                [class.on]="plan.activePresetId === p.id"
+                (click)="plan.applyPreset(p.id)">
+          <span class="preset-icon">{{ p.icon }}</span>
+          <span class="preset-name">{{ p.name }}</span>
+          <span class="preset-tag">{{ p.tagline }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="bottom-card">
+      <h3>TEAM FOCUS</h3>
+      <div class="focus-row">
+        <button *ngFor="let f of plan.focusOptions" [class.on]="plan.generalFocus === f"
+                (click)="plan.setGeneralFocus(f)">{{ f }}</button>
+      </div>
+      <h3 class="spaced">COVERAGE</h3>
+      <div class="cov" *ngFor="let area of plan.areas">
+        <span>{{ area }}</span>
+        <div class="cov-track"><i [style.width.%]="a.coverage[area]"></i></div>
+        <b>{{ a.coverage[area] }}</b>
+      </div>
+    </div>
+
+    <div class="bottom-card">
+      <h3>THE COACHING STAFF SAY</h3>
+      <div class="advice" *ngFor="let w of a.warnings" [class]="w.level">{{ w.text }}</div>
+    </div>
+  </section>
+
+  <!-- ================= INDIVIDUAL DRAWER ================= -->
+  <div class="drawer-scrim" *ngIf="showIndividual" (click)="showIndividual = false"></div>
+  <aside class="drawer" [class.open]="showIndividual">
+    <div class="drawer-head">
+      <span>INDIVIDUAL PROGRAMMES</span>
+      <button (click)="showIndividual = false">✕</button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="drawer-list">
+        <button class="dl-row" *ngFor="let p of plan.players"
+                [class.on]="selectedPlayerId === p.id"
+                (click)="selectedPlayerId = p.id">
+          <span class="dl-pos">{{ p.position }}</span>
+          <span class="dl-name">{{ p.name }}</span>
+          <span class="dl-plan" [class.set]="plan.hasIndividualPlan(p.id)">{{ plan.individualSummary(p.id) }}</span>
+        </button>
+      </div>
+
+      <div class="drawer-detail" *ngIf="selectedPlayer as player">
+        <div class="dd-head">
+          <span class="dd-name">{{ player.name }}</span>
+          <span class="dd-gain">+{{ plan.projectedGain(player) }} / month</span>
+        </div>
+
+        <label>Development area</label>
+        <div class="chip-row">
+          <button [class.on]="!areaOf(player.id)" (click)="plan.setIndividualArea(player.id, null)">None</button>
+          <button *ngFor="let area of plan.areas" [class.on]="areaOf(player.id) === area"
+                  (click)="plan.setIndividualArea(player.id, area)">{{ area }}</button>
+        </div>
+
+        <ng-container *ngIf="areaOf(player.id)">
+          <label>Specific attribute</label>
+          <div class="chip-row">
+            <button [class.on]="!plan.planFor(player.id).attribute"
+                    (click)="plan.setIndividualAttribute(player.id, null)">Whole area</button>
+            <button *ngFor="let attr of plan.attributesFor(areaOf(player.id))"
+                    [class.on]="plan.planFor(player.id).attribute === attr"
+                    (click)="plan.setIndividualAttribute(player.id, attr)">{{ attr }}</button>
+          </div>
+        </ng-container>
+
+        <label>Role</label>
+        <select [value]="plan.planFor(player.id).role || ''"
+                (change)="plan.setIndividualRole(player.id, $any($event.target).value || null)">
+          <option value="">— None —</option>
+          <option *ngFor="let r of roles" [value]="r">{{ r }}</option>
+        </select>
+
+        <label>Effort</label>
+        <div class="chip-row">
+          <button *ngFor="let l of plan.effortLabels; let i = index"
+                  [class.on]="plan.planFor(player.id).effort === i"
+                  (click)="plan.setIndividualEffort(player.id, i)">{{ l }}</button>
+        </div>
+
+        <button class="board-btn danger wide" (click)="plan.clearIndividual(player.id)">Clear programme</button>
+      </div>
+    </div>
+  </aside>
+
+</div>

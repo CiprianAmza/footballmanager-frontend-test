@@ -53,6 +53,10 @@ import { FinancesComponent } from './finances/finances.component';
 import { CupOverviewComponent } from './competition/cup-overview/cup-overview.component';
 import { ClubInfoComponent } from './club-info/club-info.component';
 import { TrainingComponent } from './training/training.component';
+import { Training1Component } from './training1/training1.component';
+import { Training2Component } from './training2/training2.component';
+import { Training3Component } from './training3/training3.component';
+import { Training4Component } from './training4/training4.component';
 import { MedicalCentreComponent } from './medical-centre/medical-centre.component';
 import { StaffComponent } from './staff/staff.component';
 import { DataHubComponent } from './data-hub/data-hub.component';
@@ -171,6 +175,10 @@ import { MultiplayerContinueComponent } from './multiplayer/multiplayer-continue
     CupOverviewComponent,
     ClubInfoComponent,
     TrainingComponent,
+    Training1Component,
+    Training2Component,
+    Training3Component,
+    Training4Component,
     MedicalCentreComponent,
     StaffComponent,
     DataHubComponent,

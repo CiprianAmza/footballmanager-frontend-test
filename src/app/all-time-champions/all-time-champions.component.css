@@ -474,3 +474,15 @@
   .past-winners-heading,
   .past-winner-row { grid-template-columns: 95px minmax(0, 1fr); }
 }
+
+/* Sortable headers. The rank column stays fixed: it numbers the current order rather
+   than being a value of its own, so sorting by it would be circular. */
+.champions-table th.sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: color .12s ease;
+}
+
+.champions-table th.sortable:hover {
+  color: #ffd24a;
+}

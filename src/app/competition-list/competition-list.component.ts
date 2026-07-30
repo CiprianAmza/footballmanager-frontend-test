@@ -202,7 +202,7 @@ export class CompetitionsListComponent implements OnInit {
   }
 
   isLeague(comp: CompetitionData): boolean {
-    return comp.typeId === 1 || comp.typeId === 3;
+    return comp.typeId === 1;
   }
 
   isCup(comp: CompetitionData): boolean {

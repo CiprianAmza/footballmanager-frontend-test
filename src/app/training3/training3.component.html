@@ -1,0 +1,206 @@
+<div class="crt">
+  <div class="scanlines"></div>
+
+  <div class="terminal">
+
+    <!-- ================= HEADER ================= -->
+    <div class="term-head">
+      <span class="prompt-tag">fm@training</span>
+      <span class="path">~/week</span>
+      <span class="spacer"></span>
+      <button class="tab" [class.on]="panel === 'week'" (click)="panel = 'week'">[ week ]</button>
+      <button class="tab" [class.on]="panel === 'squad'" (click)="panel = 'squad'">[ squad ]</button>
+    </div>
+
+    <!-- ================= STATUS LINE ================= -->
+    <div class="status" *ngIf="plan.analytics() as a">
+      <span>LOAD <b>{{ padStart(a.weeklyLoad, 3) }}</b> <i>{{ bar(a.weeklyLoad, 10) }}</i></span>
+      <span>SHARP <b>{{ padStart(a.sharpness, 3) }}</b> <i>{{ bar(a.sharpness, 10) }}</i></span>
+      <span>FATIG <b>{{ padStart(a.fatigue, 3) }}</b> <i class="warn">{{ bar(a.fatigue, 10) }}</i></span>
+      <span>RISK <b>{{ padStart(a.injuryRisk, 3) }}</b> <i class="danger">{{ bar(a.injuryRisk, 10) }}</i></span>
+      <span>FOCUS <b>{{ plan.generalFocus }}</b></span>
+    </div>
+
+    <!-- ================= WEEK PANEL ================= -->
+    <div class="panel-week" *ngIf="panel === 'week'">
+
+      <pre class="rule">┌──────────────────────────────────────────────────────────────────────────────┐</pre>
+
+      <div class="row" *ngFor="let day of week; trackBy: trackDay" [class.matchday]="day.matchDay">
+        <span class="cell-day">{{ day.dayName }}</span>
+
+        <div class="cells">
+          <ng-container *ngFor="let session of slotsOf(day); let s = index; trackBy: trackIndex">
+            <button class="cell" *ngIf="session"
+                    [class.open]="menuDay === day.dayIndex && menuSlot === s"
+                    (click)="openMenu(day.dayIndex, s)">
+              <span class="cell-name">{{ template(session).name }}</span>
+              <span class="cell-meta">{{ session.unit.slice(0, 3).toUpperCase() }}·{{ padStart(session.intensity, 3) }}</span>
+            </button>
+            <button class="cell empty" *ngIf="!session"
+                    [class.open]="menuDay === day.dayIndex && menuSlot === s"
+                    (click)="openMenu(day.dayIndex, s)">
+              <span class="cell-name">—— empty ——</span>
+            </button>
+          </ng-container>
+        </div>
+
+        <span class="cell-load" [class]="plan.loadBand(plan.dayLoad(day))">
+          {{ bar(plan.dayLoad(day), 12) }} {{ padStart(plan.dayLoad(day), 3) }}
+        </span>
+      </div>
+
+      <pre class="rule">└──────────────────────────────────────────────────────────────────────────────┘</pre>
+
+      <!-- inline drill menu -->
+      <div class="menu" *ngIf="menuDay !== -1">
+        <div class="menu-head">
+          SELECT DRILL — {{ week[menuDay].dayName }} SLOT {{ menuSlot + 1 }}
+          <button (click)="closeMenu()">[ esc ]</button>
+        </div>
+
+        <div class="menu-grid">
+          <button class="menu-item" *ngFor="let t of plan.templates" (click)="pick(t)"
+                  [style.--cat]="plan.categoryColour(t.category)">
+            <span class="mi-id">{{ pad(t.id, 15) }}</span>
+            <span class="mi-name">{{ t.name }}</span>
+            <span class="mi-int">{{ padStart(t.defaultIntensity, 3) }}</span>
+          </button>
+        </div>
+
+        <div class="menu-tune" *ngIf="week[menuDay].sessions[menuSlot] as session">
+          <div class="tune-line">
+            <span>INTENSITY</span>
+            <input type="range" min="0" max="100" step="5" [value]="session.intensity"
+                   (input)="onIntensity(menuDay, menuSlot, $any($event.target).value)">
+            <b>{{ padStart(session.intensity, 3) }}</b>
+          </div>
+          <div class="tune-line">
+            <span>UNIT</span>
+            <button class="unit" *ngFor="let u of units" [class.on]="session.unit === u"
+                    (click)="onUnit(menuDay, menuSlot, u)">{{ u }}</button>
+          </div>
+          <button class="menu-clear" (click)="clearSlot()">[ remove session ]</button>
+        </div>
+      </div>
+
+      <!-- coverage + advisory -->
+      <div class="split" *ngIf="plan.analytics() as a">
+        <div class="block">
+          <div class="block-head">COVERAGE</div>
+          <div class="cov" *ngFor="let area of plan.areas">
+            <span>{{ pad(area, 11) }}</span>
+            <i>{{ bar(a.coverage[area], 18) }}</i>
+            <b>{{ padStart(a.coverage[area], 3) }}</b>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="block-head">ADVISORY</div>
+          <div class="adv" *ngFor="let w of a.warnings" [class]="w.level">
+            <span class="adv-mark">{{ w.level === 'danger' ? '!!' : w.level === 'warn' ? ' !' : ' ·' }}</span>
+            {{ w.text }}
+          </div>
+
+          <div class="block-head spaced">PRESETS</div>
+          <div class="preset-line">
+            <button *ngFor="let p of plan.presets" [class.on]="plan.activePresetId === p.id"
+                    (click)="plan.applyPreset(p.id)" [title]="p.tagline">{{ p.id }}</button>
+          </div>
+
+          <div class="block-head spaced">FOCUS</div>
+          <div class="preset-line">
+            <button *ngFor="let f of plan.focusOptions" [class.on]="plan.generalFocus === f"
+                    (click)="plan.setGeneralFocus(f)">{{ f.toLowerCase() }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= SQUAD PANEL ================= -->
+    <div class="panel-squad" *ngIf="panel === 'squad'">
+      <div class="roster">
+        <div class="block-head">
+          ROSTER — {{ plan.individualCount }}/{{ plan.players.length }} PROGRAMMED
+          <span class="sample" *ngIf="plan.playersAreFallback">[sample data]</span>
+        </div>
+        <button class="roster-row" *ngFor="let p of plan.players"
+                [class.on]="selectedPlayerId === p.id"
+                (click)="selectedPlayerId = p.id">
+          <span>{{ pad(p.position, 4) }}</span>
+          <span class="rr-name">{{ pad(p.name, 22) }}</span>
+          <span>{{ padStart(p.rating, 3) }}</span>
+          <span class="rr-plan" [class.set]="plan.hasIndividualPlan(p.id)">{{ plan.individualSummary(p.id) }}</span>
+        </button>
+      </div>
+
+      <div class="prog" *ngIf="selectedPlayer as player">
+        <div class="block-head">PROGRAMME — {{ player.name.toUpperCase() }}</div>
+        <div class="prog-line">position {{ player.position }} · age {{ player.age }} · rating {{ player.rating }}</div>
+        <div class="prog-line gain">projected +{{ plan.projectedGain(player) }} rating / month</div>
+
+        <div class="prog-field">
+          <span class="fl">area</span>
+          <div class="opts">
+            <button [class.on]="!areaOf(player.id)" (click)="plan.setIndividualArea(player.id, null)">none</button>
+            <button *ngFor="let area of plan.areas" [class.on]="areaOf(player.id) === area"
+                    (click)="plan.setIndividualArea(player.id, area)">{{ area.toLowerCase() }}</button>
+          </div>
+        </div>
+
+        <div class="prog-field" *ngIf="areaOf(player.id)">
+          <span class="fl">attribute</span>
+          <div class="opts">
+            <button [class.on]="!plan.planFor(player.id).attribute"
+                    (click)="plan.setIndividualAttribute(player.id, null)">whole area</button>
+            <button *ngFor="let attr of plan.attributesFor(areaOf(player.id))"
+                    [class.on]="plan.planFor(player.id).attribute === attr"
+                    (click)="plan.setIndividualAttribute(player.id, attr)">{{ attr.toLowerCase() }}</button>
+          </div>
+        </div>
+
+        <div class="prog-field">
+          <span class="fl">role</span>
+          <div class="opts">
+            <select [value]="plan.planFor(player.id).role || ''"
+                    (change)="plan.setIndividualRole(player.id, $any($event.target).value || null)">
+              <option value="">-- none --</option>
+              <option *ngFor="let r of roles" [value]="r">{{ r }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="prog-field">
+          <span class="fl">effort</span>
+          <div class="opts">
+            <button *ngFor="let l of plan.effortLabels; let i = index"
+                    [class.on]="plan.planFor(player.id).effort === i"
+                    (click)="plan.setIndividualEffort(player.id, i)">{{ l.toLowerCase() }}</button>
+          </div>
+        </div>
+
+        <button class="menu-clear" (click)="plan.clearIndividual(player.id)">[ clear programme ]</button>
+      </div>
+    </div>
+
+    <!-- ================= LOG + COMMAND ================= -->
+    <div class="console">
+      <div class="log">
+        <div class="log-line" *ngFor="let line of log" [class]="line.kind">
+          <span class="log-mark">{{ line.kind === 'in' ? '$' : line.kind === 'err' ? 'x' : line.kind === 'ok' ? '>' : '·' }}</span>
+          <span>{{ line.text }}</span>
+        </div>
+      </div>
+
+      <div class="cmd">
+        <span class="cmd-prompt">$</span>
+        <input class="cmd-input" [(ngModel)]="command"
+               (keydown.enter)="submit()" (keydown)="onKey($event)"
+               placeholder="set mon 1 endurance    ·    preset congested    ·    help"
+               spellcheck="false" autocomplete="off">
+        <button class="cmd-run" (click)="submit()">RUN</button>
+      </div>
+    </div>
+
+  </div>
+</div>

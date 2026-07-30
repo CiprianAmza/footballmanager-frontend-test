@@ -61,6 +61,7 @@ interface CompetitionCatalogItem {
   name: string;
   nationId: number;
   typeId: number;
+  tier: number;
 }
 
 interface CompetitionCatalogResponse {
@@ -69,6 +70,7 @@ interface CompetitionCatalogResponse {
   name: string;
   nationId?: number;
   typeId: number;
+  tier?: number;
 }
 
 interface StatisticLeader {
@@ -587,7 +589,8 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
             competitionId,
             name: item.name,
             nationId: item.nationId ?? 0,
-            typeId: item.typeId
+            typeId: item.typeId,
+            tier: item.tier ?? 1
           });
         }
         this.competitions = Array.from(unique.values())
@@ -634,14 +637,14 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
     if (competition.typeId === 5) return 'SC';
     if (competition.typeId === 2) return 'CUP';
     if (competition.typeId === 6) return 'SUP';
-    return competition.typeId === 3 ? 'L2' : 'L1';
+    // Level comes from tier now, so a third division reads L3 without a code change.
+    return 'L' + (competition.tier || 1);
   }
 
   competitionColor(competition: CompetitionCatalogItem): string {
     switch (competition.typeId) {
-      case 1: return '#7c5cff';
+      case 1: return competition.tier > 1 ? '#3ba4d8' : '#7c5cff';
       case 2: return '#ff5d5d';
-      case 3: return '#3ba4d8';
       case 4: return '#2d6cdf';
       case 5: return '#14a37f';
       case 6: return '#d5a500';
@@ -650,7 +653,7 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
   }
 
   competitionDescription(competition: CompetitionCatalogItem): string {
-    if (competition.typeId === 1 || competition.typeId === 3) {
+    if (competition.typeId === 1) {
       return 'Standings, fixtures, results and season statistics.';
     }
     if (competition.typeId === 2) return 'Cup rounds, fixtures and results.';

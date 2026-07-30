@@ -33,6 +33,10 @@ import { CommonModule } from '@angular/common';
 import { FinancesComponent } from './finances/finances.component';
 import { ClubInfoComponent } from './club-info/club-info.component';
 import { TrainingComponent } from './training/training.component';
+import { Training1Component } from './training1/training1.component';
+import { Training2Component } from './training2/training2.component';
+import { Training3Component } from './training3/training3.component';
+import { Training4Component } from './training4/training4.component';
 import { MedicalCentreComponent } from './medical-centre/medical-centre.component';
 import { StaffComponent } from './staff/staff.component';
 import { DataHubComponent } from './data-hub/data-hub.component';
@@ -139,6 +143,10 @@ export const APP_ROUTES: Routes = [
   { path: 'dev-center', component: FeatureUnavailableComponent,
     data: { featureName: 'Development Centre' } },
   { path: 'training', component: TrainingComponent },
+  { path: 'training1', component: Training1Component },
+  { path: 'training2', component: Training2Component },
+  { path: 'training3', component: Training3Component },
+  { path: 'training4', component: Training4Component },
   { path: 'medical', component: MedicalCentreComponent },
   { path: 'staff', component: StaffComponent },
   { path: 'data-hub', component: DataHubComponent },

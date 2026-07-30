@@ -1,5 +1,5 @@
 // ... (Importurile și interfețele rămân la fel) ...
-import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnInit, Input, OnChanges, SimpleChanges, HostListener } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { urlApp } from '../app.component';
@@ -621,12 +621,43 @@ export class Tactics4Component implements OnInit, OnChanges {
           }
       });
   }
+  /**
+   * Open history entries owned by this page's modals.
+   *
+   * <p>An open modal used to be nothing but a field, invisible to the browser, so Back
+   * left the tactics page entirely and dropped the user on the squad screen — losing the
+   * modal AND the page instead of just dismissing the dialog. Each modal now pushes an
+   * entry, so Back closes what is on top, which is what the gesture means everywhere else.
+   */
+  private modalHistoryDepth = 0;
+
   openModal(type: string): void {
     if (!this.canEdit || this.isChairmanMode) return;
     if (type === 'formation' && this.managerFormationRequiredByChairman) return;
     this.activeModal = type;
+    history.pushState({ tacticModal: type }, '');
+    this.modalHistoryDepth++;
   }
-  closeModal(): void { this.activeModal = null; }
+
+  /** Dismissed from the UI: drop the entry we pushed so Back does not need pressing twice. */
+  closeModal(): void {
+    if (!this.activeModal) return;
+    // Cleared before history.back(), because that fires popstate asynchronously and the
+    // handler below would otherwise treat this as a second dismissal.
+    this.activeModal = null;
+    if (this.modalHistoryDepth > 0) {
+      this.modalHistoryDepth--;
+      history.back();
+    }
+  }
+
+  /** Back with a modal open closes it; the browser has already stepped the history. */
+  @HostListener('window:popstate')
+  onBrowserBack(): void {
+    if (!this.activeModal) return;
+    this.activeModal = null;
+    this.modalHistoryDepth = Math.max(0, this.modalHistoryDepth - 1);
+  }
   // For the formation modal we show pretty labels (mapped back to KEY on select);
   // every other modal keeps its plain string options.
   get currentOptions(): string[] {

@@ -52,6 +52,10 @@
           <span class="nation-text" *ngIf="playerView.nationName"> · {{ playerView.nationName }}</span>
           <a class="fm-link card-link" [routerLink]="['/card', playerView.id]" style="margin-left:10px;">🎴 Card</a>
         </div>
+        <div class="career-state-badges" *ngIf="playerView.isRetired || playerView.isFreeAgent">
+          <span class="career-state-badge retired-badge" *ngIf="playerView.isRetired">Retired</span>
+          <span class="career-state-badge free-agent-badge" *ngIf="playerView.isFreeAgent">Free agent</span>
+        </div>
         <div class="profile-trait-badges" *ngIf="hasStayForwardTrait()">
           <span class="profile-trait-badge stay-forward-badge">Stay Forward</span>
         </div>
@@ -364,9 +368,13 @@
                     <span class="c-label">Status</span>
                     <span class="c-val" style="color: #ff4444; font-weight: bold;">Expiring soon</span>
                 </div>
+                <div class="contract-item" *ngIf="playerView.isRetired">
+                    <span class="c-label">Career</span>
+                    <span class="c-val" style="color: #bbb; font-weight: bold;">Retired</span>
+                </div>
                 <div class="contract-item" *ngIf="playerView.willNeverLeave">
                     <span class="c-label">Career plan</span>
-                    <span class="c-val one-club-status">One-club player · retires when this contract ends</span>
+                    <span class="c-val one-club-status">One-club player · contract renews automatically, never expires</span>
                 </div>
             </div>
 
@@ -374,7 +382,7 @@
                 <div>
                     <span class="editor-kicker">FEDERATION EDITOR</span>
                     <h3>One-club player rule</h3>
-                    <p>When enabled, the player is removed from transfers, loans, free-agent signings and pre-contracts. If the contract is not renewed, the player retires.</p>
+                    <p>When enabled, the player is removed from transfers, loans, free-agent signings and pre-contracts. His contract renews itself every season, so he stays at the club until he retires with age.</p>
                 </div>
                 <label class="editor-toggle">
                     <input type="checkbox" [(ngModel)]="editorWillNeverLeave">

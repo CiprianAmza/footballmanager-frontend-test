@@ -55,6 +55,55 @@ interface CompetitionChampionsHistory {
 export class AllTimeChampionsComponent implements OnInit {
 
   champions: ChampionTeam[] = [];
+
+  /**
+   * Which column the table is ordered by, and in which direction.
+   *
+   * <p>The ranking arrives sorted by total titles, which answers one question well and
+   * every other one badly: "who has won the most cups" meant reading a whole column by
+   * eye. Clicking a header re-sorts on it.
+   */
+  sortColumn: keyof ChampionTeam = 'totalTitles';
+  sortAscending = false;
+
+  sortBy(column: keyof ChampionTeam): void {
+    // Same column toggles direction; a new one starts at the end that answers the
+    // question being asked — most titles first for counts, A-Z for the name.
+    if (this.sortColumn === column) {
+      this.sortAscending = !this.sortAscending;
+    } else {
+      this.sortColumn = column;
+      this.sortAscending = column === 'teamName';
+    }
+    this.applySort();
+  }
+
+  private applySort(): void {
+    const column = this.sortColumn;
+    const direction = this.sortAscending ? 1 : -1;
+    this.champions = [...this.champions].sort((left, right) => {
+      const a = left[column];
+      const b = right[column];
+      let comparison: number;
+      if (typeof a === 'string' || typeof b === 'string') {
+        comparison = String(a).localeCompare(String(b));
+      } else {
+        comparison = (Number(a) || 0) - (Number(b) || 0);
+      }
+      // Ties fall back to total titles then name, so equal counts keep a stable,
+      // meaningful order instead of whatever the previous sort happened to leave.
+      if (comparison === 0 && column !== 'totalTitles') {
+        comparison = left.totalTitles - right.totalTitles;
+      }
+      if (comparison === 0) return left.teamName.localeCompare(right.teamName);
+      return comparison * direction;
+    });
+  }
+
+  sortIndicator(column: keyof ChampionTeam): string {
+    if (this.sortColumn !== column) return '';
+    return this.sortAscending ? ' \u25B2' : ' \u25BC';
+  }
   competitions: CompetitionChampionsHistory[] = [];
   loading = true;
   error = '';
@@ -79,6 +128,7 @@ export class AllTimeChampionsComponent implements OnInit {
           superCupTitles: team.superCupTitles || 0,
           titles: team.titles || []
         }));
+        this.applySort();
         this.buildCompetitionHistory();
         this.loading = false;
       },

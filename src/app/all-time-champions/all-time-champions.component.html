@@ -24,14 +24,14 @@
       <thead>
         <tr>
           <th class="rank-col">#</th>
-          <th class="team-col">Team</th>
-          <th class="total-col">Total</th>
-          <th class="type-col">League</th>
-          <th class="type-col">Cup</th>
-          <th class="type-col">League 2</th>
-          <th class="type-col">LoC</th>
-          <th class="type-col">Stars Cup</th>
-          <th class="type-col">Super Cup</th>
+          <th class="team-col sortable" (click)="sortBy('teamName')">Team{{ sortIndicator('teamName') }}</th>
+          <th class="total-col sortable" (click)="sortBy('totalTitles')">Total{{ sortIndicator('totalTitles') }}</th>
+          <th class="type-col sortable" (click)="sortBy('leagueTitles')">League{{ sortIndicator('leagueTitles') }}</th>
+          <th class="type-col sortable" (click)="sortBy('cupTitles')">Cup{{ sortIndicator('cupTitles') }}</th>
+          <th class="type-col sortable" (click)="sortBy('secondLeagueTitles')">League 2{{ sortIndicator('secondLeagueTitles') }}</th>
+          <th class="type-col sortable" (click)="sortBy('locTitles')">LoC{{ sortIndicator('locTitles') }}</th>
+          <th class="type-col sortable" (click)="sortBy('starsCupTitles')">Stars Cup{{ sortIndicator('starsCupTitles') }}</th>
+          <th class="type-col sortable" (click)="sortBy('superCupTitles')">Super Cup{{ sortIndicator('superCupTitles') }}</th>
           <th class="expand-col"></th>
         </tr>
       </thead>

@@ -6,6 +6,10 @@ import { urlApp } from '../app.component';
 import { GameEventsService } from '../services/game-events.service';
 import { TeamService } from '../services/team.service';
 
+type ClubInfoTab = 'overview' | 'squad' | 'tactics' | 'matches' | 'stats';
+
+const CLUB_INFO_TABS: ClubInfoTab[] = ['overview', 'squad', 'tactics', 'matches', 'stats'];
+
 interface CompetitionHistory {
   id: number;
   teamId: number;
@@ -114,7 +118,7 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
   stadiumEffectiveCapacity: number | null = null;
   stadiumRevenueMultiplier: number | null = null;
 
-  activeTab: 'overview' | 'squad' | 'tactics' | 'matches' | 'stats' = 'overview';
+  activeTab: ClubInfoTab = 'overview';
   competitionBreakdown: CompetitionStatLine[] = [];
   competitionBreakdownLoading = false;
   competitionBreakdownUnavailable = false;
@@ -132,9 +136,15 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.sub.add(this.route.params.subscribe(params => {
       this.teamId = Number(params['teamId']);
-      this.activeTab = 'overview';
       this.setCompetitionBreakdown([]);
       this.loadData();
+    }));
+    // The tab lives in the URL so that Back steps between tabs instead of leaving the
+    // club page: opening Tactics from Squad and pressing Back used to unmount the whole
+    // page and drop the user back on the squad screen.
+    this.sub.add(this.route.queryParams.subscribe(params => {
+      const requested = params['tab'];
+      this.activeTab = CLUB_INFO_TABS.includes(requested) ? requested : 'overview';
     }));
     this.sub.add(this.gameEvents.on('stadium').subscribe(() => this.loadStadiumData()));
   }
@@ -143,8 +153,15 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
     this.sub.unsubscribe();
   }
 
-  switchTab(tab: 'overview' | 'squad' | 'tactics' | 'matches' | 'stats'): void {
-    this.activeTab = tab;
+  switchTab(tab: ClubInfoTab): void {
+    if (tab === this.activeTab) return;
+    // Navigate rather than assign: the queryParams subscription above is the single
+    // writer of activeTab, so Back and a tab click go through exactly the same path.
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tab === 'overview' ? null : tab },
+      queryParamsHandling: 'merge'
+    });
   }
 
   competitionTypeLabel(typeId: number): string {
@@ -273,7 +290,7 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
 
   private setMemberships(memberships: ClubCompetition[]): void {
     const valid = memberships.filter(item => Number.isFinite(item.competitionId) && item.competitionId > 0);
-    this.domesticLeagues = valid.filter(item => item.typeId === 1 || item.typeId === 3);
+    this.domesticLeagues = valid.filter(item => item.typeId === 1);
     this.domesticCups = valid.filter(item => item.typeId === 2 || item.typeId === 6);
     this.europeanCompetitions = valid.filter(item => item.typeId === 4 || item.typeId === 5);
     this.otherCompetitions = valid.filter(item => ![1, 2, 3, 4, 5, 6].includes(item.typeId));

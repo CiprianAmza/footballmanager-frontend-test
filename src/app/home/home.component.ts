@@ -112,8 +112,9 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.http.get<any[]>(urlApp + `/competition/getTeamCompetitions/${teamId}`)
       .subscribe({
         next: (competitions) => {
-          // Find the first league (typeId === 1)
-          this.leagueCompetition = competitions.find(c => c.typeId === 1) || competitions[0];
+          // The top flight: type 1 is now every league level, so tier decides.
+          this.leagueCompetition = competitions.find(c => c.typeId === 1 && (c.tier ?? 1) === 1)
+            || competitions[0];
           if (this.leagueCompetition) {
             this.leaguePosition = this.leagueCompetition.position;
             this.leaguePoints = this.leagueCompetition.points;
