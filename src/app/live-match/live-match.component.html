@@ -4,6 +4,13 @@
     <!-- Header -->
     <div class="lm-header">
       <span class="lm-competition">{{ liveMatchData.competitionName }} - Round {{ liveMatchData.round }}</span>
+      <!-- Render style of the pitch canvas — only meaningful while the pitch
+           is actually on screen (inline pane or a zoomed moment/replay). -->
+      <button class="lm-style-toggle" type="button" *ngIf="pitchPresentation !== 'hidden'"
+              (click)="togglePitchStyle()"
+              [title]="pitchStyle === 'broadcast' ? 'Switch to the flat 2D pitch' : 'Switch to the 2.5D broadcast camera'">
+        {{ pitchStyle === 'broadcast' ? '2D view' : 'Broadcast' }}
+      </button>
       <button class="lm-view-toggle" type="button" (click)="toggleMatchViewMode()"
               [title]="matchViewMode === 'PITCH_2D' ? 'Switch to the text view' : 'Switch to the 2D pitch'">
         {{ matchViewMode === 'PITCH_2D' ? 'Text view' : '2D pitch' }}
@@ -67,6 +74,7 @@
       </div>
 
       <app-match-pitch [responsive]="true"
+                       [pitchStyle]="pitchStyle"
                        [clip]="goalClip"
                        [homeTeamId]="liveMatchData.homeTeamId"
                        [homeKit]="matchHomeKit"

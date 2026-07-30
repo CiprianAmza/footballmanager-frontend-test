@@ -66,6 +66,7 @@
          on the same canvas. Same component the live match view uses. -->
     <div class="lmp-pitch" *ngIf="showPitch">
       <app-match-pitch [responsive]="true"
+                       [pitchStyle]="pitchStyle"
                        [clip]="pitchClip"
                        [homeTeamId]="liveMatchData.homeTeamId"
                        [homeKit]="homeKit"
@@ -93,6 +94,10 @@
       <button *ngIf="finished" (click)="replay()">Replay</button>
       <button (click)="generate()">New Match</button>
       <button (click)="togglePitch()">{{ showPitch ? 'Hide 2D pitch' : 'Show 2D pitch' }}</button>
+      <button *ngIf="showPitch" (click)="togglePitchStyle()"
+              [title]="pitchStyle === 'broadcast' ? 'Switch to the flat 2D pitch' : 'Switch to the 2.5D broadcast camera'">
+        {{ pitchStyle === 'broadcast' ? 'Flat 2D view' : 'Broadcast view' }}
+      </button>
       <!-- Deep-link to the per-player ratings for this match (shown at full time). -->
       <a *ngIf="finished" class="anim-ratings-link"
          [routerLink]="playerRatingsLink">Player ratings</a>

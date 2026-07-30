@@ -11,6 +11,7 @@ import {
 import {
   goalAnimationToFrames, kitColor, kitsFromAnimation, MatchPitchComponent, PitchMarker
 } from './match-pitch.component';
+import { PitchStyle, readPitchStyle, writePitchStyle } from './pitch-projection';
 import { PlaybackClock } from './playback-clock';
 import {
   AMBIENT_TRANSITION_MS, AmbientState, ambientFrame, blendFrames, buildTeamSlots,
@@ -151,6 +152,10 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
   matchViewMode: MatchViewMode = 'TEXT';
   private static readonly VIEW_MODE_KEY = 'fm_matchViewMode';
 
+  /** How the pitch canvas is drawn: flat 2D (`classic`) or the 2.5D
+   *  perspective camera (`broadcast`). Presentation only. */
+  pitchStyle: PitchStyle = 'classic';
+
   /** Match kits on the home/away axis — used by the persistent pitch and the
    *  clip renderer alike. */
   matchHomeKit: KitColors = DEFAULT_HOME_KIT;
@@ -204,6 +209,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
     const change = changes['matchKey'];
     if (change && this.matchKey && change.currentValue !== change.previousValue) {
       this.matchViewMode = this.readViewMode();
+      this.pitchStyle = readPitchStyle();
       this.load(this.matchKey);
     }
   }
@@ -234,6 +240,17 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
       this.spliceState = this.matchViewMode === 'PITCH_2D' ? 'clip' : 'none';
       this.spliceFrom = null;
     }
+  }
+
+  /**
+   * Flip the render style of the pitch canvas. Strictly cosmetic: the clip,
+   * the ambient synthesis and the match clock all keep running on the same
+   * canvas — no /advance, no /commit, no playback state is touched, so this is
+   * safe mid-match and mid-clip.
+   */
+  togglePitchStyle(): void {
+    this.pitchStyle = this.pitchStyle === 'broadcast' ? 'classic' : 'broadcast';
+    writePitchStyle(this.pitchStyle);
   }
 
   /**

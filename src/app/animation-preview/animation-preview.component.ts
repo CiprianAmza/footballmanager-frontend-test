@@ -10,6 +10,9 @@ import {
   AMBIENT_TRANSITION_MS, AmbientState, ambientFrame, buildTeamSlots,
   emptyAmbientState, phaseFor, samePhase
 } from '../live-match/ambient-synthesizer';
+import {
+  PitchStyle, readPitchStyle, writePitchStyle
+} from '../live-match/pitch-projection';
 
 /**
  * Animation Preview — updated to consume the CURRENT live-match engine data
@@ -41,6 +44,8 @@ export class AnimationPreviewComponent implements OnInit, OnDestroy {
 
   // ---- 2D pitch preview (same renderer + ambient synthesis as the live view) ----
   showPitch = true;
+  /** Flat 2D vs 2.5D broadcast camera — shared preference with the live view. */
+  pitchStyle: PitchStyle = readPitchStyle();
   pitchClip: PitchClip | null = null;
   homeKit: KitColors = {};
   awayKit: KitColors = {};
@@ -71,6 +76,12 @@ export class AnimationPreviewComponent implements OnInit, OnDestroy {
 
   togglePitch(): void {
     this.showPitch = !this.showPitch;
+  }
+
+  /** Presentation only — the ambient RAF and any spliced clip carry on. */
+  togglePitchStyle(): void {
+    this.pitchStyle = this.pitchStyle === 'broadcast' ? 'classic' : 'broadcast';
+    writePitchStyle(this.pitchStyle);
   }
 
   /** Ambient loop for the preview board. The live viewer has its own single

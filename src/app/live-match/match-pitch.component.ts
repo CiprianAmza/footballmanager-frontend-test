@@ -5,6 +5,9 @@ import {
 import {
   AnimationEvent, GoalAnimationData, KitColors, PitchClip, PitchFrame
 } from '../models/live-match.model';
+import {
+  createProjector, drawStandBand, PitchProjector, PitchStyle
+} from './pitch-projection';
 
 /** A transient icon pinned to a pitch location (corner, foul, offside, card). */
 export interface PitchMarker {
@@ -153,6 +156,10 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
   /** Persistent-pane mode: track the container size instead of staying at the
    *  clip modal's fixed 640x400 backing store. */
   @Input() responsive = false;
+  /** Render style. `classic` is the flat top-down 2D pitch (unchanged);
+   *  `broadcast` is the 2.5D perspective camera. Pure presentation — the host
+   *  owns the persisted value, switching it never touches playback. */
+  @Input() pitchStyle: PitchStyle = 'classic';
 
   /** Fired once the clip has run past its last frame (or was skipped). */
   @Output() clipFinished = new EventEmitter<void>();
@@ -173,6 +180,15 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
   private canvasReady = false;
   /** Kept so the viewer can blend out of exactly what is on screen. */
   private lastFrame: PitchFrame | null = null;
+  /** Names that came with the last painted frame — only so a style switch can
+   *  repaint the exact same picture in the new projection. */
+  private lastNames: { [playerId: number]: string } = {};
+  private lastMarkers: PitchMarker[] = [];
+  private lastClipOverlays = false;
+
+  /** Screen mapping for the current paint. Rebuilt per frame from the canvas
+   *  size + `pitchStyle`; every draw site goes through it. */
+  private projector: PitchProjector = createProjector('classic', 640, 400);
 
   /** Last few ball positions (world 0-100) for the trail effect — fading dots
    *  behind the ball so a fast pass leaves a visible streak. */
@@ -188,6 +204,14 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
       // In modal mode the canvas is recreated with the clip, so playback has to
       // wait for it. The persistent pane keeps the same canvas across clips.
       if (!this.responsive) this.canvasReady = false;
+    }
+    // A style switch is presentation only: repaint whatever is already on
+    // screen through the new projection. No playback state is touched, so it
+    // is safe mid-clip and mid-ambient alike.
+    if (changes['pitchStyle'] && !changes['pitchStyle'].firstChange
+        && this.canvasReady && this.lastFrame) {
+      this.paint(this.lastFrame, this.lastNames,
+                 { clipOverlays: this.lastClipOverlays, markers: this.lastMarkers });
     }
   }
 
@@ -372,6 +396,12 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
     const w = canvas.width;
     const h = canvas.height;
     this.lastFrame = frame;
+    this.lastNames = names;
+    this.lastMarkers = options.markers || [];
+    this.lastClipOverlays = options.clipOverlays;
+
+    // One projector per paint — it closes over the current canvas size.
+    this.projector = createProjector(this.pitchStyle, w, h);
 
     this.drawPitch(ctx, w, h);
     this.drawPlayers(ctx, w, h, frame, names);
@@ -405,21 +435,30 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
     ctx.save();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = 'bold 16px sans-serif';
+    // Flat styles share one font for every badge; only a depth-scaled style
+    // needs to re-set it per marker.
+    ctx.font = `bold ${MatchPitchComponent.fontPx(16, 1)}px sans-serif`;
     for (const marker of markers) {
       if (marker.alpha <= 0) continue;
       ctx.globalAlpha = Math.max(0, Math.min(1, marker.alpha));
-      const x = (marker.x / 100) * w;
-      const y = (marker.y / 100) * h;
+      // Pin to the projected ground point, then float the badge above it in
+      // screen space so it keeps its shape under perspective.
+      const point = this.projector.project((marker.x / 100) * w, (marker.y / 100) * h);
+      const scale = point.scale;
+      const x = point.x;
+      const y = point.y - 16 * scale;
+      if (this.projector.perspective) {
+        ctx.font = `bold ${MatchPitchComponent.fontPx(16, scale)}px sans-serif`;
+      }
       ctx.beginPath();
-      ctx.arc(x, y - 16, 11, 0, Math.PI * 2);
+      ctx.arc(x, y, 11 * scale, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(10, 14, 20, 0.75)';
       ctx.fill();
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1 * scale;
       ctx.stroke();
       ctx.fillStyle = '#fff';
-      ctx.fillText(marker.icon, x, y - 16);
+      ctx.fillText(marker.icon, x, y);
     }
     ctx.restore();
   }
@@ -458,23 +497,36 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
                       frame: PitchFrame, names: { [playerId: number]: string }): void {
     const players = frame.players || [];
     const carrierId = frame.ball.carrierPlayerId;
+    const projector = this.projector;
+
+    // Project every player once: classic-space anchor → screen point + depth
+    // scale. Everything below works off these.
+    const points = players.map(player => {
+      if (!isFinite(player.x) || !isFinite(player.y)) return null;
+      return projector.project((player.x / 100) * w, (player.y / 100) * h);
+    });
 
     // Pre-pass: figure out which name labels to suppress so the pitch doesn't
-    // turn into a wall of overlapping text. World coords are 0-100; two players
-    // within 5 X-units AND 3 Y-units are considered colliding. Ball carrier
-    // always wins; otherwise the player with the lower index keeps the label.
+    // turn into a wall of overlapping text. Two players closer than 5 world
+    // X-units AND 3 world Y-units are considered colliding — expressed here in
+    // PROJECTED space (5% of the width / 3% of the height, times the depth
+    // scale), so under perspective the far end tightens up exactly the way the
+    // labels there shrink. For `classic` the scale is 1 and this is the same
+    // test as before. Ball carrier always wins; otherwise the player with the
+    // lower index keeps the label.
     const suppress = new Set<number>();
     for (let i = 0; i < players.length; i++) {
       if (suppress.has(i)) continue;
-      const a = players[i];
-      if (!isFinite(a.x) || !isFinite(a.y)) continue;
-      const isCarrierI = a.playerId === carrierId;
+      const a = points[i];
+      if (!a) continue;
+      const isCarrierI = players[i].playerId === carrierId;
       for (let j = i + 1; j < players.length; j++) {
         if (suppress.has(j)) continue;
-        const b = players[j];
-        if (!isFinite(b.x) || !isFinite(b.y)) continue;
-        if (Math.abs(a.x - b.x) < 5 && Math.abs(a.y - b.y) < 3) {
-          const isCarrierJ = b.playerId === carrierId;
+        const b = points[j];
+        if (!b) continue;
+        const near = Math.max(a.scale, b.scale);
+        if (Math.abs(a.x - b.x) < 0.05 * w * near && Math.abs(a.y - b.y) < 0.03 * h * near) {
+          const isCarrierJ = players[j].playerId === carrierId;
           if (isCarrierI) suppress.add(j);
           else if (isCarrierJ) suppress.add(i);
           else suppress.add(j);
@@ -482,15 +534,41 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
       }
     }
 
-    players.forEach((player, i) => {
-      if (!isFinite(player.x) || !isFinite(player.y)) return;
-      const px = (player.x / 100) * w;
-      const py = (player.y / 100) * h;
+    // Painter's algorithm: under perspective the far players (low world y)
+    // must be laid down first so nearer ones overlap them. Flat styles keep
+    // the authored order untouched.
+    let order = players.map((_, i) => i);
+    if (projector.perspective) {
+      order = order.slice().sort((i, j) => (players[i].y || 0) - (players[j].y || 0));
+    }
+
+    order.forEach(i => {
+      const player = players[i];
+      const point = points[i];
+      if (!point) return;
+      const px = point.x;
+      const py = point.y;
+      const scale = point.scale;
       const isScorer = player.playerId === this.clip?.scorerPlayerId;
       const isBallCarrier = player.playerId === carrierId;
 
       // Player circle
-      const radius = 8;
+      const radius = 8 * scale;
+
+      // Ground shadow — sells the player as standing ON the grass rather than
+      // floating over it. Perspective styles only.
+      if (projector.perspective) {
+        ctx.save();
+        ctx.beginPath();
+        // Sits at the player's feet: pushed a full radius below the disc and
+        // wider than it, so it is actually visible instead of hiding behind
+        // the kit colour.
+        ctx.ellipse(px, py + radius * 0.95, radius * 1.25, radius * 0.5, 0, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.fill();
+        ctx.restore();
+      }
+
       ctx.beginPath();
       ctx.arc(px, py, radius, 0, Math.PI * 2);
 
@@ -505,11 +583,11 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
 
       if (isBallCarrier) {
         ctx.shadowColor = '#fff';
-        ctx.shadowBlur = 8;
+        ctx.shadowBlur = 8 * scale;
       }
 
       ctx.fill();
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2 * scale;
       ctx.stroke();
       ctx.shadowBlur = 0;
 
@@ -521,7 +599,7 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
       // Shirt number — pick black/white based on fill brightness so the
       // number stays legible on yellow/white kits.
       ctx.fillStyle = this.numberColorFor(ctx.fillStyle as string);
-      ctx.font = 'bold 8px sans-serif';
+      ctx.font = `bold ${MatchPitchComponent.fontPx(8, scale)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(String(player.shirtNumber || ''), px, py);
@@ -539,20 +617,22 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
           ctx.textBaseline = 'middle';
           const isScorerLate = isScorer && this.frameIndex >= 130;
           if (isScorerLate) {
-            ctx.font = 'bold 10px sans-serif';
+            ctx.font = `bold ${MatchPitchComponent.fontPx(10, scale)}px sans-serif`;
             ctx.fillStyle = '#f1c40f';
             ctx.shadowColor = '#f1c40f';
-            ctx.shadowBlur = 5;
+            ctx.shadowBlur = 5 * scale;
           } else if (isBallCarrier) {
-            ctx.font = 'bold 9px sans-serif';
+            ctx.font = `bold ${MatchPitchComponent.fontPx(9, scale)}px sans-serif`;
             ctx.fillStyle = '#fde047';
             ctx.shadowColor = '#000';
-            ctx.shadowBlur = 3;
+            ctx.shadowBlur = 3 * scale;
           } else {
-            ctx.font = '7px sans-serif';
+            ctx.font = `${MatchPitchComponent.fontPx(7, scale)}px sans-serif`;
             ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
           }
-          ctx.fillText(surname, px, py - 13);
+          // Label sits above the head in SCREEN space — the anchor is already
+          // projected, so only the offset needs the depth scale.
+          ctx.fillText(surname, px, py - 13 * scale);
           ctx.restore();
         }
       }
@@ -560,8 +640,8 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
   }
 
   private drawBall(ctx: CanvasRenderingContext2D, w: number, h: number, frame: PitchFrame): void {
-    const bx = (frame.ball.x / 100) * w;
-    const by = (frame.ball.y / 100) * h;
+    const projector = this.projector;
+    const ball = projector.project((frame.ball.x / 100) * w, (frame.ball.y / 100) * h);
 
     // Draw trail dots oldest → newest, fading alpha + shrinking size so the
     // newest position blends seamlessly into the actual ball drawn next.
@@ -569,18 +649,31 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
     for (let i = 0; i < this.ballTrail.length - 1; i++) {
       const t = this.ballTrail[i];
       const ageFactor = (i + 1) / this.ballTrail.length;
+      const point = projector.project((t.x / 100) * w, (t.y / 100) * h);
       ctx.beginPath();
-      ctx.arc((t.x / 100) * w, (t.y / 100) * h, 3 * ageFactor, 0, Math.PI * 2);
+      ctx.arc(point.x, point.y, 3 * ageFactor * point.scale, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(255, 255, 255, ${0.15 + ageFactor * 0.25})`;
       ctx.fill();
     }
 
+    const radius = 4 * ball.scale;
+    // There is no ball height in the frame model, so the ball is always ON the
+    // grass: a squashed shadow at the projected ground point and the ball
+    // itself nudged a couple of pixels up so it reads as resting on it.
+    const lift = projector.perspective ? radius * 0.7 : 0;
+    if (projector.perspective) {
+      ctx.beginPath();
+      ctx.ellipse(ball.x, ball.y + radius * 0.35, radius * 1.25, radius * 0.5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+      ctx.fill();
+    }
+
     ctx.beginPath();
-    ctx.arc(bx, by, 4, 0, Math.PI * 2);
+    ctx.arc(ball.x, ball.y - lift, radius, 0, Math.PI * 2);
     ctx.fillStyle = '#fff';
     ctx.fill();
     ctx.strokeStyle = '#aaa';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 * ball.scale;
     ctx.stroke();
   }
 
@@ -597,20 +690,20 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
 
       if (evt.type === 'SHOT') {
         if (!from || !isFinite(from.x)) continue;
-        ctx.beginPath();
-        ctx.moveTo((from.x / 100) * w, (from.y / 100) * h);
-        ctx.lineTo(this.clip?.shooterAttacksRight ? w - 8 : 8, h / 2);
+        const fromPy = (from.y / 100) * h;
+        this.pathLineProjected(ctx, (from.x / 100) * w, fromPy,
+                               this.clip?.shooterAttacksRight ? w - 8 : 8, h / 2);
         ctx.strokeStyle = 'rgba(241, 196, 15, 0.6)';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 * this.projector.scaleAt(fromPy);
         ctx.setLineDash([6, 4]);
         ctx.stroke();
         ctx.setLineDash([]);
       } else if (from && to && isFinite(from.x) && isFinite(to.x)) {
-        ctx.beginPath();
-        ctx.moveTo((from.x / 100) * w, (from.y / 100) * h);
-        ctx.lineTo((to.x / 100) * w, (to.y / 100) * h);
+        const fromPy = (from.y / 100) * h;
+        this.pathLineProjected(ctx, (from.x / 100) * w, fromPy,
+                               (to.x / 100) * w, (to.y / 100) * h);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1 * this.projector.scaleAt(fromPy);
         ctx.setLineDash([4, 3]);
         ctx.stroke();
         ctx.setLineDash([]);
@@ -703,9 +796,13 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
       kitColor(scoringKit.outfieldBorder, '#000'),
       '#f1c40f', '#fff', '#fef3c7'
     ];
-    // Burst origin: just outside the attacking goal.
-    const ox = attacksRight ? w - 12 : 12;
-    const oy = h / 2;
+    // Burst origin: just outside the attacking goal, projected so the burst
+    // starts at the goal mouth wherever the current style puts it. Particles
+    // then fly in screen space (they are in the air, not on the grass).
+    const origin = createProjector(this.pitchStyle, w, h)
+      .project(attacksRight ? w - 12 : 12, h / 2);
+    const ox = origin.x;
+    const oy = origin.y;
 
     this.confetti = [];
     for (let i = 0; i < 60; i++) {
@@ -745,18 +842,126 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
     }
   }
 
+  // ---------- projected primitives ----------
+  //
+  // Every pitch marking is still expressed in the ORIGINAL classic pixel
+  // geometry; these helpers put it on screen. In `classic` each one falls
+  // through to the exact canvas call the renderer always made (same arguments,
+  // same primitive — `arc` stays a real arc, `strokeRect` stays a strokeRect),
+  // so the flat pitch is untouched by the abstraction. In a perspective style
+  // the geometry is projected: straight lines keep their endpoints, rectangles
+  // become quads, circles become polylines.
+
+  /** Number of segments a circle/arc is approximated with under perspective. */
+  private static readonly ARC_SEGMENTS = 32;
+
+  private fillRectProjected(ctx: CanvasRenderingContext2D,
+                            x: number, y: number, w: number, h: number): void {
+    if (!this.projector.perspective) {
+      ctx.fillRect(x, y, w, h);
+      return;
+    }
+    const p = this.projector;
+    const a = p.project(x, y);
+    const b = p.project(x + w, y);
+    const c = p.project(x + w, y + h);
+    const d = p.project(x, y + h);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.lineTo(c.x, c.y);
+    ctx.lineTo(d.x, d.y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  private strokeRectProjected(ctx: CanvasRenderingContext2D,
+                              x: number, y: number, w: number, h: number): void {
+    if (!this.projector.perspective) {
+      ctx.strokeRect(x, y, w, h);
+      return;
+    }
+    const p = this.projector;
+    const a = p.project(x, y);
+    const b = p.project(x + w, y);
+    const c = p.project(x + w, y + h);
+    const d = p.project(x, y + h);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.lineTo(c.x, c.y);
+    ctx.lineTo(d.x, d.y);
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  /** Build (but do not stroke) a straight line — a straight world line stays
+   *  straight on screen, so only the endpoints need projecting. */
+  private pathLineProjected(ctx: CanvasRenderingContext2D,
+                            x1: number, y1: number, x2: number, y2: number): void {
+    const a = this.projector.project(x1, y1);
+    const b = this.projector.project(x2, y2);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+  }
+
+  private strokeLineProjected(ctx: CanvasRenderingContext2D,
+                              x1: number, y1: number, x2: number, y2: number): void {
+    this.pathLineProjected(ctx, x1, y1, x2, y2);
+    ctx.stroke();
+  }
+
+  /** Centre circle / penalty arcs. Flat styles use a true arc; perspective
+   *  styles walk a polyline through the projection so the circle becomes the
+   *  ellipse-like curve a camera would see. */
+  private strokeArcProjected(ctx: CanvasRenderingContext2D, cx: number, cy: number,
+                             r: number, from = 0, to = Math.PI * 2): void {
+    if (!this.projector.perspective) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, from, to);
+      ctx.stroke();
+      return;
+    }
+    const segments = MatchPitchComponent.ARC_SEGMENTS;
+    ctx.beginPath();
+    for (let i = 0; i <= segments; i++) {
+      const angle = from + ((to - from) * i) / segments;
+      const point = this.projector.project(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
+      if (i === 0) ctx.moveTo(point.x, point.y);
+      else ctx.lineTo(point.x, point.y);
+    }
+    ctx.stroke();
+  }
+
+  /** Font size rounded to 0.1px. Exact for classic (scale 1 → the original
+   *  integer size), smooth enough for depth-scaled text. */
+  private static fontPx(base: number, scale: number): number {
+    return Math.round(base * scale * 10) / 10;
+  }
+
   private drawPitch(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    const p = this.projector;
+
+    if (p.perspective) {
+      // Everything the grass no longer covers: the stand band above the far
+      // sideline plus a dark surround behind the tapered pitch.
+      ctx.fillStyle = '#0a0f14';
+      ctx.fillRect(0, 0, w, h);
+      drawStandBand(ctx, w, p.project(0, 0).y);
+    }
+
     // Background
     ctx.fillStyle = '#1a6b2a';
-    ctx.fillRect(0, 0, w, h);
+    this.fillRectProjected(ctx, 0, 0, w, h);
 
-    // Pitch stripes
+    // Pitch stripes (trapezoid bands once projected)
     const stripeCount = 10;
     const stripeW = w / stripeCount;
     for (let i = 0; i < stripeCount; i++) {
       if (i % 2 === 0) {
         ctx.fillStyle = 'rgba(0,0,0,0.05)';
-        ctx.fillRect(i * stripeW, 0, stripeW, h);
+        this.fillRectProjected(ctx, i * stripeW, 0, stripeW, h);
       }
     }
 
@@ -765,39 +970,34 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
 
     // Outer boundary
     const pad = 8;
-    ctx.strokeRect(pad, pad, w - pad * 2, h - pad * 2);
+    this.strokeRectProjected(ctx, pad, pad, w - pad * 2, h - pad * 2);
 
     // Center line
-    ctx.beginPath();
-    ctx.moveTo(w / 2, pad);
-    ctx.lineTo(w / 2, h - pad);
-    ctx.stroke();
+    this.strokeLineProjected(ctx, w / 2, pad, w / 2, h - pad);
 
     // Center circle
-    ctx.beginPath();
-    ctx.arc(w / 2, h / 2, 30, 0, Math.PI * 2);
-    ctx.stroke();
+    this.strokeArcProjected(ctx, w / 2, h / 2, 30);
 
     // Left penalty area
     const penW = w * 0.15;
     const penH = h * 0.45;
-    ctx.strokeRect(pad, (h - penH) / 2, penW, penH);
+    this.strokeRectProjected(ctx, pad, (h - penH) / 2, penW, penH);
 
     // Right penalty area
-    ctx.strokeRect(w - pad - penW, (h - penH) / 2, penW, penH);
+    this.strokeRectProjected(ctx, w - pad - penW, (h - penH) / 2, penW, penH);
 
     // Left 6-yard box
     const sixW = w * 0.06;
     const sixH = h * 0.2;
-    ctx.strokeRect(pad, (h - sixH) / 2, sixW, sixH);
+    this.strokeRectProjected(ctx, pad, (h - sixH) / 2, sixW, sixH);
 
     // Right 6-yard box
-    ctx.strokeRect(w - pad - sixW, (h - sixH) / 2, sixW, sixH);
+    this.strokeRectProjected(ctx, w - pad - sixW, (h - sixH) / 2, sixW, sixH);
 
     // Goals
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     const goalH = h * 0.12;
-    ctx.fillRect(0, (h - goalH) / 2, pad, goalH);
-    ctx.fillRect(w - pad, (h - goalH) / 2, pad, goalH);
+    this.fillRectProjected(ctx, 0, (h - goalH) / 2, pad, goalH);
+    this.fillRectProjected(ctx, w - pad, (h - goalH) / 2, pad, goalH);
   }
 }

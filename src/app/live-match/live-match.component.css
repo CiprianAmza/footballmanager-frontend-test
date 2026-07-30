@@ -1149,6 +1149,32 @@
   border-color: #4b5563;
 }
 
+/* Pitch render style (flat 2D <-> 2.5D broadcast). Same chip as the view
+   toggle, parked on the opposite side of the header. */
+.lm-style-toggle {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #1f2937;
+  color: #cbd5e1;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.lm-style-toggle:hover {
+  background: #2b3648;
+  color: #fff;
+  border-color: #4b5563;
+}
+
 /* The single pitch host. Presentation is a class swap, never a re-mount, so
    the canvas (and its playback position) survives every view change. */
 .lm-pitch-host {
