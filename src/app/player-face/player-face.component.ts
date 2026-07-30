@@ -98,6 +98,12 @@ export class PlayerFaceComponent {
   @Input() wrinkle = -1;
   /** 'seinen' | 'sports' | 'premium' — mature anime style. */
   @Input() style: 'seinen' | 'sports' | 'premium' = 'sports';
+  /**
+   * Alias for {@link style}. Angular resolves a template `[style]` binding as the DOM
+   * style map, so callers that need to drive the style from an expression bind
+   * `[faceStyle]` instead. Purely additive — existing callers are unaffected.
+   */
+  @Input() set faceStyle(v: 'seinen' | 'sports' | 'premium') { this.style = v; }
 
   /**
    * BRAND-NEW EXOTIC SPECIES selector. DEFAULT 'human' keeps every existing face,

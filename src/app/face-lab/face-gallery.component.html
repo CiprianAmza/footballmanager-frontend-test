@@ -1,0 +1,194 @@
+<div class="fl-wrap" [class.fl-neutral]="neutralBg">
+
+  <header class="fl-head">
+    <div>
+      <h2>Face Lab <small>dev-only</small></h2>
+      <p class="fl-sub">{{ axisSummary }}</p>
+    </div>
+    <nav class="fl-tabs">
+      <button [class.on]="tab === 'species'" (click)="tab = 'species'">Specii existente</button>
+      <button [class.on]="tab === 'validate'" (click)="tab = 'validate'">Parametric (validare)</button>
+      <button [class.on]="tab === 'evolve'" (click)="tab = 'evolve'">Evoluție</button>
+    </nav>
+  </header>
+
+  <div class="fl-msg" *ngIf="message">{{ message }}</div>
+
+  <!-- ===================== TAB 1 — SPECII EXISTENTE ===================== -->
+  <section *ngIf="tab === 'species'">
+    <div class="fl-controls">
+      <label>Stil
+        <select [(ngModel)]="style">
+          <option *ngFor="let s of STYLES" [value]="s">{{ s }}</option>
+        </select>
+      </label>
+      <label>Axa de culoare
+        <select [(ngModel)]="axis">
+          <option *ngFor="let a of AXES" [value]="a.key">{{ a.label }}</option>
+        </select>
+      </label>
+      <label>baseFaceId {{ baseFaceId }}
+        <input type="range" min="0" max="9" step="1" [(ngModel)]="baseFaceId">
+      </label>
+      <label>Mărime {{ faceSize }}px
+        <input type="range" min="48" max="140" step="4" [(ngModel)]="faceSize">
+      </label>
+      <label class="fl-check">
+        <input type="checkbox" [(ngModel)]="neutralBg"> fundal neutru
+      </label>
+    </div>
+
+    <div class="fl-species-row" *ngFor="let sp of REFERENCE_ORDER">
+      <h3>{{ sp }}</h3>
+      <div class="fl-strip">
+        <figure *ngFor="let slot of PALETTE_SLOTS">
+          <app-player-face
+            [species]="sp"
+            [faceStyle]="style"
+            [size]="faceSize"
+            [baseFaceId]="baseFaceId"
+            [skinTone]="tone(slot, 'skinTone')"
+            [hairColor]="tone(slot, 'hairColor')"
+            [eyeColor]="tone(slot, 'eyeColor')"></app-player-face>
+          <figcaption>{{ slot }}</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TAB 2 — PARAMETRIC / VALIDARE ===================== -->
+  <section *ngIf="tab === 'validate'">
+    <p class="fl-note">
+      Stânga = renderer-ul înghețat din producție (<code>drawX()</code>).
+      Dreapta = <code>drawParametric()</code> pe genomul de referință al aceleiași specii.
+      Parametricul trebuie să <em>aproximeze</em> originalul, nu să-l reproducă byte-cu-byte.
+    </p>
+
+    <div class="fl-controls">
+      <label>Stil
+        <select [(ngModel)]="style"><option *ngFor="let s of STYLES" [value]="s">{{ s }}</option></select>
+      </label>
+      <label>baseFaceId / jitter {{ baseFaceId }}
+        <input type="range" min="0" max="9" step="1" [(ngModel)]="baseFaceId" (change)="rebuildValidation()">
+      </label>
+      <label>Mărime {{ faceSize }}px
+        <input type="range" min="48" max="160" step="4" [(ngModel)]="faceSize">
+      </label>
+    </div>
+
+    <div class="fl-validate-grid">
+      <div class="fl-validate-card" *ngFor="let row of validationRows">
+        <h4>{{ row.species }}</h4>
+        <div class="fl-pair">
+          <div>
+            <app-player-face [species]="row.species" [faceStyle]="style" [size]="faceSize"
+                             [baseFaceId]="baseFaceId" [skinTone]="0" [hairColor]="0" [eyeColor]="0"></app-player-face>
+            <span class="fl-tag">frozen</span>
+          </div>
+          <div>
+            <app-parametric-face [genome]="row.genome" [size]="faceSize"
+                                 [inkWidth]="inkWidthFor(style)" [uid]="'val-' + row.species"></app-parametric-face>
+            <span class="fl-tag alt">parametric</span>
+          </div>
+        </div>
+        <code class="fl-code">{{ describe(row.genome) }}</code>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== TAB 3 — EVOLUȚIE ===================== -->
+  <section *ngIf="tab === 'evolve'">
+    <div class="fl-controls">
+      <button (click)="prevGeneration()" [disabled]="generation === 0">◀ gen</button>
+      <span class="fl-gen">generația {{ generation }}</span>
+      <button (click)="nextGeneration()">gen ▶</button>
+      <button (click)="refreshStatus(true)">reîncarcă</button>
+      <button (click)="generateLocalBatch()">regenerează local</button>
+      <button (click)="publishLocalBatch()" [disabled]="!backendUp || saving">publică batch-ul pe disc</button>
+      <label>seed local
+        <input type="number" [(ngModel)]="localSeed" (change)="generateLocalBatch()" style="width:110px">
+      </label>
+      <label>batch
+        <input type="number" min="6" max="60" [(ngModel)]="batchSize" (change)="generateLocalBatch()" style="width:70px">
+      </label>
+      <label class="fl-check">
+        <input type="checkbox" [(ngModel)]="abMode"> mod A/B
+      </label>
+    </div>
+
+    <div class="fl-status" *ngIf="status">
+      backend: <b [class.ok]="backendUp">{{ backendUp ? 'up' : 'down' }}</b> ·
+      generații pe disc: {{ status.generations.join(', ') || '—' }} ·
+      voturi: {{ status.voteCount }} · perechi: {{ status.pairCount }} ·
+      <code>{{ status.dataDir }}</code>
+    </div>
+    <div class="fl-status" *ngIf="!status">
+      backend: <b>{{ backendUp ? 'up' : 'down' }}</b> — generația curentă e locală (seed {{ localSeed }}).
+    </div>
+
+    <!-- A/B pairwise -->
+    <div class="fl-ab" *ngIf="abMode && cards.length > 1">
+      <div class="fl-ab-side">
+        <app-parametric-face [genome]="cards[abLeft].genome" [size]="160" [uid]="'ab-l-' + abDone"></app-parametric-face>
+        <button (click)="pickWinner('left')">asta</button>
+        <code class="fl-code">{{ describe(cards[abLeft].genome) }}</code>
+      </div>
+      <div class="fl-ab-vs">vs<br><small>{{ abDone }} perechi</small></div>
+      <div class="fl-ab-side">
+        <app-parametric-face [genome]="cards[abRight].genome" [size]="160" [uid]="'ab-r-' + abDone"></app-parametric-face>
+        <button (click)="pickWinner('right')">asta</button>
+        <code class="fl-code">{{ describe(cards[abRight].genome) }}</code>
+      </div>
+    </div>
+
+    <!-- 1-100 rating grid -->
+    <div class="fl-vote-grid" *ngIf="!abMode">
+      <div class="fl-vote-card" *ngFor="let card of cards; let i = index; trackBy: trackByIndex"
+           [class.voted]="card.touched">
+        <app-parametric-face [genome]="card.genome" [size]="110"
+                             [uid]="'ev-' + generation + '-' + i"></app-parametric-face>
+        <code class="fl-code" (click)="copyGenome(card.genome)" title="click = copiază JSON-ul genomului">
+          {{ describe(card.genome) }}
+        </code>
+        <div class="fl-rate">
+          <input type="range" min="1" max="100" step="1"
+                 [(ngModel)]="card.rating" (input)="markTouched(card)">
+          <span class="fl-score" [class.on]="card.touched">{{ card.rating }}</span>
+        </div>
+        <button class="fl-freeze" [class.on]="distillIndex === i" (click)="selectForDistill(i)">îngheață</button>
+      </div>
+    </div>
+
+    <div class="fl-submit" *ngIf="!abMode">
+      <button class="primary" (click)="submitVotes()" [disabled]="saving || votedCount === 0">
+        Trimite {{ votedCount }} note
+      </button>
+      <span *ngIf="loading">se încarcă…</span>
+    </div>
+
+    <!-- F4 — distilare -->
+    <div class="fl-distill" *ngIf="!abMode">
+      <h3>Distilare → <code>drawX()</code></h3>
+      <p class="fl-note">
+        Îngheață genomul selectat într-un renderer clasic: 3 palete × 12 (rotite ca slotul 0 să fie
+        exact fața votată), metoda <code>drawX()</code> în scheletul de 7 pași și cele 2 linii de plumbing.
+        Renderer-ul parametric rămâne în <code>src/app/face-lab/</code> — nu intră în producție.
+      </p>
+      <div class="fl-controls">
+        <label>nume specie
+          <input type="text" [(ngModel)]="distillName" placeholder="noctilume">
+        </label>
+        <label>nationId (opțional)
+          <input type="number" [(ngModel)]="distillNationId" style="width:80px">
+        </label>
+        <span class="fl-pick" *ngIf="distillIndex >= 0">selectat: #{{ distillIndex }}</span>
+        <span class="fl-pick" *ngIf="distillIndex < 0">nicio față selectată</span>
+        <button (click)="distill()" [disabled]="distillIndex < 0">generează</button>
+        <button (click)="copyDistill()" [disabled]="distillIndex < 0">copiază</button>
+        <button (click)="downloadDistill()" [disabled]="distillIndex < 0">descarcă .md</button>
+      </div>
+      <pre class="fl-out" *ngIf="distillPreview">{{ distillPreview }}</pre>
+    </div>
+  </section>
+
+</div>

@@ -1,0 +1,166 @@
+/* DEV-ONLY Face Lab gallery. Dark neutral canvas so palettes read honestly. */
+
+.fl-wrap {
+  padding: 16px 20px 60px;
+  background: #14161c;
+  color: #e6e9ef;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Stacked, never pinned to the right edge: on a wide window a top-right tab strip
+   lands under the floating dev widgets and "Evoluție" becomes unclickable. */
+.fl-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  border-bottom: 1px solid #2a2f3a;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+}
+.fl-head h2 { margin: 0; font-size: 22px; letter-spacing: .3px; }
+.fl-head h2 small {
+  font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;
+  color: #ffb648; border: 1px solid #6b4c1a; border-radius: 4px; padding: 1px 6px; margin-left: 8px;
+  vertical-align: middle;
+}
+.fl-sub { margin: 4px 0 0; font-size: 12px; color: #8b93a3; }
+
+.fl-tabs { display: flex; gap: 6px; }
+.fl-tabs button {
+  background: #1d212a; color: #b9c1cf; border: 1px solid #2f3542;
+  padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.fl-tabs button.on { background: #2c6df0; border-color: #2c6df0; color: #fff; }
+.fl-tabs button:hover:not(.on) { background: #262b36; }
+
+.fl-msg {
+  background: #1b2330; border: 1px solid #2b3a52; color: #a8c4f0;
+  padding: 7px 12px; border-radius: 6px; font-size: 12.5px; margin-bottom: 12px;
+}
+
+.fl-controls {
+  display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+  background: #191d25; border: 1px solid #262b36; border-radius: 8px;
+  padding: 10px 14px; margin-bottom: 16px;
+}
+.fl-controls label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: #8b93a3; }
+.fl-controls label.fl-check { flex-direction: row; align-items: center; gap: 6px; font-size: 12px; }
+.fl-controls select,
+.fl-controls input[type=number] {
+  background: #10131a; color: #e6e9ef; border: 1px solid #313847; border-radius: 4px; padding: 4px 6px; font-size: 12px;
+}
+.fl-controls input[type=range] { width: 140px; }
+.fl-controls button {
+  background: #222834; color: #cfd6e2; border: 1px solid #333b4a;
+  padding: 6px 11px; border-radius: 5px; cursor: pointer; font-size: 12px;
+}
+.fl-controls button:hover:not(:disabled) { background: #2b3341; }
+.fl-controls button:disabled { opacity: .4; cursor: not-allowed; }
+.fl-gen { font-size: 13px; color: #ffb648; font-weight: 600; }
+
+.fl-note { font-size: 12.5px; color: #98a2b3; max-width: 900px; line-height: 1.55; margin: 0 0 14px; }
+.fl-note code { color: #7fd1ff; }
+
+.fl-status { font-size: 11.5px; color: #7e8798; margin-bottom: 14px; }
+.fl-status b { color: #e2645a; }
+.fl-status b.ok { color: #59c26a; }
+.fl-status code { color: #7fd1ff; }
+
+/* ---- species strips ---- */
+.fl-species-row { margin-bottom: 22px; }
+.fl-species-row h3 {
+  margin: 0 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: #ffb648;
+}
+/* wraps rather than scrolls: all 12 palette slots have to be comparable at a glance */
+.fl-strip {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  background: #0f1218; border: 1px solid #232936; border-radius: 8px; padding: 10px;
+}
+.fl-strip figure { margin: 0; text-align: center; flex: 0 0 auto; }
+.fl-strip figcaption { font-size: 10px; color: #6f7889; margin-top: 2px; }
+
+/* ---- validation pairs ---- */
+.fl-validate-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+.fl-validate-card {
+  background: #0f1218; border: 1px solid #232936; border-radius: 8px; padding: 12px;
+}
+.fl-validate-card h4 {
+  margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #ffb648;
+}
+.fl-pair { display: flex; gap: 10px; }
+.fl-pair > div { text-align: center; }
+.fl-tag {
+  display: block; font-size: 9.5px; text-transform: uppercase; letter-spacing: .8px;
+  color: #6f7889; margin-top: 3px;
+}
+.fl-tag.alt { color: #59c26a; }
+
+.fl-code {
+  display: block; font-size: 10px; color: #8b93a3; margin-top: 6px;
+  word-break: break-word; max-width: 220px; cursor: pointer;
+}
+.fl-code:hover { color: #7fd1ff; }
+
+/* ---- voting grid ---- */
+.fl-vote-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px;
+}
+.fl-vote-card {
+  background: #0f1218; border: 1px solid #232936; border-radius: 8px;
+  padding: 10px; text-align: center; transition: border-color .15s;
+}
+.fl-vote-card.voted { border-color: #2c6df0; }
+.fl-rate { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.fl-rate input[type=range] { flex: 1; }
+.fl-score { font-size: 12px; width: 26px; color: #6f7889; font-variant-numeric: tabular-nums; }
+.fl-score.on { color: #ffb648; font-weight: 700; }
+
+.fl-submit { margin-top: 18px; display: flex; align-items: center; gap: 12px; }
+.fl-submit .primary {
+  background: #2c6df0; border: none; color: #fff; padding: 9px 20px;
+  border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;
+}
+.fl-submit .primary:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ---- A/B ---- */
+.fl-ab {
+  display: flex; align-items: center; justify-content: center; gap: 30px;
+  background: #0f1218; border: 1px solid #232936; border-radius: 8px; padding: 26px;
+}
+.fl-ab-side { text-align: center; }
+.fl-ab-side button {
+  display: block; margin: 10px auto 0; background: #2c6df0; border: none; color: #fff;
+  padding: 8px 24px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.fl-ab-vs { font-size: 15px; color: #6f7889; text-align: center; }
+
+/* ---- freeze / distillation ---- */
+.fl-freeze {
+  margin-top: 6px; width: 100%; background: #1e2530; color: #8b93a3;
+  border: 1px solid #2f3542; border-radius: 4px; padding: 3px 0; font-size: 10.5px; cursor: pointer;
+}
+.fl-freeze:hover { color: #cfd6e2; }
+.fl-freeze.on { background: #4a3a10; border-color: #ffb648; color: #ffb648; }
+
+.fl-distill {
+  margin-top: 26px; border-top: 1px solid #2a2f3a; padding-top: 16px;
+}
+.fl-distill h3 { margin: 0 0 6px; font-size: 14px; color: #ffb648; }
+.fl-distill h3 code { color: #7fd1ff; font-size: 13px; }
+.fl-distill input[type=text] {
+  background: #10131a; color: #e6e9ef; border: 1px solid #313847;
+  border-radius: 4px; padding: 4px 6px; font-size: 12px; width: 160px;
+}
+.fl-pick { font-size: 12px; color: #ffb648; }
+.fl-out {
+  margin-top: 12px; max-height: 460px; overflow: auto;
+  background: #0b0e14; border: 1px solid #232936; border-radius: 8px;
+  padding: 12px; font-size: 11px; line-height: 1.45; color: #b9c1cf; white-space: pre;
+}
+
+/* The production face component paints its own pitch-green vignette. That is how faces
+   look in-game, but it tints every swatch when the point of this tab is judging palettes,
+   so the gallery flattens it by default and keeps a toggle to put it back. */
+.fl-wrap.fl-neutral ::ng-deep .pf-svg { background: #0f1218 !important; }
