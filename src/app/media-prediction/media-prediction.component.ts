@@ -195,6 +195,16 @@ export class MediaPredictionComponent implements OnInit {
       2               // 1 ST
   ];
 
+  // 3-1-4-1-1: three DC, DM, ML + two MC + MR, AMC and ST.
+  indexes31411: number[] = [
+      27,
+      21, 22, 23,
+      17,
+      10, 11, 13, 14,
+      7,
+      2
+  ];
+
   tacticMap: { [key: string]: number[] } = {
     "352": this.indexes352,
     "343": this.indexes343,
@@ -210,7 +220,8 @@ export class MediaPredictionComponent implements OnInit {
     "532": this.indexes532,
     "5212": this.indexes5212,
     "541": this.indexes541,
-    "3511": this.indexes3511
+    "3511": this.indexes3511,
+    "31411": this.indexes31411
   };
 
   constructor(private http: HttpClient, private route: ActivatedRoute) {}

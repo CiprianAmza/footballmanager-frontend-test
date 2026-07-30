@@ -46,7 +46,8 @@ export class TacticComponent implements OnInit {
   readonly PRETTY: { [key: string]: string } = {
     '442': '4-4-2', '433': '4-3-3', '343': '3-4-3', '451': '4-5-1', '352': '3-5-2',
     '4231': '4-2-3-1', '4141': '4-1-4-1', '4411': '4-4-1-1', '4321': '4-3-2-1', '4222': '4-2-2-2',
-    '3421': '3-4-2-1', '532': '5-3-2', '5212': '5-2-1-2', '541': '5-4-1', '3511': '3-5-1-1'
+    '3421': '3-4-2-1', '532': '5-3-2', '5212': '5-2-1-2', '541': '5-4-1', '3511': '3-5-1-1',
+    '31411': '3-1-4-1-1'
   };
   // Populated from the backend (best-fit first). Each entry: { key: backend key, label: pretty name }.
   formationOptions: { key: string, label: string }[] = [];

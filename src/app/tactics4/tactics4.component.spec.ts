@@ -32,6 +32,49 @@ describe('Tactics4Component chairman mandate mode', () => {
     expect(built.mandateApi.tacticalMandate).not.toHaveBeenCalled();
   });
 
+  it('applies the Passing Style preset through the three engine settings', () => {
+    const built = build(null);
+    built.component.teamId = 10;
+
+    built.component.activatePassingStyle();
+
+    expect(built.component.selectedOptions.passing).toBe('Short');
+    expect(built.component.selectedOptions.pressing).toBe('Aggressive');
+    expect(built.component.selectedOptions.recovery).toBe('Instantly');
+    expect(built.component.passingStyleActive).toBeTrue();
+  });
+
+  it('keeps SHOOTER unique while allowing multiple SHADOW players', () => {
+    const built = build(null);
+    built.component.teamId = 10;
+    const first = built.component.fieldPositions[7];
+    const second = built.component.fieldPositions[10];
+    first.player = { id: 1, name: 'First', rating: 100, position: 'AMC' } as any;
+    second.player = { id: 2, name: 'Second', rating: 100, position: 'MC' } as any;
+
+    built.component.toggleShooter(first);
+    built.component.toggleShooter(second);
+    built.component.toggleShadow(first);
+    built.component.toggleShadow(second);
+
+    expect(first.specialRole).toBeNull();
+    expect(second.specialRole).toBe('SHOOTER');
+    expect(built.component.isShadowActive(first)).toBeTrue();
+    expect(built.component.isShadowActive(second)).toBeTrue();
+  });
+
+  it('locks SHADOW on players with the persistent stay-forward trait', () => {
+    const built = build(null);
+    built.component.teamId = 10;
+    const slot = built.component.fieldPositions[7];
+    slot.player = { id: 1, name: 'Locked', rating: 100, position: 'AMC', stayForward: true } as any;
+
+    built.component.toggleShadow(slot);
+
+    expect(built.component.isShadowLocked(slot)).toBeTrue();
+    expect(built.component.isShadowActive(slot)).toBeTrue();
+  });
+
   it('enters Chairman mode only for the authenticated enabled Chairman', () => {
     const enabled = build('chairman-mandate');
     enabled.component.ngOnInit();

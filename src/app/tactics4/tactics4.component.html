@@ -230,6 +230,16 @@
           <div class="w-head"><span class="w-title mini">TRANSITION</span><span class="w-chevron">▸</span></div>
           <div class="w-value accent">{{ selectedOptions.transition }}</div>
         </div>
+        <div class="widget card-pick mini-pick" (click)="openModal('recovery')">
+          <div class="w-head"><span class="w-title mini">RECOVERY</span><span class="w-chevron">▸</span></div>
+          <div class="w-value accent">{{ selectedOptions.recovery }}</div>
+        </div>
+        <div class="widget card-pick mini-pick" (click)="activatePassingStyle()"
+             [class.passing-style-active]="passingStyleActive"
+             title="Sets Short passing, Aggressive pressing and Instantly recovery">
+          <div class="w-head"><span class="w-title mini">PASSING STYLE</span><span class="w-chevron">⚡</span></div>
+          <div class="w-value accent">{{ passingStyleActive ? 'ACTIVE' : 'APPLY' }}</div>
+        </div>
       </div>
 
       <!-- ATTACK vs DEFENCE BALANCE -->
@@ -463,6 +473,19 @@
 
         <!-- ROLES TAB -->
         <div class="pp-body" *ngIf="activeRoleSlot === slot">
+            <button class="pp-special-role" [class.active]="slot.specialRole === 'SHOOTER'"
+                    (click)="toggleShooter(slot)">
+                <span>{{ slot.specialRole === 'SHOOTER' ? '☑' : '☐' }}</span>
+                SHOOTER <small>unique · special long shots</small>
+            </button>
+            <button *ngIf="isShadowEligible(slot) || isShadowLocked(slot)"
+                    class="pp-special-role" [class.active]="isShadowActive(slot)"
+                    [class.locked]="isShadowLocked(slot)" [disabled]="isShadowLocked(slot)"
+                    (click)="toggleShadow(slot)">
+                <span>{{ isShadowActive(slot) ? '☑' : '☐' }}</span>
+                SHADOW
+                <small>{{ isShadowLocked(slot) ? 'locked · persistent trait' : 'unlimited · no defensive work' }}</small>
+            </button>
             <div *ngIf="loadingRoles" class="pp-loading">Loading…</div>
             <div *ngIf="!loadingRoles && availableRoles.length === 0" class="pp-loading">No roles</div>
             <div class="pp-role" *ngFor="let role of availableRoles">

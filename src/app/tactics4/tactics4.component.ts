@@ -34,6 +34,8 @@ interface Player {
     browShape?: number;
     nationId?: number;
     species?: string;
+    /** Persistent player trait: SHADOW is forced and cannot be deselected. */
+    stayForward?: boolean;
 }
 
 interface PositionedPlayer {
@@ -42,6 +44,8 @@ interface PositionedPlayer {
     role: string | null;
     duty: string | null;
     instructions: string[];
+    specialRole?: 'SHOOTER' | null;
+    shadow?: boolean;
 }
 
 interface FormationCell {
@@ -78,11 +82,12 @@ interface SavedTactic {
     tempoFragmentation: string;
     widePlay: string;
     transition: string;
+    recovery?: string;
     penaltyTakerId?: number | null;
     freeKickTakerId?: number | null;
     cornerTakerLeftId?: number | null;
     cornerTakerRightId?: number | null;
-    formationDataList: { positionIndex: number; playerId: number; role?: string | null; duty?: string | null; instructions?: string[] | null }[];
+    formationDataList: { positionIndex: number; playerId: number; role?: string | null; duty?: string | null; instructions?: string[] | null; specialRole?: 'SHOOTER' | null; shadow?: boolean }[];
 }
 
 interface TeamTacticViewResponse {
@@ -187,17 +192,17 @@ export class Tactics4Component implements OnInit, OnChanges {
   teamRatingMin: number = 0;
   teamRatingMax: number = 0;
   selectedPlayers: Set<number> = new Set();
-  fieldPositions: PositionedPlayer[] = Array.from({ length: 30 }, (_, i) => ({ positionIndex: i, player: null, role: null, duty: null, instructions: [] }));
+  fieldPositions: PositionedPlayer[] = Array.from({ length: 30 }, (_, i) => ({ positionIndex: i, player: null, role: null, duty: null, instructions: [], specialRole: null, shadow: false }));
   substitutes: PositionedPlayer[] = Array.from({ length: 7 }, (_, i) => ({ positionIndex: 30 + i, player: null, role: null, duty: null, instructions: [] }));
 
   // ... (restul opțiunilor și configurațiilor) ...
-  // Pretty labels for the 15 backend formation KEYS. The KEY is what the engine/AI
+  // Pretty labels for the backend formation KEYS. The KEY is what the engine/AI
   // matches against and what we save; the label is display-only.
   readonly PRETTY: { [key: string]: string } = {
     '442': '4-4-2', '433': '4-3-3', '343': '3-4-3', '451': '4-5-1', '352': '3-5-2',
     '4231': '4-2-3-1', '4141': '4-1-4-1', '4411': '4-4-1-1', '4321': '4-3-2-1',
     '4222': '4-2-2-2', '3421': '3-4-2-1', '532': '5-3-2', '5212': '5-2-1-2',
-    '541': '5-4-1', '3511': '3-5-1-1'
+    '541': '5-4-1', '3511': '3-5-1-1', '31411': '3-1-4-1-1'
   };
   // Formations available for this team, fetched from the backend (best-fit first).
   formationOptions: { key: string; label: string }[] = [];
@@ -214,14 +219,15 @@ export class Tactics4Component implements OnInit, OnChanges {
     tempo: ['Much Lower', 'Lower', 'Standard', 'Higher', 'Much Higher'],
     timeWasting: ['Never', 'Sometimes', 'Frequently', 'Always'],
     defensiveLine: ['Deep', 'Standard', 'High'],
-    pressing: ['Low', 'Standard', 'High'],
+    pressing: ['Very Easy', 'Easy', 'Normal', 'Aggressive', 'Very Aggressive'],
     width: ['Narrow', 'Balanced', 'Wide'],
     dribbling: ['Less', 'Standard', 'More'],
     foulFrequency: ['Rarely', 'Normal', 'Often'],
     foulHardness: ['Soft', 'Medium', 'Hard'],
     tempoFragmentation: ['Flowing', 'Normal', 'Fragment'],
     widePlay: ['Cut Inside', 'Shoot', 'Cross'],
-    transition: ['Win Fouls', 'Balanced', 'Fast Counter']
+    transition: ['Win Fouls', 'Balanced', 'Fast Counter'],
+    recovery: ['Slow', 'Standard', 'Very Fast', 'Instantly']
   };
 
   selectedOptions = {
@@ -231,14 +237,15 @@ export class Tactics4Component implements OnInit, OnChanges {
     tempo: 'Standard',
     timeWasting: 'Sometimes',
     defensiveLine: 'Standard',
-    pressing: 'Low',
+    pressing: 'Normal',
     width: 'Balanced',
     dribbling: 'Standard',
     foulFrequency: 'Normal',
     foulHardness: 'Medium',
     tempoFragmentation: 'Normal',
     widePlay: 'Shoot',
-    transition: 'Balanced'
+    transition: 'Balanced',
+    recovery: 'Standard'
   };
 
   // ===== Per-player Roles + Instructions popup state =====
@@ -503,6 +510,8 @@ export class Tactics4Component implements OnInit, OnChanges {
       target.role = null;
       target.duty = null;
       target.instructions = [];
+      target.specialRole = null;
+      target.shadow = player.stayForward === true;
       this.selectedPlayers.add(player.id);
     }
   }
@@ -576,7 +585,10 @@ export class Tactics4Component implements OnInit, OnChanges {
     this.selectedOptions.passing = data.passingType || 'Normal';
     this.selectedOptions.timeWasting = data.timeWasting || 'Sometimes';
     this.selectedOptions.defensiveLine = data.defensiveLine || 'Standard';
-    this.selectedOptions.pressing = data.pressing || 'Low';
+    this.selectedOptions.pressing = data.pressing === 'Low' ? 'Very Easy'
+      : data.pressing === 'Standard' ? 'Normal'
+      : data.pressing === 'High' ? 'Very Aggressive'
+      : data.pressing || 'Normal';
     this.selectedOptions.width = data.width || 'Balanced';
     this.selectedOptions.dribbling = data.dribbling || 'Standard';
     this.selectedOptions.foulFrequency = data.foulFrequency || 'Normal';
@@ -584,6 +596,7 @@ export class Tactics4Component implements OnInit, OnChanges {
     this.selectedOptions.tempoFragmentation = data.tempoFragmentation || 'Normal';
     this.selectedOptions.widePlay = data.widePlay || 'Shoot';
     this.selectedOptions.transition = data.transition || 'Balanced';
+    this.selectedOptions.recovery = data.recovery || 'Standard';
     this.penaltyTakerId = data.penaltyTakerId ?? null;
     this.freeKickTakerId = data.freeKickTakerId ?? null;
     this.cornerTakerLeftId = data.cornerTakerLeftId ?? null;
@@ -602,7 +615,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
 
   // ... (Restul clasei e la fel) ...
-  mapSavedPlayersToField(savedPositions: { positionIndex: number; playerId: number; role?: string | null; duty?: string | null; instructions?: string[] | null }[]) {
+  mapSavedPlayersToField(savedPositions: { positionIndex: number; playerId: number; role?: string | null; duty?: string | null; instructions?: string[] | null; specialRole?: 'SHOOTER' | null; shadow?: boolean }[]) {
       this.clearLineupState();
       savedPositions.forEach(pos => {
           const playerObj = this.players.find(p => p.id === pos.playerId);
@@ -614,6 +627,8 @@ export class Tactics4Component implements OnInit, OnChanges {
                   cell.role = pos.role ?? null;
                   cell.duty = pos.duty ?? null;
                   cell.instructions = pos.instructions ? [...pos.instructions] : [];
+                  cell.specialRole = pos.specialRole ?? null;
+                  cell.shadow = playerObj.stayForward === true || pos.shadow === true;
               } else {
                   const subIndex = pos.positionIndex - 30;
                   if (this.substitutes[subIndex]) this.substitutes[subIndex].player = playerObj;
@@ -681,6 +696,7 @@ export class Tactics4Component implements OnInit, OnChanges {
       if (this.activeModal === 'tempoFragmentation') this.selectedOptions.tempoFragmentation = option;
       if (this.activeModal === 'widePlay') this.selectedOptions.widePlay = option;
       if (this.activeModal === 'transition') this.selectedOptions.transition = option;
+      if (this.activeModal === 'recovery') this.selectedOptions.recovery = option;
       if (this.activeModal === 'formation') {
           // `option` is the pretty label; resolve it back to the backend KEY.
           const match = this.formationOptions.find(o => o.label === option);
@@ -731,13 +747,17 @@ export class Tactics4Component implements OnInit, OnChanges {
           player: cell.player,
           role: cell.role,
           duty: cell.duty,
-          instructions: [...cell.instructions]
+          instructions: [...cell.instructions],
+          specialRole: cell.specialRole ?? null,
+          shadow: cell.shadow === true
         }
       });
       cell.player = null;
       cell.role = null;
       cell.duty = null;
       cell.instructions = [];
+      cell.specialRole = null;
+      cell.shadow = false;
     }
 
     displaced.sort((left, right) => {
@@ -769,6 +789,8 @@ export class Tactics4Component implements OnInit, OnChanges {
       targetCell.role = moved.state.role;
       targetCell.duty = moved.state.duty;
       targetCell.instructions = [...moved.state.instructions];
+      targetCell.specialRole = moved.state.specialRole ?? null;
+      targetCell.shadow = player.stayForward === true || moved.state.shadow === true;
       occupied.add(target.index);
       this.chairmanLocks = this.chairmanLocks.map(lock =>
         lock.playerId === player.id ? { ...lock, positionIndex: target.index } : lock);
@@ -990,6 +1012,8 @@ export class Tactics4Component implements OnInit, OnChanges {
       target.role = null;
       target.duty = null;
       target.instructions = [];
+      target.specialRole = null;
+      target.shadow = player.stayForward === true;
       this.selectedPlayers.add(player.id);
     });
   }
@@ -1056,6 +1080,8 @@ export class Tactics4Component implements OnInit, OnChanges {
           this.fieldPositions[positionIndex].role = null;
           this.fieldPositions[positionIndex].duty = null;
           this.fieldPositions[positionIndex].instructions = [];
+          this.fieldPositions[positionIndex].specialRole = null;
+          this.fieldPositions[positionIndex].shadow = player.stayForward === true;
           this.selectedPlayers.add(player.id);
       }
   }
@@ -1075,7 +1101,11 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
   removePlayerFromCurrentPosition(playerId: number) {
       const existingFieldIndex = this.fieldPositions.findIndex(p => p.player?.id === playerId);
-      if (existingFieldIndex !== -1) this.fieldPositions[existingFieldIndex].player = null;
+      if (existingFieldIndex !== -1) {
+          this.fieldPositions[existingFieldIndex].player = null;
+          this.fieldPositions[existingFieldIndex].specialRole = null;
+          this.fieldPositions[existingFieldIndex].shadow = false;
+      }
       const existingSubIndex = this.substitutes.findIndex(p => p.player?.id === playerId);
       if (existingSubIndex !== -1) this.substitutes[existingSubIndex].player = null;
   }
@@ -1092,6 +1122,8 @@ export class Tactics4Component implements OnInit, OnChanges {
           pos.role = null;
           pos.duty = null;
           pos.instructions = [];
+          pos.specialRole = null;
+          pos.shadow = false;
           if (this.activeRoleSlot === pos) this.activeRoleSlot = null;
           if (this.activeInstructionsSlot === pos) this.activeInstructionsSlot = null;
       }
@@ -1106,6 +1138,8 @@ export class Tactics4Component implements OnInit, OnChanges {
               position.role = null;
               position.duty = null;
               position.instructions = [];
+              position.specialRole = null;
+              position.shadow = false;
           });
           this.substitutes.forEach(position => {
               if (position.player) this.selectedPlayers.delete(position.player.id);
@@ -1117,7 +1151,7 @@ export class Tactics4Component implements OnInit, OnChanges {
   }
 
   private clearLineupState(): void {
-      this.fieldPositions.forEach(p => { p.player = null; p.role = null; p.duty = null; p.instructions = []; });
+      this.fieldPositions.forEach(p => { p.player = null; p.role = null; p.duty = null; p.instructions = []; p.specialRole = null; p.shadow = false; });
       this.substitutes.forEach(p => { p.player = null; p.role = null; p.duty = null; p.instructions = []; });
       this.selectedPlayers.clear();
       this.activeRoleSlot = null;
@@ -1126,7 +1160,7 @@ export class Tactics4Component implements OnInit, OnChanges {
 
   private resetLoadContext(): void {
       this.clearLineupState();
-      this.fieldPositions = Array.from({ length: 30 }, (_, i) => ({ positionIndex: i, player: null, role: null, duty: null, instructions: [] }));
+      this.fieldPositions = Array.from({ length: 30 }, (_, i) => ({ positionIndex: i, player: null, role: null, duty: null, instructions: [], specialRole: null, shadow: false }));
       this.substitutes = Array.from({ length: 7 }, (_, i) => ({ positionIndex: 30 + i, player: null, role: null, duty: null, instructions: [] }));
       this.players = [];
       this.formationOptions = [];
@@ -1155,9 +1189,9 @@ export class Tactics4Component implements OnInit, OnChanges {
       this.selectedTactic = '442';
       this.selectedOptions = {
         mentality: 'Balanced', possession: 'Standard', passing: 'Normal', tempo: 'Standard',
-        timeWasting: 'Sometimes', defensiveLine: 'Standard', pressing: 'Low', width: 'Balanced',
+        timeWasting: 'Sometimes', defensiveLine: 'Standard', pressing: 'Normal', width: 'Balanced',
         dribbling: 'Standard', foulFrequency: 'Normal', foulHardness: 'Medium',
-        tempoFragmentation: 'Normal', widePlay: 'Shoot', transition: 'Balanced'
+        tempoFragmentation: 'Normal', widePlay: 'Shoot', transition: 'Balanced', recovery: 'Standard'
       };
       this.teamColor1 = '#d63031';
       this.teamColor2 = '#ffffff';
@@ -1192,14 +1226,18 @@ export class Tactics4Component implements OnInit, OnChanges {
           playerId: p.player!.id,
           role: p.role,
           duty: p.duty,
-          instructions: p.instructions.length > 0 ? p.instructions : null
+          instructions: p.instructions.length > 0 ? p.instructions : null,
+          specialRole: p.specialRole || null,
+          shadow: this.isShadowActive(p)
       }));
       const substitutesData = this.substitutes.filter(p => p.player).map(p => ({
           positionIndex: p.positionIndex,
           playerId: p.player!.id,
           role: null,
           duty: null,
-          instructions: null
+          instructions: null,
+          specialRole: null,
+          shadow: false
       }));
       const payload = {
           formationDataList: [...formationData, ...substitutesData],
@@ -1219,6 +1257,7 @@ export class Tactics4Component implements OnInit, OnChanges {
           tempoFragmentation: this.selectedOptions.tempoFragmentation,
           widePlay: this.selectedOptions.widePlay,
           transition: this.selectedOptions.transition,
+          recovery: this.selectedOptions.recovery,
           penaltyTakerId: this.penaltyTakerId,
           freeKickTakerId: this.freeKickTakerId,
           cornerTakerLeftId: this.cornerTakerLeftId,
@@ -1241,6 +1280,20 @@ export class Tactics4Component implements OnInit, OnChanges {
               alert(error?.error?.error || 'The tactic could not be saved.');
           }
       });
+  }
+
+  /** Named preset derived entirely from the three engine settings. */
+  activatePassingStyle(): void {
+      if (!this.canEdit || this.isChairmanMode) return;
+      this.selectedOptions.passing = 'Short';
+      this.selectedOptions.pressing = 'Aggressive';
+      this.selectedOptions.recovery = 'Instantly';
+  }
+
+  get passingStyleActive(): boolean {
+      return this.selectedOptions.passing === 'Short'
+        && this.selectedOptions.pressing === 'Aggressive'
+        && (this.selectedOptions.recovery === 'Instantly' || this.selectedOptions.recovery === 'Very Fast');
   }
 
   // ===== Set Piece Takers =====
@@ -1519,6 +1572,35 @@ export class Tactics4Component implements OnInit, OnChanges {
     slot.duty = null;
   }
 
+  /** SHOOTER is unique per team and independent from positional role/duty. */
+  toggleShooter(slot: PositionedPlayer): void {
+    if (!this.canEdit || !slot.player) return;
+    const enable = slot.specialRole !== 'SHOOTER';
+    this.fieldPositions.forEach(candidate => candidate.specialRole = null);
+    slot.specialRole = enable ? 'SHOOTER' : null;
+  }
+
+  /** SHADOW is unlimited, but only available in the midfield/attacking slots. */
+  toggleShadow(slot: PositionedPlayer): void {
+    if (!this.canEdit || !slot.player || !this.isShadowEligible(slot) || this.isShadowLocked(slot)) return;
+    slot.shadow = !this.isShadowActive(slot);
+  }
+
+  isShadowActive(slot: PositionedPlayer): boolean {
+    return slot.player?.stayForward === true || slot.shadow === true;
+  }
+
+  isShadowLocked(slot: PositionedPlayer): boolean {
+    return slot.player?.stayForward === true;
+  }
+
+  isShadowEligible(slot: PositionedPlayer): boolean {
+    const index = slot.positionIndex;
+    return (index >= 0 && index <= 4)       // ST
+      || (index >= 5 && index <= 9)         // AML / AMC / AMR
+      || (index >= 10 && index <= 14);      // ML / MC / MR
+  }
+
   loadInstructionsForPosition(position: string): void {
     if (this.instructionsCache.has(position)) {
       this.availableInstructions = this.instructionsCache.get(position)!;
@@ -1581,6 +1663,8 @@ export class Tactics4Component implements OnInit, OnChanges {
   /** Short composite label under a pitch token: duty + abbreviated instructions. */
   playerShortLabel(slot: PositionedPlayer): string {
     const parts: string[] = [];
+    if (slot.specialRole === 'SHOOTER') parts.push('SHOOTER');
+    if (this.isShadowActive(slot)) parts.push('SHADOW');
     if (slot.duty) parts.push(slot.duty);
     for (const instr of slot.instructions) parts.push(this.abbreviateInstruction(instr));
     return parts.join(' · ');
