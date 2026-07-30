@@ -353,6 +353,7 @@
     <app-live-match *ngIf="showLiveMatch"
                     [matchKey]="liveMatchKey"
                     [interactive]="liveMatchInteractive"
+                    [shortcutsSuspended]="showTutorial"
                     (unavailable)="onLiveMatchUnavailable()"
                     (closed)="onLiveMatchClosed($event)"></app-live-match>
 

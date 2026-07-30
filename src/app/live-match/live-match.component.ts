@@ -62,6 +62,8 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
   @Input() matchKey: string | null = null;
   /** True when the engine has NOT advanced yet and we drive it via /advance. */
   @Input() interactive = false;
+  /** True while an app-shell overlay (tutorial) owns the keyboard. */
+  @Input() shortcutsSuspended = false;
 
   /** The backend has no playable session for this key. */
   @Output() unavailable = new EventEmitter<void>();
@@ -496,6 +498,10 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
+    // The app shell suspends match shortcuts while an overlay it owns (the
+    // tutorial) has the keyboard — on master the single handler's tutorial
+    // branch returned before the live-match branch ever ran.
+    if (this.shortcutsSuspended) return;
     // Ignore if typing in an input/textarea
     const tag = (event.target as HTMLElement)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -1079,6 +1085,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
           if (state) {
             this.liveMatchData = state;
             this.liveCurrentIndex = (state.timeline?.length ?? 1) - 1;
+            this.refreshAmbient();
           }
           // Commit only fires once the engine reports finished=true. With
           // untilMinute set to totalMinutes the BE always flips finished.
@@ -1092,6 +1099,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
           console.error('Skip-to-end advance failed:', err);
           // Fallback: at least reveal what we already have.
           this.liveCurrentIndex = (this.liveMatchData?.timeline?.length ?? 1) - 1;
+          this.refreshAmbient();
         }
       });
       return;
@@ -1110,6 +1118,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
     // Legacy (engine already ran sync) — timeline is complete, just jump.
     if (this.liveMatchData) {
       this.liveCurrentIndex = this.liveMatchData.timeline.length - 1;
+      this.refreshAmbient();
     }
   }
 
