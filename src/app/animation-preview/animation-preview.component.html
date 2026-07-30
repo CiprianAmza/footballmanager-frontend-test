@@ -67,6 +67,7 @@
     <div class="lmp-pitch" *ngIf="showPitch">
       <app-match-pitch [responsive]="true"
                        [pitchStyle]="pitchStyle"
+                       [pitchDetail]="pitchDetail"
                        [clip]="pitchClip"
                        [homeTeamId]="liveMatchData.homeTeamId"
                        [homeKit]="homeKit"
@@ -97,6 +98,10 @@
       <button *ngIf="showPitch" (click)="togglePitchStyle()"
               [title]="pitchStyle === 'broadcast' ? 'Switch to the flat 2D pitch' : 'Switch to the 2.5D broadcast camera'">
         {{ pitchStyle === 'broadcast' ? 'Flat 2D view' : 'Broadcast view' }}
+      </button>
+      <button *ngIf="showPitch" (click)="togglePitchDetail()"
+              [title]="pitchDetail === 'sprites' ? 'Switch back to numbered discs' : 'Switch to animated player figures'">
+        {{ pitchDetail === 'sprites' ? 'Disc players' : 'Sprite players' }}
       </button>
       <!-- Deep-link to the per-player ratings for this match (shown at full time). -->
       <a *ngIf="finished" class="anim-ratings-link"

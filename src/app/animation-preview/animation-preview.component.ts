@@ -13,6 +13,9 @@ import {
 import {
   PitchStyle, readPitchStyle, writePitchStyle
 } from '../live-match/pitch-projection';
+import {
+  PitchDetail, readPitchDetail, writePitchDetail
+} from '../live-match/player-sprites';
 
 /**
  * Animation Preview — updated to consume the CURRENT live-match engine data
@@ -46,6 +49,8 @@ export class AnimationPreviewComponent implements OnInit, OnDestroy {
   showPitch = true;
   /** Flat 2D vs 2.5D broadcast camera — shared preference with the live view. */
   pitchStyle: PitchStyle = readPitchStyle();
+  /** Numbered discs vs animated sprite figures — likewise shared. */
+  pitchDetail: PitchDetail = readPitchDetail();
   pitchClip: PitchClip | null = null;
   homeKit: KitColors = {};
   awayKit: KitColors = {};
@@ -82,6 +87,12 @@ export class AnimationPreviewComponent implements OnInit, OnDestroy {
   togglePitchStyle(): void {
     this.pitchStyle = this.pitchStyle === 'broadcast' ? 'classic' : 'broadcast';
     writePitchStyle(this.pitchStyle);
+  }
+
+  /** Presentation only — same guarantee as the style toggle. */
+  togglePitchDetail(): void {
+    this.pitchDetail = this.pitchDetail === 'sprites' ? 'discs' : 'sprites';
+    writePitchDetail(this.pitchDetail);
   }
 
   /** Ambient loop for the preview board. The live viewer has its own single

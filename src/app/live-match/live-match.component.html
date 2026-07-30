@@ -6,11 +6,18 @@
       <span class="lm-competition">{{ liveMatchData.competitionName }} - Round {{ liveMatchData.round }}</span>
       <!-- Render style of the pitch canvas — only meaningful while the pitch
            is actually on screen (inline pane or a zoomed moment/replay). -->
-      <button class="lm-style-toggle" type="button" *ngIf="pitchPresentation !== 'hidden'"
-              (click)="togglePitchStyle()"
-              [title]="pitchStyle === 'broadcast' ? 'Switch to the flat 2D pitch' : 'Switch to the 2.5D broadcast camera'">
-        {{ pitchStyle === 'broadcast' ? '2D view' : 'Broadcast' }}
-      </button>
+      <div class="lm-pitch-toggles" *ngIf="pitchPresentation !== 'hidden'">
+        <button class="lm-style-toggle" type="button"
+                (click)="togglePitchStyle()"
+                [title]="pitchStyle === 'broadcast' ? 'Switch to the flat 2D pitch' : 'Switch to the 2.5D broadcast camera'">
+          {{ pitchStyle === 'broadcast' ? '2D view' : 'Broadcast' }}
+        </button>
+        <button class="lm-detail-toggle" type="button"
+                (click)="togglePitchDetail()"
+                [title]="pitchDetail === 'sprites' ? 'Switch back to numbered discs' : 'Switch to animated player figures'">
+          {{ pitchDetail === 'sprites' ? 'Discs' : 'Sprites' }}
+        </button>
+      </div>
       <button class="lm-view-toggle" type="button" (click)="toggleMatchViewMode()"
               [title]="matchViewMode === 'PITCH_2D' ? 'Switch to the text view' : 'Switch to the 2D pitch'">
         {{ matchViewMode === 'PITCH_2D' ? 'Text view' : '2D pitch' }}
@@ -75,6 +82,7 @@
 
       <app-match-pitch [responsive]="true"
                        [pitchStyle]="pitchStyle"
+                       [pitchDetail]="pitchDetail"
                        [clip]="goalClip"
                        [homeTeamId]="liveMatchData.homeTeamId"
                        [homeKit]="matchHomeKit"

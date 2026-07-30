@@ -3,11 +3,16 @@ import {
   OnChanges, OnDestroy, Output, SimpleChanges, ViewChild
 } from '@angular/core';
 import {
-  AnimationEvent, GoalAnimationData, KitColors, PitchClip, PitchFrame
+  AnimationEvent, GoalAnimationData, KitColors, PitchClip, PitchFrame,
+  PitchPlayerPosition
 } from '../models/live-match.model';
 import {
   createProjector, drawStandBand, PitchProjector, PitchStyle
 } from './pitch-projection';
+import {
+  PitchDetail, PlayerSpriteCache, SPRITE_FOOT_X, SPRITE_FOOT_Y, SPRITE_H,
+  SPRITE_HEAD_LIFT, SPRITE_NUMBER_LIFT, SPRITE_W, SpriteMotionTracker
+} from './player-sprites';
 
 /** A transient icon pinned to a pitch location (corner, foul, offside, card). */
 export interface PitchMarker {
@@ -160,6 +165,10 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
    *  `broadcast` is the 2.5D perspective camera. Pure presentation — the host
    *  owns the persisted value, switching it never touches playback. */
   @Input() pitchStyle: PitchStyle = 'classic';
+  /** How the players themselves are drawn: `discs` is the original numbered
+   *  circle, `sprites` are the procedural animated figures. Independent of
+   *  `pitchStyle` — all four combinations are supported. */
+  @Input() pitchDetail: PitchDetail = 'discs';
 
   /** Fired once the clip has run past its last frame (or was skipped). */
   @Output() clipFinished = new EventEmitter<void>();
@@ -190,6 +199,13 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
    *  size + `pitchStyle`; every draw site goes through it. */
   private projector: PitchProjector = createProjector('classic', 640, 400);
 
+  /** Baked sprite bitmaps for this match. Kits only change per clip, so the
+   *  cache fills up in the first frame or two and is pure `drawImage` after
+   *  that. Untouched (and never populated) in `discs` mode. */
+  private readonly spriteCache = new PlayerSpriteCache();
+  /** Facing + run cycle, derived from consecutive painted positions. */
+  private readonly motion = new SpriteMotionTracker();
+
   /** Last few ball positions (world 0-100) for the trail effect — fading dots
    *  behind the ball so a fast pass leaves a visible streak. */
   private ballTrail: { x: number; y: number }[] = [];
@@ -205,13 +221,22 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
       // wait for it. The persistent pane keeps the same canvas across clips.
       if (!this.responsive) this.canvasReady = false;
     }
-    // A style switch is presentation only: repaint whatever is already on
-    // screen through the new projection. No playback state is touched, so it
-    // is safe mid-clip and mid-ambient alike.
-    if (changes['pitchStyle'] && !changes['pitchStyle'].firstChange
-        && this.canvasReady && this.lastFrame) {
-      this.paint(this.lastFrame, this.lastNames,
-                 { clipOverlays: this.lastClipOverlays, markers: this.lastMarkers });
+    // New kits mean the baked shirts are stale. The cache key contains the
+    // colours so a stale entry could never be drawn, but dropping them keeps
+    // the map small over a long match.
+    if (changes['homeKit'] || changes['awayKit']) this.spriteCache.clear();
+    // Turning sprites on mid-clip must not read the gap since the last painted
+    // position as a stride.
+    if (changes['pitchDetail']) this.motion.reset();
+    // A style/detail switch is presentation only: repaint whatever is already
+    // on screen in the new look. No playback state is touched, so it is safe
+    // mid-clip and mid-ambient alike.
+    if ((changes['pitchStyle'] && !changes['pitchStyle'].firstChange)
+        || (changes['pitchDetail'] && !changes['pitchDetail'].firstChange)) {
+      if (this.canvasReady && this.lastFrame) {
+        this.paint(this.lastFrame, this.lastNames,
+                   { clipOverlays: this.lastClipOverlays, markers: this.lastMarkers });
+      }
     }
   }
 
@@ -311,6 +336,9 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
     this.eventText = '';
     this.ballTrail = [];
     this.confetti = [];
+    // Frame 0 of a new clip has nothing to do with the last frame of the old
+    // one — start every player from a clean standing pose.
+    this.motion.reset();
   }
 
   private clearEventTextTimer(): void {
@@ -554,55 +582,35 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
 
       // Player circle
       const radius = 8 * scale;
+      const sprites = this.pitchDetail === 'sprites';
 
       // Ground shadow — sells the player as standing ON the grass rather than
       // floating over it. Perspective styles only.
       if (projector.perspective) {
         ctx.save();
         ctx.beginPath();
-        // Sits at the player's feet: pushed a full radius below the disc and
-        // wider than it, so it is actually visible instead of hiding behind
-        // the kit colour.
-        ctx.ellipse(px, py + radius * 0.95, radius * 1.25, radius * 0.5, 0, 0, Math.PI * 2);
+        if (sprites) {
+          // A sprite is pinned by its FEET, so the shadow sits exactly on the
+          // anchor rather than below it.
+          ctx.ellipse(px, py, 4.6 * scale, 1.9 * scale, 0, 0, Math.PI * 2);
+        } else {
+          // Sits at the player's feet: pushed a full radius below the disc and
+          // wider than it, so it is actually visible instead of hiding behind
+          // the kit colour.
+          ctx.ellipse(px, py + radius * 0.95, radius * 1.25, radius * 0.5, 0, 0, Math.PI * 2);
+        }
         ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
         ctx.fill();
         ctx.restore();
       }
 
-      ctx.beginPath();
-      ctx.arc(px, py, radius, 0, Math.PI * 2);
-
       const teamKit = player.teamId === this.homeTeamId ? this.homeKit : this.awayKit;
-      if (player.isGoalkeeper) {
-        ctx.fillStyle = kitColor(teamKit?.gkPrimary, FALLBACK_SCORING_KIT.gkPrimary!);
-        ctx.strokeStyle = kitColor(teamKit?.gkBorder, FALLBACK_SCORING_KIT.gkBorder!);
+
+      if (sprites) {
+        this.drawPlayerSprite(ctx, player, px, py, scale, teamKit, isBallCarrier);
       } else {
-        ctx.fillStyle = kitColor(teamKit?.outfieldPrimary, FALLBACK_SCORING_KIT.outfieldPrimary!);
-        ctx.strokeStyle = kitColor(teamKit?.outfieldBorder, FALLBACK_SCORING_KIT.outfieldBorder!);
+        this.drawPlayerDisc(ctx, player, px, py, scale, radius, teamKit, isBallCarrier);
       }
-
-      if (isBallCarrier) {
-        ctx.shadowColor = '#fff';
-        ctx.shadowBlur = 8 * scale;
-      }
-
-      ctx.fill();
-      ctx.lineWidth = 2 * scale;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Keep every outfield marker in one solid team colour. The backend has
-      // already resolved kit clashes (including use of the away/secondary kit),
-      // so adding a second stripe here makes one side look like several teams.
-      // Goalkeepers remain deliberately distinct through their dedicated kit.
-
-      // Shirt number — pick black/white based on fill brightness so the
-      // number stays legible on yellow/white kits.
-      ctx.fillStyle = this.numberColorFor(ctx.fillStyle as string);
-      ctx.font = `bold ${MatchPitchComponent.fontPx(8, scale)}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(String(player.shirtNumber || ''), px, py);
 
       // Name label — drawn for every player unless suppressed by the collision
       // pre-pass. Style depends on role this frame:
@@ -631,12 +639,104 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
             ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
           }
           // Label sits above the head in SCREEN space — the anchor is already
-          // projected, so only the offset needs the depth scale.
-          ctx.fillText(surname, px, py - 13 * scale);
+          // projected, so only the offset needs the depth scale. A sprite is
+          // pinned by its feet and stands ~19px tall, so it needs more room
+          // than the disc's centre anchor.
+          const labelLift = sprites ? SPRITE_HEAD_LIFT + 4 : 13;
+          ctx.fillText(surname, px, py - labelLift * scale);
           ctx.restore();
         }
       }
     });
+  }
+
+  /** The original numbered disc — unchanged, and the only thing `discs` mode
+   *  ever draws. */
+  private drawPlayerDisc(ctx: CanvasRenderingContext2D, player: PitchPlayerPosition,
+                         px: number, py: number, scale: number, radius: number,
+                         teamKit: KitColors, isBallCarrier: boolean): void {
+    ctx.beginPath();
+    ctx.arc(px, py, radius, 0, Math.PI * 2);
+
+    if (player.isGoalkeeper) {
+      ctx.fillStyle = kitColor(teamKit?.gkPrimary, FALLBACK_SCORING_KIT.gkPrimary!);
+      ctx.strokeStyle = kitColor(teamKit?.gkBorder, FALLBACK_SCORING_KIT.gkBorder!);
+    } else {
+      ctx.fillStyle = kitColor(teamKit?.outfieldPrimary, FALLBACK_SCORING_KIT.outfieldPrimary!);
+      ctx.strokeStyle = kitColor(teamKit?.outfieldBorder, FALLBACK_SCORING_KIT.outfieldBorder!);
+    }
+
+    if (isBallCarrier) {
+      ctx.shadowColor = '#fff';
+      ctx.shadowBlur = 8 * scale;
+    }
+
+    ctx.fill();
+    ctx.lineWidth = 2 * scale;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Keep every outfield marker in one solid team colour. The backend has
+    // already resolved kit clashes (including use of the away/secondary kit),
+    // so adding a second stripe here makes one side look like several teams.
+    // Goalkeepers remain deliberately distinct through their dedicated kit.
+
+    // Shirt number — pick black/white based on fill brightness so the
+    // number stays legible on yellow/white kits.
+    ctx.fillStyle = this.numberColorFor(ctx.fillStyle as string);
+    ctx.font = `bold ${MatchPitchComponent.fontPx(8, scale)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(player.shirtNumber || ''), px, py);
+  }
+
+  /**
+   * The procedural figure. One `drawImage` of a pre-baked (kit x facing x
+   * phase) bitmap, plus the shirt number — which is NOT baked, because it
+   * varies per player and would multiply the cache by 22.
+   *
+   * Facing and the run cycle come from `SpriteMotionTracker`, i.e. from where
+   * this player was the last time this canvas painted. Nothing in the backend
+   * payload changes.
+   */
+  private drawPlayerSprite(ctx: CanvasRenderingContext2D, player: PitchPlayerPosition,
+                           px: number, py: number, scale: number,
+                           teamKit: KitColors, isBallCarrier: boolean): void {
+    const primary = player.isGoalkeeper
+      ? kitColor(teamKit?.gkPrimary, FALLBACK_SCORING_KIT.gkPrimary!)
+      : kitColor(teamKit?.outfieldPrimary, FALLBACK_SCORING_KIT.outfieldPrimary!);
+    const accent = player.isGoalkeeper
+      ? kitColor(teamKit?.gkBorder, FALLBACK_SCORING_KIT.gkBorder!)
+      : kitColor(teamKit?.outfieldBorder, FALLBACK_SCORING_KIT.outfieldBorder!);
+
+    // World coordinates, never screen ones: the cycle must look the same in
+    // every pitch style and at every canvas size.
+    const pose = this.motion.pose(player.playerId, player.x, player.y);
+    const bitmap = this.spriteCache.get(primary, accent, pose.dir, pose.phase);
+    if (!bitmap) return;
+
+    const width = SPRITE_W * scale;
+    const height = SPRITE_H * scale;
+    const left = px - SPRITE_FOOT_X * scale;
+    const top = py - SPRITE_FOOT_Y * scale;
+
+    if (isBallCarrier) {
+      // Same accent the disc uses for the carrier, applied to the silhouette.
+      ctx.save();
+      ctx.shadowColor = '#fff';
+      ctx.shadowBlur = 8 * scale;
+      ctx.drawImage(bitmap, left, top, width, height);
+      ctx.restore();
+    } else {
+      ctx.drawImage(bitmap, left, top, width, height);
+    }
+
+    // Shirt number on the torso, same contrast rule as the disc.
+    ctx.fillStyle = this.numberColorFor(primary);
+    ctx.font = `bold ${MatchPitchComponent.fontPx(6, scale)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(player.shirtNumber || ''), px, py - SPRITE_NUMBER_LIFT * scale);
   }
 
   private drawBall(ctx: CanvasRenderingContext2D, w: number, h: number, frame: PitchFrame): void {

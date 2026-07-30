@@ -1149,6 +1149,43 @@
   border-color: #4b5563;
 }
 
+/* Left-hand chip stack: pitch render style + figure detail. Both are pure
+   presentation toggles, so they share the view-toggle chip look. */
+.lm-pitch-toggles {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 6px;
+}
+
+.lm-pitch-toggles .lm-style-toggle,
+.lm-pitch-toggles .lm-detail-toggle {
+  position: static;
+  transform: none;
+}
+
+.lm-detail-toggle {
+  background: #1f2937;
+  color: #cbd5e1;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.lm-detail-toggle:hover {
+  background: #2b3648;
+  color: #fff;
+  border-color: #4b5563;
+}
+
 /* Pitch render style (flat 2D <-> 2.5D broadcast). Same chip as the view
    toggle, parked on the opposite side of the header. */
 .lm-style-toggle {

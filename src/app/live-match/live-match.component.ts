@@ -12,6 +12,7 @@ import {
   goalAnimationToFrames, kitColor, kitsFromAnimation, MatchPitchComponent, PitchMarker
 } from './match-pitch.component';
 import { PitchStyle, readPitchStyle, writePitchStyle } from './pitch-projection';
+import { PitchDetail, readPitchDetail, writePitchDetail } from './player-sprites';
 import { PlaybackClock } from './playback-clock';
 import {
   AMBIENT_TRANSITION_MS, AmbientState, ambientFrame, blendFrames, buildTeamSlots,
@@ -155,6 +156,9 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
   /** How the pitch canvas is drawn: flat 2D (`classic`) or the 2.5D
    *  perspective camera (`broadcast`). Presentation only. */
   pitchStyle: PitchStyle = 'classic';
+  /** How the players are drawn: numbered discs or animated sprite figures.
+   *  Independent of `pitchStyle`; all four combinations are valid. */
+  pitchDetail: PitchDetail = 'discs';
 
   /** Match kits on the home/away axis — used by the persistent pitch and the
    *  clip renderer alike. */
@@ -210,6 +214,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
     if (change && this.matchKey && change.currentValue !== change.previousValue) {
       this.matchViewMode = this.readViewMode();
       this.pitchStyle = readPitchStyle();
+      this.pitchDetail = readPitchDetail();
       this.load(this.matchKey);
     }
   }
@@ -251,6 +256,16 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
   togglePitchStyle(): void {
     this.pitchStyle = this.pitchStyle === 'broadcast' ? 'classic' : 'broadcast';
     writePitchStyle(this.pitchStyle);
+  }
+
+  /**
+   * Flip between numbered discs and animated player figures. Exactly as
+   * cosmetic as the style toggle: the renderer repaints the frame it is
+   * already showing, playback is untouched.
+   */
+  togglePitchDetail(): void {
+    this.pitchDetail = this.pitchDetail === 'sprites' ? 'discs' : 'sprites';
+    writePitchDetail(this.pitchDetail);
   }
 
   /**
