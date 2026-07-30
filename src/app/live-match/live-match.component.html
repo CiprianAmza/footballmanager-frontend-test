@@ -1,0 +1,442 @@
+<!-- Live Match Modal -->
+<div class="modal-overlay live-match-overlay" *ngIf="showLiveMatch && liveMatchData" (click)="$event.stopPropagation()">
+  <div class="live-match-modal">
+    <!-- Header -->
+    <div class="lm-header">
+      <span class="lm-competition">{{ liveMatchData.competitionName }} - Round {{ liveMatchData.round }}</span>
+      <button class="lm-view-toggle" type="button" (click)="toggleMatchViewMode()"
+              [title]="matchViewMode === 'PITCH_2D' ? 'Switch to the text view' : 'Switch to the 2D pitch'">
+        {{ matchViewMode === 'PITCH_2D' ? 'Text view' : '2D pitch' }}
+      </button>
+    </div>
+
+    <!-- Scoreboard -->
+    <div class="lm-scoreboard">
+      <div class="lm-team lm-home">
+        <span class="lm-team-name">{{ liveMatchData.homeTeamName }}</span>
+      </div>
+      <div class="lm-score-box">
+        <span class="lm-score">{{ scoreboardHomeScore }} - {{ scoreboardAwayScore }}</span>
+        <span class="lm-minute" [class.lm-minute-et]="syntheticPhase !== 'none'">{{ scoreboardMinuteLabel }}</span>
+      </div>
+      <div class="lm-team lm-away">
+        <span class="lm-team-name">{{ liveMatchData.awayTeamName }}</span>
+      </div>
+    </div>
+
+    <!-- Speed controls + substitutions -->
+    <div class="lm-controls">
+      <button class="lm-speed-btn" [class.active]="liveMatchSpeed === 1" (click)="setLiveMatchSpeed(1)">1x</button>
+      <button class="lm-speed-btn" [class.active]="liveMatchSpeed === 2" (click)="setLiveMatchSpeed(2)">2x</button>
+      <button class="lm-speed-btn" [class.active]="liveMatchSpeed === 4" (click)="setLiveMatchSpeed(4)">4x</button>
+      <button class="lm-speed-btn" [class.active]="liveMatchSpeed === 8" (click)="setLiveMatchSpeed(8)">8x</button>
+      <button class="lm-skip-btn" (click)="skipToEnd()">Skip to End</button>
+      <button class="lm-sub-btn" (click)="openSubModal()" [disabled]="!canMakeSubstitution">
+        Make Substitution
+        <span class="lm-sub-count" *ngIf="liveMatchData">({{ userSubsRemaining }}/3)</span>
+      </button>
+    </div>
+
+    <div class="lm-advance-error" *ngIf="liveAdvanceError" role="alert" aria-live="assertive">
+      <span>{{ liveAdvanceError }}</span>
+      <button type="button" class="lm-retry-btn" (click)="retryLiveAdvance()"
+              [disabled]="liveAdvanceInFlight || liveMatchData.finished">RETRY</button>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="lm-progress-bar">
+      <div class="lm-progress-fill"
+           [style.width.%]="((liveCurrentMinute?.minute ?? 0) / (90 + (liveMatchData.firstHalfStoppage || 0) + (liveMatchData.secondHalfStoppage || 0))) * 100"></div>
+      <span class="lm-progress-half"
+            *ngIf="(liveCurrentMinute?.minute ?? 0) >= (45 + (liveMatchData.firstHalfStoppage || 0))">HT</span>
+    </div>
+
+    <!-- The one and only pitch canvas. It stays mounted for the whole match;
+         `pitchPresentation` decides whether it is the persistent PITCH_2D pane,
+         a full-screen moment / replay, or parked out of sight in TEXT view.
+         There is never a second canvas in the DOM. -->
+    <div class="lm-pitch-host"
+         [class.lm-pitch-inline]="pitchPresentation === 'inline'"
+         [class.lm-pitch-zoom]="pitchPresentation === 'zoom'"
+         [class.lm-pitch-hidden]="pitchPresentation === 'hidden'">
+
+      <div class="lm-zoom-header" *ngIf="pitchPresentation === 'zoom'">
+        <span class="lm-zoom-tag" *ngIf="replayAnimation">REPLAY</span>
+        <span class="lm-zoom-title">{{ zoomTitle }}</span>
+        <span class="lm-zoom-minute">{{ zoomMinute }}</span>
+      </div>
+
+      <app-match-pitch [responsive]="true"
+                       [clip]="goalClip"
+                       [homeTeamId]="liveMatchData.homeTeamId"
+                       [homeKit]="matchHomeKit"
+                       [awayKit]="matchAwayKit"
+                       (clipFinished)="onGoalClipFinished()"></app-match-pitch>
+
+      <!-- Controls for a live moment -->
+      <div class="lm-zoom-controls" *ngIf="pitchPresentation === 'zoom' && !replayAnimation">
+        <button class="lm-zoom-btn" *ngIf="!goalAnimationFinished" (click)="skipGoalAnimation()">Skip</button>
+        <button class="lm-zoom-btn" (click)="skipEntireMatchFromAnimation()">Skip Match</button>
+        <button class="lm-zoom-btn" (click)="replayGoalAnimation()">Replay</button>
+        <button class="lm-zoom-btn primary" *ngIf="goalAnimationFinished" (click)="closeGoalAnimation()">Continue</button>
+      </div>
+
+      <!-- Controls for an on-demand replay -->
+      <div class="lm-zoom-controls" *ngIf="replayAnimation">
+        <button class="lm-zoom-btn" (click)="restartReplay()">Replay again</button>
+        <button class="lm-zoom-btn primary" (click)="closeReplay()">Close</button>
+      </div>
+    </div>
+
+    <!-- Commentary feed — full centre pane in TEXT mode, a compact strip
+         beneath the pitch in PITCH_2D. -->
+    <div class="lm-commentary" [class.lm-commentary-strip]="matchViewMode === 'PITCH_2D'">
+      <div *ngFor="let event of liveVisibleEvents" class="lm-event-row"
+           [class.lm-event-goal]="event.eventType === 'goal'"
+           [class.lm-event-card]="event.eventType === 'yellow_card' || event.eventType === 'red_card'"
+           [class.lm-event-half]="event.eventType === 'half_time' || event.eventType === 'full_time' || event.eventType === 'kickoff'">
+        <span class="lm-event-minute">{{ formatMatchMinute(event.minute, liveMatchData.firstHalfStoppage) }}</span>
+        <span class="lm-event-icon">{{ getLiveEventIcon(event.eventType) }}</span>
+        <span class="lm-event-text">{{ event.commentary }}</span>
+        <button class="lm-replay-btn" type="button"
+                *ngIf="pitchPresentation !== 'zoom' && hasReplay(event)"
+                (click)="replayMoment(event)" title="Replay this moment">&#9654;</button>
+      </div>
+      <div *ngIf="liveVisibleEvents.length === 0" class="lm-no-events">
+        Match in progress...
+      </div>
+    </div>
+
+    <!-- Toggle between Squad Fitness and Match Facts. Both update live. -->
+    <div class="lm-panel-tabs">
+      <button class="lm-panel-tab" type="button"
+              [class.active]="liveMatchPanelView === 'squad'"
+              (click)="setLivePanelView('squad')">Squad Fitness</button>
+      <button class="lm-panel-tab" type="button"
+              [class.active]="liveMatchPanelView === 'facts'"
+              (click)="setLivePanelView('facts')">Match Facts</button>
+    </div>
+
+    <!-- Match Facts (live stats) — updates on every /advance response -->
+    <div class="lm-stats lm-stats-live" *ngIf="liveMatchPanelView === 'facts'">
+      <div class="lm-stat-row">
+        <span class="lm-stat-home">{{ liveMatchData.homePossession }}%</span>
+        <span class="lm-stat-label">Possession</span>
+        <span class="lm-stat-away">{{ liveMatchData.awayPossession }}%</span>
+      </div>
+      <div class="lm-stat-row">
+        <span class="lm-stat-home">{{ liveMatchData.homeShots }}</span>
+        <span class="lm-stat-label">Shots</span>
+        <span class="lm-stat-away">{{ liveMatchData.awayShots }}</span>
+      </div>
+      <div class="lm-stat-row">
+        <span class="lm-stat-home">{{ liveMatchData.homeShotsOnTarget }}</span>
+        <span class="lm-stat-label">On Target</span>
+        <span class="lm-stat-away">{{ liveMatchData.awayShotsOnTarget }}</span>
+      </div>
+      <div class="lm-stat-row">
+        <span class="lm-stat-home">{{ liveMatchData.homeCorners }}</span>
+        <span class="lm-stat-label">Corners</span>
+        <span class="lm-stat-away">{{ liveMatchData.awayCorners }}</span>
+      </div>
+      <div class="lm-stat-row">
+        <span class="lm-stat-home">{{ liveMatchData.homeOffsides || 0 }}</span>
+        <span class="lm-stat-label">Offsides</span>
+        <span class="lm-stat-away">{{ liveMatchData.awayOffsides || 0 }}</span>
+      </div>
+      <div class="lm-stat-row">
+        <span class="lm-stat-home">{{ liveMatchData.homeFouls }}</span>
+        <span class="lm-stat-label">Fouls</span>
+        <span class="lm-stat-away">{{ liveMatchData.awayFouls }}</span>
+      </div>
+      <div class="lm-stat-row">
+        <span class="lm-stat-home">{{ liveMatchData.homeYellowCards }}</span>
+        <span class="lm-stat-label">Yellow Cards</span>
+        <span class="lm-stat-away">{{ liveMatchData.awayYellowCards }}</span>
+      </div>
+      <div class="lm-stat-row" *ngIf="liveMatchData.homeRedCards > 0 || liveMatchData.awayRedCards > 0">
+        <span class="lm-stat-home">{{ liveMatchData.homeRedCards }}</span>
+        <span class="lm-stat-label">Red Cards</span>
+        <span class="lm-stat-away">{{ liveMatchData.awayRedCards }}</span>
+      </div>
+    </div>
+
+    <!-- Squad stamina panel — updates from the latest snapshot (≤ current
+         minute). On-pitch players first, then anyone who came off via
+         substitution. Bench players who never played are hidden. -->
+    <div class="lm-stamina-panel" *ngIf="liveMatchPanelView === 'squad' && currentStaminaSnapshot as snap">
+      <div class="lm-stamina-title">
+        <span>Squad Fitness</span>
+        <span class="lm-stamina-min">{{ formatMatchMinute(snap.minute, liveMatchData.firstHalfStoppage) }}</span>
+      </div>
+      <div class="lm-stamina-cols">
+        <div class="lm-stamina-col">
+          <div *ngFor="let p of snap.homePlayers" class="lm-stamina-row" [class.off-pitch]="!p.onPitch">
+            <span class="lm-stamina-pos">{{ p.position }}</span>
+            <span class="lm-stamina-name">
+              {{ p.name }}
+              <span class="lm-stamina-card yc" *ngIf="p.yellowCardMinute > 0" [title]="'Yellow card at minute ' + p.yellowCardMinute"></span>
+              <span class="lm-stamina-card rc" *ngIf="p.redCardMinute > 0" [title]="'Red card at minute ' + p.redCardMinute"></span>
+            </span>
+            <div class="lm-stamina-bar">
+              <div class="lm-stamina-fill" [class]="staminaTier(p.stamina)" [style.width.%]="p.stamina"></div>
+            </div>
+            <span class="lm-stamina-val">{{ p.stamina }}</span>
+            <span class="lm-stamina-mins" [title]="'Minutes played'">{{ p.minutesPlayed }}'</span>
+            <span class="lm-stamina-subind" *ngIf="!p.onPitch && p.minutesPlayed > 0 && !p.redCardMinute" title="Substituted off">↓</span>
+            <span class="lm-stamina-subind on" *ngIf="p.onPitch && p.minutesPlayed < snap.minute" title="Came on as sub">↑</span>
+          </div>
+        </div>
+        <div class="lm-stamina-col">
+          <div *ngFor="let p of snap.awayPlayers" class="lm-stamina-row" [class.off-pitch]="!p.onPitch">
+            <span class="lm-stamina-pos">{{ p.position }}</span>
+            <span class="lm-stamina-name">
+              {{ p.name }}
+              <span class="lm-stamina-card yc" *ngIf="p.yellowCardMinute > 0" [title]="'Yellow card at minute ' + p.yellowCardMinute"></span>
+              <span class="lm-stamina-card rc" *ngIf="p.redCardMinute > 0" [title]="'Red card at minute ' + p.redCardMinute"></span>
+            </span>
+            <div class="lm-stamina-bar">
+              <div class="lm-stamina-fill" [class]="staminaTier(p.stamina)" [style.width.%]="p.stamina"></div>
+            </div>
+            <span class="lm-stamina-val">{{ p.stamina }}</span>
+            <span class="lm-stamina-mins" [title]="'Minutes played'">{{ p.minutesPlayed }}'</span>
+            <span class="lm-stamina-subind" *ngIf="!p.onPitch && p.minutesPlayed > 0 && !p.redCardMinute" title="Substituted off">↓</span>
+            <span class="lm-stamina-subind on" *ngIf="p.onPitch && p.minutesPlayed < snap.minute" title="Came on as sub">↑</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Match Events panel — only at full time, alongside the statistics.
+         Listed in chronological order: goals + cards + subs are always
+         shown; penalty/free-kick non-goals only when there was a visible
+         animation for them (so we never advertise a phase the user
+         didn't actually see). -->
+    <div class="lm-key-events-panel" *ngIf="liveMatchFinished && keyMatchEvents.length > 0">
+      <div class="lm-key-events-title">Match Events</div>
+      <div class="lm-key-events-list">
+        <div *ngFor="let e of keyMatchEvents" class="lm-key-event-row"
+             [class.lm-key-event-goal]="e.eventType === 'goal'"
+             [class.lm-key-event-yellow]="e.eventType === 'yellow_card'"
+             [class.lm-key-event-red]="e.eventType === 'red_card'"
+             [class.lm-key-event-sub]="e.eventType === 'substitution'"
+             [class.lm-key-event-miss]="e.eventType === 'shot_wide' || e.eventType === 'shot_saved'">
+          <span class="lm-key-event-minute">{{ formatMatchMinute(e.minute, liveMatchData.firstHalfStoppage) }}</span>
+          <span class="lm-key-event-icon">{{ keyEventIcon(e.eventType, e.commentary) }}</span>
+          <span class="lm-key-event-team">{{ e.teamName }}</span>
+          <span class="lm-key-event-text">{{ e.commentary }}</span>
+          <button class="lm-replay-btn" type="button"
+                  *ngIf="pitchPresentation !== 'zoom' && hasReplay(e)"
+                  (click)="replayMoment(e)" title="Replay this moment">&#9654;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Synthetic extra-time / penalty sequence (FRONTEND-ONLY, cosmetic —
+         the backend coin-flips the winner; this is a visual fill-in so the
+         video doesn't jump straight from 90' to the result). -->
+    <div class="lm-et-panel" *ngIf="showSyntheticOverlay">
+      <div class="lm-et-banner">{{ syntheticEtBanner }}</div>
+
+      <!-- Extra-time mini commentary -->
+      <div class="lm-et-feed" *ngIf="syntheticEtFeed.length > 0">
+        <div *ngFor="let e of syntheticEtFeed" class="lm-et-feed-row">
+          <span class="lm-et-feed-min">{{ e.minute }}'</span>
+          <span class="lm-et-feed-text">{{ e.text }}</span>
+        </div>
+      </div>
+
+      <!-- Penalty shootout grid -->
+      <div class="lm-pen-board" *ngIf="syntheticDecidedByPenalties && penaltyKicks.length > 0">
+        <div class="lm-pen-score">
+          <span class="lm-pen-team">{{ liveMatchData.homeTeamName }}</span>
+          <span class="lm-pen-tally">{{ penaltyHomeScore }} - {{ penaltyAwayScore }}</span>
+          <span class="lm-pen-team">{{ liveMatchData.awayTeamName }}</span>
+        </div>
+        <div class="lm-pen-rows">
+          <div class="lm-pen-side">
+            <ng-container *ngFor="let k of penaltyKicks">
+              <span *ngIf="k.team === 'home'" class="lm-pen-dot"
+                    [class.scored]="k.revealed && k.scored"
+                    [class.missed]="k.revealed && !k.scored"
+                    [class.pending]="!k.revealed"
+                    [title]="k.taker">{{ k.revealed ? (k.scored ? '✓' : '✗') : '•' }}</span>
+            </ng-container>
+          </div>
+          <div class="lm-pen-side">
+            <ng-container *ngFor="let k of penaltyKicks">
+              <span *ngIf="k.team === 'away'" class="lm-pen-dot"
+                    [class.scored]="k.revealed && k.scored"
+                    [class.missed]="k.revealed && !k.scored"
+                    [class.pending]="!k.revealed"
+                    [title]="k.taker">{{ k.revealed ? (k.scored ? '✓' : '✗') : '•' }}</span>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Knockout outcome (aggregate / extra time / penalties / first leg) -->
+    <div class="lm-ko-result" *ngIf="showKnockoutReveal && liveKnockoutResultText">
+      {{ liveKnockoutResultText }}
+    </div>
+
+    <!-- Continue button -->
+    <button class="lm-continue-btn" *ngIf="showKnockoutReveal" (click)="closeLiveMatch()">Continue</button>
+  </div>
+</div>
+
+<!-- Lineup preview — shown ONCE at the start of every live match. Layout
+     is a single green pitch with both teams on it: home occupies the top
+     half (GK at the back, ATK at the centre line), away mirrors below.
+     Banner sits ABOVE the pitch so it never overlaps players. -->
+<div class="modal-overlay lineup-preview-overlay"
+     *ngIf="showLineupPreview && lineupPreviewData"
+     (click)="dismissLineupPreview()">
+  <div class="lineup-card">
+
+    <!-- Top banner — title + matchup -->
+    <div class="lineup-banner-top">
+      <span class="lineup-title">STARTING LINE UP</span>
+      <span class="lineup-vs">
+        <span class="lineup-vs-home">{{ lineupPreviewData.homeTeamName }}</span>
+        <span class="lineup-vs-sep">vs</span>
+        <span class="lineup-vs-away">{{ lineupPreviewData.awayTeamName }}</span>
+      </span>
+    </div>
+
+    <!-- The pitch itself: green field with markings + two team halves -->
+    <div class="lineup-pitch-board">
+
+      <!-- Home label strip (top edge of the card, outside the pitch markings) -->
+      <div class="lineup-team-strip lineup-team-strip-home">
+        <span class="lineup-team-strip-name">{{ lineupPreviewData.homeTeamName }}</span>
+        <span class="lineup-team-strip-formation">{{ formationOf(lineupPreviewData.homeTeamId) }}</span>
+      </div>
+
+      <!-- HOME side (top half of the pitch) -->
+      <div class="lineup-side lineup-home">
+        <div class="lineup-pitch lineup-pitch-home">
+          <div class="lineup-row"
+               *ngFor="let r of lineupRows(lineupPreviewData.homeTeamId)"
+               [class.lineup-row-gk]="r.row === 'GK'"
+               [class.lineup-row-def]="r.row === 'DEF'"
+               [class.lineup-row-mid]="r.row === 'MID'"
+               [class.lineup-row-atk]="r.row === 'ATK'">
+            <div class="lineup-player"
+                 *ngFor="let p of r.players; let i = index"
+                 [style.grid-column]="lineupColumn(r.players.length, i)">
+              <div class="lineup-shirt"
+                   [style.background]="p.position === 'GK' ?
+                      safeColor(lineupPreviewData.homeKit?.gkPrimary, '#fde047') :
+                      safeColor(lineupPreviewData.homeKit?.outfieldPrimary, '#3498db')"
+                   [style.border-color]="p.position === 'GK' ?
+                      safeColor(lineupPreviewData.homeKit?.gkBorder, '#ca8a04') :
+                      safeColor(lineupPreviewData.homeKit?.outfieldBorder, '#2980b9')">
+                {{ shirtLabel(p) }}
+              </div>
+              <div class="lineup-name">{{ surnameOf(p) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AWAY side (bottom half — column-reverse so ATKs meet at centre) -->
+      <div class="lineup-side lineup-away">
+        <div class="lineup-pitch lineup-pitch-away">
+          <div class="lineup-row"
+               *ngFor="let r of lineupRows(lineupPreviewData.awayTeamId)"
+               [class.lineup-row-gk]="r.row === 'GK'"
+               [class.lineup-row-def]="r.row === 'DEF'"
+               [class.lineup-row-mid]="r.row === 'MID'"
+               [class.lineup-row-atk]="r.row === 'ATK'">
+            <div class="lineup-player"
+                 *ngFor="let p of r.players; let i = index"
+                 [style.grid-column]="lineupColumn(r.players.length, i)">
+              <div class="lineup-shirt"
+                   [style.background]="p.position === 'GK' ?
+                      safeColor(lineupPreviewData.awayKit?.gkPrimary, '#22d3ee') :
+                      safeColor(lineupPreviewData.awayKit?.outfieldPrimary, '#e74c3c')"
+                   [style.border-color]="p.position === 'GK' ?
+                      safeColor(lineupPreviewData.awayKit?.gkBorder, '#0e7490') :
+                      safeColor(lineupPreviewData.awayKit?.outfieldBorder, '#c0392b')">
+                {{ shirtLabel(p) }}
+              </div>
+              <div class="lineup-name">{{ surnameOf(p) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Away label strip (bottom edge of the card) -->
+      <div class="lineup-team-strip lineup-team-strip-away">
+        <span class="lineup-team-strip-formation">{{ formationOf(lineupPreviewData.awayTeamId) }}</span>
+        <span class="lineup-team-strip-name">{{ lineupPreviewData.awayTeamName }}</span>
+      </div>
+    </div>
+
+    <div class="lineup-hint">Tap or press SPACE to skip</div>
+  </div>
+</div>
+
+<!-- Substitution Modal (Faza 3) — opened from the live match controls. -->
+<div class="modal-overlay sub-modal-overlay" *ngIf="showSubModal" (click)="$event.stopPropagation()">
+  <div class="sub-modal">
+    <div class="sub-modal-header">
+      <h2>Make Substitution</h2>
+      <span class="sub-modal-sub-count">{{ userSubsRemaining }}/3 remaining</span>
+    </div>
+
+    <div class="sub-modal-cols">
+      <!-- ON-PITCH (choose who comes off) -->
+      <div class="sub-modal-col">
+        <div class="sub-modal-col-title">On Pitch — choose who comes off</div>
+        <div class="sub-modal-list">
+          <div *ngFor="let p of userPitch"
+               class="sub-modal-row"
+               [class.sub-selected]="subPlayerOutId === p.playerId"
+               (click)="selectSubOut(p.playerId)">
+            <span class="sub-pos">{{ p.position }}</span>
+            <span class="sub-name">{{ p.name }}</span>
+            <div class="sub-bar">
+              <div class="sub-bar-fill" [class]="staminaTier(p.stamina)" [style.width.%]="p.stamina"></div>
+            </div>
+            <span class="sub-val">{{ p.stamina }}</span>
+          </div>
+          <div *ngIf="userPitch.length === 0" class="sub-empty">No data available.</div>
+        </div>
+      </div>
+
+      <!-- BENCH (choose who comes on) -->
+      <div class="sub-modal-col">
+        <div class="sub-modal-col-title">Bench — choose who comes on</div>
+        <div class="sub-modal-list">
+          <div *ngFor="let p of userBench"
+               class="sub-modal-row"
+               [class.sub-selected]="subPlayerInId === p.playerId"
+               [class.sub-recommended]="benchIsRecommended(p)"
+               (click)="selectSubIn(p.playerId)">
+            <span class="sub-pos">{{ p.position }}</span>
+            <span class="sub-name">{{ p.name }}</span>
+            <div class="sub-bar">
+              <div class="sub-bar-fill" [class]="staminaTier(p.stamina)" [style.width.%]="p.stamina"></div>
+            </div>
+            <span class="sub-val">{{ p.stamina }}</span>
+          </div>
+          <div *ngIf="userBench.length === 0" class="sub-empty">No bench players available.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub-modal-error" *ngIf="subError">{{ subError }}</div>
+
+    <div class="sub-modal-actions">
+      <button class="sub-cancel-btn" (click)="closeSubModal()" [disabled]="subSubmitting">Cancel</button>
+      <button class="sub-confirm-btn"
+              (click)="applySubstitution()"
+              [disabled]="subSubmitting || subPlayerOutId == null || subPlayerInId == null">
+        {{ subSubmitting ? 'Applying...' : 'Apply' }}
+      </button>
+    </div>
+  </div>
+</div>

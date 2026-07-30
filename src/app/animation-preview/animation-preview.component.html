@@ -62,6 +62,17 @@
       <div class="lmp-progress-fill" [style.width.%]="progressPct"></div>
     </div>
 
+    <!-- 2D pitch — ambient synthesis between moments, engine clips spliced in
+         on the same canvas. Same component the live match view uses. -->
+    <div class="lmp-pitch" *ngIf="showPitch">
+      <app-match-pitch [responsive]="true"
+                       [clip]="pitchClip"
+                       [homeTeamId]="liveMatchData.homeTeamId"
+                       [homeKit]="homeKit"
+                       [awayKit]="awayKit"
+                       (clipFinished)="onClipFinished()"></app-match-pitch>
+    </div>
+
     <!-- Event feed -->
     <div class="lmp-feed">
       <div *ngFor="let event of visibleEvents" class="lmp-event"
@@ -81,6 +92,7 @@
       <button *ngIf="!finished" (click)="skip()">Skip to Full Time</button>
       <button *ngIf="finished" (click)="replay()">Replay</button>
       <button (click)="generate()">New Match</button>
+      <button (click)="togglePitch()">{{ showPitch ? 'Hide 2D pitch' : 'Show 2D pitch' }}</button>
       <!-- Deep-link to the per-player ratings for this match (shown at full time). -->
       <a *ngIf="finished" class="anim-ratings-link"
          [routerLink]="playerRatingsLink">Player ratings</a>

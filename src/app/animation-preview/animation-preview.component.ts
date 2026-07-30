@@ -1,7 +1,15 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, NgZone, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { urlApp } from '../app.component';
+import { KitColors, PitchClip } from '../models/live-match.model';
+import {
+  goalAnimationToFrames, kitsFromAnimation, MatchPitchComponent
+} from '../live-match/match-pitch.component';
+import {
+  AMBIENT_TRANSITION_MS, AmbientState, ambientFrame, buildTeamSlots,
+  emptyAmbientState, phaseFor, samePhase
+} from '../live-match/ambient-synthesizer';
 
 /**
  * Animation Preview — updated to consume the CURRENT live-match engine data
@@ -31,7 +39,21 @@ export class AnimationPreviewComponent implements OnInit, OnDestroy {
   finished = false;
   loading = false;
 
-  constructor(private http: HttpClient, private route: ActivatedRoute) {}
+  // ---- 2D pitch preview (same renderer + ambient synthesis as the live view) ----
+  showPitch = true;
+  pitchClip: PitchClip | null = null;
+  homeKit: KitColors = {};
+  awayKit: KitColors = {};
+  @ViewChild(MatchPitchComponent) pitch?: MatchPitchComponent;
+
+  private ambient: AmbientState = emptyAmbientState();
+  private ambientLayoutKey = '';
+  private ambientNames: { [playerId: number]: string } = {};
+  private shirtNumbers: { [playerId: number]: number } = {};
+  private rafId: number | null = null;
+  private lastFrameTs = 0;
+
+  constructor(private http: HttpClient, private route: ActivatedRoute, private zone: NgZone) {}
 
   ngOnInit(): void {
     this.loadTeams();
@@ -45,6 +67,118 @@ export class AnimationPreviewComponent implements OnInit, OnDestroy {
         this.generate();
       }
     });
+  }
+
+  togglePitch(): void {
+    this.showPitch = !this.showPitch;
+  }
+
+  /** Ambient loop for the preview board. The live viewer has its own single
+   *  clock; this route is a standalone sandbox, so it runs its own RAF. */
+  private startPitchLoop(): void {
+    if (this.rafId !== null) return;
+    this.zone.runOutsideAngular(() => {
+      this.lastFrameTs = 0;
+      const step = (timestamp: number) => {
+        if (this.lastFrameTs === 0) this.lastFrameTs = timestamp;
+        const dt = Math.min(100, timestamp - this.lastFrameTs);
+        this.lastFrameTs = timestamp;
+        this.renderPitch(dt);
+        this.rafId = requestAnimationFrame(step);
+      };
+      this.rafId = requestAnimationFrame(step);
+    });
+  }
+
+  private stopPitchLoop(): void {
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+  }
+
+  private renderPitch(dt: number): void {
+    if (!this.pitch || !this.liveMatchData || !this.showPitch) return;
+    this.ambient.elapsedMs += dt;
+    this.ambient.transitionMs = Math.min(this.ambient.transitionMs + dt, AMBIENT_TRANSITION_MS);
+    if (this.pitchClip) {
+      this.pitch.advance(dt);
+      return;
+    }
+    this.pitch.renderFrame(ambientFrame(this.ambient), this.ambientNames);
+  }
+
+  /** Rebuild the ambient picture from the timeline position we're playing. */
+  private refreshAmbient(): void {
+    const data = this.liveMatchData;
+    if (!data) return;
+
+    const names: { [playerId: number]: string } = {};
+    for (const player of [...(data.homePitch || []), ...(data.awayPitch || [])]) {
+      names[player.playerId] = (player.name || '').split(' ').pop() || '';
+    }
+    this.ambientNames = names;
+
+    const clips: any[] = [
+      ...(data.canonicalAnimations || []),
+      ...Object.values(data.goalAnimations || {})
+    ];
+    for (const clip of clips) {
+      for (const player of clip?.players || []) {
+        if (player.shirtNumber) this.shirtNumbers[player.playerId] = player.shirtNumber;
+      }
+    }
+    if (clips[0]) {
+      const kits = kitsFromAnimation(clips[0]);
+      this.homeKit = kits.home;
+      this.awayKit = kits.away;
+    }
+
+    const flipped = (data.timeline || [])
+      .slice(0, this.currentIndex + 1)
+      .some((event: any) => event.eventType === 'half_time');
+    const homeAttacksRight = !flipped;
+
+    const homePlayers = (data.homePitch || []).filter((p: any) => p.onPitch !== false);
+    const awayPlayers = (data.awayPitch || []).filter((p: any) => p.onPitch !== false);
+    const layoutKey = [
+      homeAttacksRight,
+      homePlayers.map((p: any) => `${p.playerId}:${p.position}`).join(','),
+      awayPlayers.map((p: any) => `${p.playerId}:${p.position}`).join(',')
+    ].join('|');
+    if (layoutKey !== this.ambientLayoutKey) {
+      this.ambientLayoutKey = layoutKey;
+      this.ambient.slots = [
+        ...buildTeamSlots(homePlayers, data.homeTeamId, homeAttacksRight, this.shirtNumbers),
+        ...buildTeamSlots(awayPlayers, data.awayTeamId, !homeAttacksRight, this.shirtNumbers)
+      ];
+    }
+
+    const phase = phaseFor(this.currentMinute, data.homeTeamId, data.awayTeamId, homeAttacksRight);
+    if (!samePhase(phase, this.ambient.current)) {
+      this.ambient.previous = this.ambient.current;
+      this.ambient.current = phase;
+      this.ambient.transitionMs = 0;
+    }
+  }
+
+  /** Splice the engine's clip for this minute onto the same canvas. */
+  private maybePlayClipAt(minute: number): void {
+    const data: any = this.liveMatchData;
+    if (!data) return;
+    const canonical = (data.canonicalAnimations || [])
+      .filter((clip: any) => Number(clip?.minute) === Number(minute))
+      .sort((a: any, b: any) => Number(a?.slotIndex ?? 0) - Number(b?.slotIndex ?? 0));
+    const animation = canonical[0] || data.goalAnimations?.[minute];
+    if (!animation) return;
+    const kits = kitsFromAnimation(animation);
+    this.homeKit = kits.home;
+    this.awayKit = kits.away;
+    this.pitchClip = goalAnimationToFrames(animation);
+  }
+
+  onClipFinished(): void {
+    this.zone.run(() => this.pitchClip = null);
   }
 
   loadTeams(): void {
@@ -79,6 +213,11 @@ export class AnimationPreviewComponent implements OnInit, OnDestroy {
         if (data && data.timeline && data.timeline.length > 0) {
           this.liveMatchData = data;
           this.currentIndex = 0;
+          this.pitchClip = null;
+          this.ambient = emptyAmbientState();
+          this.ambientLayoutKey = '';
+          this.refreshAmbient();
+          this.startPitchLoop();
           this.startPlayback();
         }
       },
@@ -97,6 +236,8 @@ export class AnimationPreviewComponent implements OnInit, OnDestroy {
       if (!this.liveMatchData?.timeline) { this.stop(); return; }
       if (this.currentIndex < this.liveMatchData.timeline.length - 1) {
         this.currentIndex++;
+        this.refreshAmbient();
+        this.maybePlayClipAt(this.currentMinute?.minute ?? 0);
       } else {
         this.finished = true;
         this.stop();
@@ -231,5 +372,6 @@ export class AnimationPreviewComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stop();
+    this.stopPitchLoop();
   }
 }

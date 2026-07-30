@@ -103,15 +103,23 @@ import { NotFoundComponent } from './not-found/not-found.component';
 import { ChairmanClubComponent } from './chairman-club/chairman-club.component';
 import { MultiplayerRoomComponent } from './multiplayer/multiplayer-room.component';
 import { MultiplayerContinueComponent } from './multiplayer/multiplayer-continue.component';
+import { LiveMatchComponent } from './live-match/live-match.component';
+import { MatchPitchComponent } from './live-match/match-pitch.component';
+import { FaceGalleryComponent } from './face-lab/face-gallery.component';
+import { ParametricFaceComponent } from './face-lab/parametric-face.component';
 
 @NgModule({
   declarations: [
     AppComponent,
+    LiveMatchComponent,
+    MatchPitchComponent,
     PlayerFaceComponent,
     PlayerCardComponent,
     MatchRatingsComponent,
     CoachControlComponent,
     PlayerGalleryComponent,
+    FaceGalleryComponent,
+    ParametricFaceComponent,
     TeamCrestComponent,
     AwardHistoryComponent,
     AwardCentreComponent,

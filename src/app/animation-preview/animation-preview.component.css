@@ -307,3 +307,14 @@
   font-style: italic;
   color: #aaa;
 }
+
+
+/* 2D pitch pane inside the preview board. */
+.lmp-pitch {
+  margin: 10px 0 14px;
+}
+
+.lmp-pitch app-match-pitch {
+  display: block;
+  width: 100%;
+}

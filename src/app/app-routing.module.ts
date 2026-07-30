@@ -68,6 +68,8 @@ import { PlayerCardComponent } from './player-card/player-card.component';
 import { MatchRatingsComponent } from './match-ratings/match-ratings.component';
 import { CoachControlComponent } from './boardroom/coach-control.component';
 import { PlayerGalleryComponent } from './player-gallery/player-gallery.component';
+import { FaceGalleryComponent } from './face-lab/face-gallery.component';
+import { DevOnlyGuard } from './face-lab/dev-only.guard';
 import { AwardHistoryComponent } from './award-history/award-history.component';
 import { AwardCentreComponent } from './award-centre/award-centre.component';
 import { CompetitionRecordsComponent } from './competition-records/competition-records.component';
@@ -183,6 +185,9 @@ export const APP_ROUTES: Routes = [
   { path: 'competition-records/:competitionId', component: CompetitionRecordsComponent },
   { path: 'gallery/:teamId', component: PlayerGalleryComponent },
   { path: 'gallery', component: PlayerGalleryComponent },
+  // DEV-ONLY: Face Lab — species preview, parametric validation and the voting loop.
+  // DevOnlyGuard keeps it resolvable on localhost only.
+  { path: 'dev/face-gallery', component: FaceGalleryComponent, canActivate: [DevOnlyGuard] },
 
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: '**', component: NotFoundComponent }
