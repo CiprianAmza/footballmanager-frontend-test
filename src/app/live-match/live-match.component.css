@@ -1229,8 +1229,19 @@
 
 .lm-pitch-inline {
   flex: 1;
-  min-height: 0;
+  min-height: 240px;
   padding: 8px 16px 0;
+}
+
+/* Constrain the aspect-locked canvas to the height the modal actually gives
+   this pane. Without the chain below the canvas keeps its width-derived
+   height on short viewports, overflows the shrunken pane, and the commentary
+   strip paints on top of the pitch. */
+.lm-pitch-inline app-match-pitch {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .lm-pitch-hidden {

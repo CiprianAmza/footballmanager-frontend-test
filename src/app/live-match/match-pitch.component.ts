@@ -143,6 +143,10 @@ export function kitsFromAnimation(data: GoalAnimationData): { home: KitColors; a
     .mp-fill {
       margin-bottom: 0;
       height: 100%;
+      /* When the host lays this out as a flex child, take the given space and
+         never force the pane taller than the modal allows. */
+      flex: 1;
+      min-height: 0;
     }
     .mp-fill .mp-canvas {
       width: 100%;
