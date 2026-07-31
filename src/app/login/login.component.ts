@@ -13,10 +13,10 @@ export class LoginComponent {
   @Output() loggedIn = new EventEmitter<void>();
 
   mode: 'login' | 'register' = 'login';
-  username = '';
-  password = '';
-  email = '';
-  displayName = '';
+  username = 'ciprian';
+  password = 'LocalDev2026!';
+  email = 'ciprianamza@yahoo.com';
+  displayName = 'Ciprian Amza';
   careerRole: CareerRole = 'MANAGER';
   startingWealth = 10000000;
   loading = false;
