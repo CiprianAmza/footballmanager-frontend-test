@@ -106,7 +106,14 @@ export class Friendlies3Component implements OnInit {
   }
 
   get hasAvailableWindow(): boolean {
-    return (this.options?.currentDay || 0) < 210;
+    return !!this.options?.dateOptions.length;
+  }
+
+  get startDateOptions() { return this.options?.dateOptions || []; }
+
+  get endDateOptions() {
+    const sameWindow = this.startDay <= 30 ? (day: number) => day <= 30 : (day: number) => day >= 201;
+    return (this.options?.dateOptions || []).filter(option => option.day >= this.startDay && sameWindow(option.day));
   }
 
   get projectedFeeIncome(): number {
@@ -139,6 +146,13 @@ export class Friendlies3Component implements OnInit {
       const eventMultiplier = this.eventType === 'TRAINING_CAMP' ? 1 : this.eventType === 'MINI_LEAGUE' ? 2.2 : 1.8;
       this.organizerCost = Math.round((destination.estimatedBaseCost + duration * 90000) * eventMultiplier / 10000) * 10000;
     }
+  }
+
+  changeStartDate(): void {
+    if (!this.endDateOptions.some(option => option.day === this.endDay)) {
+      this.endDay = this.endDateOptions[0]?.day || this.startDay;
+    }
+    this.updateCostFromDestination(true);
   }
 
   toggleParticipant(teamId: number): void {

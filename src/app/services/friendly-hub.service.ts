@@ -6,6 +6,7 @@ import { urlApp } from '../app.component';
 export interface FriendlyMatchView {
   matchId: number;
   day: number;
+  dateDisplay: string;
   homeTeamId: number;
   awayTeamId: number;
   homeTeamName: string;
@@ -37,6 +38,7 @@ export interface FriendlyOpponent {
 
 export interface FriendlyDay {
   day: number;
+  dateDisplay: string;
   phase: 'PRE_SEASON' | 'WINTER_BREAK';
 }
 
@@ -60,6 +62,8 @@ export interface FriendlyEventView {
   locationName: string;
   startDay: number;
   endDay: number;
+  startDate: string;
+  endDate: string;
   focus: string;
   format?: string;
   participants: FriendlyParticipant[];
@@ -79,7 +83,9 @@ export interface FriendlyPlannerOptions {
   availableBalance: number;
   currentSeason: number;
   currentDay: number;
+  currentDate: string;
   minimumStartDay: number;
+  dateOptions: FriendlyDay[];
   destinations: Array<{nationId: number; name: string; flagCode: string; domestic: boolean; estimatedBaseCost: number}>;
   eventTypes: Array<{id: string; label: string; description: string}>;
   rulesets: Array<{id: string; label: string; description: string}>;
