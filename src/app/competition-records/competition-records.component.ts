@@ -3,34 +3,51 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { urlApp } from '../app.component';
 
-interface CompetitionRecordRow {
+export interface LegendRow {
   rank: number;
   playerId: number;
   playerName: string;
+  position: string;
   teamId: number | null;
   teamName: string;
   multipleClubs: boolean;
-  seasonNumber: number | null;
-  firstSeason: number | null;
-  lastSeason: number | null;
+  firstSeason: number;
+  lastSeason: number;
   appearances: number;
   goals: number;
   assists: number;
+  averageRating: number;
+  trophies: number;
   recordValue: number;
 }
 
-interface CompetitionRecordsData {
-  competitionId: number;
-  competitionName: string;
+export interface BestElevenPlayer { slot: string; player: LegendRow; legacyScore: number; }
+export interface TransferRecord {
+  playerId: number; playerName: string; fromTeamId: number; fromTeamName: string;
+  toTeamId: number; toTeamName: string; fee: number; seasonNumber: number;
+}
+export interface LegacyRecordsData {
+  scopeType: 'CLUB' | 'COMPETITION' | 'WORLD';
+  scopeId: number | null;
+  scopeName: string;
   currentSeason: number;
+  selectedSeason: number;
+  availableSeasons: number[];
   limit: number;
-  goalsSingleSeason: CompetitionRecordRow[];
-  goalsAllTime: CompetitionRecordRow[];
-  assistsSingleSeason: CompetitionRecordRow[];
-  assistsAllTime: CompetitionRecordRow[];
+  allTimeScorers: LegendRow[];
+  allTimeAssists: LegendRow[];
+  allTimeAppearances: LegendRow[];
+  trophyLeaders: LegendRow[];
+  seasonScorers: LegendRow[];
+  seasonAssists: LegendRow[];
+  seasonAppearances: LegendRow[];
+  seasonBestEleven: BestElevenPlayer[];
+  allTimeBestEleven: BestElevenPlayer[];
+  playerHistory: LegendRow[];
+  recordSales: TransferRecord[];
 }
 
-type RecordMetric = 'goals' | 'assists';
+type RecordMetric = 'goals' | 'assists' | 'appearances' | 'trophies';
 
 @Component({
   selector: 'app-competition-records',
@@ -39,10 +56,11 @@ type RecordMetric = 'goals' | 'assists';
 })
 export class CompetitionRecordsComponent implements OnInit {
   competitionId = 0;
-  data?: CompetitionRecordsData;
+  world = false;
+  data?: LegacyRecordsData;
   metric: RecordMetric = 'goals';
   limit = 20;
-  readonly limitOptions = [10, 20, 50];
+  readonly limitOptions = [10, 20, 50, 100];
   loading = false;
   failed = false;
 
@@ -50,52 +68,51 @@ export class CompetitionRecordsComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
-      this.competitionId = Number(params.get('competitionId'));
+      this.competitionId = Number(params.get('competitionId')) || 0;
+      this.world = !this.competitionId;
       this.load();
     });
   }
 
-  load(): void {
-    if (!this.competitionId) return;
+  load(season?: number): void {
     this.loading = true;
     this.failed = false;
-    this.http.get<CompetitionRecordsData>(
-      urlApp + `/stats/competition/${this.competitionId}/records?limit=${this.limit}`
-    ).subscribe({
-      next: data => {
-        this.data = data;
-        this.loading = false;
-      },
-      error: () => {
-        this.data = undefined;
-        this.failed = true;
-        this.loading = false;
-      }
+    const scope = this.world ? '/stats/records/world' : `/stats/records/competition/${this.competitionId}`;
+    const selected = season ?? this.data?.selectedSeason;
+    const seasonQuery = selected ? `&season=${selected}` : '';
+    this.http.get<LegacyRecordsData>(urlApp + `${scope}?limit=${this.limit}${seasonQuery}`).subscribe({
+      next: data => { this.data = data; this.loading = false; },
+      error: () => { this.data = undefined; this.failed = true; this.loading = false; }
     });
   }
 
-  setMetric(metric: RecordMetric): void {
-    this.metric = metric;
-  }
+  setMetric(metric: RecordMetric): void { this.metric = metric; }
 
-  singleSeasonRows(): CompetitionRecordRow[] {
+  seasonRows(): LegendRow[] {
     if (!this.data) return [];
-    return this.metric === 'goals' ? this.data.goalsSingleSeason : this.data.assistsSingleSeason;
+    if (this.metric === 'goals') return this.data.seasonScorers;
+    if (this.metric === 'assists') return this.data.seasonAssists;
+    if (this.metric === 'appearances') return this.data.seasonAppearances;
+    return [];
   }
 
-  allTimeRows(): CompetitionRecordRow[] {
+  allTimeRows(): LegendRow[] {
     if (!this.data) return [];
-    return this.metric === 'goals' ? this.data.goalsAllTime : this.data.assistsAllTime;
+    if (this.metric === 'goals') return this.data.allTimeScorers;
+    if (this.metric === 'assists') return this.data.allTimeAssists;
+    if (this.metric === 'appearances') return this.data.allTimeAppearances;
+    return this.data.trophyLeaders;
   }
 
-  seasonRange(row: CompetitionRecordRow): string {
-    if (row.firstSeason == null) return '—';
-    return row.firstSeason === row.lastSeason
-      ? `Season ${row.firstSeason}`
-      : `S${row.firstSeason}–S${row.lastSeason}`;
+  metricTitle(): string {
+    return ({ goals: 'Goals', assists: 'Assists', appearances: 'Appearances', trophies: 'Trophies won' } as const)[this.metric];
   }
 
-  trackRecord(index: number, row: CompetitionRecordRow): string {
-    return `${row.playerId}-${row.seasonNumber ?? 'all'}-${index}`;
+  seasonRange(row: LegendRow): string {
+    return row.firstSeason === row.lastSeason ? `Season ${row.firstSeason}` : `S${row.firstSeason}–S${row.lastSeason}`;
   }
+
+  trackRecord(index: number, row: LegendRow): string { return `${row.playerId}-${index}`; }
+  trackEleven(index: number, row: BestElevenPlayer): string { return `${row.slot}-${row.player.playerId}-${index}`; }
+  formatMoney(value: number): string { return new Intl.NumberFormat('en-GB').format(value || 0); }
 }

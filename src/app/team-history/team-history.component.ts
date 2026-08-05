@@ -3,6 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin } from 'rxjs';
 import { urlApp } from '../app.component'; // Ajusteaza calea daca e nevoie
+import { LegacyRecordsData, LegendRow, BestElevenPlayer } from '../competition-records/competition-records.component';
 
 // Interfata bruta de la Backend
 interface CompetitionHistory {
@@ -35,7 +36,10 @@ export class TeamHistoryComponent implements OnInit {
   teamId!: number;
   teamName: string = '';
   historyStats: DetailedStat[] = [];
+  records?: LegacyRecordsData;
+  activeTab: 'legends' | 'honours' | 'players' | 'sales' = 'legends';
   loading: boolean = true;
+  failed = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -55,14 +59,17 @@ export class TeamHistoryComponent implements OnInit {
     
     const nameReq = this.http.get(urlApp + `/teams/getTeamNameById/${this.teamId}`, { responseType: 'text' });
     const historyReq = this.http.get<CompetitionHistory[]>(urlApp + `/history/teamCompetitionWins/${this.teamId}`);
+    const recordsReq = this.http.get<LegacyRecordsData>(urlApp + `/stats/records/club/${this.teamId}?limit=20`);
 
-    forkJoin([nameReq, historyReq]).subscribe({
-      next: ([name, historyData]) => {
+    forkJoin([nameReq, historyReq, recordsReq]).subscribe({
+      next: ([name, historyData, records]) => {
         this.teamName = name;
         this.processHistory(historyData);
+        this.records = records;
+        this.failed = false;
         this.loading = false;
       },
-      error: () => { this.loading = false; }
+      error: () => { this.failed = true; this.loading = false; }
     });
   }
 
@@ -114,4 +121,17 @@ export class TeamHistoryComponent implements OnInit {
   goToCompetition(competitionId: number) {
     this.router.navigate(['/comp', competitionId]);
   }
+
+  changeSeason(season: number): void {
+    this.loading = true;
+    this.http.get<LegacyRecordsData>(urlApp + `/stats/records/club/${this.teamId}?limit=20&season=${season}`).subscribe({
+      next: records => { this.records = records; this.loading = false; },
+      error: () => { this.failed = true; this.loading = false; }
+    });
+  }
+
+  setTab(tab: 'legends' | 'honours' | 'players' | 'sales'): void { this.activeTab = tab; }
+  trackPlayer(_: number, row: LegendRow): number { return row.playerId; }
+  trackEleven(index: number, row: BestElevenPlayer): string { return `${row.slot}-${row.player.playerId}-${index}`; }
+  formatMoney(value: number): string { return new Intl.NumberFormat('en-GB').format(value || 0); }
 }

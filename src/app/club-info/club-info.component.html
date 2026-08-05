@@ -132,7 +132,7 @@
 
       <div class="column right-col">
         <div class="fm-panel">
-          <a class="panel-header panel-header-link" [routerLink]="['/team-history', teamId]">HONOURS <span>➤</span></a>
+          <a class="panel-header panel-header-link" [routerLink]="['/team-history', teamId]">CLUB ARCHIVE · RECORDS & HONOURS <span>➤</span></a>
           <div class="trophy-cabinet" *ngIf="club.trophies.length > 0; else noTrophies">
             <a class="trophy-item" *ngFor="let trophy of club.trophies"
               [routerLink]="competitionStatLink(trophy)">
