@@ -38,8 +38,12 @@
   </section>
 
   <section class="archive-content honours-list" *ngIf="!loading && activeTab === 'honours'">
+    <article class="friendly-honours" *ngIf="friendlyHonours?.honours?.length">
+      <header><div><small>Unofficial silverware</small><h3>Friendly honours</h3></div><b>{{ friendlyHonours?.total }} trophies · {{ friendlyHonours?.miniCups }} cups · {{ friendlyHonours?.miniLeagues }} leagues</b></header>
+      <div class="friendly-honour-grid"><div *ngFor="let honour of friendlyHonours?.honours"><i>{{ honour.eventType === 'MINI_CUP' ? '♜' : '▦' }}</i><span><b>{{ honour.name }}</b><small>Season {{ honour.season }} · {{ honour.locationName || honour.hostNationName }}</small><em>Hosted by {{ honour.organizerTeamName }}</em></span><strong>{{ honour.prizePool ? formatMoney(honour.prizePool) : 'Friendly' }}</strong></div></div>
+    </article>
     <article class="competition-card clickable-card" *ngFor="let stat of historyStats" (click)="goToCompetition(stat.competitionId)"><div class="comp-identity"><div class="big-icon" [ngClass]="{'is-cup': stat.typeId === 2, 'is-league': stat.typeId === 1}">🏆</div><div class="comp-name">{{ stat.competitionName }}</div><div class="total-wins" *ngIf="stat.totalWins">{{ stat.totalWins }} Wins</div></div><div class="comp-years"><div class="year-row" *ngIf="stat.championYears.length"><div class="row-label">🥇 Champions <span>x{{ stat.championYears.length }}</span></div><div class="years-list"><span *ngFor="let year of stat.championYears" class="year-pill gold">{{ year }}</span></div></div><div class="year-row" *ngIf="stat.runnerUpYears.length"><div class="row-label">🥈 Runners-up</div><div class="years-list"><span *ngFor="let year of stat.runnerUpYears" class="year-pill silver">{{ year }}</span></div></div><div class="year-row" *ngIf="stat.thirdPlaceYears.length"><div class="row-label">🥉 Third</div><div class="years-list"><span *ngFor="let year of stat.thirdPlaceYears" class="year-pill bronze">{{ year }}</span></div></div></div></article>
-    <div class="no-history" *ngIf="!historyStats.length">No honours have been recorded yet.</div>
+    <div class="no-history" *ngIf="!historyStats.length && !friendlyHonours?.honours?.length">No honours have been recorded yet.</div>
   </section>
 
   <section class="archive-content" *ngIf="records && !loading && activeTab === 'sales'">

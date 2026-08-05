@@ -1,0 +1,72 @@
+<div class="event-page">
+  <header class="event-header">
+    <div><p>CLUB EVENT STUDIO · SEASON {{ season }}</p><h1>Build the pre-season around your club</h1><span>Design a camp, host an invitational league or create an unofficial cup.</span></div>
+    <div class="balance"><small>AVAILABLE CLUB BALANCE</small><strong>€{{ money(options?.availableBalance || 0) }}</strong></div>
+  </header>
+
+  <nav class="view-switcher">
+    <a routerLink="/friendlies">Classic</a><a [routerLink]="['/friendlies2', teamId]">Preparation hub</a><a [routerLink]="['/friendlies3', teamId]" class="active">Tours & tournaments</a>
+  </nav>
+
+  <div class="loading" *ngIf="loading">Opening event studio…</div>
+  <div class="notice" *ngIf="notice">{{ notice }}</div>
+  <div class="notice error" *ngIf="error">{{ error }}</div>
+
+  <main *ngIf="!loading" class="studio">
+    <section class="builder">
+      <div class="step-title"><span>01</span><div><b>Choose the experience</b><small>Shortcuts <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></small></div></div>
+      <div class="type-cards">
+        <button [class.active]="eventType === 'TRAINING_CAMP'" (click)="chooseType('TRAINING_CAMP')"><i>⌂</i><b>Training camp</b><small>Travel, facilities and a focused block of work.</small><em>3–14 days</em></button>
+        <button [class.active]="eventType === 'MINI_LEAGUE'" (click)="chooseType('MINI_LEAGUE')"><i>▦</i><b>Mini league</b><small>Every club meets once. Table decides the winner.</small><em>3–6 clubs</em></button>
+        <button [class.active]="eventType === 'MINI_CUP'" (click)="chooseType('MINI_CUP')"><i>♜</i><b>Mini cup</b><small>Semi-finals followed by a winner-takes-all final.</small><em>4 clubs</em></button>
+      </div>
+
+      <div class="form-grid">
+        <label class="wide"><span>EVENT NAME</span><input [(ngModel)]="eventName"></label>
+        <label><span>HOST COUNTRY</span><select [(ngModel)]="hostNationId" (change)="updateCostFromDestination(true)"><option *ngFor="let destination of options?.destinations" [ngValue]="destination.nationId">{{ destination.name }}{{ destination.domestic ? ' · home' : '' }}</option></select></label>
+        <label><span>BASE / VENUE</span><input [(ngModel)]="locationName"></label>
+        <label><span>START DAY</span><input type="number" [(ngModel)]="startDay" [min]="options?.minimumStartDay || 1" max="210" (change)="updateCostFromDestination(true)"><small>Today: Day {{ options?.currentDay }} · future dates only</small></label>
+        <label><span>END DAY</span><input type="number" [(ngModel)]="endDay" [min]="startDay" max="210" (change)="updateCostFromDestination(true)"><small>Must stay inside pre-season or the winter break.</small></label>
+        <label class="wide"><span>PRIMARY OBJECTIVE</span><div class="focuses"><button *ngFor="let item of ['FITNESS','TACTICAL','TEAM_BONDING','COMMERCIAL']" [class.active]="focus === item" (click)="focus = item">{{ pretty(item) }}</button></div></label>
+      </div>
+
+      <div class="invitations" *ngIf="eventType !== 'TRAINING_CAMP'">
+        <div class="step-title"><span>02</span><div><b>Invite clubs</b><small>{{ requiredGuests }} · {{ participantIds.length }} selected</small></div></div>
+        <input [(ngModel)]="opponentQuery" placeholder="Search invitees…">
+        <div class="club-grid"><button *ngFor="let opponent of filteredOpponents" [class.active]="isSelected(opponent.teamId)" (click)="toggleParticipant(opponent.teamId)"><i>{{ opponent.name.slice(0,2).toUpperCase() }}</i><span><b>{{ opponent.name }}</b><small>Reputation {{ opponent.reputation }}</small></span><em>{{ isSelected(opponent.teamId) ? '✓' : '+' }}</em></button></div>
+      </div>
+
+      <div class="finance-block">
+        <div class="step-title"><span>{{ eventType === 'TRAINING_CAMP' ? '02' : '03' }}</span><div><b>Set the event economy</b><small>Charged only when the draft is confirmed.</small></div></div>
+        <div class="money-fields">
+          <label><span>ORGANISATION & LOGISTICS</span><div>€ <input type="number" [(ngModel)]="organizerCost" min="0" step="100000"></div></label>
+          <label *ngIf="eventType !== 'TRAINING_CAMP'"><span>FEE / GUEST CLUB</span><div>€ <input type="number" [(ngModel)]="participationFee" min="0" step="50000"></div></label>
+          <label *ngIf="eventType !== 'TRAINING_CAMP'"><span>WINNER PRIZE</span><div>€ <input type="number" [(ngModel)]="prizePool" min="0" step="100000"></div></label>
+        </div>
+        <div class="budget-preview"><div><small>HOST COMMITMENT</small><b>€{{ money(organizerCost + (eventType === 'TRAINING_CAMP' ? 0 : prizePool)) }}</b></div><div><small>PROJECTED FEE INCOME</small><b class="positive">+€{{ money(projectedFeeIncome) }}</b></div><div><small>PROJECTED NET COST</small><b [class.positive]="projectedNetCost < 0">€{{ money(projectedNetCost) }}</b></div></div>
+      </div>
+      <div class="notice error" *ngIf="!hasAvailableWindow">No friendly-event window remains in Season {{ season }}.</div>
+      <div class="notice error" *ngIf="hasAvailableWindow && !isFutureWindow">Choose a future period entirely inside pre-season (Days 1–30) or the winter break (Days 201–210).</div>
+      <button class="create" [disabled]="!canCreate || saving" (click)="createDraft()">{{ saving ? 'Saving…' : 'Create reviewable draft' }} <kbd>C</kbd></button>
+    </section>
+
+    <aside class="portfolio">
+      <header><div><p>EVENT PORTFOLIO</p><h2>Your tours & invitations</h2></div><label><span>⌕</span><input id="event-search" [(ngModel)]="eventQuery" placeholder="Filter events"><kbd>/</kbd></label></header>
+      <div class="event-list">
+        <button *ngFor="let event of filteredEvents; let i = index" [class.selected]="selectedEvent?.eventId === event.eventId" (click)="selectEvent(event, i)">
+          <i>{{ typeIcon(event.eventType) }}</i><span><small>{{ pretty(event.eventType) }} · DAY {{ event.startDay }}</small><b>{{ event.name }}</b><em>{{ event.locationName }} · {{ event.participants.length }} club{{ event.participants.length === 1 ? '' : 's' }}</em></span><strong [attr.data-status]="event.status">{{ event.status }}</strong>
+        </button>
+        <div class="empty" *ngIf="!filteredEvents.length"><b>No club events yet.</b><span>Your first draft will appear here.</span></div>
+      </div>
+
+      <section class="event-detail" *ngIf="selectedEvent">
+        <div class="detail-head"><i>{{ typeIcon(selectedEvent.eventType) }}</i><div><small>{{ pretty(selectedEvent.eventType) }}</small><h3>{{ selectedEvent.name }}</h3><span>{{ selectedEvent.locationName }} · Days {{ selectedEvent.startDay }}–{{ selectedEvent.endDay }}</span></div></div>
+        <div class="detail-kpis"><div><small>FOCUS</small><b>{{ pretty(selectedEvent.focus) }}</b></div><div><small>NET COST</small><b>€{{ money(selectedEvent.projectedNetCost) }}</b></div><div><small>PRIZE</small><b>€{{ money(selectedEvent.prizePool) }}</b></div></div>
+        <h4>Participants</h4><div class="participant-row"><a *ngFor="let participant of selectedEvent.participants" [routerLink]="['/team', participant.teamId]">{{ participant.name }}<small *ngIf="participant.organizer">HOST</small></a></div>
+        <h4 *ngIf="selectedEvent.matches.length">Event schedule</h4><div class="event-match" *ngFor="let match of selectedEvent.matches"><span>DAY {{ match.day }} · {{ pretty(match.eventStage) }}</span><b>{{ match.homeTeamName }} <em>{{ match.score || 'vs' }}</em> {{ match.awayTeamName }}</b></div>
+        <div class="winner" *ngIf="selectedEvent.winnerTeamName"><small>EVENT WINNER</small><b>♜ {{ selectedEvent.winnerTeamName }}</b></div>
+        <div class="detail-actions"><button class="confirm" *ngIf="selectedEvent.status === 'DRAFT'" [disabled]="saving" (click)="confirm(selectedEvent)">Confirm & post finances</button><button class="cancel" *ngIf="selectedEvent.status === 'DRAFT' || selectedEvent.status === 'CONFIRMED'" (click)="cancel(selectedEvent)">Cancel event</button></div>
+      </section>
+    </aside>
+  </main>
+</div>

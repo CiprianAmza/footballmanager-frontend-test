@@ -26,6 +26,24 @@ interface DetailedStat {
   totalWins: number;
 }
 
+interface FriendlyHonour {
+  eventId: number;
+  name: string;
+  eventType: 'MINI_CUP' | 'MINI_LEAGUE';
+  season: number;
+  hostNationName: string;
+  locationName: string;
+  organizerTeamName: string;
+  prizePool: number;
+}
+
+interface FriendlyHonoursResponse {
+  total: number;
+  miniCups: number;
+  miniLeagues: number;
+  honours: FriendlyHonour[];
+}
+
 @Component({
   selector: 'app-team-history',
   templateUrl: './team-history.component.html',
@@ -37,6 +55,7 @@ export class TeamHistoryComponent implements OnInit {
   teamName: string = '';
   historyStats: DetailedStat[] = [];
   records?: LegacyRecordsData;
+  friendlyHonours?: FriendlyHonoursResponse;
   activeTab: 'legends' | 'honours' | 'players' | 'sales' = 'legends';
   loading: boolean = true;
   failed = false;
@@ -60,12 +79,14 @@ export class TeamHistoryComponent implements OnInit {
     const nameReq = this.http.get(urlApp + `/teams/getTeamNameById/${this.teamId}`, { responseType: 'text' });
     const historyReq = this.http.get<CompetitionHistory[]>(urlApp + `/history/teamCompetitionWins/${this.teamId}`);
     const recordsReq = this.http.get<LegacyRecordsData>(urlApp + `/stats/records/club/${this.teamId}?limit=20`);
+    const friendlyHonoursReq = this.http.get<FriendlyHonoursResponse>(urlApp + `/friendly/honours/${this.teamId}`);
 
-    forkJoin([nameReq, historyReq, recordsReq]).subscribe({
-      next: ([name, historyData, records]) => {
+    forkJoin([nameReq, historyReq, recordsReq, friendlyHonoursReq]).subscribe({
+      next: ([name, historyData, records, friendlyHonours]) => {
         this.teamName = name;
         this.processHistory(historyData);
         this.records = records;
+        this.friendlyHonours = friendlyHonours;
         this.failed = false;
         this.loading = false;
       },
@@ -119,7 +140,7 @@ export class TeamHistoryComponent implements OnInit {
     this.router.navigate(['/team', this.teamId]); // Sau ruta ta principala de echipa
   }
   goToCompetition(competitionId: number) {
-    this.router.navigate(['/comp', competitionId]);
+    this.router.navigate(['/competition', competitionId]);
   }
 
   changeSeason(season: number): void {

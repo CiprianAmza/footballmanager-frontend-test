@@ -51,6 +51,14 @@ td a { color: #f4f6fa; font-weight: 800; text-decoration: none; }
 tbody tr:hover { background: rgba(255,255,255,.03); }
 
 .honours-list { display: flex; flex-direction: column; gap: 14px; }
+.friendly-honours { overflow: hidden; border: 1px solid #315f78; border-radius: 8px; background: linear-gradient(135deg,#202f3a,#202334); }
+.friendly-honours > header { display: flex; align-items: center; justify-content: space-between; padding: 15px 18px; border-bottom: 1px solid #315f78; }
+.friendly-honours > header > b { color: #72c9f6; font-size: .72rem; }
+.friendly-honour-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.friendly-honour-grid > div { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 10px; padding: 13px 16px; border-right: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); }
+.friendly-honour-grid i { color: #72c9f6; font-size: 1.35rem; font-style: normal; text-align: center; }
+.friendly-honour-grid span b, .friendly-honour-grid span small, .friendly-honour-grid span em { display: block; }
+.friendly-honour-grid span b { color: #fff; font-size: .8rem; }.friendly-honour-grid span small,.friendly-honour-grid span em { margin-top: 2px; color: #8994a9; font-size: .65rem; font-style: normal; }.friendly-honour-grid strong { color: #71d5a1; font-size: .72rem; }
 .competition-card { display: flex; overflow: hidden; min-height: 130px; border: 1px solid #343a50; border-radius: 8px; background: #202334; cursor: pointer; }
 .competition-card:hover { border-color: #59627c; transform: translateY(-1px); }
 .comp-identity { display: flex; flex: 0 0 210px; flex-direction: column; align-items: center; justify-content: center; padding: 18px; border-right: 1px solid #343a50; background: #252a3b; text-align: center; }
@@ -63,5 +71,5 @@ tbody tr:hover { background: rgba(255,255,255,.03); }
 @media (max-width: 720px) {
   .page-header { padding: 18px 14px; }.logo-placeholder{display:none}.header-titles h1{font-size:1.5rem}
   .archive-tabs { margin: 12px; overflow-x: auto; }.archive-tabs button,.archive-tabs a{min-width:max-content}.archive-tabs select{min-width:115px}
-  .archive-content,.loading-state{margin:0 12px}.leader-grid,.eleven-grid{grid-template-columns:1fr}.competition-card{flex-direction:column}.comp-identity{flex-basis:auto;border-right:0}.year-row{flex-direction:column;gap:6px}
+  .archive-content,.loading-state{margin:0 12px}.leader-grid,.eleven-grid,.friendly-honour-grid{grid-template-columns:1fr}.friendly-honours>header{align-items:flex-start;flex-direction:column;gap:6px}.competition-card{flex-direction:column}.comp-identity{flex-basis:auto;border-right:0}.year-row{flex-direction:column;gap:6px}
 }
