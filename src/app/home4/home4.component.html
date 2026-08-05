@@ -24,10 +24,19 @@
       <header><span>NEXT MATCH</span><a [routerLink]="['/tactics6', teamService.teamId]">Prepare ↗</a></header>
       <ng-container *ngIf="matchPreview; else noMatch">
         <div class="fixture-meta"><span>{{ matchPreview.competitionName }}</span><b>ROUND {{ matchPreview.round }}</b></div>
+        <div class="fixture-context">
+          <span>{{ matchPreview.date || matchPreview.matchDate || 'Next scheduled match' }}</span>
+          <span *ngIf="matchPreview.weather">{{ matchPreview.weather }}</span>
+          <span>{{ matchPreview.venue || (ownTeamIsHome ? 'Home' : 'Away') }}</span>
+        </div>
         <div class="fixture-versus">
           <div><app-team-crest [teamId]="matchPreview.homeTeamId" [teamName]="matchPreview.homeTeamName" [size]="54"></app-team-crest><strong>{{ matchPreview.homeTeamName }}</strong></div>
           <span><b>VS</b><small>{{ matchPreview.prediction || 'Even contest' }}</small></span>
           <div><app-team-crest [teamId]="matchPreview.awayTeamId" [teamName]="matchPreview.awayTeamName" [size]="54"></app-team-crest><strong>{{ matchPreview.awayTeamName }}</strong></div>
+        </div>
+        <div class="team-news-grid">
+          <section class="team-news"><b>{{ teamName }} news</b><span *ngFor="let item of ownTeamNews">{{ item.playerName || item.name }} · {{ item.explanation || item.type }}</span><small *ngIf="!ownTeamNews.length">No selection concerns</small></section>
+          <section class="team-news"><b>{{ opponentName }} news</b><span *ngFor="let item of opponentTeamNews">{{ item.playerName || item.name }} · {{ item.explanation || item.type }}</span><small *ngIf="!opponentTeamNews.length">No reported absences</small></section>
         </div>
         <div class="match-actions"><a [routerLink]="['/squad4', teamService.teamId]">Select XI</a><a routerLink="/medical">Availability</a><a routerLink="/assistant">Staff brief</a></div>
       </ng-container>
@@ -45,17 +54,14 @@
 
     <article class="desk-card leaders-card">
       <header><span>PLAYER LEADERS</span><a routerLink="/stats/scorers">All statistics ↗</a></header>
-      <a class="leader" *ngFor="let stat of playerStats.slice(0, 6)" [routerLink]="['/player', stat.playerId]" [queryParams]="{ actingTeamId: teamService.teamId }">
-        <span class="leader-rank">{{ stat.rank }}</span><span><strong>{{ stat.playerName }}</strong><small>{{ stat.position }} · {{ stat.appearances }} apps</small></span><i><b>{{ stat.goals }}</b><small>G</small></i><i><b>{{ stat.assists || 0 }}</b><small>A</small></i><i><b>{{ (stat.averageRating || stat.overallRating || 0) | number:'1.2-2' }}</b><small>AVG</small></i>
+      <a class="category-leader" *ngFor="let stat of playerLeaderCards" [routerLink]="stat.playerId ? ['/player', stat.playerId] : null" [queryParams]="{ actingTeamId: teamService.teamId }">
+        <span class="leader-icon">{{ stat.icon }}</span><span><small>{{ stat.label }}</small><strong>{{ stat.name }}</strong></span><b>{{ stat.value }}</b>
       </a>
-      <p class="empty" *ngIf="!playerStats.length">No season statistics yet.</p>
     </article>
 
     <article class="desk-card squad-status">
       <header><span>SQUAD STATUS</span><a routerLink="/medical">Medical centre ↗</a></header>
-      <div class="status-line"><span class="dot green"></span><strong>First team ready</strong><small>Selection and tactics available</small></div>
-      <div class="status-line" *ngFor="let request of boardRequests.slice(0, 4)"><span class="dot amber"></span><strong>{{ request.requestType || 'Board request' }}</strong><small>{{ request.description }}</small></div>
-      <p class="empty" *ngIf="!boardRequests.length">No urgent squad or board actions.</p>
+      <div class="status-line" *ngFor="let group of squadGroups"><span class="dot" [ngClass]="group.tone"></span><strong>{{ group.label }}</strong><small>{{ group.names }}</small></div>
     </article>
 
     <article class="desk-card board-card">
@@ -75,10 +81,42 @@
       <div class="result upcoming" *ngFor="let match of upcomingFixtures.slice(0, 4)"><b>•</b><span>{{ match.homeTeamAbbr || match.homeTeamName }} – {{ match.awayTeamAbbr || match.awayTeamName }}</span><strong>{{ match.date }}</strong><small>{{ match.competitionName }}</small></div>
     </article>
 
+    <article class="desk-card manager-card">
+      <header><span>MANAGER PROFILE</span><a *ngIf="managerProfile" [routerLink]="['/manager-profile', managerProfile.managerId]">Full profile ↗</a></header>
+      <ng-container *ngIf="managerProfile; else noManagerProfile">
+        <div class="manager-profile">
+          <div class="manager-face"><app-player-face [size]="92" [baseFaceId]="managerProfile.baseFaceId || 0" [skinTone]="managerProfile.skinTone || 0" [hairStyle]="managerProfile.hairStyle || 0" [hairColor]="managerProfile.hairColor || 0" [eyeColor]="managerProfile.eyeColor || 0" [faceShape]="managerProfile.faceShape || 0" [noseShape]="managerProfile.noseShape || 0" [eyeShape]="managerProfile.eyeShape || 0" [mouthShape]="managerProfile.mouthShape || 0" [browShape]="managerProfile.browShape || 0" [species]="managerProfile.species || 'human'"></app-player-face></div>
+          <div class="manager-meta"><strong>{{ managerProfile.managerName }}</strong><span>{{ managerProfile.age || '—' }} years old · {{ managerReputationLabel }}</span><span>{{ managerProfile.tacticStyle || 'Flexible tactical identity' }}</span><span>{{ money(managerProfile.monthlySalary) }} / month</span></div>
+        </div>
+        <div class="career-strip"><span><b>{{ managerProfile.totalGames || 0 }}</b> games</span><span><b>{{ managerProfile.winPercentage || 0 }}%</b> wins</span><span><b>{{ managerProfile.totalTrophies || 0 }}</b> trophies</span></div>
+        <div class="manager-attributes"><div *ngFor="let attribute of managerAttributes"><span>{{ attribute.label }}</span><i><b [style.width.%]="attribute.value * 5"></b></i><strong>{{ attribute.value }}</strong></div></div>
+      </ng-container>
+      <ng-template #noManagerProfile><p class="empty">Manager profile is unavailable.</p></ng-template>
+    </article>
+
+    <article class="desk-card team-stats-card">
+      <header><span>TEAM STATS</span><a routerLink="/data-hub3">Data Hub ↗</a></header>
+      <div class="team-stat" *ngFor="let stat of teamStatRows"><span>{{ stat.label }}</span><strong>{{ stat.value }}</strong></div>
+    </article>
+
+    <article class="desk-card training-card">
+      <header><span>TRAINING</span><a routerLink="/training">Schedule ↗</a></header>
+      <div class="training-visual" *ngIf="trainingSchedule.length"><div class="training-pie" [style.background]="trainingGradient"></div><div class="training-legend"><span *ngFor="let segment of trainingSegments"><i [style.background]="segment.color"></i>{{ segment.label }} <b>{{ segment.percent }}%</b></span></div></div>
+      <div class="training-session" *ngFor="let session of prioritySessions"><span>{{ session.name || session.sessionName || session.sessionType }}</span><small>{{ session.unit || 'Team' }}</small><b>{{ session.intensity || 0 }}</b></div>
+      <p class="empty" *ngIf="!trainingSchedule.length">No training schedule has been set.</p>
+    </article>
+
+    <article class="desk-card scouting-card">
+      <header><span>SCOUTING</span><a routerLink="/scouting">Recruitment centre ↗</a></header>
+      <div class="scout-summary"><strong>{{ teamScouts.length }}</strong><span>scouts · {{ scoutAssignments.length }} active assignments</span></div>
+      <div class="scout-row" *ngFor="let scout of scoutingRows"><span><strong>{{ scout.name }}</strong><small>Ability {{ scout.scoutingAbility || '—' }}</small></span><b [class.available]="!scout.onAssignment && !scout.assignment">{{ scout.assignment?.targetName || scout.assignment?.playerName || scout.assignmentPlayerName || (scout.onAssignment ? 'On assignment' : 'Available') }}</b></div>
+      <p class="empty" *ngIf="!teamScouts.length">No scouts are currently employed.</p>
+    </article>
+
     <article class="desk-card finance-card">
       <header><span>FINANCE & SALARY</span><a routerLink="/finances">Open finances ↗</a></header>
-      <div class="finance-bars" aria-label="Finance trend"><i *ngFor="let h of [42,68,53,76,49,85,64,91,58,74]" [style.height.%]="h"></i></div>
-      <dl><div><dt>CLUB BALANCE</dt><dd>{{ money(totalFinances) }}</dd></div><div><dt>TRANSFER BUDGET</dt><dd>{{ money(transferBudget) }}</dd></div><div><dt>DEBT</dt><dd [class.bad]="debt > 0">{{ money(debt) }}</dd></div></dl>
+      <div class="budget-utilization"><div><span>MONTHLY SALARY COMMITMENT</span><strong>{{ salaryUtilization }}%</strong></div><i><b [style.width.%]="salaryUtilization"></b></i><small>{{ money(financeDetail?.monthlyWages) }} of {{ money(financeDetail?.salaryBudget) }}</small></div>
+      <dl><div><dt>CLUB BALANCE</dt><dd>{{ money(totalFinances) }}</dd></div><div><dt>TRANSFER BUDGET</dt><dd>{{ money(transferBudget) }}</dd></div><div><dt>WAGES PAID THIS SEASON</dt><dd>{{ money(financeDetail?.wagesPaidThisSeason) }}</dd></div><div><dt>SCOUT WAGES / MONTH</dt><dd>{{ money(financeDetail?.scoutWages) }}</dd></div><div><dt>DEBT</dt><dd [class.bad]="debt > 0">{{ money(debt) }}</dd></div></dl>
     </article>
 
     <article class="desk-card news-card">
