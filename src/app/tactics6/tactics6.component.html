@@ -1,10 +1,18 @@
 <main class="selection-studio" [class.read-only]="isReadOnly">
   <header class="studio-header">
-    <div><span>TACTICAL SELECTION · SEASON {{ currentTeam.currentSeason }}</span><h1>{{ formationLabel() }} match plan</h1></div>
+    <div><span>TACTICAL SELECTION · SEASON {{ currentTeam.currentSeason }}</span><h1>{{ formationLabel() }} match plan</h1><small *ngIf="matchPreview">Next: {{ nextOpponentName }} · {{ matchPreview.competitionName }} · {{ matchPreview.date || matchPreview.matchDate || 'scheduled' }}</small></div>
     <div class="familiarity"><span>FAMILIARITY</span><i><b [style.width.%]="startersPicked / 11 * 100"></b></i><strong>{{ startersPicked }}/11</strong></div>
     <nav><a [routerLink]="['/tactics4', teamId]">Current</a><a [routerLink]="['/tactics5', teamId]">Wizard</a><a class="active" [routerLink]="['/tactics6', teamId]">Selection studio</a></nav>
     <button class="save" (click)="saveStudio()" [disabled]="!canEdit">SAVE TACTIC</button>
   </header>
+
+  <nav class="tactics-workspace-nav" aria-label="Tactics workspace">
+    <a class="active" [routerLink]="['/tactics6', teamId]">Overview</a>
+    <a href="#selection-list">Player roles</a>
+    <a [routerLink]="['/tactics4', teamId]">Set pieces & instructions</a>
+    <a routerLink="/assistant">Opposition instructions</a>
+    <a routerLink="/data-hub3">Analysis</a>
+  </nav>
 
   <section class="instruction-strip">
     <label><span>FORMATION</span><select [(ngModel)]="selectedTactic" (change)="changeFormation()" [disabled]="!canEdit || managerFormationRequiredByChairman"><option *ngFor="let option of formationOptions" [value]="option.key">{{ option.label }}</option></select></label>
@@ -18,27 +26,30 @@
 
   <section class="chairman-warning" *ngIf="managerFormationRequiredByChairman"><strong>Chairman requirement active:</strong> formation {{ managerChairmanRequiredFormation }} is locked.</section>
   <section class="studio-error" *ngIf="playersError || formationsError || mandateError">{{ playersError || formationsError || mandateError }} <button (click)="loadData()">Retry</button></section>
+  <section class="instruction-summary"><strong>TEAM INSTRUCTIONS</strong><span *ngFor="let instruction of instructionSummary">{{ instruction }}</span><a [routerLink]="['/tactics4', teamId]">Edit all ↗</a></section>
+  <section class="selection-warnings" *ngIf="selectionWarnings.length"><article *ngFor="let warning of selectionWarnings" [ngClass]="warning.tone"><strong>{{ warning.title }}</strong><span>{{ warning.detail }}</span></article></section>
 
   <section class="studio-grid">
-    <div class="roster-panel">
+    <div class="roster-panel" id="selection-list">
       <header><div><span>SELECTION LIST</span><strong>{{ visibleRoster.length }} players</strong></div><a [routerLink]="['/squad4', teamId]">Full register ↗</a></header>
       <div class="roster-tools"><input [(ngModel)]="rosterQuery" placeholder="Search player"><select [(ngModel)]="rosterPosition"><option value="ALL">All positions</option><option *ngFor="let position of rosterPositions" [value]="position">{{ position }}</option></select><select [(ngModel)]="rosterSort"><option value="POSITION">Position</option><option value="RATING">Rating</option><option value="CONDITION">Condition</option><option value="NAME">Name</option></select></div>
-      <div class="roster-head"><span>POS</span><span>PLAYER</span><span>ABILITY</span><span>CON</span><span>SHARP</span><span>AVG</span></div>
+      <div class="roster-head"><span>POS</span><span>PLAYER</span><span>ROLE / DUTY</span><span>ABILITY</span><span>CON</span><span>MOR</span><span>APPS</span><span>G+A</span><span>FORM</span></div>
       <div class="roster-scroll">
         <div class="roster-row" *ngFor="let player of visibleRoster" [class.selected]="isPlayerSelected(player.id)" [attr.draggable]="canEdit && !isManagerChairmanPlayerLocked(player.id) ? 'true' : null" (dragstart)="drag($event, player)">
-          <span><b [attr.data-position]="player.position">{{ player.position }}</b></span><span><strong>{{ player.name }}</strong><small>{{ player.age }} yrs · {{ isPlayerSelected(player.id) ? 'Selected' : 'Drag to pitch' }}</small></span>
-          <span class="ability"><i><b [style.width.%]="bar(player.rating)"></b></i></span><span [class.low]="condition(player) < 70">{{ condition(player) }}%</span><span [class.low]="sharpness(player) < 65">{{ sharpness(player) }}%</span><span class="rating">{{ player.rating | number:'1.2-2' }}</span>
+          <span><b [attr.data-position]="player.position">{{ player.position }}</b></span><span><strong>{{ player.name }}</strong><small>{{ player.age }} yrs · {{ player.currentStatus || (isPlayerSelected(player.id) ? 'Selected' : 'Drag to pitch') }}</small><em *ngIf="playerConcern(player)">{{ playerConcern(player).message }}</em></span>
+          <button class="role-cell" type="button" [disabled]="!isPlayerSelected(player.id) || !canEdit" (click)="editPlayerRole(player, $event)">{{ playerRole(player) }}</button>
+          <span class="ability"><i><b [style.width.%]="bar(player.rating)"></b></i><small>{{ player.rating | number:'1.1-1' }}</small></span><span [class.low]="condition(player) < 70">{{ condition(player) | number:'1.0-0' }}%</span><span [class.low]="morale(player) < 55">{{ morale(player) | number:'1.0-0' }}%</span><span>{{ player.seasonAppearances || 0 }}</span><span>{{ player.seasonGoals || 0 }}+{{ player.seasonAssists || 0 }}</span><span class="rating">{{ player.lastFiveAverageRating ? (player.lastFiveAverageRating | number:'1.2-2') : '—' }}</span>
         </div>
       </div>
     </div>
 
     <div class="pitch-panel">
-      <header><span>STARTING XI</span><strong>{{ startersPicked }}/11 · AVG {{ xiAvgRating | number:'1.2-2' }}</strong></header>
+      <header><span>STARTING XI</span><strong>{{ startersPicked }}/11 · AVG {{ xiAvgRating | number:'1.2-2' }} · {{ selectedOptions.mentality }}</strong></header>
       <div class="tactical-pitch" [style.--def-line]="defLineHeightPct + '%'">
         <div class="pitch-half"></div><div class="center-circle"></div><div class="penalty top"></div><div class="penalty bottom"></div><div class="defensive-line"></div>
         <div class="pitch-slots">
           <div class="pitch-slot" *ngFor="let cell of fieldPositions" [class.allowed]="allowedIndexes.includes(cell.positionIndex)" [style.transform]="'translate(' + cellWidthShift(cell.positionIndex) + '%, ' + cellDefLineShift(cell.positionIndex) + '%)'" (dragover)="allowDrop($event)" (drop)="drop($event, cell.positionIndex)" (contextmenu)="onRightClick(cell.positionIndex, $event)">
-            <div class="player-token" *ngIf="cell.player" [class.locked]="isSlotLocked(cell.positionIndex, cell.player.position)" [attr.draggable]="canEdit && !isSlotLocked(cell.positionIndex, cell.player.position) ? 'true' : null" (dragstart)="drag($event, cell.player)">
+            <div class="player-token" *ngIf="cell.player" [class.locked]="isSlotLocked(cell.positionIndex, cell.player.position)" [attr.draggable]="canEdit && !isSlotLocked(cell.positionIndex, cell.player.position) ? 'true' : null" (dragstart)="drag($event, cell.player)" (click)="openPlayerPanel(cell, $event)">
               <b>{{ cell.player.rating | number:'1.0-0' }}</b><span>{{ cell.player.name }}</span><small>{{ assignedRole(cell) }}</small><i *ngIf="cell.shadow">SHADOW</i>
             </div>
             <span class="empty-slot" *ngIf="!cell.player && allowedIndexes.includes(cell.positionIndex)">+</span>
@@ -56,5 +67,26 @@
     </aside>
   </section>
 
+  <section class="match-preparation">
+    <a *ngFor="let card of matchPreparationCards" [routerLink]="card.route"><span>{{ card.label }}</span><strong>{{ card.value }}</strong><small>{{ card.detail }}</small></a>
+  </section>
+
   <footer class="studio-footer"><span>Drag players between roster, pitch and bench.</span><span>Right-click a pitch player to remove him.</span><strong *ngIf="savedNotice">{{ savedNotice }}</strong><a routerLink="/assistant">Assistant report ↗</a></footer>
+
+  <div class="role-modal-backdrop" *ngIf="(activeRoleSlot || activeInstructionsSlot) as slot" (click)="closePlayerPanel()">
+    <section class="role-modal" (click)="$event.stopPropagation()">
+      <header><div><span>PLAYER INSTRUCTIONS</span><strong>{{ slot.player?.name }}</strong></div><button type="button" (click)="closePlayerPanel()">×</button></header>
+      <nav><button [class.active]="activeRoleSlot === slot" (click)="showRolesTab(slot)">Role & duty</button><button [class.active]="activeInstructionsSlot === slot" (click)="showInstructionsTab(slot)">Instructions</button></nav>
+      <div class="role-modal-body" *ngIf="activeRoleSlot === slot">
+        <button *ngIf="isShadowEligible(slot) || isShadowLocked(slot)" class="special-role" [class.active]="isShadowActive(slot)" [disabled]="isShadowLocked(slot)" (click)="toggleShadow(slot)"><b>SHADOW</b><small>{{ isShadowLocked(slot) ? 'Persistent player trait' : 'Stay forward and skip defensive work' }}</small></button>
+        <p class="modal-state" *ngIf="loadingRoles">Loading suitable roles…</p>
+        <article class="role-option" *ngFor="let role of availableRoles"><div><strong>{{ role.name }}</strong><span>{{ role.suitability || 0 }}% suitability</span></div><section><button *ngFor="let duty of role.duties" [class.active]="slot.role === role.name && slot.duty === duty" (click)="selectRole(slot, role, duty)">{{ duty }}</button></section></article>
+        <button class="clear-role" *ngIf="slot.role" (click)="clearRole(slot)">Clear assigned role</button>
+      </div>
+      <div class="role-modal-body" *ngIf="activeInstructionsSlot === slot">
+        <p class="modal-state" *ngIf="loadingInstructions">Loading instructions…</p>
+        <section class="instruction-category" *ngFor="let category of getInstructionCategories()"><strong>{{ category }}</strong><button *ngFor="let instruction of getInstructionsByCategory(category)" [class.active]="hasInstruction(slot, instruction.name)" [title]="instruction.description" (click)="toggleInstruction(slot, instruction.name)">{{ hasInstruction(slot, instruction.name) ? '✓ ' : '' }}{{ instruction.name }}</button></section>
+      </div>
+    </section>
+  </div>
 </main>
