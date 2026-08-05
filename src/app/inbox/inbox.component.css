@@ -163,6 +163,7 @@
 .msg-category-indicator.cat-transfer {
     background-color: #3498db;
 }
+.msg-category-indicator.cat-TRANSFER_RUMOUR { background-color: #a278d1; }
 
 .msg-category-indicator.cat-season_end {
     background-color: #daa520;
@@ -248,6 +249,7 @@
     background-color: rgba(52, 152, 219, 0.2);
     color: #3498db;
 }
+.badge-TRANSFER_RUMOUR { background-color: rgba(162, 120, 209, 0.2); color: #d5b7f4; }
 
 .badge-season_end {
     background-color: rgba(218, 165, 32, 0.2);
@@ -346,6 +348,7 @@
 .article-top-bar.bar-transfer {
     background-color: #3498db;
 }
+.article-top-bar.bar-TRANSFER_RUMOUR { background-color: #a278d1; }
 
 .article-top-bar.bar-season_end {
     background-color: #daa520;

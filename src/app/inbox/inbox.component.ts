@@ -38,7 +38,7 @@ export class InboxComponent implements OnInit {
   error = '';
   get chairmanMode(): boolean { return this.authService.careerRole === 'CHAIRMAN'; }
 
-  categories: string[] = ['all', 'JOB_OFFER', 'CAREER', 'match_result', 'league_news', 'transfer', 'european_prize', 'board', 'discipline', 'season_end', 'european',
+  categories: string[] = ['all', 'JOB_OFFER', 'CAREER', 'match_result', 'league_news', 'TRANSFER_RUMOUR', 'transfer', 'european_prize', 'board', 'discipline', 'season_end', 'european',
     'CHAIRMAN_WELCOME', 'CONTROL_ACQUIRED', 'TREASURY_TRANSFER', 'TACTICAL_MANDATE_UPDATED',
     'TRADER_ADVISER_HIRED', 'TRADER_ADVICE_AVAILABLE', 'CONTROLLED_CLUB_MATCH_RESULT'];
 
@@ -187,6 +187,7 @@ export class InboxComponent implements OnInit {
     switch (category) {
       case 'match_result': return 'Match Result';
       case 'league_news': return 'League News';
+      case 'TRANSFER_RUMOUR': return 'Transfer Rumour';
       case 'transfer': return 'Transfer';
       case 'board': return 'Board';
       case 'discipline': return 'Discipline';
