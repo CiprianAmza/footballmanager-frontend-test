@@ -43,7 +43,8 @@ export class ScoutingComponent implements OnInit, OnDestroy {
     maxAge: 45,
     minSalary: 0,
     maxSalary: 100000000, // Un maxim mare default
-    minRating: 0
+    minRating: 0,
+    maxRating: 300
   };
 
   // Dropdown-uri
@@ -107,7 +108,8 @@ export class ScoutingComponent implements OnInit, OnDestroy {
       const salaryMatch = player.salary >= this.filters.minSalary && player.salary <= this.filters.maxSalary;
 
       // 6. Filter Rating
-      const ratingMatch = player.rating >= this.filters.minRating;
+      const ratingMatch = player.rating >= this.filters.minRating
+        && player.rating <= this.filters.maxRating;
 
       return nameMatch && teamMatch && posMatch && ageMatch && salaryMatch && ratingMatch;
     });
@@ -156,7 +158,8 @@ export class ScoutingComponent implements OnInit, OnDestroy {
       maxAge: 45,
       minSalary: 0,
       maxSalary: 100000000,
-      minRating: 0
+      minRating: 0,
+      maxRating: 300
     };
     this.applyFilters();
   }

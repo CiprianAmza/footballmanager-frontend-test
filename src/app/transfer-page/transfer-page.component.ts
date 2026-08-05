@@ -35,6 +35,7 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
   sortField: string = 'estimatedRating';
   sortDirection: 'asc' | 'desc' = 'desc';
   positions: string[] = ['ALL', 'GK', 'DC', 'DL', 'DR', 'MC', 'ML', 'MR', 'ST'];
+  maxRating: number = 300;
   marketPage: number = 0;
   marketPageSize: number = 50;
   marketTotalPages: number = 0;
@@ -235,7 +236,8 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
       this.marketPageSize,
       this.positionFilter,
       backendSort,
-      this.sortDirection
+      this.sortDirection,
+      this.maxRating
     ).subscribe({
       next: (result) => {
         this.availablePlayers = result.content;

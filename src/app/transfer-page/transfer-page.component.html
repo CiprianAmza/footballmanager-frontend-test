@@ -41,6 +41,12 @@
         </select>
       </div>
       <div class="filter-group">
+        <label for="transfer-max-rating">Max rating:</label>
+        <input id="transfer-max-rating" type="number" [(ngModel)]="maxRating"
+               (change)="onFilterChange()" min="0" max="300" step="5"
+               placeholder="Max rating" class="filter-value-input">
+      </div>
+      <div class="filter-group">
         <label>Sort by:</label>
         <button class="sort-btn" (click)="toggleSort('estimatedRating')">Rating{{ getSortIcon('estimatedRating') }}</button>
         <button class="sort-btn" (click)="toggleSort('age')">Age{{ getSortIcon('age') }}</button>

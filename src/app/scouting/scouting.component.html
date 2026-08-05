@@ -43,8 +43,14 @@
         </div>
   
         <div class="filter-group range-group">
-          <label>Min Rating</label>
-          <input type="number" [(ngModel)]="filters.minRating" (change)="applyFilters()" class="small-input" step="5">
+          <label>Rating</label>
+          <div class="range-inputs">
+            <input type="number" [(ngModel)]="filters.minRating" (change)="applyFilters()"
+                   min="0" max="300" class="small-input" step="5" aria-label="Minimum rating">
+            <span>to</span>
+            <input type="number" [(ngModel)]="filters.maxRating" (change)="applyFilters()"
+                   min="0" max="300" class="small-input" step="5" aria-label="Maximum rating">
+          </div>
         </div>
   
         <div class="filter-group">

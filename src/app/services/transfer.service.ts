@@ -137,14 +137,17 @@ export class TransferService {
     size: number,
     position: string,
     sort: string,
-    direction: 'asc' | 'desc'
+    direction: 'asc' | 'desc',
+    maxRating: number = 300
   ): Observable<AvailablePlayersPage> {
+    const safeMaxRating = Number.isFinite(maxRating) ? Math.max(0, Math.min(300, maxRating)) : 300;
     const params = new URLSearchParams({
       page: String(page),
       size: String(size),
       position,
       sort,
-      direction
+      direction,
+      maxRating: String(safeMaxRating)
     });
     return this.http.get<AvailablePlayersPage>(
       `${urlApp}/transferOffer/availablePlayersPage/${teamId}?${params.toString()}`
