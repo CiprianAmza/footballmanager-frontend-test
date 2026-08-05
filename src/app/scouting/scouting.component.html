@@ -1,154 +1,323 @@
 <div class="scouting-container">
-
-    <!-- HEADER & SEARCH BAR -->
-    <div class="scout-header">
-      <h1>🌎 Player Search</h1>
-      <div class="results-count">
-        {{ displayedPlayers.length }} players found
-      </div>
+  <div class="scout-header">
+    <div>
+      <span class="eyebrow">RECRUITMENT CENTRE</span>
+      <h1>Scouting</h1>
+      <p>Search the database or send your recruitment team into the football world.</p>
     </div>
-  
-    <!-- FILTER PANEL -->
+    <div class="header-summary">
+      <strong>{{ availableScouts.length }}</strong>
+      <span>scouts available</span>
+    </div>
+  </div>
+
+  <nav class="scouting-tabs" aria-label="Scouting sections">
+    <button [class.active]="activeView === 'database'" (click)="setView('database')">
+      Player database <span>{{ displayedPlayers.length }}</span>
+    </button>
+    <button [class.active]="activeView === 'focuses'" (click)="setView('focuses')">
+      Recruitment focuses <span>{{ activeFocuses.length }}</span>
+    </button>
+    <button [class.active]="activeView === 'reports'" (click)="setView('reports')">
+      Focus reports <span>{{ completedFocuses.length }}</span>
+    </button>
+  </nav>
+
+  <div class="focus-alert success" *ngIf="focusMessage">{{ focusMessage }}</div>
+  <div class="focus-alert error" *ngIf="focusError">{{ focusError }}</div>
+
+  <ng-container *ngIf="activeView === 'database'">
     <div class="filters-panel">
-      
-      <!-- Row 1: Text Inputs -->
       <div class="filter-row">
         <div class="filter-group">
           <label>Name</label>
           <input type="text" [(ngModel)]="filters.name" (keyup)="applyFilters()" placeholder="Search name...">
         </div>
-  
         <div class="filter-group">
           <label>Club</label>
           <input type="text" [(ngModel)]="filters.team" (keyup)="applyFilters()" placeholder="Search club...">
         </div>
-  
         <div class="filter-group">
           <label>Position</label>
           <select [(ngModel)]="filters.position" (change)="applyFilters()">
             <option *ngFor="let pos of positions" [value]="pos">{{ pos }}</option>
           </select>
         </div>
+        <div class="filter-group">
+          <label>Market status</label>
+          <select aria-label="Market status" [(ngModel)]="filters.marketStatus" (change)="applyFilters()">
+            <option value="AVAILABLE">Available only</option>
+            <option value="ALL">All players</option>
+            <option value="TRANSFERRED">Transferred this season</option>
+            <option value="LOANED">On loan</option>
+          </select>
+        </div>
       </div>
-  
-      <!-- Row 2: Ranges -->
       <div class="filter-row">
         <div class="filter-group range-group">
-          <label>Age ({{filters.minAge}} - {{filters.maxAge}})</label>
+          <label>Age</label>
           <div class="range-inputs">
-              <input type="number" [(ngModel)]="filters.minAge" (change)="applyFilters()" min="15" max="45" class="small-input">
-              <span>to</span>
-              <input type="number" [(ngModel)]="filters.maxAge" (change)="applyFilters()" min="15" max="45" class="small-input">
+            <input type="number" [(ngModel)]="filters.minAge" (change)="applyFilters()" min="15" max="45" class="small-input" aria-label="Minimum age">
+            <span>to</span>
+            <input type="number" [(ngModel)]="filters.maxAge" (change)="applyFilters()" min="15" max="45" class="small-input" aria-label="Maximum age">
           </div>
         </div>
-  
         <div class="filter-group range-group">
           <label>Rating</label>
           <div class="range-inputs">
-            <input type="number" [(ngModel)]="filters.minRating" (change)="applyFilters()"
-                   min="0" max="300" class="small-input" step="5" aria-label="Minimum rating">
+            <input type="number" [(ngModel)]="filters.minRating" (change)="applyFilters()" min="0" max="300" class="small-input" step="5" aria-label="Minimum rating">
             <span>to</span>
-            <input type="number" [(ngModel)]="filters.maxRating" (change)="applyFilters()"
-                   min="0" max="300" class="small-input" step="5" aria-label="Maximum rating">
+            <input type="number" [(ngModel)]="filters.maxRating" (change)="applyFilters()" min="0" max="300" class="small-input" step="5" aria-label="Maximum rating">
           </div>
         </div>
-  
         <div class="filter-group">
-          <label>Min Salary (€)</label>
-          <input type="number" [(ngModel)]="filters.minSalary" (change)="applyFilters()" placeholder="Min Salary">
+          <label>Min salary (€)</label>
+          <input type="number" [(ngModel)]="filters.minSalary" (change)="applyFilters()" placeholder="Min salary">
         </div>
-  
-        <button class="btn-reset" (click)="resetFilters()">✖ Clear Filters</button>
+        <div class="filter-group value-range-filter">
+          <label>Value (€)</label>
+          <div class="range-inputs">
+            <input type="number" [(ngModel)]="filters.minValue" (change)="applyFilters()" min="0" placeholder="Min value">
+            <span>to</span>
+            <input type="number" [(ngModel)]="filters.maxValue" (change)="applyFilters()" min="0" placeholder="Max value">
+          </div>
+        </div>
+        <button class="btn-reset" (click)="resetFilters()">Clear filters</button>
       </div>
-  
     </div>
-  
-    <!-- LOADING STATE -->
-    <div *ngIf="loading" class="loading-container">
-      <div class="spinner"></div>
-      <p>Scouting the world...</p>
-    </div>
-  
-    <!-- DATA TABLE -->
-    <div class="table-container" *ngIf="!loading">
-      <table class="fm-table">
-        <thead>
-          <tr>
-            <th class="center" style="width:40px;">SL</th>
-            <th (click)="sort('name')">Name {{ getSortIcon('name') }}</th>
-            <th class="center" (click)="sort('position')">Position {{ getSortIcon('position') }}</th>
-            <th (click)="sort('teamName')">Club {{ getSortIcon('teamName') }}</th>
-            <th class="center" (click)="sort('age')">Age {{ getSortIcon('age') }}</th>
-            <th class="center" (click)="sort('rating')">Rating {{ getSortIcon('rating') }}</th>
-            <th class="right" (click)="sort('salary')">Salary {{ getSortIcon('salary') }}</th>
-            <th class="right" (click)="sort('transferValue')">Value {{ getSortIcon('transferValue') }}</th>
-            <th class="right" (click)="sort('fitness')">Condition {{ getSortIcon('fitness') }}</th>
-            <th class="center" (click)="sort('morale')">Morale {{ getSortIcon('morale') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let player of displayedPlayers">
 
-            <!-- SHORTLIST -->
+    <app-ui-state *ngIf="loading" kind="loading" title="Scouting the world"></app-ui-state>
+    <app-ui-state *ngIf="!loading && errorMessage" kind="error" title="Scouting unavailable"
+      [message]="errorMessage" (retry)="loadPlayers()"></app-ui-state>
+
+    <div class="table-container" *ngIf="!loading && !errorMessage">
+      <table class="fm-table">
+        <thead><tr>
+          <th class="center shortlist-column">SL</th>
+          <th (click)="sort('name')">Name {{ getSortIcon('name') }}</th>
+          <th class="center" (click)="sort('position')">Position {{ getSortIcon('position') }}</th>
+          <th (click)="sort('teamName')">Club {{ getSortIcon('teamName') }}</th>
+          <th class="center" (click)="sort('age')">Age {{ getSortIcon('age') }}</th>
+          <th class="center" (click)="sort('rating')">Rating {{ getSortIcon('rating') }}</th>
+          <th class="right" (click)="sort('salary')">Salary {{ getSortIcon('salary') }}</th>
+          <th class="right" (click)="sort('transferValue')">Value {{ getSortIcon('transferValue') }}</th>
+          <th class="right" (click)="sort('fitness')">Condition {{ getSortIcon('fitness') }}</th>
+          <th class="center" (click)="sort('morale')">Morale {{ getSortIcon('morale') }}</th>
+        </tr></thead>
+        <tbody>
+          <tr *ngFor="let player of displayedPlayers" [class.loaned-player-row]="player.loaned"
+              [class.transferred-player-row]="player.transferredThisSeason && !player.loaned">
             <td class="center">
-              <button class="shortlist-btn" [class.active]="isShortlisted(player.id)" (click)="toggleShortlist(player.id, $event)" [title]="isShortlisted(player.id) ? 'Remove from shortlist' : 'Add to shortlist'">
+              <button class="shortlist-btn" [class.active]="isShortlisted(player.id)" (click)="toggleShortlist(player.id, $event)"
+                [title]="isShortlisted(player.id) ? 'Remove from shortlist' : 'Add to shortlist'">
                 {{ isShortlisted(player.id) ? '\u2605' : '\u2606' }}
               </button>
             </td>
-
-            <!-- NAME -->
             <td class="name-cell">
-              <a [routerLink]="['/player', player.id]" class="fm-link">{{ player.name }}</a>
-            </td>
-  
-            <!-- POSITION (Pill) -->
-            <td class="center">
-              <span class="pos-pill">{{ player.position }}</span>
-            </td>
-  
-            <!-- CLUB -->
-            <td class="club-cell">
-              {{ player.teamName || 'Free Agent' }}
-            </td>
-  
-            <!-- AGE -->
-            <td class="center">{{ player.age }}</td>
-  
-            <!-- RATING -->
-            <td class="center rating-val"
-                [style.color]="player.rating | ratingColor"
-                [style.font-weight]="700">{{ player.rating | number:'1.0-0' }}</td>
-  
-            <!-- SALARY -->
-            <td class="right money-val">
-              {{ player.salary | currency:'EUR':'symbol':'1.0-0' }}
-            </td>
-
-            <!-- VALUE -->
-            <td class="right money-val">
-              {{ player.transferValue | currency:'EUR':'symbol':'1.0-0' }}
-            </td>
-
-            <!-- CONDITION -->
-            <td class="right">
-              {{ player.fitness | number:'1.0-0' }}%
-            </td>
-  
-            <!-- MORALE -->
-            <td class="center">
-              <span [class.morale-high]="player.morale > 80" [class.morale-low]="player.morale < 40">
-                  {{ player.morale | number:'1.0-0' }}
+              <span class="scout-player-preview">
+                <a [routerLink]="['/player', player.id]" [queryParams]="{ actingTeamId: teamService.teamId }" class="fm-link">{{ player.name }}</a>
+                <button type="button" class="scout-info-btn" [attr.aria-label]="'Information about ' + player.name">i</button>
+                <span *ngIf="player.loaned" class="scout-market-badge loaned" [title]="marketStatusLabel(player)">LOAN</span>
+                <span *ngIf="player.transferredThisSeason && !player.loaned" class="scout-market-badge transferred">NEW</span>
+                <span class="scout-mini-card" role="tooltip">
+                  <span class="scout-card-head"><strong>{{ player.name }}</strong><b>{{ player.rating | fmRating }}</b></span>
+                  <span class="scout-card-sub">{{ player.position }} · {{ player.teamName || 'Free Agent' }}</span>
+                  <span class="scout-card-grid">
+                    <span><small>Age</small><strong>{{ player.age }}</strong></span>
+                    <span><small>Condition</small><strong>{{ player.fitness | fmPercent }}</strong></span>
+                    <span><small>Morale</small><strong>{{ player.morale | number:'1.0-0' }}</strong></span>
+                    <span><small>Status</small><strong>{{ marketStatusLabel(player) }}</strong></span>
+                    <span class="wide"><small>Contract</small><strong>{{ contractSummary(player) }}</strong></span>
+                    <span class="wide"><small>Wage</small><strong>{{ (player.wage || player.salary || 0) | fmMoney }} / month</strong></span>
+                  </span>
+                  <span class="scout-season-title">Current season</span>
+                  <span class="scout-season-stats">
+                    <span><strong>{{ player.seasonAppearances || 0 }}</strong><small>Apps</small></span>
+                    <span><strong>{{ player.seasonGoals || 0 }}</strong><small>Goals</small></span>
+                    <span><strong>{{ player.seasonAssists || 0 }}</strong><small>Assists</small></span>
+                  </span>
+                  <span class="scout-important-attributes" *ngIf="player.importantAttributes?.length">
+                    <span *ngFor="let attribute of player.importantAttributes"><small>{{ attribute.name }}</small><strong>{{ attribute.value }}</strong></span>
+                  </span>
+                </span>
               </span>
             </td>
-  
+            <td class="center"><span class="pos-pill">{{ player.position }}</span></td>
+            <td class="club-cell">{{ player.teamName || 'Free Agent' }}</td>
+            <td class="center">{{ player.age }}</td>
+            <td class="center rating-val" [style.color]="player.rating | ratingColor" [style.font-weight]="700">{{ player.rating | fmRating }}</td>
+            <td class="right money-val">{{ player.salary | fmMoney }}</td>
+            <td class="right money-val">{{ player.transferValue | fmMoney }}</td>
+            <td class="right">{{ player.fitness | fmPercent }}</td>
+            <td class="center"><span [class.morale-high]="player.morale > 80" [class.morale-low]="player.morale < 40">{{ player.morale | number:'1.0-0' }}</span></td>
           </tr>
         </tbody>
       </table>
-      
-      <!-- No Results -->
-      <div *ngIf="displayedPlayers.length === 0" class="no-results">
-          No players found matching your criteria.
-      </div>
+      <app-ui-state *ngIf="displayedPlayers.length === 0" kind="empty" title="No players found"
+        message="Try widening the age, rating, salary or value filters." [showRetry]="false"></app-ui-state>
     </div>
-  
-  </div>
+  </ng-container>
+
+  <main class="focus-workspace" *ngIf="activeView === 'focuses'">
+    <section class="focus-builder">
+      <div class="section-heading">
+        <div><span class="eyebrow">NEW ASSIGNMENT</span><h2>Create recruitment focus</h2></div>
+        <span class="step-note">Up to 6 key attributes</span>
+      </div>
+
+      <div class="builder-grid">
+        <label class="form-field">
+          <span>Scout</span>
+          <select [(ngModel)]="focusForm.scoutId">
+            <option [ngValue]="0">Choose available scout</option>
+            <option *ngFor="let scout of availableScouts" [ngValue]="scout.id">
+              {{ scout.name }} · Ability {{ scout.scoutingAbility }} · Potential {{ scout.judgingPotential }}
+            </option>
+          </select>
+          <small *ngIf="availableScouts.length === 0">All scouts are currently assigned.</small>
+        </label>
+
+        <div class="form-field target-type-field">
+          <span>Search area</span>
+          <div class="segmented-control">
+            <button *ngFor="let type of ['TEAM', 'COMPETITION', 'NATION']"
+              [class.active]="focusForm.targetType === type" (click)="changeTargetType($any(type))">{{ type | titlecase }}</button>
+          </div>
+        </div>
+
+        <label class="form-field target-field">
+          <span>Destination</span>
+          <select [(ngModel)]="focusForm.targetId">
+            <option [ngValue]="0">Choose {{ focusForm.targetType | lowercase }}</option>
+            <option *ngFor="let target of targetOptions" [ngValue]="target.id">{{ target.name }}</option>
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>Position</span>
+          <select [(ngModel)]="focusForm.position">
+            <option value="ANY">Any position</option>
+            <option *ngFor="let position of focusCatalog?.positions" [value]="position">{{ position }}</option>
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>Priority</span>
+          <select [(ngModel)]="focusForm.emphasis">
+            <option *ngFor="let emphasis of focusCatalog?.emphases" [ngValue]="emphasis">{{ emphasisLabel(emphasis) }}</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="criteria-row">
+        <div class="range-card">
+          <span>Approximate rating</span>
+          <div><input type="number" min="0" max="300" [(ngModel)]="focusForm.minRating" aria-label="Focus minimum rating"><b>–</b>
+            <input type="number" min="0" max="300" [(ngModel)]="focusForm.maxRating" aria-label="Focus maximum rating"></div>
+        </div>
+        <div class="range-card">
+          <span>Age range</span>
+          <div><input type="number" min="15" max="50" [(ngModel)]="focusForm.minAge" aria-label="Focus minimum age"><b>–</b>
+            <input type="number" min="15" max="50" [(ngModel)]="focusForm.maxAge" aria-label="Focus maximum age"></div>
+        </div>
+        <label class="range-card threshold-card">
+          <span>Attribute threshold</span>
+          <input type="number" min="1" max="20" [(ngModel)]="focusForm.minimumAttribute" aria-label="Minimum key attribute">
+          <small>Every selected attribute must meet this value.</small>
+        </label>
+      </div>
+
+      <div class="attribute-picker">
+        <div class="attribute-picker-heading">
+          <span>Key attributes</span><small>{{ focusForm.keyAttributes.length }}/6 selected</small>
+        </div>
+        <button *ngFor="let attribute of focusCatalog?.attributes" (click)="toggleFocusAttribute(attribute)"
+          [class.selected]="focusForm.keyAttributes.includes(attribute)"
+          [disabled]="focusForm.keyAttributes.length >= 6 && !focusForm.keyAttributes.includes(attribute)">
+          {{ attribute }}
+        </button>
+      </div>
+
+      <div class="builder-footer">
+        <p>The scout's experience and knowledge of the area determine the final duration and cost.</p>
+        <button class="primary-action" (click)="createFocus()" [disabled]="focusSaving || availableScouts.length === 0">
+          {{ focusSaving ? 'Sending scout…' : 'Start recruitment focus' }}
+        </button>
+      </div>
+    </section>
+
+    <section class="active-focus-section">
+      <div class="section-heading"><div><span class="eyebrow">IN THE FIELD</span><h2>Active focuses</h2></div><span class="count-badge">{{ activeFocuses.length }}</span></div>
+      <app-ui-state *ngIf="focusLoading" kind="loading" title="Loading recruitment focuses"></app-ui-state>
+      <app-ui-state *ngIf="!focusLoading && activeFocuses.length === 0" kind="empty" title="No active recruitment focus"
+        message="Choose an available scout and give them a precise recruitment brief." [showRetry]="false"></app-ui-state>
+      <div class="focus-card-list" *ngIf="!focusLoading && activeFocuses.length">
+        <article class="focus-card" *ngFor="let focus of activeFocuses">
+          <div class="focus-card-top">
+            <span class="target-icon">{{ focus.targetType === 'TEAM' ? 'C' : focus.targetType === 'COMPETITION' ? 'L' : 'N' }}</span>
+            <div><h3>{{ focus.targetName }}</h3><p>{{ focus.scoutName }} · {{ focus.targetType | titlecase }}</p></div>
+            <span class="days-left">{{ focus.daysRemaining }} days</span>
+          </div>
+          <div class="progress-track"><span [style.width.%]="100 - (focus.daysRemaining / (focus.endDay - focus.startDay) * 100)"></span></div>
+          <div class="focus-criteria">
+            <span>{{ focus.position === 'ANY' ? 'Any position' : focus.position }}</span>
+            <span>Rating {{ focus.minRating }}–{{ focus.maxRating }}</span>
+            <span>Age {{ focus.minAge }}–{{ focus.maxAge }}</span>
+            <span>{{ emphasisLabel(focus.emphasis) }}</span>
+          </div>
+          <div class="focus-card-footer">
+            <span>{{ focus.cost | fmMoney }} · due day {{ focus.endDay }}</span>
+            <button (click)="cancelFocus(focus)">Cancel</button>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <main class="reports-workspace" *ngIf="activeView === 'reports'">
+    <aside class="report-index">
+      <div class="section-heading"><div><span class="eyebrow">RECRUITMENT INTELLIGENCE</span><h2>Completed reports</h2></div></div>
+      <app-ui-state *ngIf="focusLoading" kind="loading" title="Loading reports"></app-ui-state>
+      <app-ui-state *ngIf="!focusLoading && completedFocuses.length === 0" kind="empty" title="No focus reports yet"
+        message="Completed recruitment focuses will be stored here." [showRetry]="false"></app-ui-state>
+      <button class="report-index-item" *ngFor="let focus of completedFocuses" [class.active]="selectedFocus?.id === focus.id" (click)="openReport(focus)">
+        <span class="report-target-type">{{ focus.targetType.charAt(0) }}</span>
+        <span><strong>{{ focus.targetName }}</strong><small>{{ focus.scoutName }} · Season {{ focus.season }}</small></span>
+        <b>{{ focus.candidatesFound }}</b>
+      </button>
+    </aside>
+
+    <section class="report-detail">
+      <app-ui-state *ngIf="!selectedFocus" kind="empty" title="Select a scouting report"
+        message="Open a completed focus to compare the candidates found by your scout." [showRetry]="false"></app-ui-state>
+      <ng-container *ngIf="selectedFocus">
+        <div class="report-hero">
+          <div><span class="eyebrow">{{ selectedFocus.targetType }} REPORT</span><h2>{{ selectedFocus.targetName }}</h2>
+            <p>{{ selectedFocus.scoutName }} searched for {{ selectedFocus.position === 'ANY' ? 'all positions' : selectedFocus.position }} · {{ emphasisLabel(selectedFocus.emphasis) }}</p></div>
+          <div class="report-score"><strong>{{ selectedFocus.candidatesFound }}</strong><span>matches</span></div>
+        </div>
+        <div class="report-brief">
+          <span>Rating {{ selectedFocus.minRating }}–{{ selectedFocus.maxRating }}</span>
+          <span>Age {{ selectedFocus.minAge }}–{{ selectedFocus.maxAge }}</span>
+          <span *ngIf="selectedFocus.keyAttributes.length">{{ selectedFocus.keyAttributes.join(', ') }} ≥ {{ selectedFocus.minimumAttribute }}</span>
+        </div>
+        <app-ui-state *ngIf="resultsLoading" kind="loading" title="Opening scouting report"></app-ui-state>
+        <app-ui-state *ngIf="!resultsLoading && focusResults.length === 0" kind="empty" title="No candidates met the brief"
+          message="Try a wider rating range, fewer key attributes or a lower attribute threshold next time." [showRetry]="false"></app-ui-state>
+        <div class="result-table-wrap" *ngIf="!resultsLoading && focusResults.length">
+          <table class="result-table">
+            <thead><tr><th>Recommendation</th><th>Player</th><th>Club</th><th>Age</th><th>Est. rating</th><th>Potential</th><th>Value</th><th>Key evidence</th></tr></thead>
+            <tbody><tr *ngFor="let result of focusResults">
+              <td><span class="recommendation" [attr.data-level]="result.recommendation">{{ recommendationLabel(result.recommendation) }}</span><b class="fit-score">{{ result.fitScore | number:'1.0-0' }}</b></td>
+              <td><a [routerLink]="['/player', result.playerId]" [queryParams]="{ actingTeamId: teamService.teamId }">{{ result.playerName }}</a><small>{{ result.position }}</small></td>
+              <td>{{ result.playerTeamName }}</td><td>{{ result.age }}</td>
+              <td><strong>{{ result.estimatedRating | fmRating }}</strong></td><td>{{ result.estimatedPotential | number:'1.0-0' }}</td>
+              <td>{{ result.estimatedTransferValue | fmMoney }}</td>
+              <td><span class="attribute-evidence" *ngFor="let attribute of resultAttributes(result.matchedAttributes)">{{ attribute }}</span><em *ngIf="!result.matchedAttributes">Profile fit</em></td>
+            </tr></tbody>
+          </table>
+        </div>
+      </ng-container>
+    </section>
+  </main>
+</div>
