@@ -59,7 +59,7 @@ export class Friendlies3Component implements OnInit {
         this.opponents = data.preparation.opponents;
         this.events = data.preparation.events;
         this.options = data.options;
-        this.season = this.options.currentSeason;
+        if (!this.options.availableSeasons.includes(this.season)) this.season = this.options.currentSeason;
         this.selectNextAvailableWindow();
         const domestic = this.options.destinations.find(destination => destination.domestic);
         if (domestic && !this.hostNationId) this.hostNationId = domestic.nationId;
@@ -99,21 +99,23 @@ export class Friendlies3Component implements OnInit {
 
   get isFutureWindow(): boolean {
     const currentDay = this.options?.currentDay || 0;
-    const future = this.startDay > currentDay;
+    const currentSeason = this.options?.currentSeason || this.season;
+    const future = this.season > currentSeason || (this.season === currentSeason && this.startDay > currentDay);
+    const allowedSeason = !!this.options?.availableSeasons.includes(this.season);
     const preSeason = this.startDay >= 1 && this.endDay <= 30;
     const winterBreak = this.startDay >= 201 && this.endDay <= 210;
-    return future && (preSeason || winterBreak);
+    return allowedSeason && future && (preSeason || winterBreak);
   }
 
   get hasAvailableWindow(): boolean {
-    return !!this.options?.dateOptions.length;
+    return this.startDateOptions.length > 0;
   }
 
-  get startDateOptions() { return this.options?.dateOptions || []; }
+  get startDateOptions() { return (this.options?.dateOptions || []).filter(option => option.season === this.season); }
 
   get endDateOptions() {
     const sameWindow = this.startDay <= 30 ? (day: number) => day <= 30 : (day: number) => day >= 201;
-    return (this.options?.dateOptions || []).filter(option => option.day >= this.startDay && sameWindow(option.day));
+    return this.startDateOptions.filter(option => option.day >= this.startDay && sameWindow(option.day));
   }
 
   get projectedFeeIncome(): number {
@@ -153,6 +155,14 @@ export class Friendlies3Component implements OnInit {
       this.endDay = this.endDateOptions[0]?.day || this.startDay;
     }
     this.updateCostFromDestination(true);
+  }
+
+  changePlanningSeason(): void {
+    this.startDay = 0;
+    this.endDay = 0;
+    this.events = [];
+    this.selectedEvent = null;
+    this.load();
   }
 
   toggleParticipant(teamId: number): void {
@@ -256,14 +266,13 @@ export class Friendlies3Component implements OnInit {
   }
 
   private selectNextAvailableWindow(): void {
-    const currentDay = this.options?.currentDay || 1;
-    if (this.startDay > currentDay && ((this.startDay <= 30 && this.endDay <= 30) || (this.startDay >= 201 && this.endDay <= 210))) return;
-    if (currentDay < 30) {
-      this.startDay = currentDay + 1;
-      this.endDay = Math.min(30, this.startDay + (this.eventType === 'TRAINING_CAMP' ? 6 : 4));
-    } else if (currentDay < 210) {
-      this.startDay = Math.max(201, currentDay + 1);
-      this.endDay = Math.min(210, this.startDay + (this.eventType === 'TRAINING_CAMP' ? 6 : 4));
-    }
+    if (!this.startDateOptions.length && this.season === this.options?.currentSeason) this.season = this.options.currentSeason + 1;
+    const dates = this.startDateOptions;
+    if (!dates.length) return;
+    if (dates.some(option => option.day === this.startDay) && this.endDateOptions.some(option => option.day === this.endDay)) return;
+    this.startDay = dates[0].day;
+    const desiredEnd = this.startDay + (this.eventType === 'TRAINING_CAMP' ? 6 : 4);
+    const ends = this.endDateOptions;
+    this.endDay = ends.find(option => option.day >= desiredEnd)?.day || ends[ends.length - 1]?.day || this.startDay;
   }
 }

@@ -23,6 +23,7 @@
 
       <div class="form-grid">
         <label class="wide"><span>EVENT NAME</span><input [(ngModel)]="eventName"></label>
+        <label><span>SEASON</span><select [(ngModel)]="season" (change)="changePlanningSeason()"><option *ngFor="let availableSeason of options?.availableSeasons" [ngValue]="availableSeason">Season {{ availableSeason }}{{ availableSeason === options?.currentSeason ? ' · current' : ' · next' }}</option></select></label>
         <label><span>HOST COUNTRY</span><select [(ngModel)]="hostNationId" (change)="updateCostFromDestination(true)"><option *ngFor="let destination of options?.destinations" [ngValue]="destination.nationId">{{ destination.name }}{{ destination.domestic ? ' · home' : '' }}</option></select></label>
         <label><span>BASE / VENUE</span><input [(ngModel)]="locationName"></label>
         <label><span>START DATE</span><select [(ngModel)]="startDay" (change)="changeStartDate()"><option *ngFor="let date of startDateOptions" [ngValue]="date.day">Season {{ season }} · {{ date.dateDisplay }}</option></select><small>Today: Season {{ options?.currentSeason }} · {{ options?.currentDate }} · future dates only</small></label>

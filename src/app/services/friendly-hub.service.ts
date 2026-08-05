@@ -37,6 +37,7 @@ export interface FriendlyOpponent {
 }
 
 export interface FriendlyDay {
+  season?: number;
   day: number;
   dateDisplay: string;
   phase: 'PRE_SEASON' | 'WINTER_BREAK';
@@ -85,6 +86,7 @@ export interface FriendlyPlannerOptions {
   currentDay: number;
   currentDate: string;
   minimumStartDay: number;
+  availableSeasons: number[];
   dateOptions: FriendlyDay[];
   destinations: Array<{nationId: number; name: string; flagCode: string; domestic: boolean; estimatedBaseCost: number}>;
   eventTypes: Array<{id: string; label: string; description: string}>;
