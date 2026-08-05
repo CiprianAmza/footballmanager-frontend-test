@@ -165,6 +165,7 @@
 }
 .msg-category-indicator.cat-TRANSFER_RUMOUR { background-color: #a278d1; }
 .msg-category-indicator.cat-MEDIA_FORMER_PLAYER { background-color: #d4a72c; }
+.msg-category-indicator.cat-MEDIA_FORMER_MANAGER { background-color: #3fa7a3; }
 
 .msg-category-indicator.cat-season_end {
     background-color: #daa520;
@@ -252,6 +253,7 @@
 }
 .badge-TRANSFER_RUMOUR { background-color: rgba(162, 120, 209, 0.2); color: #d5b7f4; }
 .badge-MEDIA_FORMER_PLAYER { background-color: rgba(212, 167, 44, 0.18); color: #f3d275; }
+.badge-MEDIA_FORMER_MANAGER { background-color: rgba(63, 167, 163, 0.18); color: #79d9d4; }
 
 .badge-season_end {
     background-color: rgba(218, 165, 32, 0.2);
@@ -352,6 +354,7 @@
 }
 .article-top-bar.bar-TRANSFER_RUMOUR { background-color: #a278d1; }
 .article-top-bar.bar-MEDIA_FORMER_PLAYER { background-color: #d4a72c; }
+.article-top-bar.bar-MEDIA_FORMER_MANAGER { background-color: #3fa7a3; }
 
 .article-top-bar.bar-season_end {
     background-color: #daa520;
