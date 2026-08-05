@@ -8,7 +8,7 @@ export type AdviceAction = 'BUY' | 'SELL' | 'HOLD';
 export interface MarketInstrumentView {
   id: number; code: string; type: MarketInstrumentType; teamId?: number;
   name: string; price: Money; totalSupply: number; availableSupply: number;
-  riskClass: MarketRiskClass; dailyLimitBps: number; weeklyLimitBps: number; algorithmVersion: string;
+  riskClass: MarketRiskClass; dailyChangeBps: number; dailyLimitBps: number; weeklyLimitBps: number; algorithmVersion: string;
   underlyingClubValuation?: Money; clubValuationVersion?: string;
 }
 export interface MarketPriceView {
@@ -21,7 +21,7 @@ export interface PortfolioPositionView {
 }
 export interface PortfolioView {
   positions: PortfolioPositionView[]; totalCostBasis: Money; marketValue: Money;
-  unrealizedGain: Money; realizedGain: Money;
+  unrealizedGain: Money; realizedGain: Money; cashBalance: Money;
 }
 export interface MarketTradeView {
   id: number; instrumentId: number; code: string; side: MarketTradeSide;

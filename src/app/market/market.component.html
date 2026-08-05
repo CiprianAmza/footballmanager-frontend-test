@@ -1,126 +1,113 @@
 <section class="market-page">
   <header class="market-header">
-    <div>
-      <span class="eyebrow">DETERMINISTIC EXCHANGE</span>
+    <div class="header-copy">
+      <span class="eyebrow">REGENT EXCHANGE</span>
       <h1>Market</h1>
-      <p>Execution prices, adviser identity and chairman ownership are enforced by the server.</p>
+      <p>Explore opportunities, understand the risk and review every order before it reaches the exchange.</p>
     </div>
-    <a routerLink="/portfolio">My portfolio</a>
+    <div class="header-actions"><span class="market-open"><i></i> Market open</span><a routerLink="/portfolio">Portfolio & activity <b>→</b></a></div>
   </header>
 
-  <p class="notice error" *ngIf="error">{{ error }}</p>
-  <p class="notice success" *ngIf="message">{{ message }}</p>
+  <div class="notice-stack"><p class="notice error" *ngIf="error">{{ error }}</p><p class="notice success" *ngIf="message">{{ message }}</p></div>
 
   <section class="state-card" *ngIf="flagOff">
-    <h2>Feature flag off</h2>
-    <p>The Regent market is still disabled in this environment. No rollout has been activated.</p>
-    <button type="button" (click)="load(); loadAdviser()">Retry</button>
+    <span class="state-icon">◇</span><h2>Market currently unavailable</h2>
+    <p>The Regent market has not been enabled in this environment.</p>
+    <button type="button" (click)="load(); loadAdviser()">Try again</button>
   </section>
 
-  <p *ngIf="loading && !flagOff">Loading market…</p>
-
-  <section class="state-card" *ngIf="!loading && !flagOff && !instruments.length">
-    <h2>No instruments yet</h2>
-    <p>The server has not published any tradable instruments for the current save.</p>
-    <button type="button" (click)="load()">Retry</button>
+  <section class="portfolio-strip" *ngIf="!flagOff" aria-label="Portfolio overview">
+    <article class="primary-stat">
+      <span>Buying power</span><b>{{ portfolioLoading ? '—' : compactMoney(portfolio?.cashBalance?.amount || 0) }}</b>
+      <small>Available to invest now</small>
+    </article>
+    <article><span>Portfolio value</span><b>{{ portfolioLoading ? '—' : compactMoney(portfolio?.marketValue?.amount || 0) }}</b><small>{{ portfolio?.positions?.length || 0 }} open positions</small></article>
+    <article><span>Unrealized return</span><b [class.negative]="(portfolio?.unrealizedGain?.amount || 0) < 0">{{ portfolioLoading ? '—' : compactMoney(portfolio?.unrealizedGain?.amount || 0) }}</b><small [class.negative]="portfolioReturnPercent < 0">{{ portfolioReturnPercent > 0 ? '+' : '' }}{{ portfolioReturnPercent | number:'1.1-1' }}%</small></article>
+    <article><span>Realized gain</span><b [class.negative]="(portfolio?.realizedGain?.amount || 0) < 0">{{ portfolioLoading ? '—' : compactMoney(portfolio?.realizedGain?.amount || 0) }}</b><small>Career investment result</small></article>
+    <p class="portfolio-warning" *ngIf="portfolioError">{{ portfolioError }}</p>
   </section>
 
-  <div class="market-grid" *ngIf="!loading && !flagOff && instruments.length">
-    <section>
-      <div class="market-table">
-        <div class="market-row market-labels"><span>Instrument</span><span>Price</span><span>Available</span><span>Order</span></div>
-        <div class="market-row" *ngFor="let instrument of instruments; trackBy: trackInstrument">
-          <button class="instrument" type="button" (click)="showHistory(instrument)">
-            <b>{{ instrument.code }}</b>
-            <span>{{ instrument.name }} · {{ instrument.type }}</span>
-            <small class="risk-pill">{{ riskLabel(instrument.riskClass) }}</small>
-          </button>
-          <strong>{{ money(instrument.price.amount) }}</strong>
-          <span>{{ instrument.availableSupply | number }} / {{ instrument.totalSupply | number }}</span>
-          <div class="order">
-            <input type="number" min="1" step="1" [(ngModel)]="quantities[instrument.id]" [disabled]="busy">
-            <button type="button" (click)="execute(instrument, 'BUY')" [disabled]="busy || instrument.availableSupply < quantities[instrument.id]">Buy</button>
-            <button class="sell" type="button" (click)="execute(instrument, 'SELL')" [disabled]="busy">Sell</button>
-          </div>
-        </div>
+  <section class="market-workspace" *ngIf="!loading && !flagOff && instruments.length">
+    <div class="browse-column">
+      <div class="section-heading"><div><span class="eyebrow">DISCOVER</span><h2>All instruments</h2></div><b>{{ visibleInstruments.length }} of {{ instruments.length }}</b></div>
+
+      <div class="market-toolbar">
+        <label class="market-search"><span>⌕</span><input type="search" [(ngModel)]="query" placeholder="Search name or ticker" aria-label="Search instruments"></label>
+        <label><span>Type</span><select [(ngModel)]="typeFilter"><option value="ALL">All assets</option><option value="COMPANY">Companies</option><option value="CLUB">Football clubs</option></select></label>
+        <label><span>Risk</span><select [(ngModel)]="riskFilter"><option value="ALL">All risk levels</option><option value="SAFE_COMPANY">Low volatility</option><option value="SPECULATIVE">High volatility</option><option value="CLUB_EQUITY">Club equity</option></select></label>
+        <label><span>Sort</span><select [(ngModel)]="sort"><option value="CHANGE_DESC">Top movers</option><option value="NAME_ASC">Name A–Z</option><option value="PRICE_ASC">Lowest price</option><option value="PRICE_DESC">Highest price</option><option value="SUPPLY_DESC">Most available</option></select></label>
       </div>
-    </section>
 
-    <aside class="detail-column">
-      <section class="detail-card" *ngIf="selected">
-        <div class="detail-head">
-          <div>
-            <span class="eyebrow">SELECTED INSTRUMENT</span>
-            <h2>{{ selected.code }}</h2>
-            <p>{{ selected.name }}</p>
-          </div>
-          <span class="risk-pill">{{ riskLabel(selected.riskClass) }}</span>
-        </div>
-        <p class="risk-copy">{{ riskDescription(selected.riskClass) }}</p>
-        <p class="detail-price">{{ money(selected.price.amount) }}</p>
-        <p class="history-error error" *ngIf="historyError">{{ historyError }}</p>
-        <p *ngIf="historyLoading">Loading price history…</p>
-        <div class="history" *ngIf="!historyLoading">
-          <div *ngFor="let quote of history">
-            <span>S{{ quote.season }} · D{{ quote.day }}</span>
-            <b>{{ money(quote.closePrice.amount) }}</b>
-            <em [class.negative]="quote.dailyChangeBps < 0">{{ quote.dailyChangeBps / 100 | number:'1.2-2' }}%</em>
-          </div>
-          <p *ngIf="!history.length">No daily close has been generated yet.</p>
-        </div>
-      </section>
+      <div class="applied-filters" *ngIf="activeFilterCount">
+        <span>{{ activeFilterCount }} applied</span>
+        <button type="button" *ngIf="query" (click)="query = ''">Search: {{ query }} ×</button>
+        <button type="button" *ngIf="typeFilter !== 'ALL'" (click)="typeFilter = 'ALL'">{{ typeFilter === 'CLUB' ? 'Football clubs' : 'Companies' }} ×</button>
+        <button type="button" *ngIf="riskFilter !== 'ALL'" (click)="riskFilter = 'ALL'">{{ riskLabel(riskFilter) }} ×</button>
+        <button class="clear-filters" type="button" (click)="clearFilters()">Clear all</button>
+      </div>
 
-      <section class="detail-card">
-        <div class="detail-head">
-          <div>
-            <span class="eyebrow">TRADER ADVISER</span>
-            <h2>Chairman adviser desk</h2>
-          </div>
-          <span class="status-tag" [class]="statusTone(currentContract?.status)">{{ currentContract?.status || 'NOT_HIRED' }}</span>
-        </div>
-        <p class="notice error" *ngIf="adviserError">{{ adviserError }}</p>
-        <p *ngIf="adviserLoading">Loading adviser desk…</p>
-        <ng-container *ngIf="!adviserLoading">
-          <div class="contract-card" *ngIf="currentContract; else noContract">
-            <h3>{{ currentContract.adviserName }}</h3>
-            <p>{{ money(currentContract.salaryPerDay.amount) }} per day · skill {{ currentContract.skill }} · reputation {{ currentContract.reputation }}</p>
-            <p>Contract: S{{ currentContract.startDate.season }} D{{ currentContract.startDate.day }} to S{{ currentContract.endDate.season }} D{{ currentContract.endDate.day }}</p>
-            <p *ngIf="currentContract.terminationReason">Status reason: {{ currentContract.terminationReason }}</p>
-          </div>
-          <ng-template #noContract>
-            <p class="risk-copy">No adviser is under contract right now.</p>
-          </ng-template>
+      <div class="instrument-table" role="table" aria-label="Tradable instruments">
+        <div class="instrument-labels" role="row"><span>Instrument</span><span>Today</span><span>Price</span><span>Owned</span><span>Available</span><span></span></div>
+        <button class="instrument-row" role="row" type="button" *ngFor="let instrument of visibleInstruments; trackBy: trackInstrument" [class.selected]="selected?.id === instrument.id" (click)="showHistory(instrument)">
+          <span class="instrument-identity"><i [attr.data-type]="instrument.type">{{ instrument.code.slice(0, 2) }}</i><span><b>{{ instrument.code }}</b><small>{{ instrument.name }}</small></span><em>{{ riskLabel(instrument.riskClass) }}</em></span>
+          <strong [class.negative]="instrument.dailyChangeBps < 0">{{ changeLabel(instrument.dailyChangeBps) }}</strong>
+          <span class="instrument-price">{{ compactMoney(instrument.price.amount) }}</span>
+          <span>{{ (positionFor(instrument.id)?.quantity || 0) | number }}</span>
+          <span>{{ instrument.availableSupply | number }}</span>
+          <span class="row-arrow">›</span>
+        </button>
+        <div class="empty-results" *ngIf="!visibleInstruments.length"><span>⌕</span><h3>No matching instruments</h3><p>Remove one or more filters to broaden the list.</p><button type="button" (click)="clearFilters()">Clear filters</button></div>
+      </div>
+    </div>
 
-          <div *ngIf="!isChairman" class="state-card compact">
-            <p>Only chairman careers can hire a trader adviser or request investment advice.</p>
-          </div>
+    <aside class="detail-column" *ngIf="selected">
+      <section class="instrument-detail">
+        <div class="detail-tabs" role="tablist"><button type="button" role="tab" [class.active]="detailTab === 'OVERVIEW'" (click)="setDetailTab('OVERVIEW')">Overview</button><button type="button" role="tab" [class.active]="detailTab === 'ADVISER'" (click)="setDetailTab('ADVISER')">Adviser <i *ngIf="hasActiveContract"></i></button></div>
 
-          <div class="options" *ngIf="isChairman && !hasActiveContract">
-            <article class="option-card" *ngFor="let option of hireOptions; trackBy: trackOption">
-              <h3>{{ option.adviserName }}</h3>
-              <p>{{ money(option.salaryPerDay.amount) }} per day · {{ option.durationDays }} days</p>
-              <p>Skill {{ option.skill }} · reputation {{ option.reputation }}</p>
-              <button type="button" (click)="hire(option)" [disabled]="busy">Hire adviser</button>
-            </article>
-          </div>
+        <ng-container *ngIf="detailTab === 'OVERVIEW'">
+          <header class="detail-head"><div class="selected-symbol"><i [attr.data-type]="selected.type">{{ selected.code.slice(0, 2) }}</i><span><small>{{ selected.type === 'CLUB' ? 'Football club equity' : 'Listed company' }}</small><h2>{{ selected.code }}</h2><p>{{ selected.name }}</p></span></div><span class="risk-pill">{{ riskLabel(selected.riskClass) }}</span></header>
 
-          <div class="advice-panel" *ngIf="isChairman">
-            <button type="button" (click)="requestAdvice()" [disabled]="!selected || adviceLoading || !hasActiveContract">
-              {{ adviceLoading ? 'Requesting advice…' : 'Request advice' }}
-            </button>
-            <p class="risk-copy" *ngIf="!hasActiveContract">Hire an active adviser contract before asking for BUY / SELL / HOLD guidance.</p>
-            <article class="advice-card" *ngIf="advice">
-              <div class="detail-head">
-                <h3>{{ advice.action }}</h3>
-                <span class="risk-pill">{{ riskLabel(advice.riskClass) }}</span>
-              </div>
-              <p>{{ advice.instrumentCode }} · confidence {{ percent(advice.confidence) }} · risk {{ percent(advice.risk) }}</p>
-              <p>Horizon {{ advice.horizonDays }} days · observed volatility {{ percent(advice.observedVolatility) }}</p>
-              <p class="risk-copy">{{ advice.explanation }}</p>
-            </article>
-          </div>
+          <div class="price-block"><div><b>{{ money(selected.price.amount) }}</b><span [class.negative]="selected.dailyChangeBps < 0">{{ changeLabel(selected.dailyChangeBps) }} today</span></div><label>Range<select [(ngModel)]="historyRange" (ngModelChange)="reloadHistory()"><option [ngValue]="7">7 days</option><option [ngValue]="30">30 days</option><option [ngValue]="90">90 days</option><option [ngValue]="366">1 year</option></select></label></div>
+          <div class="price-chart" [class.loading]="historyLoading"><svg viewBox="0 0 100 42" preserveAspectRatio="none" aria-label="Price history chart"><defs><linearGradient id="marketArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#55d5ae" stop-opacity=".35"/><stop offset="1" stop-color="#55d5ae" stop-opacity="0"/></linearGradient></defs><polygon *ngIf="sparklinePoints()" [attr.points]="'0,42 ' + sparklinePoints() + ' 100,42'" fill="url(#marketArea)"></polygon><polyline *ngIf="sparklinePoints()" [attr.points]="sparklinePoints()" fill="none" stroke="#55d5ae" stroke-width="1.7" vector-effect="non-scaling-stroke"></polyline></svg><span *ngIf="historyLoading">Loading history…</span><span *ngIf="!historyLoading && !history.length">Price history will appear after the first market close.</span><p class="error-inline" *ngIf="historyError">{{ historyError }}</p></div>
+
+          <div class="instrument-facts"><div><span>Owned</span><b>{{ (selectedPosition?.quantity || 0) | number }} shares</b></div><div><span>Available</span><b>{{ selected.availableSupply | number }}</b></div><div><span>Daily limit</span><b>±{{ selected.dailyLimitBps / 100 | number:'1.0-2' }}%</b></div><div><span *ngIf="selected.underlyingClubValuation">Club valuation</span><b *ngIf="selected.underlyingClubValuation">{{ compactMoney(selected.underlyingClubValuation.amount) }}</b><span *ngIf="!selected.underlyingClubValuation">Total supply</span><b *ngIf="!selected.underlyingClubValuation">{{ selected.totalSupply | number }}</b></div></div>
+          <p class="risk-copy"><b>Risk:</b> {{ riskDescription(selected.riskClass) }}</p>
+
+          <section class="order-ticket">
+            <div class="order-side"><button type="button" [class.active]="orderSide === 'BUY'" (click)="setOrderSide('BUY')">Buy</button><button type="button" [class.active]="orderSide === 'SELL'" (click)="setOrderSide('SELL')">Sell</button></div>
+            <label class="quantity-field"><span>Quantity <small>{{ maximumOrderQuantity | number }} max</small></span><div><button type="button" (click)="adjustQuantity(-1)" aria-label="Decrease quantity">−</button><input type="number" min="1" step="1" [(ngModel)]="quantities[selected.id]" [disabled]="busy"><button type="button" (click)="adjustQuantity(1)" aria-label="Increase quantity">+</button><button class="max-button" type="button" (click)="setMaximumQuantity()">Max</button></div></label>
+            <div class="order-estimate"><span>Estimated {{ orderSide === 'BUY' ? 'cost' : 'credit' }}</span><b>{{ money(estimatedOrderTotal) }}</b><small>At the current deterministic execution price</small></div>
+            <p class="order-error" *ngIf="orderError">{{ orderError }}</p>
+            <button class="review-button" type="button" (click)="reviewOrder()" [disabled]="busy || !selectedQuantity">Review {{ orderSide | lowercase }} order</button>
+          </section>
+        </ng-container>
+
+        <ng-container *ngIf="detailTab === 'ADVISER'">
+          <div class="adviser-title"><span class="eyebrow">TRADER ADVISER</span><h2>Decision support</h2><p>Optional guidance based on observed return, volatility and your contracted adviser's skill.</p></div>
+          <p class="notice error" *ngIf="adviserError">{{ adviserError }}</p>
+          <div class="detail-loading" *ngIf="adviserLoading">Loading adviser desk…</div>
+          <ng-container *ngIf="!adviserLoading">
+            <article class="contract-card" *ngIf="currentContract; else noContract"><header><div><small>CURRENT CONTRACT</small><h3>{{ currentContract.adviserName }}</h3></div><span class="status-tag" [class]="statusTone(currentContract.status)">{{ currentContract.status }}</span></header><dl><div><dt>Skill</dt><dd>{{ currentContract.skill }}</dd></div><div><dt>Reputation</dt><dd>{{ currentContract.reputation }}</dd></div><div><dt>Daily fee</dt><dd>{{ compactMoney(currentContract.salaryPerDay.amount) }}</dd></div></dl><p>S{{ currentContract.startDate.season }} D{{ currentContract.startDate.day }} → S{{ currentContract.endDate.season }} D{{ currentContract.endDate.day }}</p></article>
+            <ng-template #noContract><div class="no-adviser"><span>◎</span><h3>No adviser hired</h3><p>Compare the available profiles below before committing to a daily salary.</p></div></ng-template>
+            <div class="options" *ngIf="isChairman && !hasActiveContract"><article class="option-card" *ngFor="let option of hireOptions; trackBy: trackOption"><header><h3>{{ option.adviserName }}</h3><b>{{ option.skill }}</b></header><p>Reputation {{ option.reputation }} · {{ option.durationDays }} days</p><strong>{{ money(option.salaryPerDay.amount) }} <small>/ day</small></strong><button type="button" (click)="hire(option)" [disabled]="busy">Hire</button></article></div>
+            <div class="advice-panel" *ngIf="isChairman"><button type="button" (click)="requestAdvice()" [disabled]="!selected || adviceLoading || !hasActiveContract">{{ adviceLoading ? 'Analysing…' : 'Analyse ' + selected.code }}</button><p class="risk-copy" *ngIf="!hasActiveContract">An active adviser contract is required for BUY / SELL / HOLD guidance.</p><article class="advice-card" *ngIf="advice"><header><span>RECOMMENDATION</span><b [attr.data-action]="advice.action">{{ advice.action }}</b></header><h3>{{ advice.instrumentCode }} · {{ percent(advice.confidence) }} confidence</h3><dl><div><dt>Risk</dt><dd>{{ percent(advice.risk) }}</dd></div><div><dt>Volatility</dt><dd>{{ percent(advice.observedVolatility) }}</dd></div><div><dt>Horizon</dt><dd>{{ advice.horizonDays }} days</dd></div></dl><p>{{ advice.explanation }}</p></article></div>
+            <div class="manager-note" *ngIf="!isChairman">Only chairman careers can hire an adviser and request recommendations.</div>
+          </ng-container>
         </ng-container>
       </section>
     </aside>
-  </div>
+  </section>
+
+  <div class="page-loading" *ngIf="loading && !flagOff"><span></span><h2>Opening the exchange</h2><p>Loading prices and available supply…</p></div>
+  <section class="state-card" *ngIf="!loading && !flagOff && !instruments.length"><span class="state-icon">◇</span><h2>No tradable instruments</h2><p>The exchange has not published any listings for this save.</p><button type="button" (click)="load()">Refresh market</button></section>
+
+  <div class="modal-backdrop" *ngIf="orderReviewOpen" (click)="closeOrderReview()"></div>
+  <section class="order-review" *ngIf="orderReviewOpen && selected" role="dialog" aria-modal="true" aria-labelledby="review-title">
+    <header><div><span class="eyebrow">FINAL CHECK</span><h2 id="review-title">Review {{ orderSide | lowercase }} order</h2></div><button type="button" (click)="closeOrderReview()" aria-label="Close order review">×</button></header>
+    <div class="review-symbol"><i [attr.data-type]="selected.type">{{ selected.code.slice(0, 2) }}</i><span><b>{{ selected.code }}</b><small>{{ selected.name }}</small></span><strong>{{ riskLabel(selected.riskClass) }}</strong></div>
+    <dl><div><dt>Side</dt><dd [class.sell-text]="orderSide === 'SELL'">{{ orderSide }}</dd></div><div><dt>Quantity</dt><dd>{{ selectedQuantity | number }} shares</dd></div><div><dt>Execution price</dt><dd>{{ money(selected.price.amount) }}</dd></div><div class="review-total"><dt>Estimated {{ orderSide === 'BUY' ? 'cost' : 'credit' }}</dt><dd>{{ money(estimatedOrderTotal) }}</dd></div><div><dt>Position after</dt><dd>{{ ((selectedPosition?.quantity || 0) + (orderSide === 'BUY' ? selectedQuantity : -selectedQuantity)) | number }} shares</dd></div><div *ngIf="orderSide === 'BUY'"><dt>Cash after</dt><dd>{{ money((portfolio?.cashBalance?.amount || 0) - estimatedOrderTotal) }}</dd></div></dl>
+    <p class="review-risk">{{ riskDescription(selected.riskClass) }} Final execution is enforced by the server.</p>
+    <p class="order-error" *ngIf="orderError">{{ orderError }}</p>
+    <footer><button type="button" class="cancel" (click)="closeOrderReview()" [disabled]="busy">Edit order</button><button type="button" class="confirm" [class.sell]="orderSide === 'SELL'" (click)="confirmOrder()" [disabled]="busy">{{ busy ? 'Submitting…' : 'Confirm ' + (orderSide | lowercase) }}</button></footer>
+  </section>
 </section>
