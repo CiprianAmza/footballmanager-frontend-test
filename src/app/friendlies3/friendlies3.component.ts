@@ -268,7 +268,7 @@ export class Friendlies3Component implements OnInit {
     this.endDay = 0;
     this.seriesDetail = null;
     this.selectNextAvailableWindow();
-    this.notice = `Planning Edition ${nextEdition} of ${this.eventName}.`;
+    this.notice = `Planning Edition ${nextEdition} of ${this.eventName}. Prize money, fees, venue and invited clubs can all be changed for this season.`;
     void this.router.navigate([], { relativeTo: this.route, queryParams: { seriesId: null }, queryParamsHandling: 'merge' });
   }
 
