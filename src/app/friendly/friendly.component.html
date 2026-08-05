@@ -62,7 +62,7 @@
                       *ngFor="let d of getPreSeasonDays()"
                       [class.selected]="selectedDay === d.day"
                       (click)="selectedDay = d.day">
-                {{ d.dateDisplay }}
+                Season {{ season }} · {{ d.dateDisplay }}
               </button>
             </div>
           </div>
@@ -73,7 +73,7 @@
                       *ngFor="let d of getWinterBreakDays()"
                       [class.selected]="selectedDay === d.day"
                       (click)="selectedDay = d.day">
-                {{ d.dateDisplay }}
+                Season {{ season }} · {{ d.dateDisplay }}
               </button>
             </div>
           </div>
@@ -113,7 +113,7 @@
          [ngClass]="getStatusClass(match.status)">
       <div class="match-row" (click)="toggleMatchDetails(match.matchId)">
         <div class="match-day">
-          <span class="day-num">{{ match.dateDisplay }}</span>
+          <span class="day-num">Season {{ season }} · {{ match.dateDisplay }}</span>
         </div>
         <div class="match-teams" [ngClass]="getResultClass(match)">
           <a class="team-home team-link" [class.our-team]="match.homeTeamId === teamId"

@@ -45,7 +45,7 @@
       <div class="timeline-head"><span>DATE</span><span>FIXTURE</span><span>PLAN</span><span>STATE</span></div>
       <button class="match-row" *ngFor="let match of filteredMatches; let i = index; trackBy: trackMatch"
               [class.selected]="selectedMatch?.matchId === match.matchId" (click)="selectMatch(match, i)">
-        <span class="day"><b>{{ match.dateDisplay }}</b><small>{{ match.day <= 30 ? 'PRE-SEASON' : 'WINTER' }}</small></span>
+        <span class="day"><b>Season {{ season }} · {{ match.dateDisplay }}</b><small>{{ match.day <= 30 ? 'PRE-SEASON' : 'WINTER' }}</small></span>
         <span class="fixture">
           <i class="crest">{{ opponentName(match).slice(0, 2).toUpperCase() }}</i>
           <span><b>{{ opponentName(match) }}</b><small>{{ venue(match) }} · {{ pretty(match.eventStage) }}</small></span>
@@ -59,7 +59,7 @@
 
     <aside class="inspector" *ngIf="selectedMatch; else guide">
       <button class="close" (click)="selectedMatch = null">×</button>
-      <p>{{ selectedMatch.dateDisplay }}</p>
+      <p>Season {{ season }} · {{ selectedMatch.dateDisplay }}</p>
       <h2>{{ opponentName(selectedMatch) }}</h2>
       <span class="event-pill" *ngIf="selectedMatch.friendlyEventId">{{ pretty(selectedMatch.matchType) }}</span>
       <div class="detail-grid">
@@ -88,7 +88,7 @@
     <input id="friendly-opponent-search" [(ngModel)]="opponentQuery" placeholder="Search clubs…">
     <div class="opponents"><button *ngFor="let opponent of filteredOpponents" [class.active]="selectedOpponent?.teamId === opponent.teamId" (click)="selectedOpponent = opponent"><span>{{ opponent.name }}</span><small>REP {{ opponent.reputation }} <em *ngIf="opponent.sameLeague">SAME LEAGUE</em></small></button></div>
     <label>Match date</label>
-    <div class="days"><button *ngFor="let item of availableDays" [class.active]="selectedDay === item.day" (click)="selectedDay = item.day"><b>{{ item.dateDisplay }}</b><small>{{ item.phase === 'PRE_SEASON' ? 'PRE' : 'WINTER' }}</small></button></div>
+    <div class="days"><button *ngFor="let item of availableDays" [class.active]="selectedDay === item.day" (click)="selectedDay = item.day"><b>Season {{ season }} · {{ item.dateDisplay }}</b><small>{{ item.phase === 'PRE_SEASON' ? 'PRE' : 'WINTER' }}</small></button></div>
     <div class="two-fields"><label><span>Rules</span><select [(ngModel)]="ruleset"><option value="STANDARD">Standard</option><option value="EXTENDED_BENCH">Extended bench</option><option value="DEVELOPMENT">Development</option></select></label><label><span>Venue label</span><input [(ngModel)]="venueName" placeholder="Home stadium"></label></div>
     <button class="confirm" [disabled]="!selectedOpponent || !selectedDay || saving" (click)="schedule()">{{ saving ? 'Scheduling…' : 'Add to calendar' }}</button>
   </aside>
