@@ -17,6 +17,7 @@ import { ScorerLeaderboardComponent } from './scorer-leaderboard/scorer-leaderbo
 import { HomeComponent } from './home/home.component';
 import { LeaguesOverviewComponent } from './leagues-overview/leagues-overview.component';
 import { InboxComponent } from './inbox/inbox.component';
+import { SocialFeedComponent } from './social-feed/social-feed.component';
 import { Tactics1Component } from './tactics1/tactics1.component';
 import { Tactics2Component } from './tactics2/tactics2.component';
 import { Tactics3Component } from './tactics3/tactics3.component';
@@ -133,6 +134,7 @@ export const APP_ROUTES: Routes = [
   { path: 'stats/scorers', component: ScorerLeaderboardComponent },
   { path: 'home', component: HomeComponent },
   { path: 'inbox', component: InboxComponent },
+  { path: 'social-feed', component: SocialFeedComponent, title: 'Social Feed' },
   { path: 'tactics', component: TacticsAdvisorComponent },
   { path: 'simulate', component: SimulateComponent },
   { path: 'scouting', component: ScoutingComponent },

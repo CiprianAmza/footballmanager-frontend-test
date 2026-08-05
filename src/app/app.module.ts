@@ -34,6 +34,7 @@ import { AdminTransfersComponent } from './admin/admin-transfers/admin-transfers
 import { TacticsAdvisorComponent } from './tactics-advisor/tactics-advisor.component';
 import { SimulateComponent } from './simulate/simulate.component';
 import { InboxComponent } from './inbox/inbox.component';
+import { SocialFeedComponent } from './social-feed/social-feed.component';
 import { TacticsComponent } from './tactics/tactics.component';
 import { Tactics1Component } from './tactics1/tactics1.component';
 import { Tactics2Component } from './tactics2/tactics2.component';
@@ -165,6 +166,7 @@ import { ParametricFaceComponent } from './face-lab/parametric-face.component';
     TacticsAdvisorComponent,
     SimulateComponent,
     InboxComponent,
+    SocialFeedComponent,
     TacticsComponent,
     Tactics1Component,
     Tactics2Component,

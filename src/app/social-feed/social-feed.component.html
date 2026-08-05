@@ -1,0 +1,55 @@
+<div class="social-shell">
+  <header class="social-header">
+    <div>
+      <span class="eyebrow">SUPPORTER NETWORK</span>
+      <h1>Social Feed</h1>
+      <p>Unfiltered matchday discussion, tactical opinions and club talk from the stands.</p>
+    </div>
+    <div class="mood-card" [attr.data-mood]="fanMood.toLowerCase()">
+      <span>Current fan mood</span>
+      <strong>{{ fanMood }}</strong>
+      <small>{{ harshCount }} hard reactions in the feed</small>
+    </div>
+  </header>
+
+  <section class="feed-toolbar" aria-label="Social feed controls">
+    <div class="filter-tabs">
+      <button type="button" [class.active]="filter === 'all'" (click)="setFilter('all')">All</button>
+      <button type="button" [class.active]="filter === 'positive'" (click)="setFilter('positive')">Positive</button>
+      <button type="button" [class.active]="filter === 'critical'" (click)="setFilter('critical')">Critical</button>
+      <button type="button" class="harsh-filter" [class.active]="filter === 'harsh'" (click)="setFilter('harsh')">Harsh</button>
+    </div>
+    <label class="feed-search"><span>Search</span><input type="search" [(ngModel)]="query" placeholder="Search supporter posts"></label>
+    <div class="order-toggle" aria-label="Sort feed">
+      <button type="button" [class.active]="order === 'hot'" (click)="setOrder('hot')">🔥 Hot</button>
+      <button type="button" [class.active]="order === 'new'" (click)="setOrder('new')">New</button>
+    </div>
+  </section>
+
+  <div class="feed-loading" *ngIf="loading"><span></span><p>Listening to the stands…</p></div>
+  <div class="feed-error" *ngIf="!loading && error"><strong>Feed unavailable</strong><p>{{ error }}</p><button type="button" (click)="loadFeed()">Try again</button></div>
+
+  <main class="feed-grid" *ngIf="!loading && !error && visiblePosts.length">
+    <article class="fan-post" *ngFor="let post of visiblePosts" [attr.data-tone]="post.tone.toLowerCase()">
+      <aside class="vote-column"><span>▲</span><strong>{{ post.upvotes }}</strong><span>▼</span></aside>
+      <div class="post-body">
+        <header>
+          <span class="fan-avatar">{{ avatar(post.handle) }}</span>
+          <div><strong>{{ post.handle }}</strong><small>S{{ post.seasonNumber }} · Day {{ post.day }}</small></div>
+          <span class="tone-pill">{{ toneLabel(post.tone) }}</span>
+        </header>
+        <div class="context-line">{{ post.context }}</div>
+        <p>{{ post.body }}</p>
+        <footer><span>💬 {{ post.replies }} replies</span><span>↗ Share</span><span>☆ Save</span></footer>
+      </div>
+    </article>
+  </main>
+
+  <section class="feed-empty" *ngIf="!loading && !error && !visiblePosts.length">
+    <span>◌</span><h2>No supporter posts here yet</h2>
+    <p *ngIf="posts.length">Try another filter or search.</p>
+    <p *ngIf="!posts.length">Reactions will appear after matches and major club events.</p>
+  </section>
+
+  <p class="feed-disclaimer">Supporter posts are fictional in-game reactions. Strong criticism is directed at football decisions and performances.</p>
+</div>
