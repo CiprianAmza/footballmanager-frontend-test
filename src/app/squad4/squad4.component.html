@@ -1,18 +1,27 @@
 <main class="squad-register" [class.comfortable]="!compact">
   <header class="register-header">
-    <div><span>FIRST TEAM · SEASON {{ currentTeam.currentSeason }}</span><h1>Squad register</h1><p>Availability, ability, status and contract context in one sortable workspace.</p></div>
+    <div><span>FIRST TEAM · SEASON {{ currentTeam.currentSeason }}</span><h1>Squad register</h1><p>Availability, ability, status and contract context in one sortable workspace.<ng-container *ngIf="matchPreview"> Next: {{ nextOpponentName }} · {{ matchPreview.competitionName }}.</ng-container></p></div>
     <nav><a routerLink="/squad">Current</a><a [routerLink]="['/squad2', teamId]">Matchday</a><a [routerLink]="['/squad3', teamId]">People</a><a class="active" [routerLink]="['/squad4', teamId]">Register</a></nav>
   </header>
 
+  <section class="squad-sections">
+    <button [class.active]="registerView === 'PLAYERS' && squadFilter === 'ALL'" (click)="registerView = 'PLAYERS'; setSquadFilter('ALL')">Players</button>
+    <button [class.active]="squadFilter === 'UNAVAILABLE'" (click)="registerView = 'PLAYERS'; setSquadFilter('UNAVAILABLE')">Players not in duty</button>
+    <button [class.active]="squadFilter === 'INTERNATIONAL'" (click)="registerView = 'PLAYERS'; setSquadFilter('INTERNATIONAL')">International duty</button>
+    <button [class.active]="registerView === 'LOANS'" (click)="registerView = 'LOANS'">Players on loan <b>{{ activeLoans.loansOut.length }}</b></button>
+    <button [class.active]="squadFilter === 'LEAVE'" (click)="registerView = 'PLAYERS'; setSquadFilter('LEAVE')">Extended leave</button>
+    <a [routerLink]="['/tactics6', teamId]">Match selection ↗</a>
+  </section>
+
   <section class="register-kpis">
     <article><span>PLAYERS</span><strong>{{ players.length }}</strong><small>{{ visiblePlayers.length }} visible</small></article>
-    <article><span>AVAILABLE</span><strong>{{ players.length - availability.length }}</strong><small>ready for selection</small></article>
-    <article [class.alert]="availability.length"><span>UNAVAILABLE</span><strong>{{ availability.length }}</strong><small>injury or suspension</small></article>
+    <article><span>AVAILABLE</span><strong>{{ availableCount }}</strong><small>ready for selection</small></article>
+    <article [class.alert]="unavailableCount"><span>UNAVAILABLE</span><strong>{{ unavailableCount }}</strong><small>injury or suspension</small></article>
     <article [class.alert]="expiringContracts.length"><span>EXPIRING</span><strong>{{ expiringContracts.length }}</strong><small>contracts require review</small></article>
     <article [class.alert]="unhappyPlayers.length"><span>CONCERNS</span><strong>{{ unhappyPlayers.length }}</strong><small>player happiness</small></article>
   </section>
 
-  <section class="register-toolbar">
+  <section class="register-toolbar" *ngIf="registerView === 'PLAYERS'">
     <label class="search"><span>⌕</span><input [(ngModel)]="search" placeholder="Search player, position or nation"></label>
     <label><span>POSITION</span><select [(ngModel)]="positionFilter"><option value="ALL">All positions</option><option *ngFor="let position of positions" [value]="position">{{ position }}</option></select></label>
     <div class="filter-buttons">
@@ -22,41 +31,55 @@
       <button [class.active]="squadFilter === 'FIRST_TEAM'" (click)="setSquadFilter('FIRST_TEAM')">Core XI</button>
       <button [class.active]="squadFilter === 'YOUTH'" (click)="setSquadFilter('YOUTH')">U21</button>
     </div>
+    <div class="position-buttons" aria-label="Quick position filters"><button *ngFor="let band of ['GK','DEF','MID','ATT']" [class.active]="positionBand === band" (click)="setPositionBand(band)">{{ band }}</button></div>
     <button class="density" (click)="compact = !compact">{{ compact ? 'Comfortable rows' : 'Compact rows' }}</button>
   </section>
 
-  <section class="active-alerts" *ngIf="availability.length || expiringContracts.length || unhappyPlayers.length">
-    <span *ngIf="availability.length">{{ availability.length }} unavailable</span><span *ngIf="expiringContracts.length">{{ expiringContracts.length }} expiring</span><span *ngIf="unhappyPlayers.length">{{ unhappyPlayers.length }} concerns</span><a routerLink="/medical">Review alerts ↗</a>
+  <section class="active-alerts" *ngIf="unavailableCount || expiringContracts.length || unhappyPlayers.length">
+    <span *ngIf="unavailableCount">{{ unavailableCount }} unavailable</span><span *ngIf="expiringContracts.length">{{ expiringContracts.length }} expiring</span><span *ngIf="unhappyPlayers.length">{{ unhappyPlayers.length }} concerns</span><a routerLink="/medical">Review alerts ↗</a>
   </section>
 
-  <section class="register-table" role="table" aria-label="Squad players">
+  <section class="register-table" role="table" aria-label="Squad players" *ngIf="registerView === 'PLAYERS'">
     <div class="register-row table-head" role="row">
+      <span>SEL</span>
       <button (click)="sort('position')">POS {{ getSortIcon('position') }}</button>
       <button (click)="sort('name')">PLAYER {{ getSortIcon('name') }}</button>
       <button (click)="sort('age')">AGE {{ getSortIcon('age') }}</button>
-      <span>ABILITY</span><span>POTENTIAL</span><span>PERSONALITY</span><span>SQUAD STATUS</span><span>CONDITION</span><span>SHARPNESS</span>
-      <button (click)="sort('rating')">AVG {{ getSortIcon('rating') }}</button>
+      <button (click)="sort('currentAbility')">ABILITY {{ getSortIcon('currentAbility') }}</button><button (click)="sort('potentialAbility')">POTENTIAL {{ getSortIcon('potentialAbility') }}</button><button (click)="sort('personalityLabel')">PERSONALITY {{ getSortIcon('personalityLabel') }}</button><button (click)="sort('agreedPlayingTime')">SQUAD STATUS {{ getSortIcon('agreedPlayingTime') }}</button><button (click)="sort('fitness')">CONDITION {{ getSortIcon('fitness') }}</button><button (click)="sort('morale')">MORALE {{ getSortIcon('morale') }}</button>
+      <button (click)="sort('seasonAppearances')">APPS {{ getSortIcon('seasonAppearances') }}</button><button (click)="sort('seasonGoals')">G+A {{ getSortIcon('seasonGoals') }}</button><button (click)="sort('lastFiveAverageRating')">FORM {{ getSortIcon('lastFiveAverageRating') }}</button><button (click)="sort('seasonAverageRating')">AVG {{ getSortIcon('seasonAverageRating') }}</button>
+      <button (click)="sort('heightCm')">PROFILE {{ getSortIcon('heightCm') }}</button>
       <button (click)="sort('transferValue')">VALUE {{ getSortIcon('transferValue') }}</button>
       <button (click)="sort('wage')">WAGE {{ getSortIcon('wage') }}</button>
-      <button (click)="sort('contractEndSeason')">EXPIRES {{ getSortIcon('contractEndSeason') }}</button><span>NAT</span>
+      <button (click)="sort('contractEndSeason')">EXPIRES {{ getSortIcon('contractEndSeason') }}</button><button (click)="sort('nationName')">NAT {{ getSortIcon('nationName') }}</button>
     </div>
 
     <a class="register-row player-row" role="row" *ngFor="let player of visiblePlayers; let index = index" [routerLink]="['/player', player.id]" [queryParams]="{ actingTeamId: teamId }" [class.unavailable]="isUnavailable(player.id)">
+      <span><b class="selection-badge" [attr.data-selection]="selectionStatus(player.id)">{{ selectionStatus(player.id) }}</b></span>
       <span><b class="position" [attr.data-position]="player.position">{{ player.position }}</b></span>
       <span class="player-name"><app-player-face *ngIf="!compact" [size]="32" [baseFaceId]="player.baseFaceId || 0" [skinTone]="player.skinTone || 0" [hairStyle]="player.hairStyle || 0" [hairColor]="player.hairColor || 0" [eyeColor]="player.eyeColor || 0" [faceShape]="player.faceShape || 0" [noseShape]="player.noseShape || 0" [eyeShape]="player.eyeShape || 0" [mouthShape]="player.mouthShape || 0" [browShape]="player.browShape || 0" [nationId]="player.nationId || 0" [species]="player.species || 'human'"></app-player-face><span><strong>{{ player.name }}</strong><small *ngIf="isUnavailable(player.id)">{{ availabilityFor(player.id)[0]?.explanation }}</small></span></span>
       <span>{{ player.age }}</span>
       <span class="meter-cell"><i><b [style.width.%]="ratingWidth(ability(player))"></b></i><em>{{ ability(player) | number:'1.0-0' }}</em></span>
       <span class="meter-cell potential"><i><b [style.width.%]="ratingWidth(potential(player))"></b></i><em>{{ potential(player) | number:'1.0-0' }}</em></span>
-      <span>{{ player.personality || player.personalityLabel || '—' }}</span>
+      <span>{{ player.personalityLabel || player.personality || '—' }}</span>
       <span>{{ player.agreedPlayingTime || 'Squad player' }}</span>
       <span class="percentage"><i><b [style.width.%]="condition(player)"></b></i><em>{{ condition(player) }}%</em></span>
-      <span class="percentage sharp"><i><b [style.width.%]="sharpness(player)"></b></i><em>{{ sharpness(player) }}%</em></span>
-      <span class="avg">{{ player.rating | number:'1.2-2' }}</span>
+      <span class="percentage morale"><i><b [style.width.%]="morale(player)"></b></i><em>{{ morale(player) | number:'1.0-0' }}%</em></span>
+      <span>{{ player.seasonAppearances || 0 }}</span><span>{{ player.seasonGoals || 0 }}+{{ player.seasonAssists || 0 }}</span><span class="avg">{{ player.lastFiveAverageRating ? (player.lastFiveAverageRating | number:'1.2-2') : '—' }}</span><span class="avg">{{ player.seasonAverageRating ? (player.seasonAverageRating | number:'1.2-2') : '—' }}</span>
+      <span class="physical">{{ player.heightCm || '—' }}cm · {{ player.weightKg || '—' }}kg<small>{{ player.preferredFoot || '—' }} foot</small></span>
       <span>{{ money(player.transferValue) }}</span><span>{{ money(player.wage) }}</span><span>S{{ player.contractEndSeason || '—' }}</span><span>{{ player.nationFlagCode || player.nationality || player.nationName || '—' }}</span>
     </a>
 
     <div class="table-empty" *ngIf="!visiblePlayers.length"><strong>No players match this view.</strong><button (click)="resetFilters()">Clear filters</button></div>
   </section>
 
-  <footer class="register-footer"><span>{{ visiblePlayers.length }} of {{ players.length }} players</span><span>Click any column heading to sort</span><a [routerLink]="['/tactics6', teamId]">Open tactical selection ↗</a></footer>
+  <section class="loans-register" *ngIf="registerView === 'LOANS'">
+    <header><div><span>LOAN MANAGEMENT</span><h2>Players away from the club</h2></div><a [routerLink]="['/transfers', teamId, currentTeam.currentSeason]">Open loan centre ↗</a></header>
+    <div class="loan-head"><span>PLAYER</span><span>LOAN CLUB</span><span>SEASON</span><span>FEE</span><span>WAGE SHARE</span><span>BUY OPTION</span></div>
+    <a class="loan-row" *ngFor="let loan of activeLoans.loansOut" [routerLink]="['/player', loan.playerId]" [queryParams]="{ actingTeamId: teamId }"><strong>{{ loan.playerName }}</strong><span>{{ loan.loanTeamName }}</span><span>S{{ loan.startSeason }}–S{{ loan.endSeason }}</span><span>{{ money(loan.loanFee) }}</span><span>{{ loan.parentWageContribution || 0 }}%</span><span>{{ loan.buyOptionFee ? money(loan.buyOptionFee) : 'None' }}</span></a>
+    <div class="table-empty" *ngIf="!activeLoans.loansOut.length"><strong>No players are currently out on loan.</strong><button (click)="registerView = 'PLAYERS'">Return to squad</button></div>
+    <header class="incoming-title" *ngIf="activeLoans.loansIn.length"><div><span>LOANS IN</span><h2>Temporary squad members</h2></div></header>
+    <a class="loan-row" *ngFor="let loan of activeLoans.loansIn" [routerLink]="['/player', loan.playerId]" [queryParams]="{ actingTeamId: teamId }"><strong>{{ loan.playerName }}</strong><span>From {{ loan.parentTeamName }}</span><span>S{{ loan.startSeason }}–S{{ loan.endSeason }}</span><span>{{ money(loan.loanFee) }}</span><span>{{ 100 - (loan.parentWageContribution || 0) }}%</span><span>{{ loan.buyOptionFee ? money(loan.buyOptionFee) : 'None' }}</span></a>
+  </section>
+
+  <footer class="register-footer"><span>{{ registerView === 'PLAYERS' ? visiblePlayers.length + ' of ' + players.length + ' players' : activeLoans.loansOut.length + ' players on loan' }}</span><span>Every data column can be sorted</span><a [routerLink]="['/tactics6', teamId]">Open tactical selection ↗</a></footer>
 </main>
