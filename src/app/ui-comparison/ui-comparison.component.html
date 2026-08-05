@@ -1,0 +1,11 @@
+<main class="comparison-page">
+  <header><span>EXPERIMENTAL UI LAB</span><h1>Compare management workspaces</h1><p>The existing pages remain unchanged. Open each new route beside its current counterpart and decide which interaction model should become the default.</p></header>
+  <section class="principles"><article><b>01</b><strong>Context stays visible</strong><p>Match, squad and tactical context are not hidden behind extra navigation.</p></article><article><b>02</b><strong>Dense, not crowded</strong><p>Compact rows, strong hierarchy and progressive detail keep more information useful.</p></article><article><b>03</b><strong>Decisions beside data</strong><p>Preparation, selection and analysis shortcuts appear next to the information that motivates them.</p></article></section>
+  <section class="comparison-grid">
+    <article><span>HOME</span><h2>Director dashboard</h2><p>A modern interpretation of the classic multi-widget manager home: match, league, leaders, squad, board, fixtures, finance and news on one screen.</p><div><a routerLink="/home">Open current</a><a class="new" routerLink="/home4">Open Home 4</a></div></article>
+    <article><span>SQUAD</span><h2>Squad register</h2><p>A table-first view with dense scouting bars, availability, playing status, contract context, filtering, sorting and a comfortable-row toggle.</p><div><a routerLink="/squad">Open current</a><a class="new" [routerLink]="['/squad4', team.teamId]">Open Squad 4</a></div></article>
+    <article><span>TACTICS</span><h2>Selection studio</h2><p>Roster, formation, instructions, starting XI and bench remain visible together. Drag-and-drop and the existing save logic remain functional.</p><div><a [routerLink]="['/tactics4', team.teamId]">Open current</a><a class="new" [routerLink]="['/tactics6', team.teamId]">Open Tactics 6</a></div></article>
+    <article><span>LIVE MATCH</span><h2>Broadcast match centre</h2><p>A route-driven match layout with facts on the left, a permanent central pitch and commentary below. It accepts the same live match session key.</p><code>/match-centre2/&lt;matchKey&gt;</code><small>Add <b>?interactive=0</b> for replay-only sessions.</small></article>
+  </section>
+  <footer><a routerLink="/home4">Start comparison →</a><span>Prototype routes use the real existing APIs and do not replace production routes.</span></footer>
+</main>

@@ -1,0 +1,90 @@
+<main class="manager-desk">
+  <header class="desk-header">
+    <div class="club-id">
+      <app-team-crest [teamId]="teamService.teamId" [teamName]="teamName" [size]="42"></app-team-crest>
+      <div><span>MANAGER DESK · SEASON {{ teamService.currentSeason }}</span><h1>{{ teamName || 'Club overview' }}</h1></div>
+    </div>
+    <div class="date-block"><strong>{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }}</strong><span>{{ teamService.currentPhase }}</span></div>
+    <nav class="view-nav"><a routerLink="/home">Current</a><a routerLink="/home2">Desk</a><a routerLink="/home3">Cockpit</a><a class="active" routerLink="/home4">Director</a></nav>
+  </header>
+
+  <section class="desk-toolbar">
+    <a [routerLink]="['/squad4', teamService.teamId]">Squad list</a>
+    <a [routerLink]="['/tactics6', teamService.teamId]">Tactical studio</a>
+    <a [routerLink]="['/fixtures', teamService.teamId]">Schedule</a>
+    <a routerLink="/inbox3">Inbox</a>
+    <a routerLink="/data-hub3">Analysis</a>
+    <a routerLink="/ui-lab">Compare UI</a>
+  </section>
+
+  <section class="dismissed" *ngIf="managerFired"><strong>Manager status: dismissed</strong><span>This dashboard is read-only.</span><a routerLink="/job-search">Find a club</a></section>
+
+  <section class="desk-grid">
+    <article class="desk-card next-match">
+      <header><span>NEXT MATCH</span><a [routerLink]="['/tactics6', teamService.teamId]">Prepare ↗</a></header>
+      <ng-container *ngIf="matchPreview; else noMatch">
+        <div class="fixture-meta"><span>{{ matchPreview.competitionName }}</span><b>ROUND {{ matchPreview.round }}</b></div>
+        <div class="fixture-versus">
+          <div><app-team-crest [teamId]="matchPreview.homeTeamId" [teamName]="matchPreview.homeTeamName" [size]="54"></app-team-crest><strong>{{ matchPreview.homeTeamName }}</strong></div>
+          <span><b>VS</b><small>{{ matchPreview.prediction || 'Even contest' }}</small></span>
+          <div><app-team-crest [teamId]="matchPreview.awayTeamId" [teamName]="matchPreview.awayTeamName" [size]="54"></app-team-crest><strong>{{ matchPreview.awayTeamName }}</strong></div>
+        </div>
+        <div class="match-actions"><a [routerLink]="['/squad4', teamService.teamId]">Select XI</a><a routerLink="/medical">Availability</a><a routerLink="/assistant">Staff brief</a></div>
+      </ng-container>
+      <ng-template #noMatch><p class="empty">No upcoming match is currently scheduled.</p></ng-template>
+    </article>
+
+    <article class="desk-card league-card">
+      <header><span>LEAGUE TABLE</span><a *ngIf="leagueCompetition" [routerLink]="['/competition', leagueCompetition.competitionId]">Full table ↗</a></header>
+      <div class="league-head"><span>#</span><span>TEAM</span><span>P</span><span>GD</span><span>PTS</span></div>
+      <a class="league-row" *ngFor="let row of compactTable" [routerLink]="['/team', row.teamId]" [class.mine]="row.isHumanTeam || row.name === teamName || row.teamName === teamName">
+        <span>{{ row.position }}</span><strong>{{ row.name || row.teamName }}</strong><span>{{ row.games }}</span><span>{{ row.goalDifference }}</span><b>{{ row.points }}</b>
+      </a>
+      <p class="empty" *ngIf="!compactTable.length">Standings are not available yet.</p>
+    </article>
+
+    <article class="desk-card leaders-card">
+      <header><span>PLAYER LEADERS</span><a routerLink="/stats/scorers">All statistics ↗</a></header>
+      <a class="leader" *ngFor="let stat of playerStats.slice(0, 6)" [routerLink]="['/player', stat.playerId]" [queryParams]="{ actingTeamId: teamService.teamId }">
+        <span class="leader-rank">{{ stat.rank }}</span><span><strong>{{ stat.playerName }}</strong><small>{{ stat.position }} · {{ stat.appearances }} apps</small></span><i><b>{{ stat.goals }}</b><small>G</small></i><i><b>{{ stat.assists || 0 }}</b><small>A</small></i><i><b>{{ (stat.averageRating || stat.overallRating || 0) | number:'1.2-2' }}</b><small>AVG</small></i>
+      </a>
+      <p class="empty" *ngIf="!playerStats.length">No season statistics yet.</p>
+    </article>
+
+    <article class="desk-card squad-status">
+      <header><span>SQUAD STATUS</span><a routerLink="/medical">Medical centre ↗</a></header>
+      <div class="status-line"><span class="dot green"></span><strong>First team ready</strong><small>Selection and tactics available</small></div>
+      <div class="status-line" *ngFor="let request of boardRequests.slice(0, 4)"><span class="dot amber"></span><strong>{{ request.requestType || 'Board request' }}</strong><small>{{ request.description }}</small></div>
+      <p class="empty" *ngIf="!boardRequests.length">No urgent squad or board actions.</p>
+    </article>
+
+    <article class="desk-card board-card">
+      <header><span>BOARD CONFIDENCE</span><a routerLink="/finances">Club details ↗</a></header>
+      <div class="confidence-total"><strong>{{ boardConfidence }}%</strong><span>overall confidence</span></div>
+      <div class="confidence-row"><span>Competitions</span><i><b [style.width.%]="confidenceWidth(boardConfidence)"></b></i><strong>{{ boardConfidence }}%</strong></div>
+      <div class="confidence-row"><span>Club finances</span><i><b [style.width.%]="confidenceWidth(debt > 0 ? 42 : 76)"></b></i><strong>{{ debt > 0 ? 'Watch' : 'Good' }}</strong></div>
+      <div class="confidence-row"><span>Squad harmony</span><i><b [style.width.%]="confidenceWidth(68)"></b></i><strong>Stable</strong></div>
+      <div class="confidence-row"><span>Transfers</span><i><b [style.width.%]="confidenceWidth(61)"></b></i><strong>Okay</strong></div>
+    </article>
+
+    <article class="desk-card schedule-card">
+      <header><span>FIXTURES & FORM</span><a [routerLink]="['/fixtures', teamService.teamId]">Calendar ↗</a></header>
+      <div class="schedule-section">RECENT</div>
+      <div class="result" *ngFor="let match of recentResults.slice(0, 4)"><b [attr.data-result]="resultCode(match)">{{ resultCode(match) }}</b><span>{{ match.opponentTeam }}</span><strong>{{ match.score }}</strong><small>{{ match.competitionName }}</small></div>
+      <div class="schedule-section">UPCOMING</div>
+      <div class="result upcoming" *ngFor="let match of upcomingFixtures.slice(0, 4)"><b>•</b><span>{{ match.homeTeamAbbr || match.homeTeamName }} – {{ match.awayTeamAbbr || match.awayTeamName }}</span><strong>{{ match.date }}</strong><small>{{ match.competitionName }}</small></div>
+    </article>
+
+    <article class="desk-card finance-card">
+      <header><span>FINANCE & SALARY</span><a routerLink="/finances">Open finances ↗</a></header>
+      <div class="finance-bars" aria-label="Finance trend"><i *ngFor="let h of [42,68,53,76,49,85,64,91,58,74]" [style.height.%]="h"></i></div>
+      <dl><div><dt>CLUB BALANCE</dt><dd>{{ money(totalFinances) }}</dd></div><div><dt>TRANSFER BUDGET</dt><dd>{{ money(transferBudget) }}</dd></div><div><dt>DEBT</dt><dd [class.bad]="debt > 0">{{ money(debt) }}</dd></div></dl>
+    </article>
+
+    <article class="desk-card news-card">
+      <header><span>CLUB & LEAGUE WIRE</span><a routerLink="/inbox3">Inbox ↗</a></header>
+      <article *ngFor="let item of leagueNews.slice(0, 5)"><span>{{ item.type || 'NEWS' }}</span><strong>{{ item.title }}</strong><p>{{ item.content }}</p></article>
+      <p class="empty" *ngIf="!leagueNews.length">No new stories.</p>
+    </article>
+  </section>
+</main>

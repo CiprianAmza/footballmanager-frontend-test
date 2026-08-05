@@ -1,0 +1,60 @@
+<main class="selection-studio" [class.read-only]="isReadOnly">
+  <header class="studio-header">
+    <div><span>TACTICAL SELECTION · SEASON {{ currentTeam.currentSeason }}</span><h1>{{ formationLabel() }} match plan</h1></div>
+    <div class="familiarity"><span>FAMILIARITY</span><i><b [style.width.%]="startersPicked / 11 * 100"></b></i><strong>{{ startersPicked }}/11</strong></div>
+    <nav><a [routerLink]="['/tactics4', teamId]">Current</a><a [routerLink]="['/tactics5', teamId]">Wizard</a><a class="active" [routerLink]="['/tactics6', teamId]">Selection studio</a></nav>
+    <button class="save" (click)="saveStudio()" [disabled]="!canEdit">SAVE TACTIC</button>
+  </header>
+
+  <section class="instruction-strip">
+    <label><span>FORMATION</span><select [(ngModel)]="selectedTactic" (change)="changeFormation()" [disabled]="!canEdit || managerFormationRequiredByChairman"><option *ngFor="let option of formationOptions" [value]="option.key">{{ option.label }}</option></select></label>
+    <label><span>MENTALITY</span><select [(ngModel)]="selectedOptions.mentality" [disabled]="!canEdit"><option *ngFor="let option of optionsData['mentality']">{{ option }}</option></select></label>
+    <label><span>TEAM SHAPE</span><select [(ngModel)]="selectedOptions.width" [disabled]="!canEdit"><option *ngFor="let option of optionsData['width']">{{ option }}</option></select></label>
+    <label><span>PRESSING</span><select [(ngModel)]="selectedOptions.pressing" [disabled]="!canEdit"><option *ngFor="let option of optionsData['pressing']">{{ option }}</option></select></label>
+    <label><span>PASSING</span><select [(ngModel)]="selectedOptions.passing" [disabled]="!canEdit"><option *ngFor="let option of optionsData['passing']">{{ option }}</option></select></label>
+    <label><span>RECOVERY</span><select [(ngModel)]="selectedOptions.recovery" [disabled]="!canEdit"><option *ngFor="let option of optionsData['recovery']">{{ option }}</option></select></label>
+    <button (click)="askAssistant()" [disabled]="!canEdit">QUICK PICK</button><button (click)="removeAll()" [disabled]="!canEdit">CLEAR</button>
+  </section>
+
+  <section class="chairman-warning" *ngIf="managerFormationRequiredByChairman"><strong>Chairman requirement active:</strong> formation {{ managerChairmanRequiredFormation }} is locked.</section>
+  <section class="studio-error" *ngIf="playersError || formationsError || mandateError">{{ playersError || formationsError || mandateError }} <button (click)="loadData()">Retry</button></section>
+
+  <section class="studio-grid">
+    <div class="roster-panel">
+      <header><div><span>SELECTION LIST</span><strong>{{ visibleRoster.length }} players</strong></div><a [routerLink]="['/squad4', teamId]">Full register ↗</a></header>
+      <div class="roster-tools"><input [(ngModel)]="rosterQuery" placeholder="Search player"><select [(ngModel)]="rosterPosition"><option value="ALL">All positions</option><option *ngFor="let position of rosterPositions" [value]="position">{{ position }}</option></select><select [(ngModel)]="rosterSort"><option value="POSITION">Position</option><option value="RATING">Rating</option><option value="CONDITION">Condition</option><option value="NAME">Name</option></select></div>
+      <div class="roster-head"><span>POS</span><span>PLAYER</span><span>ABILITY</span><span>CON</span><span>SHARP</span><span>AVG</span></div>
+      <div class="roster-scroll">
+        <div class="roster-row" *ngFor="let player of visibleRoster" [class.selected]="isPlayerSelected(player.id)" [attr.draggable]="canEdit && !isManagerChairmanPlayerLocked(player.id) ? 'true' : null" (dragstart)="drag($event, player)">
+          <span><b [attr.data-position]="player.position">{{ player.position }}</b></span><span><strong>{{ player.name }}</strong><small>{{ player.age }} yrs · {{ isPlayerSelected(player.id) ? 'Selected' : 'Drag to pitch' }}</small></span>
+          <span class="ability"><i><b [style.width.%]="bar(player.rating)"></b></i></span><span [class.low]="condition(player) < 70">{{ condition(player) }}%</span><span [class.low]="sharpness(player) < 65">{{ sharpness(player) }}%</span><span class="rating">{{ player.rating | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pitch-panel">
+      <header><span>STARTING XI</span><strong>{{ startersPicked }}/11 · AVG {{ xiAvgRating | number:'1.2-2' }}</strong></header>
+      <div class="tactical-pitch" [style.--def-line]="defLineHeightPct + '%'">
+        <div class="pitch-half"></div><div class="center-circle"></div><div class="penalty top"></div><div class="penalty bottom"></div><div class="defensive-line"></div>
+        <div class="pitch-slots">
+          <div class="pitch-slot" *ngFor="let cell of fieldPositions" [class.allowed]="allowedIndexes.includes(cell.positionIndex)" [style.transform]="'translate(' + cellWidthShift(cell.positionIndex) + '%, ' + cellDefLineShift(cell.positionIndex) + '%)'" (dragover)="allowDrop($event)" (drop)="drop($event, cell.positionIndex)" (contextmenu)="onRightClick(cell.positionIndex, $event)">
+            <div class="player-token" *ngIf="cell.player" [class.locked]="isSlotLocked(cell.positionIndex, cell.player.position)" [attr.draggable]="canEdit && !isSlotLocked(cell.positionIndex, cell.player.position) ? 'true' : null" (dragstart)="drag($event, cell.player)">
+              <b>{{ cell.player.rating | number:'1.0-0' }}</b><span>{{ cell.player.name }}</span><small>{{ assignedRole(cell) }}</small><i *ngIf="cell.shadow">SHADOW</i>
+            </div>
+            <span class="empty-slot" *ngIf="!cell.player && allowedIndexes.includes(cell.positionIndex)">+</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="bench-panel">
+      <header><span>SUBSTITUTES</span><strong>{{ subsPicked }}/7</strong></header>
+      <div class="bench-slot" *ngFor="let slot of substitutes; let index = index" (dragover)="allowDrop($event)" (drop)="dropSubstitute($event, index)">
+        <span class="shirt">{{ slot.player ? index + 12 : '+' }}</span><div *ngIf="slot.player"><strong>{{ slot.player.name }}</strong><small>{{ slot.player.position }} · {{ slot.player.rating | number:'1.2-2' }}</small></div><em *ngIf="!slot.player">Empty slot</em>
+      </div>
+      <section class="match-plan"><span>MATCH PLAN</span><div><small>In possession</small><strong>{{ selectedOptions.possession }}</strong></div><div><small>Tempo</small><strong>{{ selectedOptions.tempo }}</strong></div><div><small>Defensive line</small><strong>{{ selectedOptions.defensiveLine }}</strong></div><div><small>Transition</small><strong>{{ selectedOptions.transition }}</strong></div></section>
+    </aside>
+  </section>
+
+  <footer class="studio-footer"><span>Drag players between roster, pitch and bench.</span><span>Right-click a pitch player to remove him.</span><strong *ngIf="savedNotice">{{ savedNotice }}</strong><a routerLink="/assistant">Assistant report ↗</a></footer>
+</main>

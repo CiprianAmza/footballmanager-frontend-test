@@ -133,6 +133,41 @@ export const APP_ROUTES: Routes = [
   { path: 'hall-of-fame', component: PlayerLeaderboardComponent },
   { path: 'stats/scorers', component: ScorerLeaderboardComponent },
   { path: 'home', component: HomeComponent },
+  {
+    path: 'home4',
+    loadComponent: () => import('./home4/home4.component').then(module => module.Home4Component),
+    title: 'Director dashboard'
+  },
+  {
+    path: 'squad4/:teamId',
+    loadComponent: () => import('./squad4/squad4.component').then(module => module.Squad4Component),
+    title: 'Squad register'
+  },
+  {
+    path: 'squad4',
+    loadComponent: () => import('./squad4/squad4.component').then(module => module.Squad4Component),
+    title: 'Squad register'
+  },
+  {
+    path: 'tactics6/:teamId',
+    loadComponent: () => import('./tactics6/tactics6.component').then(module => module.Tactics6Component),
+    title: 'Tactical selection studio'
+  },
+  {
+    path: 'tactics6',
+    loadComponent: () => import('./tactics6/tactics6.component').then(module => module.Tactics6Component),
+    title: 'Tactical selection studio'
+  },
+  {
+    path: 'match-centre2/:matchKey',
+    loadComponent: () => import('./match-centre2/match-centre2.component').then(module => module.MatchCentre2Component),
+    title: 'Broadcast match centre'
+  },
+  {
+    path: 'ui-lab',
+    loadComponent: () => import('./ui-comparison/ui-comparison.component').then(module => module.UiComparisonComponent),
+    title: 'UI comparison lab'
+  },
   { path: 'inbox', component: InboxComponent },
   { path: 'social-feed', component: SocialFeedComponent, title: 'Social Feed' },
   { path: 'tactics', component: TacticsAdvisorComponent },
