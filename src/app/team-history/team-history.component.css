@@ -48,12 +48,30 @@ h3 { margin: 2px 0 0; color: #fff; font-size: .98rem; }
 
 .eleven-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; margin-top: 14px; }
 .eleven-card > header { display: flex; justify-content: space-between; align-items: baseline; padding: 15px 16px; border-bottom: 1px solid #343a50; }
-.eleven-card > a { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; padding: 10px 14px; color: #edf0f5; border-bottom: 1px solid rgba(255,255,255,.05); text-decoration: none; }
-.eleven-card > a:hover { background: rgba(255,255,255,.03); }
+.eleven-main { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; padding: 10px 14px; color: #edf0f5; border-bottom: 1px solid rgba(255,255,255,.05); text-decoration: none; }
+.eleven-main:hover { background: rgba(255,255,255,.03); }
 .eleven-card em { display: grid; place-items: center; height: 27px; color: #72c9f6; border-radius: 4px; background: rgba(52,152,219,.13); font-size: .65rem; font-style: normal; font-weight: 900; }
-.eleven-card a span { font-size: .77rem; font-weight: 800; }
-.eleven-card a span small { display: block; margin-top: 2px; font-weight: 500; }
-.eleven-card a > b { color: #f1c40f; font-size: .72rem; }
+.eleven-main span { font-size: .77rem; font-weight: 800; }
+.eleven-main span small { display: block; margin-top: 2px; font-weight: 500; }
+.eleven-main > b { color: #f1c40f; font-size: .72rem; }
+.eleven-player { border-bottom: 1px solid rgba(255,255,255,.045); }
+.where-now { background: rgba(10,13,22,.22); }
+.where-now summary { display: flex; align-items: center; gap: 8px; padding: 7px 14px 8px 58px; color: #778399; font-size: .62rem; cursor: pointer; list-style: none; }
+.where-now summary::-webkit-details-marker { display: none; }
+.where-now summary::before { content: '›'; margin-left: -13px; color: #72c9f6; font-size: .9rem; transition: transform .18s; }
+.where-now[open] summary::before { transform: rotate(90deg); }
+.where-now summary span { text-transform: uppercase; letter-spacing: .06em; }
+.where-now summary b { margin-left: auto; color: #72c9f6; font-size: .64rem; }
+.where-now summary b[data-status="RETIRED"] { color: #a4adbd; }.where-now summary b[data-status="OWNER"] { color: #f1c40f; }.where-now summary b[data-status="STAFF"],.where-now summary b[data-status="MANAGER"] { color: #b79cff; }.where-now summary b[data-status="FREE_AGENT"] { color: #ef9f74; }
+.where-content { padding: 11px 14px 14px 58px; border-top: 1px solid rgba(255,255,255,.04); }
+.where-content > p { margin: 0 0 10px; color: #b5bdcc; font-size: .68rem; line-height: 1.5; }
+.where-content dl { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 5px; margin: 0 0 10px; }
+.where-content dl div { padding: 7px; border-radius: 4px; background: #181b28; text-align: center; }.where-content dt { color: #69758b; font-size: .5rem; text-transform: uppercase; }.where-content dd { margin: 2px 0 0; color: #f1c40f; font-size: .7rem; font-weight: 900; }
+.career-destination { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; color: #758198; font-size: .62rem; }.career-destination a { color: #72c9f6; font-weight: 850; text-decoration: none; }
+.career-moves h4,.owned-clubs h4 { margin: 9px 0 5px; color: #7e899e; font-size: .56rem; letter-spacing: .08em; text-transform: uppercase; }
+.career-moves > div { display: grid; grid-template-columns: 27px 1fr auto; gap: 6px; padding: 5px 0; color: #aeb7c7; border-top: 1px solid rgba(255,255,255,.04); font-size: .62rem; }.career-moves b { color: #72c9f6; }.career-moves i { color: #657289; font-style: normal; }.career-moves em { display: block; height: auto; color: #71d5a1; background: transparent; font-size: .6rem; font-weight: 800; }
+.owned-clubs { display: flex; flex-wrap: wrap; gap: 6px; }.owned-clubs h4 { flex-basis: 100%; }.owned-clubs a { padding: 5px 8px; color: #f1c40f; border: 1px solid rgba(241,196,15,.22); border-radius: 4px; background: rgba(241,196,15,.07); font-size: .62rem; text-decoration: none; }
+.no-later-career { display: block; padding: 7px 0; color: #687388; font-style: italic; }
 
 .history-table > header { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; border-bottom: 1px solid #343a50; }
 .history-table > header > b { color: #72c9f6; }
@@ -87,5 +105,5 @@ tbody tr:hover { background: rgba(255,255,255,.03); }
 @media (max-width: 720px) {
   .page-header { padding: 18px 14px; }.logo-placeholder{display:none}.header-titles h1{font-size:1.5rem}
   .archive-tabs { margin: 12px; overflow-x: auto; }.archive-tabs button,.archive-tabs a{min-width:max-content}.archive-tabs select{min-width:115px}
-  .archive-content,.loading-state{margin:0 12px}.leader-grid,.eleven-grid,.friendly-honour-grid,.official-legend-grid{grid-template-columns:1fr}.official-legend-grid>article{grid-template-columns:36px minmax(0,1fr)}.official-legend-grid dl{grid-column:2}.friendly-honours>header{align-items:flex-start;flex-direction:column;gap:6px}.competition-card{flex-direction:column}.comp-identity{flex-basis:auto;border-right:0}.year-row{flex-direction:column;gap:6px}
+  .archive-content,.loading-state{margin:0 12px}.leader-grid,.eleven-grid,.friendly-honour-grid,.official-legend-grid{grid-template-columns:1fr}.official-legend-grid>article{grid-template-columns:36px minmax(0,1fr)}.official-legend-grid dl{grid-column:2}.friendly-honours>header{align-items:flex-start;flex-direction:column;gap:6px}.competition-card{flex-direction:column}.comp-identity{flex-basis:auto;border-right:0}.year-row{flex-direction:column;gap:6px}.where-content{padding-left:16px}.where-now summary{padding-left:28px}.where-content dl{grid-template-columns:repeat(2,minmax(0,1fr))}
 }

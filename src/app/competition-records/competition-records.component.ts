@@ -21,7 +21,32 @@ export interface LegendRow {
   recordValue: number;
 }
 
-export interface BestElevenPlayer { slot: string; player: LegendRow; legacyScore: number; }
+export interface CareerMove {
+  seasonNumber: number; fromTeamId: number; fromTeamName: string;
+  toTeamId: number; toTeamName: string; fee: number;
+}
+export interface OwnedClub { teamId: number; teamName: string; }
+export interface WhereAreTheyNow {
+  status: 'ACTIVE_PLAYER' | 'FREE_AGENT' | 'RETIRED' | 'MANAGER' | 'STAFF' | 'OWNER' | 'OTHER' | 'UNKNOWN';
+  statusLabel: string;
+  currentTeamId: number | null;
+  currentTeamName: string | null;
+  role: string;
+  retired: boolean;
+  appearancesAfterSeason: number;
+  goalsAfterSeason: number;
+  assistsAfterSeason: number;
+  lastActiveSeason: number | null;
+  transferJourney: CareerMove[];
+  ownedClubs: OwnedClub[];
+  summary: string;
+}
+export interface BestElevenPlayer {
+  slot: string;
+  player: LegendRow;
+  legacyScore: number;
+  whereAreTheyNow?: WhereAreTheyNow | null;
+}
 export interface TransferRecord {
   playerId: number; playerName: string; fromTeamId: number; fromTeamName: string;
   toTeamId: number; toTeamName: string; fee: number; seasonNumber: number;
