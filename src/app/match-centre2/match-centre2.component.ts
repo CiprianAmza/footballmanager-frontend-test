@@ -25,6 +25,8 @@ export class MatchCentre2Component extends LiveMatchComponent implements OnInit 
     const key = this.route.snapshot.paramMap.get('matchKey');
     if (!key) return;
     try { localStorage.setItem('fm_matchViewMode', 'PITCH_2D'); } catch { /* storage unavailable */ }
+    this.pitchStyle = 'classic';
+    this.pitchDetail = 'discs';
     this.interactive = this.route.snapshot.queryParamMap.get('interactive') !== '0';
     this.matchKey = key;
     this.ngOnChanges({ matchKey: new SimpleChange(null, key, true) });
