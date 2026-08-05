@@ -12,7 +12,14 @@
   <div class="notice" *ngIf="notice">{{ notice }}</div>
   <div class="notice error" *ngIf="error">{{ error }}</div>
 
-  <main *ngIf="!loading" class="studio">
+  <main *ngIf="!loading && seriesDetail" class="tradition-page">
+    <button class="tradition-back" (click)="closeSeries()">← Back to event studio</button>
+    <header class="tradition-hero"><div><small>UNOFFICIAL COMPETITION · EST. SEASON {{ seriesDetail.foundedSeason }}</small><h1>{{ seriesDetail.name }}</h1><p>{{ pretty(seriesDetail.eventType) }} · hosted by {{ seriesDetail.organizerTeamName }} · {{ seriesDetail.editionCount }} edition{{ seriesDetail.editionCount === 1 ? '' : 's' }}</p></div><div class="tradition-mark">{{ typeIcon(seriesDetail.eventType) }}</div></header>
+    <section class="tradition-stats"><article><small>EDITIONS</small><strong>{{ seriesDetail.editionCount }}</strong></article><article><small>COMPLETED</small><strong>{{ seriesDetail.completedEditions }}</strong></article><article><small>LATEST WINNER</small><strong>{{ seriesDetail.latestWinnerTeamName || 'Not decided' }}</strong></article><article><small>LATEST HOST</small><strong>{{ seriesDetail.latestLocationName }}</strong></article></section>
+    <section class="edition-history"><header><div><small>THE TRADITION</small><h2>Edition history</h2></div><button [disabled]="!seriesDetail.proposalAvailable" (click)="repeatSeries()">{{ seriesDetail.proposalAvailable ? 'Propose Season ' + seriesDetail.nextEditionSeason + ' edition →' : 'Next edition becomes available next season' }}</button></header><article *ngFor="let edition of seriesDetail.editions"><i>#{{ edition.editionNumber }}</i><span><small>Season {{ edition.season }} · {{ edition.startDate }}–{{ edition.endDate }}</small><b>{{ edition.name }}</b><em>{{ edition.locationName }} · {{ edition.participants.length }} clubs</em></span><strong [attr.data-status]="edition.status">{{ edition.winnerTeamName ? '♜ ' + edition.winnerTeamName : edition.status }}</strong></article></section>
+  </main>
+
+  <main *ngIf="!loading && !seriesDetail" class="studio">
     <section class="builder">
       <div class="step-title"><span>01</span><div><b>Choose the experience</b><small>Shortcuts <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></small></div></div>
       <div class="type-cards">
@@ -53,6 +60,7 @@
 
     <aside class="portfolio">
       <header><div><p>EVENT PORTFOLIO</p><h2>Your tours & invitations</h2></div><label><span>⌕</span><input id="event-search" [(ngModel)]="eventQuery" placeholder="Filter events"><kbd>/</kbd></label></header>
+      <section class="tradition-catalog" *ngIf="competitions.length"><div class="catalog-title"><span>REGULAR INVITATIONALS</span><small>Competitions with a history across seasons</small></div><button *ngFor="let competition of competitions" (click)="openSeries(competition.seriesId)"><i>{{ typeIcon(competition.eventType) }}</i><span><b>{{ competition.name }}</b><small>Since Season {{ competition.foundedSeason }} · {{ competition.editionCount }} edition{{ competition.editionCount === 1 ? '' : 's' }}</small></span><strong>View history →</strong></button></section>
       <div class="event-list">
         <button *ngFor="let event of filteredEvents; let i = index" [class.selected]="selectedEvent?.eventId === event.eventId" (click)="selectEvent(event, i)">
           <i>{{ typeIcon(event.eventType) }}</i><span><small>{{ pretty(event.eventType) }} · Season {{ event.season }} · {{ event.startDate }}</small><b>{{ event.name }}</b><em>{{ event.locationName }} · {{ event.participants.length }} club{{ event.participants.length === 1 ? '' : 's' }}</em></span><strong [attr.data-status]="event.status">{{ event.status }}</strong>
@@ -66,7 +74,7 @@
         <h4>Participants</h4><div class="participant-row"><a *ngFor="let participant of selectedEvent.participants" [routerLink]="['/team', participant.teamId]">{{ participant.name }}<small *ngIf="participant.organizer">HOST</small></a></div>
         <h4 *ngIf="selectedEvent.matches.length">Event schedule</h4><div class="event-match" *ngFor="let match of selectedEvent.matches"><span>Season {{ selectedEvent.season }} · {{ match.dateDisplay }} · {{ pretty(match.eventStage) }}</span><b>{{ match.homeTeamName }} <em>{{ match.score || 'vs' }}</em> {{ match.awayTeamName }}</b></div>
         <div class="winner" *ngIf="selectedEvent.winnerTeamName"><small>EVENT WINNER</small><b>♜ {{ selectedEvent.winnerTeamName }}</b></div>
-        <div class="detail-actions"><button class="confirm" *ngIf="selectedEvent.status === 'DRAFT'" [disabled]="saving" (click)="confirm(selectedEvent)">Confirm & post finances</button><button class="cancel" *ngIf="selectedEvent.status === 'DRAFT' || selectedEvent.status === 'CONFIRMED'" (click)="cancel(selectedEvent)">Cancel event</button></div>
+        <div class="detail-actions"><button *ngIf="selectedEvent.seriesId" (click)="openSeries(selectedEvent.seriesId)">Competition history</button><button class="confirm" *ngIf="selectedEvent.status === 'DRAFT'" [disabled]="saving" (click)="confirm(selectedEvent)">Confirm & post finances</button><button class="cancel" *ngIf="selectedEvent.status === 'DRAFT' || selectedEvent.status === 'CONFIRMED'" (click)="cancel(selectedEvent)">Cancel event</button></div>
       </section>
     </aside>
   </main>

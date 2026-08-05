@@ -55,6 +55,9 @@ export interface FriendlyEventView {
   organizerTeamId: number;
   organizerTeamName: string;
   name: string;
+  seriesId?: string;
+  seriesName?: string;
+  editionNumber?: number;
   eventType: 'TRAINING_CAMP' | 'MINI_LEAGUE' | 'MINI_CUP';
   status: 'DRAFT' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED';
   hostNationId: number;
@@ -76,6 +79,29 @@ export interface FriendlyEventView {
   winnerTeamId?: number;
   winnerTeamName?: string;
   matches: FriendlyMatchView[];
+}
+
+export interface FriendlyCompetitionSeries {
+  seriesId: string;
+  name: string;
+  eventType: 'MINI_LEAGUE' | 'MINI_CUP';
+  foundedSeason: number;
+  lastSeason: number;
+  editionCount: number;
+  completedEditions: number;
+  organizerTeamId: number;
+  organizerTeamName: string;
+  latestWinnerTeamId?: number;
+  latestWinnerTeamName?: string;
+  latestStatus: string;
+  latestLocationName: string;
+}
+
+export interface FriendlyCompetitionDetail extends FriendlyCompetitionSeries {
+  nextEditionSeason: number;
+  proposalAvailable: boolean;
+  latestEdition: FriendlyEventView;
+  editions: FriendlyEventView[];
 }
 
 export interface FriendlyPlannerOptions {
@@ -133,5 +159,13 @@ export class FriendlyHubService {
 
   cancelEvent(eventId: number): Observable<FriendlyEventView> {
     return this.http.delete<FriendlyEventView>(`${urlApp}/friendly/events/${eventId}`);
+  }
+
+  competitions(teamId: number): Observable<FriendlyCompetitionSeries[]> {
+    return this.http.get<FriendlyCompetitionSeries[]>(`${urlApp}/friendly/competitions?teamId=${teamId}`);
+  }
+
+  competition(seriesId: string): Observable<FriendlyCompetitionDetail> {
+    return this.http.get<FriendlyCompetitionDetail>(`${urlApp}/friendly/competitions/${encodeURIComponent(seriesId)}`);
   }
 }

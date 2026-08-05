@@ -1,7 +1,7 @@
 import { Component, HostListener, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin } from 'rxjs';
-import { FriendlyEventView, FriendlyHubService, FriendlyOpponent, FriendlyPlannerOptions } from '../services/friendly-hub.service';
+import { FriendlyCompetitionDetail, FriendlyCompetitionSeries, FriendlyEventView, FriendlyHubService, FriendlyOpponent, FriendlyPlannerOptions } from '../services/friendly-hub.service';
 import { TeamService } from '../services/team.service';
 
 @Component({
@@ -19,6 +19,9 @@ export class Friendlies3Component implements OnInit {
   options: FriendlyPlannerOptions | null = null;
   opponents: FriendlyOpponent[] = [];
   events: FriendlyEventView[] = [];
+  competitions: FriendlyCompetitionSeries[] = [];
+  seriesDetail: FriendlyCompetitionDetail | null = null;
+  repeatSeriesId = '';
   selectedEvent: FriendlyEventView | null = null;
   selectedIndex = 0;
   eventQuery = '';
@@ -38,6 +41,7 @@ export class Friendlies3Component implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private hub: FriendlyHubService,
     public teamService: TeamService
   ) {}
@@ -53,12 +57,14 @@ export class Friendlies3Component implements OnInit {
     this.loading = true;
     forkJoin({
       preparation: this.hub.loadPreparation(this.teamId, this.season),
-      options: this.hub.plannerOptions(this.teamId)
+      options: this.hub.plannerOptions(this.teamId),
+      competitions: this.hub.competitions(this.teamId)
     }).subscribe({
       next: data => {
         this.opponents = data.preparation.opponents;
         this.events = data.preparation.events;
         this.options = data.options;
+        this.competitions = data.competitions;
         if (!this.options.availableSeasons.includes(this.season)) this.season = this.options.currentSeason;
         this.selectNextAvailableWindow();
         const domestic = this.options.destinations.find(destination => destination.domestic);
@@ -66,6 +72,8 @@ export class Friendlies3Component implements OnInit {
         this.updateCostFromDestination(false);
         this.loading = false;
         this.refreshSelection();
+        const requestedSeries = this.route.snapshot.queryParamMap.get('seriesId');
+        if (requestedSeries) this.loadSeries(requestedSeries);
       },
       error: () => {
         this.error = 'The event studio could not be loaded.';
@@ -127,6 +135,7 @@ export class Friendlies3Component implements OnInit {
   }
 
   chooseType(type: 'TRAINING_CAMP' | 'MINI_LEAGUE' | 'MINI_CUP'): void {
+    if (this.repeatSeriesId && type !== this.eventType) this.repeatSeriesId = '';
     this.eventType = type;
     this.participantIds = [];
     if (type === 'TRAINING_CAMP') {
@@ -189,11 +198,13 @@ export class Friendlies3Component implements OnInit {
       participantTeamIds: this.participantIds,
       participationFee: Number(this.participationFee),
       prizePool: this.eventType === 'TRAINING_CAMP' ? 0 : Number(this.prizePool),
-      organizerCost: Number(this.organizerCost)
+      organizerCost: Number(this.organizerCost),
+      ...(this.repeatSeriesId ? { seriesId: this.repeatSeriesId } : {})
     }).subscribe({
       next: event => {
         this.saving = false;
         this.notice = `${event.name} saved as draft. Review the budget before confirmation.`;
+        this.repeatSeriesId = '';
         this.load();
         this.selectedEvent = event;
       },
@@ -226,6 +237,46 @@ export class Friendlies3Component implements OnInit {
   selectEvent(event: FriendlyEventView, index?: number): void {
     this.selectedEvent = event;
     if (index !== undefined) this.selectedIndex = index;
+  }
+
+  openSeries(seriesId: string): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { seriesId }, queryParamsHandling: 'merge' });
+    this.loadSeries(seriesId);
+  }
+
+  closeSeries(): void {
+    this.seriesDetail = null;
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { seriesId: null }, queryParamsHandling: 'merge' });
+  }
+
+  repeatSeries(): void {
+    if (!this.seriesDetail || !this.options || !this.seriesDetail.proposalAvailable) return;
+    const latest = this.seriesDetail.latestEdition;
+    const nextEdition = (latest.editionNumber || this.seriesDetail.editionCount) + 1;
+    this.repeatSeriesId = this.seriesDetail.seriesId;
+    this.eventType = this.seriesDetail.eventType;
+    this.eventName = this.seriesDetail.name;
+    this.season = Math.min(this.options.currentSeason + 1, Math.max(this.options.currentSeason, this.seriesDetail.nextEditionSeason));
+    this.hostNationId = latest.hostNationId;
+    this.locationName = latest.locationName;
+    this.focus = latest.focus;
+    this.participationFee = latest.participationFee;
+    this.prizePool = latest.prizePool;
+    this.organizerCost = latest.organizerCost;
+    this.participantIds = latest.participants.filter(participant => !participant.organizer).map(participant => participant.teamId);
+    this.startDay = 0;
+    this.endDay = 0;
+    this.seriesDetail = null;
+    this.selectNextAvailableWindow();
+    this.notice = `Planning Edition ${nextEdition} of ${this.eventName}.`;
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { seriesId: null }, queryParamsHandling: 'merge' });
+  }
+
+  private loadSeries(seriesId: string): void {
+    this.hub.competition(seriesId).subscribe({
+      next: detail => { this.seriesDetail = detail; this.error = ''; },
+      error: () => { this.error = 'The friendly competition history could not be loaded.'; this.seriesDetail = null; }
+    });
   }
 
   money(value: number): string {
