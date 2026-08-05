@@ -19,6 +19,11 @@
     <h2>Server catalogue</h2>
     <div class="asset-grid">
       <article class="asset-card" *ngFor="let item of catalog">
+        <figure class="asset-visual">
+          <img [src]="catalogImage(item)" [alt]="assetAlt(item.name, item.type)"
+               loading="lazy" (error)="useFallbackImage($event, item.type)">
+          <figcaption>{{ item.type }}</figcaption>
+        </figure>
         <span class="asset-type">{{ item.type }}<ng-container *ngIf="item.apartmentRooms"> · {{ item.apartmentRooms }} room{{ item.apartmentRooms === 1 ? '' : 's' }}</ng-container></span>
         <h3>{{ item.name }}</h3><strong>{{ money(item.purchasePrice.amount) }}</strong>
         <small>Verified server price · resale haircut {{ item.resaleHaircutBps / 100 }}%</small>
@@ -29,6 +34,11 @@
     <h2>Owned assets</h2>
     <div class="asset-grid" *ngIf="assets.length; else noAssets">
       <article class="asset-card owned" *ngFor="let asset of assets">
+        <figure class="asset-visual">
+          <img [src]="ownedAssetImage(asset)" [alt]="assetAlt(asset.name, asset.type)"
+               loading="lazy" (error)="useFallbackImage($event, asset.type)">
+          <figcaption>OWNED</figcaption>
+        </figure>
         <span class="asset-type">{{ asset.type }}</span><h3>{{ asset.name }}</h3>
         <strong>{{ money(asset.currentValue.amount) }}</strong>
         <small>Purchased S{{ asset.purchaseSeason }} · D{{ asset.purchaseDay }}</small>

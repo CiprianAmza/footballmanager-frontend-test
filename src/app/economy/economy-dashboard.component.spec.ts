@@ -62,4 +62,13 @@ describe('EconomyDashboardComponent', () => {
     expect(args[0]).toBe(8);
     expect(args[1]).toContain('ui-purchase-8-');
   });
+
+  it('renders the generated catalogue artwork with accessible alternative text', () => {
+    const image = fixture.nativeElement.querySelector('.asset-card img') as HTMLImageElement;
+
+    expect(component.catalogImage(item)).toBe('/assets/economy/apartment-1.webp');
+    expect(image.getAttribute('src')).toBe('/assets/economy/apartment-1.webp');
+    expect(image.getAttribute('alt')).toContain('One-room Apartment');
+    expect(image.getAttribute('alt')).toContain('Cartoon apartment illustration');
+  });
 });

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { EconomyService } from '../services/economy.service';
-import { CatalogItemView, LedgerEntryView, OwnedAssetView, PublicProfileView } from './economy.models';
+import { AssetType, CatalogItemView, LedgerEntryView, OwnedAssetView, PublicProfileView } from './economy.models';
 
 @Component({
   selector: 'app-economy-dashboard',
@@ -53,6 +53,44 @@ export class EconomyDashboardComponent implements OnInit {
   money(amount?: number): string {
     return new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
       .format(amount || 0);
+  }
+
+  catalogImage(item: CatalogItemView): string {
+    return `/assets/economy/${item.iconKey}.webp`;
+  }
+
+  ownedAssetImage(asset: OwnedAssetView): string {
+    const catalogItem = this.catalog.find(item => item.id === asset.catalogItemId)
+      || this.catalog.find(item => item.code === asset.catalogCode);
+    return catalogItem ? this.catalogImage(catalogItem) : this.fallbackImage(asset.type);
+  }
+
+  assetAlt(name: string, type: AssetType): string {
+    const labels: Record<AssetType, string> = {
+      APARTMENT: 'Cartoon apartment illustration',
+      VILLA: 'Cartoon villa illustration',
+      HOTEL: 'Cartoon boutique hotel illustration',
+      CAR: 'Cartoon car illustration',
+      YACHT: 'Cartoon yacht illustration'
+    };
+    return `${name} — ${labels[type]}`;
+  }
+
+  useFallbackImage(event: Event, type: AssetType): void {
+    const image = event.target as HTMLImageElement;
+    image.onerror = null;
+    image.src = this.fallbackImage(type);
+  }
+
+  private fallbackImage(type: AssetType): string {
+    const fallback: Record<AssetType, string> = {
+      APARTMENT: 'apartment-1',
+      VILLA: 'villa-classic',
+      HOTEL: 'hotel-boutique',
+      CAR: 'car-luxury',
+      YACHT: 'yacht-classic'
+    };
+    return `/assets/economy/${fallback[type]}.webp`;
   }
 
   private key(action: string, id: number): string {

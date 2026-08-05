@@ -1,6 +1,6 @@
 export type CareerType = 'PLAYER' | 'MANAGER' | 'CHAIRMAN';
 export type ControlType = 'AI' | 'USER';
-export type AssetType = 'APARTMENT' | 'VILLA' | 'HOTEL' | 'CAR';
+export type AssetType = 'APARTMENT' | 'VILLA' | 'HOTEL' | 'CAR' | 'YACHT';
 
 export interface Money { amount: number; currency: string; minorUnitScale: number; }
 export interface AccountView {
