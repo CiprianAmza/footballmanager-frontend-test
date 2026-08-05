@@ -1,168 +1,150 @@
-<div class="am-container">
+<main class="assistant-shell">
+  <app-page-header
+    eyebrow="Technical staff"
+    title="Assistant Manager"
+    [subtitle]="'Evidence-led advice · Season ' + (teamService.currentSeason || '—')"
+    [status]="formationSuggestion?.assistantName || lineupConcerns?.assistantName || 'Staff report'"
+    statusTone="neutral">
+    <button class="refresh-button" type="button" (click)="loadPerformance()" [disabled]="loadingPerformance">
+      Refresh analysis
+    </button>
+  </app-page-header>
 
-  <!-- Header -->
-  <div class="am-header">
-    <h1>ASSISTANT MANAGER</h1>
-    <div class="am-tabs">
-      <button class="am-tab" [class.active]="activeTab === 'briefing'" (click)="setTab('briefing')">Pre-Match Briefing</button>
-      <button class="am-tab" [class.active]="activeTab === 'formation'" (click)="setTab('formation')">Formation</button>
-      <button class="am-tab" [class.active]="activeTab === 'concerns'" (click)="setTab('concerns')">Lineup Concerns</button>
-      <button class="am-tab" [class.active]="activeTab === 'opponent'" (click)="setTab('opponent')">Opponent Analysis</button>
-      <button class="am-tab" [class.active]="activeTab === 'transfers'" (click)="setTab('transfers')">Transfer Needs</button>
-    </div>
+  <nav class="assistant-tabs" role="tablist" aria-label="Assistant manager reports">
+    <button type="button" role="tab" [attr.aria-selected]="activeTab === 'performance'" [class.active]="activeTab === 'performance'" (click)="setTab('performance')">Season Performance</button>
+    <button type="button" role="tab" [attr.aria-selected]="activeTab === 'briefing'" [class.active]="activeTab === 'briefing'" (click)="setTab('briefing')">Pre-Match Briefing</button>
+    <button type="button" role="tab" [attr.aria-selected]="activeTab === 'formation'" [class.active]="activeTab === 'formation'" (click)="setTab('formation')">Formation</button>
+    <button type="button" role="tab" [attr.aria-selected]="activeTab === 'concerns'" [class.active]="activeTab === 'concerns'" (click)="setTab('concerns')">Squad Risks</button>
+    <button type="button" role="tab" [attr.aria-selected]="activeTab === 'opponent'" [class.active]="activeTab === 'opponent'" (click)="setTab('opponent')">Opposition</button>
+    <button type="button" role="tab" [attr.aria-selected]="activeTab === 'transfers'" [class.active]="activeTab === 'transfers'" (click)="setTab('transfers')">Recruitment</button>
+  </nav>
+
+  <div class="assistant-content">
+    <section *ngIf="activeTab === 'performance'" class="assistant-section performance-view">
+      <div *ngIf="loadingPerformance" class="state-card"><span class="state-spinner"></span><strong>Analysing the season…</strong><small>Reading match, shot, progression, pressing and set-piece records.</small></div>
+      <div *ngIf="!loadingPerformance && performanceError" class="state-card error"><strong>Analysis unavailable</strong><small>{{ performanceError }}</small><button type="button" (click)="loadPerformance()">Try again</button></div>
+
+      <ng-container *ngIf="!loadingPerformance && performance">
+        <section class="assistant-summary" *ngIf="performance.underlying as u">
+          <div><span>Assistant</span><strong>{{ formationSuggestion?.assistantName || lineupConcerns?.assistantName || 'Staff team' }}</strong><small>Tactical judgement {{ formationSuggestion?.tacticalAbility ?? '—' }}</small></div>
+          <div><span>Evidence</span><strong>{{ u.matches }} matches</strong><small>{{ u.confidence }} model confidence</small></div>
+          <div><span>Next opponent</span><strong>{{ nextOpponentName || 'Not scheduled' }}</strong><small *ngIf="nextOpponentId">Club ID {{ nextOpponentId }}</small></div>
+          <div><span>Urgent risks</span><strong>{{ lineupConcerns?.totalConcerns || 0 }}</strong><small>{{ lineupConcerns?.summary || 'Squad review pending' }}</small></div>
+        </section>
+
+        <section class="section-block" *ngIf="performance.underlying as u">
+          <header class="section-heading"><div><span>UNDERLYING PERFORMANCE</span><h2>Results versus the process</h2></div><p>Observed results compared with the quality of chances created and allowed.</p></header>
+          <div class="metric-grid">
+            <article><span>POINTS vs xPTS</span><strong [ngClass]="tone(u.pointsDelta)">{{ u.actualPoints }} <small>/ {{ u.expectedPoints }}</small></strong><p>{{ signed(u.pointsDelta) }} point delta</p></article>
+            <article><span>GOALS vs xG</span><strong [ngClass]="tone(u.finishingDelta)">{{ u.goals }} <small>/ {{ u.xg }}</small></strong><p>{{ signed(u.finishingDelta) }} finishing delta</p></article>
+            <article><span>CONCEDED vs xGA</span><strong [ngClass]="tone(u.goalsPrevented)">{{ u.goalsConceded }} <small>/ {{ u.xga }}</small></strong><p>{{ signed(u.goalsPrevented) }} goals prevented</p></article>
+            <article><span>xG DIFFERENCE / 90</span><strong [ngClass]="tone(u.xgDifferencePer90)">{{ signed(u.xgDifferencePer90) }}</strong><p>{{ u.xgPer90 }} xG · {{ u.xgaPer90 }} xGA</p></article>
+            <article><span>CONVERSION EDGE</span><strong [ngClass]="tone(u.conversionDeltaPercentagePoints)">{{ signed(u.conversionDeltaPercentagePoints) }}<small> pp</small></strong><p>{{ u.actualConversionPercentage }}% actual</p></article>
+          </div>
+        </section>
+
+        <section class="insight-layout">
+          <div class="insight-column">
+            <header class="section-heading compact"><div><span>ASSISTANT VERDICT</span><h2>Evidence → decision</h2></div></header>
+            <article class="insight-card" *ngFor="let insight of performanceInsights" [ngClass]="insight.tone">
+              <span class="signal">{{ insight.tone }}</span>
+              <div><h3>{{ insight.title }}</h3><p>{{ insight.evidence }}</p><strong>{{ insight.action }}</strong></div>
+              <em>{{ insight.confidence }} confidence</em>
+            </article>
+          </div>
+          <aside class="decision-panel">
+            <header><span>DECISION SHORTCUTS</span><h2>Act on the report</h2></header>
+            <a routerLink="/tactics4"><b>Tactics</b><small>Adjust roles, shape and instructions</small><span>→</span></a>
+            <a routerLink="/squad2"><b>Squad selection</b><small>Compare availability and form</small><span>→</span></a>
+            <a routerLink="/training"><b>Training</b><small>Target the diagnosed weakness</small><span>→</span></a>
+            <a routerLink="/data-hub"><b>Full Data Hub</b><small>Inspect maps, funnels and match samples</small><span>→</span></a>
+          </aside>
+        </section>
+
+        <section class="analytics-grid">
+          <article class="analytics-card" *ngIf="performance.shots as s">
+            <header><div><span>CHANCE CREATION</span><h3>Shot profile</h3></div><mark>OPTA-STYLE</mark></header>
+            <div class="analytics-metrics"><div><strong>{{ s.xgPerShot | number:'1.2-2' }}</strong><span>xG / shot</span></div><div><strong>{{ s.bigChances }}</strong><span>big chances</span></div><div><strong>{{ ratioPercent(s.shotsInsideBox, s.shots) }}%</strong><span>shots in box</span></div><div><strong>{{ s.touchesInOppositionBox }}</strong><span>box touches</span></div></div>
+            <p>{{ s.shots }} shots produced {{ s.xg }} xG and {{ s.goals }} goals. Average distance: {{ s.averageShotDistanceMeters }}m.</p>
+            <footer><span class="quality observed">{{ s.dataQuality?.observedShots }} observed</span><span class="quality modelled">{{ s.dataQuality?.modeledShots }} modelled</span></footer>
+          </article>
+
+          <article class="analytics-card" *ngIf="performance.progression as p">
+            <header><div><span>POSSESSION & PROGRESSION</span><h3>Territory with purpose</h3></div><mark>MODELLED</mark></header>
+            <div class="analytics-metrics"><div><strong>{{ p.averages?.fieldTiltPercentage }}%</strong><span>field tilt</span></div><div><strong>{{ p.averages?.progressivePassesPerMatch }}</strong><span>prog. passes / match</span></div><div><strong>{{ p.averages?.progressiveCarriesPerMatch }}</strong><span>prog. carries / match</span></div><div><strong>{{ p.averages?.finalThirdToBoxPercentage }}%</strong><span>final third → box</span></div></div>
+            <div class="mini-funnel" *ngIf="p.funnel"><div><b>{{ p.funnel.completedPasses }}</b><span>passes</span></div><i>→</i><div><b>{{ p.funnel.progressivePasses }}</b><span>progressive</span></div><i>→</i><div><b>{{ p.funnel.finalThirdEntries }}</b><span>final third</span></div><i>→</i><div><b>{{ p.funnel.penaltyAreaEntries }}</b><span>box</span></div><i>→</i><div><b>{{ p.funnel.shots }}</b><span>shots</span></div></div>
+          </article>
+
+          <article class="analytics-card" *ngIf="performance.pressing as d">
+            <header><div><span>PRESSING & DEFENCE</span><h3>Regain and resistance</h3></div><mark class="proxy">PROXY + MODEL</mark></header>
+            <div class="analytics-metrics"><div><strong>{{ d.averages?.ppdaProxy }}</strong><span>PPDA-like proxy</span></div><div><strong>{{ d.averages?.pressureSuccessPercentage }}%</strong><span>pressure success</span></div><div><strong>{{ d.averages?.ballRecoveryTimeSeconds }}s</strong><span>recovery time</span></div><div><strong>{{ d.averages?.xgaPerShot }}</strong><span>xGA / shot</span></div></div>
+            <p>{{ d.totals?.highTurnovers }} high turnovers · {{ d.totals?.highTurnoversToShot }} created a shot · {{ d.averages?.duelWinPercentage }}% duels won.</p>
+            <footer><span class="quality proxy">Real PPDA unavailable until zoned events are stored</span></footer>
+          </article>
+
+          <article class="analytics-card" *ngIf="performance.setPieces as sp">
+            <header><div><span>SET PIECES</span><h3>Margins at dead balls</h3></div><mark>BENCHMARKED</mark></header>
+            <div class="analytics-metrics"><div><strong>{{ sp.summary?.cornerXgPerCornerFor }}</strong><span>xG / corner</span></div><div><strong>{{ sp.summary?.cornerXgPerCornerAgainst }}</strong><span>xGA / corner</span></div><div><strong>{{ sp.summary?.setPieceShareOfTotalXgaPercentage }}%</strong><span>share of total xGA</span></div><div><strong>{{ sp.summary?.secondBallRecoveryPercentage }}%</strong><span>second balls won</span></div></div>
+            <p *ngIf="sp.insights?.length"><b>{{ sp.insights[0].title }}.</b> {{ sp.insights[0].evidence }}</p>
+          </article>
+        </section>
+
+        <section class="contributors-grid">
+          <article *ngIf="performance.progression?.playerContributions?.length">
+            <header class="section-heading compact"><div><span>BUILD-UP LEADERS</span><h2>Progression contribution</h2></div></header>
+            <a class="player-row" *ngFor="let player of take(performance.progression.playerContributions, 5)" [routerLink]="['/player', player.playerId]" [queryParams]="{ actingTeamId: teamId }"><span>{{ player.position || '—' }}</span><div><strong>{{ player.name }}</strong><small>{{ player.progressivePasses }} progressive passes · {{ player.progressiveCarries }} carries</small></div><b>{{ player.progressionSharePercentage }}%</b></a>
+          </article>
+          <article *ngIf="performance.pressing?.playerContributions?.length">
+            <header class="section-heading compact"><div><span>PRESSING LEADERS</span><h2>Defensive activity</h2></div></header>
+            <a class="player-row" *ngFor="let player of take(performance.pressing.playerContributions, 5)" [routerLink]="['/player', player.playerId]" [queryParams]="{ actingTeamId: teamId }"><span>{{ player.position || '—' }}</span><div><strong>{{ player.name }}</strong><small>{{ player.pressures }} pressures · {{ player.counterpressures }} counterpressures</small></div><b>{{ player.defensiveActions }}</b></a>
+          </article>
+        </section>
+
+        <p class="methodology-note">Methodology: xG/xGA and match totals are observed. Progression, detailed pressing and some set-piece locations are deterministic models. The displayed PPDA-like number is explicitly a whole-pitch proxy, not real zonal PPDA.</p>
+      </ng-container>
+    </section>
+
+    <section *ngIf="activeTab === 'briefing'" class="assistant-section">
+      <div *ngIf="loadingBriefing" class="state-card"><span class="state-spinner"></span><strong>Preparing the match briefing…</strong></div>
+      <div *ngIf="!loadingBriefing && !briefing && !nextOpponentId" class="state-card"><strong>No upcoming match</strong><small>The assistant will prepare a report when an opponent is scheduled.</small></div>
+      <ng-container *ngIf="!loadingBriefing && briefing">
+        <section class="briefing-hero"><span>NEXT ASSIGNMENT</span><h2>{{ briefing.opponentAnalysis?.opponentName || nextOpponentName }}</h2><p>{{ briefing.opponentAnalysis?.advice }}</p><div><b>{{ briefing.opponentAnalysis?.recommendedMentality }}</b><small>recommended mentality</small></div></section>
+        <div class="two-column">
+          <article class="report-card"><header>Recommended formation</header><strong class="formation-badge">{{ briefing.formation?.recommended }}</strong><p>{{ briefing.formation?.advice }}</p></article>
+          <article class="report-card"><header>Availability summary</header><strong>{{ briefing.lineupConcerns?.totalConcerns || 0 }} concerns</strong><p>{{ briefing.lineupConcerns?.summary }}</p></article>
+        </div>
+        <article class="report-card" *ngIf="briefing.lineupConcerns?.concerns?.length"><header>Decisions before team selection</header><div class="concern-item" *ngFor="let c of take(briefing.lineupConcerns.concerns, 6)"><span class="concern-icon">{{ getConcernIcon(c.type) }}</span><div><a [routerLink]="['/player', c.playerId]" [queryParams]="{ actingTeamId: teamId }">{{ c.playerName }}</a><small>{{ c.message }}</small></div><b [ngClass]="getConcernSeverityClass(c.severity)">{{ c.severity }}</b></div></article>
+      </ng-container>
+    </section>
+
+    <section *ngIf="activeTab === 'formation'" class="assistant-section">
+      <div *ngIf="loadingFormation" class="state-card"><span class="state-spinner"></span><strong>Evaluating every available shape…</strong></div>
+      <div *ngIf="!loadingFormation && !formationSuggestion" class="state-card error"><strong>Formation report unavailable</strong></div>
+      <ng-container *ngIf="!loadingFormation && formationSuggestion">
+        <section class="recommendation-banner"><div><span>RECOMMENDATION</span><strong>{{ formationSuggestion.recommended }}</strong></div><p>{{ formationSuggestion.advice }}</p><aside><span>Combined XI rating</span><b>{{ formationSuggestion.recommendedRating | number:'1.1-1' }}</b></aside></section>
+        <article class="report-card"><header>All formations ranked</header><div class="formation-row" *ngFor="let f of formationSuggestion.allFormations; let rank = index"><b>{{ rank + 1 }}</b><strong>{{ f.formation }}</strong><span>{{ f.totalRating | number:'1.1-1' }}</span><i><em [style.width.%]="f.totalRating / formationSuggestion.recommendedRating * 100"></em></i></div></article>
+      </ng-container>
+    </section>
+
+    <section *ngIf="activeTab === 'concerns'" class="assistant-section">
+      <div *ngIf="loadingConcerns" class="state-card"><span class="state-spinner"></span><strong>Checking squad readiness…</strong></div>
+      <article class="report-card" *ngIf="!loadingConcerns && lineupConcerns"><header>Squad risk register <span>{{ lineupConcerns.totalConcerns || 0 }}</span></header><p class="report-intro">{{ lineupConcerns.summary }}</p><div class="concern-item" *ngFor="let c of lineupConcerns.concerns"><span class="concern-icon">{{ getConcernIcon(c.type) }}</span><div><a [routerLink]="['/player', c.playerId]" [queryParams]="{ actingTeamId: teamId }">{{ c.playerName }}</a><small>{{ c.position }} · {{ c.message }}</small></div><b [ngClass]="getConcernSeverityClass(c.severity)">{{ c.severity }}</b></div><div class="empty-inline" *ngIf="!lineupConcerns.concerns?.length">No injuries, fitness, morale, contract or transfer-request risks detected.</div></article>
+    </section>
+
+    <section *ngIf="activeTab === 'opponent'" class="assistant-section">
+      <div class="opponent-selector"><label for="assistant-opponent">Opponent club ID</label><input id="assistant-opponent" type="number" [(ngModel)]="opponentIdForAnalysis"><button type="button" (click)="loadOpponentAnalysis()" [disabled]="!opponentIdForAnalysis || loadingOpponent">Analyse opponent</button></div>
+      <div *ngIf="loadingOpponent" class="state-card"><span class="state-spinner"></span><strong>Building opposition report…</strong></div>
+      <ng-container *ngIf="!loadingOpponent && opponentAnalysis">
+        <section class="briefing-hero"><span>OPPOSITION REPORT</span><h2>{{ opponentAnalysis.opponentName }}</h2><p>{{ opponentAnalysis.advice }}</p><div><b>{{ opponentAnalysis.recommendedMentality }}</b><small>recommended mentality</small></div></section>
+        <div class="power-comparison"><div><span>Our estimated XI</span><strong>{{ opponentAnalysis.ourEstimatedPower | number:'1.1-1' }}</strong></div><i>vs</i><div><span>Their estimated XI</span><strong>{{ opponentAnalysis.opponentEstimatedPower | number:'1.1-1' }}</strong></div></div>
+        <article class="report-card"><header>Position groups</header><div class="position-grid"><div *ngFor="let pos of opponentAnalysis.positionAnalysis"><span>{{ pos.position }}</span><strong>{{ pos.bestPlayerName || '—' }}</strong><small>Avg {{ pos.averageRating }} · best {{ pos.bestPlayerRating }}</small><b [ngClass]="getStrengthClass(pos.strength)">{{ pos.strength.replace('_', ' ') }}</b></div></div></article>
+        <div class="two-column"><article class="report-card"><header>Areas to target</header><div class="tag-list"><span class="target" *ngFor="let pos of opponentAnalysis.weakPositions">{{ pos }}</span><small *ngIf="!opponentAnalysis.weakPositions?.length">No obvious weak position group.</small></div></article><article class="report-card"><header>Areas to respect</header><div class="tag-list"><span class="danger" *ngFor="let pos of opponentAnalysis.strongPositions">{{ pos }}</span><small *ngIf="!opponentAnalysis.strongPositions?.length">No dominant position group.</small></div></article></div>
+      </ng-container>
+    </section>
+
+    <section *ngIf="activeTab === 'transfers'" class="assistant-section">
+      <div *ngIf="loadingTransferNeeds" class="state-card"><span class="state-spinner"></span><strong>Auditing squad depth…</strong></div>
+      <article class="report-card" *ngIf="!loadingTransferNeeds && transferNeeds"><header>Recruitment priorities</header><p class="report-intro">{{ transferNeeds.advice }}</p><div class="recruitment-row" *ngFor="let need of transferNeeds.needs"><strong>{{ need.position }}</strong><div><b>{{ need.reason }}</b><small>{{ need.currentCount }} players · average {{ need.averageRating }} · best {{ need.bestRating }}</small></div><span [ngClass]="'priority-' + need.priority.toLowerCase()">{{ need.priority }}</span><a [routerLink]="['/transfers', teamId, teamService.currentSeason]" [queryParams]="{ position: need.position }">Search →</a></div><div class="empty-inline" *ngIf="!transferNeeds.needs?.length">The current squad meets the assistant's minimum depth and quality thresholds.</div></article>
+    </section>
   </div>
-
-  <div class="am-content">
-
-    <!-- PRE-MATCH BRIEFING -->
-    <div *ngIf="activeTab === 'briefing'" class="am-section">
-      <div *ngIf="loadingBriefing" class="am-loading">Preparing briefing...</div>
-      <div *ngIf="!loadingBriefing && !briefing && !nextOpponentId" class="am-empty">No upcoming match found.</div>
-
-      <div *ngIf="!loadingBriefing && briefing" class="briefing-content">
-        <div class="am-card" *ngIf="briefing.recommendedFormation">
-          <div class="am-card-title">RECOMMENDED FORMATION</div>
-          <div class="formation-badge">{{ briefing.recommendedFormation }}</div>
-          <div class="am-card-desc" *ngIf="briefing.formationReason">{{ briefing.formationReason }}</div>
-        </div>
-
-        <div class="am-card" *ngIf="briefing.concerns?.length > 0">
-          <div class="am-card-title">LINEUP ISSUES</div>
-          <div class="concern-item" *ngFor="let c of briefing.concerns">
-            <span class="concern-icon">{{ getConcernIcon(c.type) }}</span>
-            <span class="concern-text">{{ c.message }}</span>
-            <span class="concern-severity" [ngClass]="getConcernSeverityClass(c.severity)">{{ c.severity }}</span>
-          </div>
-        </div>
-
-        <div class="am-card" *ngIf="briefing.opponentAnalysis">
-          <div class="am-card-title">OPPONENT: {{ briefing.opponentName || nextOpponentName }}</div>
-          <div class="am-card-desc" *ngIf="briefing.opponentAnalysis.recommendedMentality">
-            Suggested mentality: <strong>{{ briefing.opponentAnalysis.recommendedMentality }}</strong>
-          </div>
-          <div class="opp-positions" *ngIf="briefing.opponentAnalysis.positionAnalysis">
-            <div class="opp-pos-item" *ngFor="let pos of briefing.opponentAnalysis.positionAnalysis | keyvalue">
-              <span class="opp-pos-name">{{ pos.key }}</span>
-              <span class="opp-pos-strength" [ngClass]="getStrengthClass($any(pos.value))">{{ pos.value }}</span>
-            </div>
-          </div>
-          <div *ngIf="briefing.opponentAnalysis.vulnerabilities?.length > 0" class="vulnerabilities">
-            <div class="vuln-title">Vulnerabilities:</div>
-            <div class="vuln-item" *ngFor="let v of briefing.opponentAnalysis.vulnerabilities">{{ v }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- FORMATION SUGGESTION -->
-    <div *ngIf="activeTab === 'formation'" class="am-section">
-      <div *ngIf="loadingFormation" class="am-loading">Analyzing squad...</div>
-      <div *ngIf="!loadingFormation && !formationSuggestion" class="am-empty">Unable to analyze formations.</div>
-
-      <div *ngIf="!loadingFormation && formationSuggestion" class="formation-content">
-        <div class="am-card">
-          <div class="am-card-title">BEST FORMATION</div>
-          <div class="formation-badge large">{{ formationSuggestion.bestFormation }}</div>
-          <div class="am-card-desc" *ngIf="formationSuggestion.reason">{{ formationSuggestion.reason }}</div>
-        </div>
-
-        <div class="am-card" *ngIf="formationSuggestion.formations">
-          <div class="am-card-title">ALL FORMATIONS RANKED</div>
-          <div class="formation-rank-list">
-            <div class="formation-rank-item" *ngFor="let f of formationSuggestion.formations; let i = index">
-              <span class="rank-pos">{{ i + 1 }}.</span>
-              <span class="rank-name">{{ f.formation }}</span>
-              <span class="rank-rating">{{ f.totalRating | number:'1.1-1' }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- LINEUP CONCERNS -->
-    <div *ngIf="activeTab === 'concerns'" class="am-section">
-      <div *ngIf="loadingConcerns" class="am-loading">Checking squad...</div>
-      <div *ngIf="!loadingConcerns && !lineupConcerns" class="am-empty">No data available.</div>
-
-      <div *ngIf="!loadingConcerns && lineupConcerns">
-        <div class="am-card" *ngIf="lineupConcerns.concerns?.length > 0">
-          <div class="am-card-title">ISSUES FOUND ({{ lineupConcerns.concerns.length }})</div>
-          <div class="concern-item" *ngFor="let c of lineupConcerns.concerns">
-            <span class="concern-icon">{{ getConcernIcon(c.type) }}</span>
-            <div class="concern-body">
-              <span class="concern-player" *ngIf="c.playerName">
-                <a *ngIf="c.playerId" [routerLink]="['/player', c.playerId]" class="fm-link">{{ c.playerName }}</a>
-                <ng-container *ngIf="!c.playerId">{{ c.playerName }}</ng-container>
-              </span>
-              <span class="concern-text">{{ c.message }}</span>
-            </div>
-            <span class="concern-severity" [ngClass]="getConcernSeverityClass(c.severity)">{{ c.severity }}</span>
-          </div>
-        </div>
-        <div class="am-card" *ngIf="!lineupConcerns.concerns || lineupConcerns.concerns.length === 0">
-          <div class="am-card-title">ALL CLEAR</div>
-          <div class="am-card-desc">No lineup issues detected. Squad is ready.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- OPPONENT ANALYSIS -->
-    <div *ngIf="activeTab === 'opponent'" class="am-section">
-      <div class="opp-selector">
-        <label>Opponent Team ID:</label>
-        <input type="number" [(ngModel)]="opponentIdForAnalysis" class="opp-input" />
-        <button class="analyze-btn" (click)="loadOpponentAnalysis()">Analyze</button>
-      </div>
-
-      <div *ngIf="loadingOpponent" class="am-loading">Analyzing opponent...</div>
-
-      <div *ngIf="!loadingOpponent && opponentAnalysis">
-        <div class="am-card">
-          <div class="am-card-title">{{ opponentAnalysis.opponentName || 'OPPONENT' }}</div>
-          <div class="am-card-desc" *ngIf="opponentAnalysis.recommendedMentality">
-            Suggested mentality: <strong>{{ opponentAnalysis.recommendedMentality }}</strong>
-          </div>
-        </div>
-
-        <div class="am-card" *ngIf="opponentAnalysis.positionAnalysis">
-          <div class="am-card-title">POSITION BREAKDOWN</div>
-          <div class="opp-positions">
-            <div class="opp-pos-item" *ngFor="let pos of opponentAnalysis.positionAnalysis | keyvalue">
-              <span class="opp-pos-name">{{ pos.key }}</span>
-              <span class="opp-pos-strength" [ngClass]="getStrengthClass($any(pos.value))">{{ pos.value }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="am-card" *ngIf="opponentAnalysis.vulnerabilities?.length > 0">
-          <div class="am-card-title">VULNERABILITIES</div>
-          <div class="vuln-item" *ngFor="let v of opponentAnalysis.vulnerabilities">{{ v }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TRANSFER NEEDS -->
-    <div *ngIf="activeTab === 'transfers'" class="am-section">
-      <div *ngIf="loadingTransferNeeds" class="am-loading">Analyzing squad depth...</div>
-      <div *ngIf="!loadingTransferNeeds && !transferNeeds" class="am-empty">Unable to analyze transfer needs.</div>
-
-      <div *ngIf="!loadingTransferNeeds && transferNeeds">
-        <div class="am-card" *ngIf="transferNeeds.needs?.length > 0">
-          <div class="am-card-title">POSITIONS NEEDING REINFORCEMENT</div>
-          <div class="transfer-need-item" *ngFor="let need of transferNeeds.needs">
-            <div class="need-position">{{ need.position }}</div>
-            <div class="need-reason">{{ need.reason }}</div>
-            <div class="need-priority" [ngClass]="'priority-' + (need.priority || 'medium').toLowerCase()">
-              {{ need.priority || 'MEDIUM' }}
-            </div>
-          </div>
-        </div>
-        <div class="am-card" *ngIf="!transferNeeds.needs || transferNeeds.needs.length === 0">
-          <div class="am-card-title">SQUAD DEPTH OK</div>
-          <div class="am-card-desc">No urgent transfer needs identified.</div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
+</main>
