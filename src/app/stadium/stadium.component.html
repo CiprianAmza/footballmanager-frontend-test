@@ -27,8 +27,19 @@
     <!-- STADIUM OVERVIEW -->
     <div class="stadium-overview">
       <div class="stadium-visual">
-        <div class="stadium-svg">
-          <div class="svg-field">
+        <div class="stadium-svg" [ngClass]="stadiumDesignClasses()" [ngStyle]="stadiumDesignStyles()">
+          <div class="stadium-sky"><span></span><span></span><span></span></div>
+          <div class="stadium-shell">
+            <div class="facade-ring"></div>
+            <div class="floodlight floodlight-nw"></div>
+            <div class="floodlight floodlight-ne"></div>
+            <div class="floodlight floodlight-sw"></div>
+            <div class="floodlight floodlight-se"></div>
+            <div class="svg-field">
+            <div class="roof roof-top"></div>
+            <div class="roof roof-bottom"></div>
+            <div class="roof roof-left"></div>
+            <div class="roof roof-right"></div>
             <div class="svg-pitch">
               <div class="pitch-markings">
                 <div class="center-line"></div>
@@ -43,6 +54,15 @@
             <div class="svg-stand stand-bottom"></div>
             <div class="svg-stand stand-left"></div>
             <div class="svg-stand stand-right"></div>
+            <div class="stadium-corner corner-nw"></div>
+            <div class="stadium-corner corner-ne"></div>
+            <div class="stadium-corner corner-sw"></div>
+            <div class="stadium-corner corner-se"></div>
+            </div>
+          </div>
+          <div class="architecture-caption">
+            <span>{{ stadiumDesign.architectureLabel }}</span>
+            <b>{{ stadiumDesign.prestige }} prestige</b>
           </div>
         </div>
         <div class="stadium-name-plate">

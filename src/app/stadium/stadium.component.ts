@@ -5,6 +5,28 @@ import { TeamService } from '../services/team.service';
 import { GameEventsService } from '../services/game-events.service';
 import { urlApp } from '../app.component';
 
+interface StadiumDesign {
+  seed: number;
+  shape: string;
+  scale: string;
+  tiers: number;
+  roof: string;
+  corners: string;
+  facade: string;
+  pitchPattern: string;
+  floodlights: string;
+  openEnd: string;
+  primaryColour: string;
+  secondaryColour: string;
+  accentColour: string;
+  northStandScale: number;
+  southStandScale: number;
+  westStandScale: number;
+  eastStandScale: number;
+  prestige: number;
+  architectureLabel: string;
+}
+
 @Component({
   selector: 'app-stadium',
   templateUrl: './stadium.component.html',
@@ -19,6 +41,7 @@ export class StadiumComponent implements OnInit, OnDestroy {
 
   // Stadium data
   stadium: any = null;
+  stadiumDesign: StadiumDesign = this.fallbackDesign();
   effectiveCapacity = 0;
   revenueMultiplier = 1.0;
 
@@ -70,6 +93,7 @@ export class StadiumComponent implements OnInit, OnDestroy {
     this.http.get<any>(urlApp + `/game/facilities/${teamId}`).subscribe({
       next: (data) => {
         this.stadium = data.stadium;
+        this.stadiumDesign = data.design || this.fallbackDesign(data.effectiveCapacity || data.stadium?.capacity);
         this.facilities = data.facilities;
         this.effectiveCapacity = data.effectiveCapacity || 0;
         this.revenueMultiplier = data.revenueMultiplier || 1.0;
@@ -214,5 +238,45 @@ export class StadiumComponent implements OnInit, OnDestroy {
     if (value >= 1_000_000) return (value / 1_000_000).toFixed(1) + 'M';
     if (value >= 1_000) return Math.floor(value / 1_000) + 'K';
     return String(value);
+  }
+
+  stadiumDesignClasses(): { [className: string]: boolean } {
+    const design = this.stadiumDesign;
+    return {
+      [`shape-${design.shape.toLowerCase().replace(/_/g, '-')}`]: true,
+      [`scale-${design.scale.toLowerCase()}`]: true,
+      [`tiers-${design.tiers}`]: true,
+      [`roof-${design.roof.toLowerCase().replace(/_/g, '-')}`]: true,
+      [`corners-${design.corners.toLowerCase()}`]: true,
+      [`facade-${design.facade.toLowerCase()}`]: true,
+      [`pitch-${design.pitchPattern.toLowerCase()}`]: true,
+      [`lights-${design.floodlights.toLowerCase().replace(/_/g, '-')}`]: true,
+      [`open-${design.openEnd.toLowerCase()}`]: design.openEnd !== 'NONE'
+    };
+  }
+
+  stadiumDesignStyles(): { [name: string]: string } {
+    const design = this.stadiumDesign;
+    return {
+      '--seat-primary': design.primaryColour,
+      '--seat-secondary': design.secondaryColour,
+      '--stadium-accent': design.accentColour,
+      '--north-scale': String(design.northStandScale),
+      '--south-scale': String(design.southStandScale),
+      '--west-scale': String(design.westStandScale),
+      '--east-scale': String(design.eastStandScale)
+    };
+  }
+
+  private fallbackDesign(capacity = 30000): StadiumDesign {
+    const tiers = capacity >= 72000 ? 3 : capacity >= 36000 ? 2 : 1;
+    return {
+      seed: this.teamService?.teamId || 0, shape: 'FOUR_STANDS', scale: 'NATIONAL', tiers,
+      roof: 'PARTIAL', corners: 'OPEN', facade: 'CONCRETE', pitchPattern: 'STRIPES',
+      floodlights: 'FOUR_TOWERS', openEnd: 'NONE', primaryColour: '#2867b2',
+      secondaryColour: '#f4f5f7', accentColour: '#d9a928', northStandScale: 1,
+      southStandScale: 1, westStandScale: 1, eastStandScale: 1, prestige: 50,
+      architectureLabel: `Four stands · ${tiers} ${tiers === 1 ? 'tier' : 'tiers'} · partial roof`
+    };
   }
 }
