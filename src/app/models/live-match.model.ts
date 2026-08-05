@@ -177,6 +177,7 @@ export interface SubstitutionRequest {
 export interface LiveMatchCommitResult {
   postMatchPressConferenceId?: number;
   postMatchPressConferenceOutcome?: 'WIN' | 'DRAW' | 'LOSS' | null;
+  postMatchPressConferenceQuestion?: string | null;
   knockoutResultText?: string | null;
   liveMatch?: LiveMatchData;
 }
@@ -186,6 +187,7 @@ export interface LiveMatchCommitResult {
 export interface LiveMatchClosed {
   pressConferenceId: number | null;
   outcome: 'WIN' | 'DRAW' | 'LOSS' | null;
+  question: string | null;
 }
 
 /** Roster + kits used by the pre-kickoff lineup preview. */

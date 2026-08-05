@@ -56,12 +56,14 @@ export class AppComponent implements OnDestroy {
   showPressConference = false;
   pressConferenceId: number = 0;
   pressConferenceTitle: string = '';
+  pressConferenceQuestion: string = '';
   pressConferenceResponding = false;
   // When the user chose "view full match", the backend schedules a post-match
   // press conference right after the live match. We hold its id here so the
   // PC modal chains automatically when closeLiveMatch fires.
   pendingPostMatchPressConferenceId: number | null = null;
   pendingPostMatchOutcome: 'WIN' | 'DRAW' | 'LOSS' | null = null;
+  pendingPostMatchQuestion: string | null = null;
 
   // Match result modal state
   showMatchResult = false;
@@ -498,6 +500,7 @@ export class AppComponent implements OnDestroy {
               // created by /commit and we read it from that response.
               this.pendingPostMatchPressConferenceId = matchEvent.postMatchPressConferenceId ?? null;
               this.pendingPostMatchOutcome = matchEvent.postMatchPressConferenceOutcome ?? null;
+              this.pendingPostMatchQuestion = matchEvent.postMatchPressConferenceQuestion ?? null;
               this.fetchLiveMatch(matchEvent.liveMatchKey);
               return;
             }
@@ -516,6 +519,7 @@ export class AppComponent implements OnDestroy {
           if (pcEvent) {
             this.pressConferenceId = pcEvent.pressConferenceId;
             this.pressConferenceTitle = pcEvent.title || 'Pre-match Press Conference';
+            this.pressConferenceQuestion = pcEvent.pressConferenceQuestion || '';
             this.showPressConference = true;
             return;
           }
@@ -632,6 +636,7 @@ export class AppComponent implements OnDestroy {
     this.teamService.respondToPressConference(this.pressConferenceId, responseType).subscribe({
       next: (result) => {
         this.showPressConference = false;
+        this.pressConferenceQuestion = '';
         this.pressConferenceResponding = false;
         this.lastEvents = [{
           type: 'PRESS_CONFERENCE',
@@ -959,14 +964,17 @@ export class AppComponent implements OnDestroy {
     if (event?.pressConferenceId != null) {
       this.pendingPostMatchPressConferenceId = event.pressConferenceId;
       this.pendingPostMatchOutcome = event.outcome ?? null;
+      this.pendingPostMatchQuestion = event.question ?? null;
     }
 
     if (this.pendingPostMatchPressConferenceId != null) {
       this.pressConferenceId = this.pendingPostMatchPressConferenceId;
       this.pressConferenceTitle = this.postMatchTitleFor(this.pendingPostMatchOutcome);
+      this.pressConferenceQuestion = this.pendingPostMatchQuestion || '';
       this.showPressConference = true;
       this.pendingPostMatchPressConferenceId = null;
       this.pendingPostMatchOutcome = null;
+      this.pendingPostMatchQuestion = null;
       return;
     }
     this.showPendingMatchResult();
@@ -985,6 +993,7 @@ export class AppComponent implements OnDestroy {
   // Adapt the prompt line to pre- vs post-match by inspecting the title set
   // when the modal was opened.
   pcQuestionLine(): string {
+    if (this.pressConferenceQuestion) return this.pressConferenceQuestion;
     const t = (this.pressConferenceTitle || '').toLowerCase();
     if (t.startsWith('post')) {
       return "The media want your reaction to the match. How do you respond?";

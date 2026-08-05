@@ -108,6 +108,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
    *  when the modal closes. */
   private commitPressConferenceId: number | null = null;
   private commitOutcome: 'WIN' | 'DRAW' | 'LOSS' | null = null;
+  private commitPressConferenceQuestion: string | null = null;
 
   // ---- Synthetic extra-time / penalty playback (FRONTEND-ONLY, COSMETIC) ----
   // The backend does NOT simulate minutes 91-120 or the shootout kick-by-kick:
@@ -594,6 +595,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
     this.liveMatchCommitted = false;
     this.commitPressConferenceId = null;
     this.commitOutcome = null;
+    this.commitPressConferenceQuestion = null;
     this.resetSyntheticState();
     this.liveMatch.fetch(key).subscribe({
       next: (data) => {
@@ -815,6 +817,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
         if (result?.postMatchPressConferenceId) {
           this.commitPressConferenceId = result.postMatchPressConferenceId;
           this.commitOutcome = result.postMatchPressConferenceOutcome ?? null;
+          this.commitPressConferenceQuestion = result.postMatchPressConferenceQuestion ?? null;
         }
         // Knockout outcome (aggregate / extra time / penalties / first leg).
         this.liveKnockoutResultText = result?.knockoutResultText ?? null;
@@ -1298,10 +1301,12 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
 
     this.closed.emit({
       pressConferenceId: this.commitPressConferenceId,
-      outcome: this.commitOutcome
+      outcome: this.commitOutcome,
+      question: this.commitPressConferenceQuestion
     });
     this.commitPressConferenceId = null;
     this.commitOutcome = null;
+    this.commitPressConferenceQuestion = null;
   }
 
   get liveCurrentMinute(): LiveMatchMinute | null {
