@@ -20,6 +20,27 @@
   <div class="loading-state error" *ngIf="failed && !loading">The club archive could not be loaded. <button (click)="loadHistory()">Retry</button></div>
 
   <section class="archive-content" *ngIf="records && !loading && activeTab === 'legends'">
+    <article class="official-legends">
+      <header>
+        <div><small>Official club recognition</small><h3>Hall of Fame</h3></div>
+        <b>{{ officialLegends.length }} club {{ officialLegends.length === 1 ? 'legend' : 'legends' }}</b>
+      </header>
+      <div class="legend-error" *ngIf="legendError">{{ legendError }}</div>
+      <div class="official-legend-grid" *ngIf="officialLegends.length; else noOfficialLegends">
+        <article *ngFor="let legend of officialLegends; trackBy: trackOfficialLegend">
+          <i>★</i>
+          <div>
+            <a [routerLink]="['/player', legend.playerId]">{{ legend.playerName }}</a>
+            <small>{{ legend.position || 'Player' }} · Inducted Season {{ legend.inductedSeason }}</small>
+            <p>{{ legend.reason }}</p>
+          </div>
+          <dl><div><dt>Apps</dt><dd>{{ legend.appearances }}</dd></div><div><dt>Goals</dt><dd>{{ legend.goals }}</dd></div><div><dt>Assists</dt><dd>{{ legend.assists }}</dd></div></dl>
+          <button *ngIf="canManageLegends" type="button" (click)="removeLegend(legend.playerId)" [disabled]="legendActionPlayerId !== null" title="Remove official club legend status">Remove</button>
+        </article>
+      </div>
+      <ng-template #noOfficialLegends><div class="no-official-legends">No player has been formally inducted yet.<span *ngIf="canManageLegends"> Use Player history to select the first club legend.</span></div></ng-template>
+    </article>
+
     <div class="leader-grid">
       <article class="leader-card"><header><span>⚽</span><div><small>All-time</small><h3>Top scorers</h3></div></header><a *ngFor="let row of records.allTimeScorers; trackBy: trackPlayer" [routerLink]="['/player', row.playerId]"><b class="rank">{{ row.rank }}</b><span>{{ row.playerName }}<small>{{ row.appearances }} appearances</small></span><strong>{{ row.goals }}</strong></a></article>
       <article class="leader-card"><header><span>◇</span><div><small>All-time</small><h3>Top assists</h3></div></header><a *ngFor="let row of records.allTimeAssists; trackBy: trackPlayer" [routerLink]="['/player', row.playerId]"><b class="rank">{{ row.rank }}</b><span>{{ row.playerName }}<small>{{ row.goals }} goals</small></span><strong>{{ row.assists }}</strong></a></article>
@@ -34,7 +55,7 @@
   </section>
 
   <section class="archive-content" *ngIf="records && !loading && activeTab === 'players'">
-    <article class="history-table"><header><div><small>Every player who appeared</small><h3>Player history</h3></div><b>{{ records.playerHistory.length }} players</b></header><div class="table-wrap"><table><thead><tr><th>Player</th><th>Position</th><th>Seasons</th><th>Apps</th><th>Goals</th><th>Assists</th><th>Avg</th><th>Trophies</th></tr></thead><tbody><tr *ngFor="let row of records.playerHistory; trackBy: trackPlayer"><td><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a></td><td>{{ row.position || '—' }}</td><td>S{{ row.firstSeason }}–S{{ row.lastSeason }}</td><td>{{ row.appearances }}</td><td>{{ row.goals }}</td><td>{{ row.assists }}</td><td>{{ row.averageRating ? (row.averageRating | number:'1.2-2') : '—' }}</td><td>{{ row.trophies }}</td></tr></tbody></table></div></article>
+    <article class="history-table"><header><div><small>Every player who appeared</small><h3>Player history</h3></div><b>{{ records.playerHistory.length }} players</b></header><div class="legend-error" *ngIf="legendError">{{ legendError }}</div><div class="table-wrap"><table><thead><tr><th>Player</th><th>Position</th><th>Seasons</th><th>Apps</th><th>Goals</th><th>Assists</th><th>Avg</th><th>Trophies</th><th>Club status</th></tr></thead><tbody><tr *ngFor="let row of records.playerHistory; trackBy: trackPlayer"><td><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a></td><td>{{ row.position || '—' }}</td><td>S{{ row.firstSeason }}–S{{ row.lastSeason }}</td><td>{{ row.appearances }}</td><td>{{ row.goals }}</td><td>{{ row.assists }}</td><td>{{ row.averageRating ? (row.averageRating | number:'1.2-2') : '—' }}</td><td>{{ row.trophies }}</td><td><span class="legend-status" *ngIf="isOfficialLegend(row.playerId)">★ Club legend</span><button class="induct-btn" *ngIf="canManageLegends && !isOfficialLegend(row.playerId)" type="button" (click)="inductLegend(row)" [disabled]="legendActionPlayerId !== null">{{ legendActionPlayerId === row.playerId ? 'Inducting…' : 'Make legend' }}</button><span *ngIf="!canManageLegends && !isOfficialLegend(row.playerId)">—</span></td></tr></tbody></table></div></article>
   </section>
 
   <section class="archive-content honours-list" *ngIf="!loading && activeTab === 'honours'">

@@ -18,6 +18,21 @@
 .loading-state button { margin-left: 8px; }
 
 .leader-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; }
+.official-legends { margin-bottom: 14px; overflow: hidden; border: 1px solid #705f25; border-radius: 8px; background: linear-gradient(135deg,#2a281d,#202334); box-shadow: 0 14px 28px rgba(0,0,0,.18); }
+.official-legends > header { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid rgba(241,196,15,.22); }
+.official-legends > header small { color: #ad9b5b; font-size: .63rem; text-transform: uppercase; letter-spacing: .08em; }
+.official-legends > header > b { color: #f1c40f; font-size: .75rem; }
+.official-legend-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.official-legend-grid > article { position: relative; display: grid; grid-template-columns: 40px minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 16px 18px; border-right: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); }
+.official-legend-grid i { display: grid; place-items: center; width: 36px; height: 36px; color: #2a2508; border-radius: 50%; background: #f1c40f; font-size: 1.05rem; font-style: normal; }
+.official-legend-grid a { color: #fff; font-size: .9rem; font-weight: 900; text-decoration: none; }
+.official-legend-grid small, .official-legend-grid p { display: block; margin: 3px 0 0; color: #9e967c; font-size: .65rem; }
+.official-legend-grid p { color: #c8c2ad; }
+.official-legend-grid dl { display: flex; gap: 11px; margin: 0; }
+.official-legend-grid dl div { text-align: center; }.official-legend-grid dt { color: #817a64; font-size: .52rem; text-transform: uppercase; }.official-legend-grid dd { margin: 2px 0 0; color: #f1c40f; font-size: .75rem; font-weight: 900; }
+.official-legend-grid button { position: absolute; top: 7px; right: 8px; padding: 3px 6px; color: #8b8062; border: 0; background: transparent; font-size: .55rem; cursor: pointer; }.official-legend-grid button:hover { color: #f08b84; }
+.no-official-legends { padding: 25px; color: #90886e; text-align: center; }.no-official-legends span { color: #c6b96f; }
+.legend-error { padding: 9px 14px; color: #ffc1bd; background: rgba(180,54,54,.14); font-size: .7rem; }
 .leader-card, .eleven-card, .history-table, .sales-list { overflow: hidden; border: 1px solid #343a50; border-radius: 8px; background: #202334; box-shadow: 0 14px 28px rgba(0,0,0,.16); }
 .leader-card > header { display: flex; align-items: center; gap: 10px; padding: 15px; border-bottom: 1px solid #343a50; }
 .leader-card header > span { display: grid; place-items: center; width: 34px; height: 34px; color: #211e0b; border-radius: 50%; background: #f1c40f; }
@@ -49,6 +64,7 @@ th { color: #7e879b; background: rgba(7,9,16,.2); text-transform: uppercase; }
 th:first-child, td:first-child { text-align: left; }
 td a { color: #f4f6fa; font-weight: 800; text-decoration: none; }
 tbody tr:hover { background: rgba(255,255,255,.03); }
+.legend-status { color: #f1c40f; font-weight: 850; }.induct-btn { padding: 5px 8px; color: #241f08; border: 0; border-radius: 4px; background: #f1c40f; font-size: .66rem; font-weight: 900; cursor: pointer; }.induct-btn:disabled { cursor: wait; opacity: .55; }
 
 .honours-list { display: flex; flex-direction: column; gap: 14px; }
 .friendly-honours { overflow: hidden; border: 1px solid #315f78; border-radius: 8px; background: linear-gradient(135deg,#202f3a,#202334); }
@@ -71,5 +87,5 @@ tbody tr:hover { background: rgba(255,255,255,.03); }
 @media (max-width: 720px) {
   .page-header { padding: 18px 14px; }.logo-placeholder{display:none}.header-titles h1{font-size:1.5rem}
   .archive-tabs { margin: 12px; overflow-x: auto; }.archive-tabs button,.archive-tabs a{min-width:max-content}.archive-tabs select{min-width:115px}
-  .archive-content,.loading-state{margin:0 12px}.leader-grid,.eleven-grid,.friendly-honour-grid{grid-template-columns:1fr}.friendly-honours>header{align-items:flex-start;flex-direction:column;gap:6px}.competition-card{flex-direction:column}.comp-identity{flex-basis:auto;border-right:0}.year-row{flex-direction:column;gap:6px}
+  .archive-content,.loading-state{margin:0 12px}.leader-grid,.eleven-grid,.friendly-honour-grid,.official-legend-grid{grid-template-columns:1fr}.official-legend-grid>article{grid-template-columns:36px minmax(0,1fr)}.official-legend-grid dl{grid-column:2}.friendly-honours>header{align-items:flex-start;flex-direction:column;gap:6px}.competition-card{flex-direction:column}.comp-identity{flex-basis:auto;border-right:0}.year-row{flex-direction:column;gap:6px}
 }
