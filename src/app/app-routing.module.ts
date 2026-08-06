@@ -164,6 +164,11 @@ export const APP_ROUTES: Routes = [
     title: 'Broadcast match centre'
   },
   {
+    path: 'player2/:playerId',
+    loadComponent: () => import('./player2/player2.component').then(module => module.Player2Component),
+    title: 'Classic player profile'
+  },
+  {
     path: 'ui-lab',
     loadComponent: () => import('./ui-comparison/ui-comparison.component').then(module => module.UiComparisonComponent),
     title: 'UI comparison lab'

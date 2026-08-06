@@ -1,0 +1,196 @@
+<section class="profile-state" *ngIf="loading" role="status">
+  <span class="spinner"></span><strong>Loading player dossier…</strong>
+</section>
+
+<section class="profile-state error" *ngIf="!loading && (errorMessage || emptyMessage)" role="alert">
+  <strong>Player unavailable</strong>
+  <span>{{ errorMessage || emptyMessage }}</span>
+  <button type="button" (click)="retryClassic()">Retry</button>
+</section>
+
+<main class="classic-profile" *ngIf="!loading && !errorMessage && !emptyMessage && playerView">
+  <header class="profile-toolbar">
+    <a routerLink="/home4" class="back" aria-label="Back to dashboard">‹</a>
+    <div>
+      <small>PLAYER PROFILE · SEASON {{ selectedSeason }}</small>
+      <strong>{{ playerView.name }}</strong>
+      <span>{{ identitySubtitle }}</span>
+    </div>
+    <nav aria-label="Player profile sections">
+      <a class="active">Overview</a>
+      <a [routerLink]="['/player', playerId]" [queryParams]="tabQuery('stats')">Statistics</a>
+      <a [routerLink]="['/player', playerId]" [queryParams]="tabQuery('contract')">Contract</a>
+      <a [routerLink]="['/player', playerId]" [queryParams]="tabQuery('history')">History</a>
+    </nav>
+    <button type="button" class="shortlist" (click)="toggleShortlistFromPlayer()">
+      {{ isInShortlist ? '★ Shortlisted' : '☆ Shortlist' }}
+    </button>
+  </header>
+
+  <section class="identity-ribbon">
+    <div class="portrait-card">
+      <div class="kit" aria-hidden="true"><i></i><b>{{ shirtNumberLabel }}</b></div>
+      <app-player-face
+        [baseFaceId]="playerView.baseFaceId || 0" [skinTone]="playerView.skinTone || 0"
+        [hairStyle]="playerView.hairStyle || 0" [hairColor]="playerView.hairColor || 0"
+        [eyeColor]="playerView.eyeColor || 0" [faceShape]="playerView.faceShape ?? -1"
+        [noseShape]="playerView.noseShape ?? -1" [eyeShape]="playerView.eyeShape ?? -1"
+        [mouthShape]="playerView.mouthShape ?? -1" [browShape]="playerView.browShape ?? -1"
+        [nationId]="playerView.nationId || 0" [species]="playerView.species || 'human'"
+        [size]="116"></app-player-face>
+    </div>
+
+    <article class="bio-card">
+      <div class="crest-line">
+        <app-team-crest [teamId]="playerView.teamId || 0" [teamName]="teamLabel" [size]="42"></app-team-crest>
+        <div><strong>{{ playerView.name }}</strong><span>{{ teamLabel }}</span></div>
+      </div>
+      <dl>
+        <div><dt>Age</dt><dd>{{ playerView.age ?? '—' }} years</dd></div>
+        <div><dt>Nationality</dt><dd>{{ playerView.nationName || 'Unknown' }}</dd></div>
+        <div><dt>Personality</dt><dd>{{ playerView.personalityLabel || playerView.personality || 'Unknown' }}</dd></div>
+        <div><dt>Preferred foot</dt><dd>{{ preferredFootLabel }}</dd></div>
+        <div><dt>Position</dt><dd>{{ positionLabel }}</dd></div>
+        <div><dt>Value</dt><dd>{{ money(playerView.transferValue) }}</dd></div>
+      </dl>
+    </article>
+
+    <article class="ability-card">
+      <span>CURRENT ABILITY</span>
+      <strong class="stars">{{ abilityStars(currentAbility) }}</strong>
+      <div class="meter"><i [style.width.%]="abilityWidth(currentAbility)"></i></div>
+      <small>{{ currentAbility || '—' }} · {{ scoutCard?.tier || 'Scouted estimate' }}</small>
+    </article>
+
+    <article class="ability-card potential">
+      <span>POTENTIAL ABILITY</span>
+      <strong class="stars">{{ abilityStars(potentialAbility) }}</strong>
+      <div class="meter"><i [style.width.%]="abilityWidth(potentialAbility)"></i></div>
+      <small>{{ potentialAbility || '—' }} · {{ scoutCard?.percentile ? ('Top ' + (100 - scoutCard.percentile) + '%') : 'Development ceiling' }}</small>
+    </article>
+
+    <article class="quick-report">
+      <header><span>SCOUT REPORT</span><strong>{{ scoutCard?.tier || 'Live profile' }}</strong></header>
+      <div class="report-columns">
+        <section class="pros"><b>PROS</b><span *ngFor="let attr of strongestAttributes">● {{ attr.name }} <em>{{ attr.value }}</em></span></section>
+        <section class="cons"><b>FOCUS</b><span *ngFor="let attr of developmentAreas">● {{ attr.name }} <em>{{ attr.value }}</em></span></section>
+      </div>
+    </article>
+
+    <article class="career-card">
+      <span>SEASON STATS</span>
+      <div><b>{{ seasonTotals.games || 0 }}</b><small>Apps</small></div>
+      <div><b>{{ seasonTotals.goals || 0 }}</b><small>Goals</small></div>
+      <div><b>{{ seasonTotals.assists || 0 }}</b><small>Assists</small></div>
+      <div><b>{{ seasonTotals.avgRating ? (seasonTotals.avgRating | number:'1.2-2') : '—' }}</b><small>AvR</small></div>
+    </article>
+  </section>
+
+  <nav class="subnav">
+    <a class="active">Overview</a><a>Analysis</a><a>Recent form</a><a>Happiness</a><a>Reports</a><a>Training</a>
+    <a [routerLink]="['/player', playerId]" [queryParams]="profileQueryParams">Full profile & actions ↗</a>
+  </nav>
+
+  <section class="profile-workspace">
+    <aside class="left-rail">
+      <article class="fm-panel positions-panel">
+        <header>POSITIONS</header>
+        <div class="mini-pitch">
+          <i class="half"></i><i class="circle"></i><i class="box top"></i><i class="box bottom"></i>
+          <b class="position-dot" [ngClass]="positionClass()"></b>
+          <span>{{ positionLabel }}</span>
+        </div>
+      </article>
+
+      <article class="fm-panel roles-panel">
+        <header>ROLE AND DUTY</header>
+        <div class="role-row" *ngFor="let role of rolesClassic">
+          <span><b>{{ roleName(role) }}</b><small>{{ role.duty || 'Available role' }}</small></span>
+          <div><i [style.width.%]="roleScore(role)"></i></div><strong>{{ roleScore(role) | number:'1.0-0' }}</strong>
+        </div>
+        <p *ngIf="roleSuitabilitiesLoaded && !rolesClassic.length">No role analysis available.</p>
+      </article>
+    </aside>
+
+    <section class="attribute-lab">
+      <article class="fm-panel attribute-group" *ngFor="let group of attributeGroupsClassic">
+        <header>{{ group.title }}</header>
+        <div class="attribute-row" *ngFor="let attr of group.attrs">
+          <span>{{ attr.name }}</span><i><b [style.width.%]="attributeWidth(attr.value)"></b></i>
+          <strong [ngClass]="getAttrClass(attr.value)">{{ attr.value }}</strong>
+        </div>
+      </article>
+
+      <article class="fm-panel season-strip">
+        <header><span>SEASON STATS</span><small>{{ seasonStats?.teamName || teamLabel }} · Season {{ selectedSeason }}</small></header>
+        <div class="stat-head"><span>Competition</span><span>Apps</span><span>Goals</span><span>Assists</span><span>AvR</span></div>
+        <div class="stat-row" *ngFor="let competition of seasonStats?.competitions">
+          <span>{{ competition.name }}</span><span>{{ competition.games }} ({{ competition.subApps }})</span>
+          <span>{{ competition.goals }}</span><span>{{ competition.assists }}</span>
+          <span>{{ competition.avgRating ? (competition.avgRating | number:'1.2-2') : '—' }}</span>
+        </div>
+        <div class="stat-row total">
+          <span>Total</span><span>{{ seasonTotals.games || 0 }} ({{ seasonTotals.subApps || 0 }})</span>
+          <span>{{ seasonTotals.goals || 0 }}</span><span>{{ seasonTotals.assists || 0 }}</span>
+          <span>{{ seasonTotals.avgRating ? (seasonTotals.avgRating | number:'1.2-2') : '—' }}</span>
+        </div>
+      </article>
+    </section>
+
+    <aside class="right-rail">
+      <article class="fm-panel dossier">
+        <header>PLAYER REPORT</header>
+        <div class="report-verdict"><b>{{ scoutCard?.tier || 'Profile analysed' }}</b><span>{{ scoutCard?.percentile ? ('Percentile ' + scoutCard.percentile) : 'Live squad data' }}</span></div>
+        <div class="report-ability"><span>Current ability</span><strong>{{ abilityStars(currentAbility) }}</strong></div>
+        <div class="report-ability"><span>Potential ability</span><strong>{{ abilityStars(potentialAbility) }}</strong></div>
+        <dl>
+          <div><dt>Transfer interest</dt><dd>{{ playerView.willNeverLeave ? 'Unavailable' : (playerView.transferInterest || 'Unknown') }}</dd></div>
+          <div><dt>Loan interest</dt><dd>{{ playerView.loanInterest || 'Unknown' }}</dd></div>
+          <div><dt>Transfer value</dt><dd>{{ money(playerView.transferValue) }}</dd></div>
+          <div><dt>Estimated wage</dt><dd>{{ money(playerView.wage) }}</dd></div>
+          <div><dt>Condition</dt><dd>{{ playerView.fitness ?? '—' }}%</dd></div>
+          <div><dt>Morale</dt><dd>{{ playerView.morale ?? '—' }}</dd></div>
+        </dl>
+        <div class="market-actions" *ngIf="canMakeTransferOffer() || canOfferFreeAgentContract()">
+          <button *ngIf="canMakeTransferOffer()" type="button" (click)="openTransferOffer()">Make offer</button>
+          <button *ngIf="canOfferFreeAgentContract()" type="button" (click)="openFreeAgentContract()">Offer contract</button>
+        </div>
+        <p class="market-message" *ngIf="marketActionMessage">{{ marketActionMessage }}</p>
+      </article>
+
+      <article class="fm-panel comparison">
+        <header>SQUAD COMPARISON</header>
+        <div class="comparison-head"><span>Player</span><span>Ability</span><span>Potential</span></div>
+        <a *ngFor="let player of squadComparison; let rank = index"
+           [routerLink]="['/player2', player.id]" [queryParams]="profileQueryParams"
+           [class.current]="player.id === playerId">
+          <span><i>{{ rank + 1 }}</i>{{ player.name }}</span>
+          <b>{{ abilityStars(playerAbility(player)) }}</b>
+          <b>{{ abilityStars(player.potentialAbility || playerAbility(player)) }}</b>
+        </a>
+        <p *ngIf="supplementaryLoading">Loading squad comparison…</p>
+      </article>
+    </aside>
+  </section>
+</main>
+
+<div class="offer-backdrop" *ngIf="showTransferOfferForm" (click)="closeTransferOffer()">
+  <form class="offer-dialog" (click)="$event.stopPropagation()" (ngSubmit)="submitTransferOffer()">
+    <header><span>TRANSFER OFFER</span><button type="button" (click)="closeTransferOffer()">×</button></header>
+    <strong>Make an offer for {{ playerView?.name }}</strong>
+    <label>Transfer fee <input type="number" min="1" name="fee" [(ngModel)]="transferOfferAmount"></label>
+    <p *ngIf="transferOfferResult">{{ transferOfferResult.message || transferOfferResult.status }}</p>
+    <footer><button type="button" (click)="closeTransferOffer()">Cancel</button><button class="primary" type="submit" [disabled]="transferOfferLoading">Submit offer</button></footer>
+  </form>
+</div>
+
+<div class="offer-backdrop" *ngIf="showFreeAgentContractForm" (click)="closeFreeAgentContract()">
+  <form class="offer-dialog" (click)="$event.stopPropagation()" (ngSubmit)="submitFreeAgentContract()">
+    <header><span>CONTRACT OFFER</span><button type="button" (click)="closeFreeAgentContract()">×</button></header>
+    <strong>Offer terms to {{ playerView?.name }}</strong>
+    <label>Weekly wage <input type="number" min="1" name="wage" [(ngModel)]="freeAgentWageOffer"></label>
+    <label>Contract years <input type="number" min="1" max="8" name="years" [(ngModel)]="freeAgentContractYears"></label>
+    <p *ngIf="freeAgentOfferMessage">{{ freeAgentOfferMessage }}</p>
+    <footer><button type="button" (click)="closeFreeAgentContract()">Cancel</button><button class="primary" type="submit" [disabled]="freeAgentOfferLoading">Submit contract</button></footer>
+  </form>
+</div>
