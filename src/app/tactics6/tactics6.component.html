@@ -26,7 +26,7 @@
 
   <section class="chairman-warning" *ngIf="managerFormationRequiredByChairman"><strong>Chairman requirement active:</strong> formation {{ managerChairmanRequiredFormation }} is locked.</section>
   <section class="studio-error" *ngIf="playersError || formationsError || mandateError">{{ playersError || formationsError || mandateError }} <button (click)="loadData()">Retry</button></section>
-  <section class="instruction-summary"><strong>TEAM INSTRUCTIONS</strong><span *ngFor="let instruction of instructionSummary">{{ instruction }}</span><a [routerLink]="['/tactics4', teamId]">Edit all ↗</a></section>
+  <section class="instruction-summary"><strong>TEAM INSTRUCTIONS</strong><button type="button" *ngFor="let instruction of instructionSummary" (click)="openTeamInstructions()" [disabled]="!canEdit">{{ instruction }}</button><button type="button" class="edit-instructions" (click)="openTeamInstructions()" [disabled]="!canEdit">Edit all ↗</button></section>
   <section class="selection-warnings" *ngIf="selectionWarnings.length"><article *ngFor="let warning of selectionWarnings" [ngClass]="warning.tone"><strong>{{ warning.title }}</strong><span>{{ warning.detail }}</span></article></section>
 
   <section class="studio-grid">
@@ -78,6 +78,7 @@
       <header><div><span>PLAYER INSTRUCTIONS</span><strong>{{ slot.player?.name }}</strong></div><button type="button" (click)="closePlayerPanel()">×</button></header>
       <nav><button [class.active]="activeRoleSlot === slot" (click)="showRolesTab(slot)">Role & duty</button><button [class.active]="activeInstructionsSlot === slot" (click)="showInstructionsTab(slot)">Instructions</button></nav>
       <div class="role-modal-body" *ngIf="activeRoleSlot === slot">
+        <button class="special-role" [class.active]="slot.specialRole === 'SHOOTER'" (click)="toggleShooter(slot)"><b>SHOOTER</b><small>{{ slot.specialRole === 'SHOOTER' ? 'Selected as the unique designated shooter' : 'Give this player priority for shooting situations' }}</small></button>
         <button *ngIf="isShadowEligible(slot) || isShadowLocked(slot)" class="special-role" [class.active]="isShadowActive(slot)" [disabled]="isShadowLocked(slot)" (click)="toggleShadow(slot)"><b>SHADOW</b><small>{{ isShadowLocked(slot) ? 'Persistent player trait' : 'Stay forward and skip defensive work' }}</small></button>
         <p class="modal-state" *ngIf="loadingRoles">Loading suitable roles…</p>
         <article class="role-option" *ngFor="let role of availableRoles"><div><strong>{{ role.name }}</strong><span>{{ role.suitability || 0 }}% suitability</span></div><section><button *ngFor="let duty of role.duties" [class.active]="slot.role === role.name && slot.duty === duty" (click)="selectRole(slot, role, duty)">{{ duty }}</button></section></article>
@@ -87,6 +88,19 @@
         <p class="modal-state" *ngIf="loadingInstructions">Loading instructions…</p>
         <section class="instruction-category" *ngFor="let category of getInstructionCategories()"><strong>{{ category }}</strong><button *ngFor="let instruction of getInstructionsByCategory(category)" [class.active]="hasInstruction(slot, instruction.name)" [title]="instruction.description" (click)="toggleInstruction(slot, instruction.name)">{{ hasInstruction(slot, instruction.name) ? '✓ ' : '' }}{{ instruction.name }}</button></section>
       </div>
+    </section>
+  </div>
+
+  <div class="role-modal-backdrop" *ngIf="showTeamInstructions" (click)="closeTeamInstructions()">
+    <section class="team-instructions-modal" (click)="$event.stopPropagation()">
+      <header><div><span>TACTICAL PLAN</span><strong>Team instructions</strong><small>Changes apply to the current {{ formationLabel() }} plan.</small></div><button type="button" (click)="closeTeamInstructions()">×</button></header>
+      <div class="team-instructions-body">
+        <section class="instruction-group" *ngFor="let group of teamInstructionGroups">
+          <header>{{ group }}</header>
+          <label *ngFor="let field of instructionsForGroup(group)"><span>{{ field.label }}</span><select [ngModel]="instructionValue(field.key)" (ngModelChange)="setInstructionValue(field.key, $event)" [disabled]="!canEdit"><option *ngFor="let choice of instructionChoices(field.key)" [value]="choice">{{ choice }}</option></select></label>
+        </section>
+      </div>
+      <footer><span>Use Apply & Save to persist these instructions on the server.</span><button type="button" (click)="closeTeamInstructions()">Apply</button><button type="button" class="primary" (click)="saveTeamInstructions()">Apply & Save</button></footer>
     </section>
   </div>
 </main>

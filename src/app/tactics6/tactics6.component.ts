@@ -24,6 +24,7 @@ export class Tactics6Component extends Tactics4Component {
   rosterPosition = 'ALL';
   rosterSort: 'POSITION' | 'RATING' | 'CONDITION' | 'NAME' = 'POSITION';
   savedNotice = '';
+  showTeamInstructions = false;
   matchPreview: any = null;
   lineupConcerns: any = null;
   matchBriefing: any = null;
@@ -99,6 +100,45 @@ export class Tactics6Component extends Tactics4Component {
       this.selectedOptions.pressing, this.selectedOptions.defensiveLine, this.selectedOptions.transition]
       .filter((value, index, rows) => !!value && rows.indexOf(value) === index);
   }
+
+  get teamInstructionFields(): { key: string; label: string; group: string }[] {
+    return [
+      { key: 'mentality', label: 'Mentality', group: 'Core' },
+      { key: 'possession', label: 'In possession', group: 'With the ball' },
+      { key: 'passing', label: 'Passing', group: 'With the ball' },
+      { key: 'tempo', label: 'Tempo', group: 'With the ball' },
+      { key: 'width', label: 'Attacking width', group: 'With the ball' },
+      { key: 'dribbling', label: 'Dribbling', group: 'With the ball' },
+      { key: 'widePlay', label: 'Wide play', group: 'With the ball' },
+      { key: 'transition', label: 'Transition', group: 'Transitions' },
+      { key: 'recovery', label: 'Recovery', group: 'Transitions' },
+      { key: 'pressing', label: 'Pressing', group: 'Without the ball' },
+      { key: 'defensiveLine', label: 'Defensive line', group: 'Without the ball' },
+      { key: 'foulFrequency', label: 'Foul frequency', group: 'Without the ball' },
+      { key: 'foulHardness', label: 'Tackle hardness', group: 'Without the ball' },
+      { key: 'timeWasting', label: 'Time wasting', group: 'Game management' },
+      { key: 'tempoFragmentation', label: 'Tempo fragmentation', group: 'Game management' }
+    ];
+  }
+
+  get teamInstructionGroups(): string[] {
+    return [...new Set(this.teamInstructionFields.map(field => field.group))];
+  }
+
+  instructionsForGroup(group: string): { key: string; label: string; group: string }[] {
+    return this.teamInstructionFields.filter(field => field.group === group);
+  }
+
+  instructionValue(key: string): string { return (this.selectedOptions as any)[key] || ''; }
+  instructionChoices(key: string): string[] { return this.optionsData[key] || []; }
+  setInstructionValue(key: string, value: string): void {
+    if (!this.canEdit) return;
+    (this.selectedOptions as any)[key] = value;
+  }
+
+  openTeamInstructions(): void { if (this.canEdit) this.showTeamInstructions = true; }
+  closeTeamInstructions(): void { this.showTeamInstructions = false; }
+  saveTeamInstructions(): void { this.showTeamInstructions = false; this.saveStudio(); }
 
   get selectionWarnings(): { tone: string; title: string; detail: string }[] {
     const warnings: { tone: string; title: string; detail: string }[] = [];
