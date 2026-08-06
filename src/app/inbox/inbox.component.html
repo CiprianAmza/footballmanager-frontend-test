@@ -66,7 +66,64 @@
       <div class="email-body">
         <div class="news-article-container">
           <div class="article-top-bar" [ngClass]="'bar-' + selectedMessage.category"></div>
-          <div class="article-content" [style.white-space]="'pre-line'">{{ selectedMessage.content }}</div>
+          <div *ngIf="matchReportLoading" class="match-report-state">Loading the complete match report…</div>
+
+          <section *ngIf="selectedMatchReport as report; else standardArticle" class="inbox-match-report">
+            <div class="match-story-copy">
+              <div class="match-story-kicker">
+                <span>{{ report.competitionName || 'Match report' }}</span>
+                <b>Season {{ report.season }} · Matchday {{ report.round }}</b>
+              </div>
+              <p class="match-story-lead">{{ selectedMessage.content }}</p>
+
+              <div class="match-story-events" *ngIf="matchReportEvents.length">
+                <h3>Key events</h3>
+                <div *ngFor="let event of matchReportEvents" class="match-story-event">
+                  <time>{{ event.minute }}'</time>
+                  <span>{{ matchEventIcon(event.eventType) }}</span>
+                  <strong>{{ event.playerName || event.details || event.eventType }}</strong>
+                  <small>{{ event.details }}</small>
+                </div>
+              </div>
+
+              <div class="match-story-links">
+                <a *ngIf="matchReportRoute" [routerLink]="matchReportRoute">Open full match report →</a>
+                <a *ngIf="relatedHomeTeamRoute" [routerLink]="relatedHomeTeamRoute">{{ matchReportSummary.homeTeamName }} news</a>
+                <a *ngIf="relatedAwayTeamRoute" [routerLink]="relatedAwayTeamRoute">{{ matchReportSummary.awayTeamName }} news</a>
+              </div>
+            </div>
+
+            <aside class="match-story-sidebar">
+              <div class="match-story-score">
+                <small>FULL TIME</small>
+                <div>
+                  <span>{{ matchReportSummary.homeTeamName }}</span>
+                  <strong>{{ matchReportSummary.score }}</strong>
+                  <span>{{ matchReportSummary.awayTeamName }}</span>
+                </div>
+              </div>
+
+              <div class="match-story-stats">
+                <h3>Match stats</h3>
+                <div><span><b>{{ matchReportRaw.homeShots || 0 }}</b> / {{ matchReportRaw.awayShots || 0 }}</span><small>Shots</small></div>
+                <div><span><b>{{ matchReportRaw.homeXg || 0 }}</b> / {{ matchReportRaw.awayXg || 0 }}</span><small>xG</small></div>
+                <div><span><b>{{ matchReportRaw.homePossession || 0 }}%</b> / {{ matchReportRaw.awayPossession || 0 }}%</span><small>Possession</small></div>
+              </div>
+
+              <a class="match-story-motm" *ngIf="matchReportSummary.manOfTheMatchName"
+                 [routerLink]="['/player', matchReportSummary.manOfTheMatchPlayerId]"
+                 [queryParams]="{ actingTeamId: selectedMessage.teamId }">
+                <small>PLAYER OF THE MATCH</small>
+                <strong>{{ matchReportSummary.manOfTheMatchName }}</strong>
+                <span>{{ matchReportSummary.manOfTheMatchRating | number:'1.1-2' }} rating</span>
+              </a>
+            </aside>
+          </section>
+
+          <ng-template #standardArticle>
+            <div *ngIf="!matchReportLoading" class="article-content" [style.white-space]="'pre-line'">{{ selectedMessage.content }}</div>
+            <div *ngIf="matchReportError" class="match-report-state error">{{ matchReportError }}</div>
+          </ng-template>
 
           <!-- Inline accept/decline for an offer that is still pending. Pressing CONTINUE
                is blocked elsewhere until the user picks one. -->

@@ -15,6 +15,15 @@ interface ManagerInbox {
   category: string;
   isRead: boolean;
   createdAt: string;
+  deduplicationKey?: string | null;
+}
+
+interface MatchReportReference {
+  competitionId: number;
+  season: number;
+  round: number;
+  homeTeamId: number;
+  awayTeamId: number;
 }
 
 @Component({
@@ -27,6 +36,9 @@ export class InboxComponent implements OnInit {
   messages: ManagerInbox[] = [];
   filteredMessages: ManagerInbox[] = [];
   selectedMessage: ManagerInbox | null = null;
+  selectedMatchReport: any = null;
+  matchReportLoading = false;
+  matchReportError = '';
   unreadCount: number = 0;
   activeFilter: string = 'all';
 
@@ -145,9 +157,73 @@ export class InboxComponent implements OnInit {
 
   selectMessage(msg: ManagerInbox): void {
     this.selectedMessage = msg;
+    this.loadMatchReport(msg);
     if (!msg.isRead) {
       this.markAsRead(msg);
     }
+  }
+
+  private loadMatchReport(msg: ManagerInbox): void {
+    this.selectedMatchReport = null;
+    this.matchReportError = '';
+    const reference = this.matchReportReference(msg);
+    if (!reference) {
+      this.matchReportLoading = false;
+      return;
+    }
+    this.matchReportLoading = true;
+    const selectedId = msg.id;
+    this.http.get<any>(`${urlApp}/match/report/${reference.competitionId}/${reference.season}/${reference.round}/${reference.homeTeamId}/${reference.awayTeamId}`).subscribe({
+      next: report => {
+        if (this.selectedMessage?.id !== selectedId) return;
+        this.matchReportLoading = false;
+        if (report?.available) this.selectedMatchReport = report;
+        else this.matchReportError = 'The detailed report is not available for this match.';
+      },
+      error: () => {
+        if (this.selectedMessage?.id !== selectedId) return;
+        this.matchReportLoading = false;
+        this.matchReportError = 'The detailed report could not be loaded.';
+      }
+    });
+  }
+
+  matchReportReference(msg: ManagerInbox | null): MatchReportReference | null {
+    const value = msg?.deduplicationKey || '';
+    const parts = value.split('|');
+    if (parts.length < 7 || parts[0] !== 'MATCH_REPORT_V1') return null;
+    const values = parts.slice(1, 6).map(Number);
+    if (!values.every(valuePart => Number.isSafeInteger(valuePart) && valuePart > 0)) return null;
+    return {
+      competitionId: values[0], season: values[1], round: values[2],
+      homeTeamId: values[3], awayTeamId: values[4]
+    };
+  }
+
+  get matchReportSummary(): any { return this.selectedMatchReport?.summary || {}; }
+  get matchReportRaw(): any { return this.selectedMatchReport?.stats?.raw || {}; }
+  get matchReportEvents(): any[] {
+    return (this.selectedMatchReport?.events || [])
+      .filter((event: any) => event.eventType !== 'assist')
+      .slice(0, 10);
+  }
+  get matchReportRoute(): any[] | null {
+    const reference = this.matchReportReference(this.selectedMessage);
+    return reference ? ['/match-report2', reference.competitionId, reference.season, reference.round,
+      reference.homeTeamId, reference.awayTeamId] : null;
+  }
+  get relatedHomeTeamRoute(): any[] | null {
+    const reference = this.matchReportReference(this.selectedMessage);
+    return reference ? ['/team', reference.homeTeamId] : null;
+  }
+  get relatedAwayTeamRoute(): any[] | null {
+    const reference = this.matchReportReference(this.selectedMessage);
+    return reference ? ['/team', reference.awayTeamId] : null;
+  }
+
+  matchEventIcon(type: string): string {
+    const icons: Record<string, string> = { goal: '⚽', yellow_card: '🟨', red_card: '🟥', substitution: '↔' };
+    return icons[type] || '•';
   }
 
   markAsRead(msg: ManagerInbox): void {
@@ -185,7 +261,7 @@ export class InboxComponent implements OnInit {
 
   getCategoryLabel(category: string): string {
     switch (category) {
-      case 'match_result': return 'Match Result';
+      case 'match_result': return 'Match Report';
       case 'league_news': return 'League News';
       case 'MEDIA_FORMER_PLAYER': return 'Former Player';
       case 'MEDIA_FORMER_MANAGER': return 'Former Manager';
