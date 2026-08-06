@@ -164,6 +164,11 @@ export const APP_ROUTES: Routes = [
     title: 'Broadcast match centre'
   },
   {
+    path: 'match-report2/:competitionId/:season/:round/:teamId1/:teamId2',
+    loadComponent: () => import('./match-report2/match-report2.component').then(module => module.MatchReport2Component),
+    title: 'Post-match report'
+  },
+  {
     path: 'player2/:playerId',
     loadComponent: () => import('./player2/player2.component').then(module => module.Player2Component),
     title: 'Classic player profile'

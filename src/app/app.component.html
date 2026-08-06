@@ -344,6 +344,10 @@
           </div>
         </div>
 
+        <a class="mr-close-btn"
+           style="margin-bottom:8px;background:#3498db;text-align:center;text-decoration:none;box-sizing:border-box"
+           [routerLink]="['/match-report2', matchResult.competitionId, matchResult.seasonNumber || teamService.currentSeason, matchResult.roundNumber || matchResult.matchday, matchResult.team1Id, matchResult.team2Id]"
+           (click)="showMatchResult = false">Open full match report</a>
         <button class="mr-close-btn" (click)="closeMatchResult()">Continue</button>
       </div>
     </div>

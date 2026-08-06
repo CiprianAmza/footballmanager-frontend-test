@@ -1,0 +1,110 @@
+<section class="report-state" *ngIf="loading"><i></i><strong>Building post-match report…</strong></section>
+<section class="report-state error" *ngIf="!loading && error">
+  <strong>Report unavailable</strong><span>{{ error }}</span><button type="button" (click)="load()">Retry</button>
+</section>
+
+<main class="post-match" *ngIf="!loading && !error && report">
+  <header class="scoreboard">
+    <div class="scoreboard-top">
+      <a [routerLink]="['/fixtures', teamId1]">‹ Fixtures</a>
+      <span>{{ report.competitionName }}</span>
+      <span>FULL TIME</span>
+    </div>
+    <section>
+      <div class="score-team home">
+        <span><strong>{{ summary.homeTeamName }}</strong><small>Home</small></span>
+        <app-team-crest [teamId]="summary.homeTeamId" [teamName]="summary.homeTeamName" [size]="54"></app-team-crest>
+      </div>
+      <div class="score"><b>{{ scoreParts[0] }}</b><i>–</i><b>{{ scoreParts[1] }}</b></div>
+      <div class="score-team away">
+        <app-team-crest [teamId]="summary.awayTeamId" [teamName]="summary.awayTeamName" [size]="54"></app-team-crest>
+        <span><strong>{{ summary.awayTeamName }}</strong><small>Away</small></span>
+      </div>
+    </section>
+    <footer>
+      <span>{{ matchDateLabel }}</span><span>Round {{ round }}</span>
+      <span *ngIf="summary.manOfTheMatchName">★ {{ summary.manOfTheMatchName }} <b>{{ summary.manOfTheMatchRating | number:'1.1-1' }}</b></span>
+    </footer>
+  </header>
+
+  <section class="report-grid">
+    <article class="report-panel formation-panel">
+      <header><span>{{ abbreviation(summary.homeTeamName) }} FORMATION</span><small>{{ formationLabel(lineups.homeFormation) }}</small></header>
+      <div class="formation-pitch">
+        <i class="half"></i><i class="circle"></i><i class="box top"></i><i class="box bottom"></i>
+        <a class="pitch-player" *ngFor="let player of homeStarters"
+           [routerLink]="['/player2', player.playerId]"
+           [style.grid-column]="gridColumn(player.positionIndex)" [style.grid-row]="gridRow(player.positionIndex)">
+          <app-player-face [baseFaceId]="player.baseFaceId" [skinTone]="player.skinTone" [hairStyle]="player.hairStyle"
+            [hairColor]="player.hairColor" [eyeColor]="player.eyeColor" [faceShape]="player.faceShape"
+            [noseShape]="player.noseShape" [eyeShape]="player.eyeShape" [mouthShape]="player.mouthShape"
+            [browShape]="player.browShape" [species]="player.species || 'human'" [size]="42"></app-player-face>
+          <b [ngClass]="ratingClass(player.performanceRating)">{{ player.performanceRating ? (player.performanceRating | number:'1.1-1') : '—' }} <em>{{ player.role || player.position }}</em></b>
+          <span>{{ player.playerName }}</span>
+          <small *ngIf="player.goals || player.assists">{{ player.goals ? '⚽ ' + player.goals : '' }}{{ player.assists ? ' A ' + player.assists : '' }}</small>
+        </a>
+      </div>
+    </article>
+
+    <article class="report-panel events-panel">
+      <header><span>MATCH EVENTS</span><small>{{ abbreviation(summary.homeTeamName) }} {{ scoreParts[0] }}–{{ scoreParts[1] }} {{ abbreviation(summary.awayTeamName) }}</small></header>
+      <div class="events-scroll">
+        <div class="event" *ngFor="let event of events" [ngClass]="eventClass(event)">
+          <b>{{ eventIcon(event.eventType) }}</b><span><strong>{{ event.minute }}' {{ event.playerName }}</strong><small>{{ event.details || (event.eventType | titlecase) }}</small></span>
+        </div>
+        <p *ngIf="!events.length">No detailed events were stored.</p>
+      </div>
+    </article>
+
+    <article class="report-panel stats-panel">
+      <header><span>MATCH STATS</span><small>OPTA REPORT</small></header>
+      <div class="stat" *ngFor="let stat of stats">
+        <div><b>{{ stat.home }}</b><span>{{ stat.label }}</span><b>{{ stat.away }}</b></div>
+        <section><i [style.width.%]="statWidth(stat.home, stat.away)"></i><em [style.width.%]="statWidth(stat.away, stat.home)"></em></section>
+      </div>
+      <div class="stat average"><div><b>{{ averageHomeRating ? (averageHomeRating | number:'1.1-1') : '—' }}</b><span>Average Rating</span><b>{{ averageAwayRating ? (averageAwayRating | number:'1.1-1') : '—' }}</b></div></div>
+    </article>
+
+    <section class="analytics-column">
+      <article class="report-panel chart-panel">
+        <header><span>xG GRAPH STORY</span><small>{{ (raw.homeXg || 0) | number:'1.2-2' }} – {{ (raw.awayXg || 0) | number:'1.2-2' }}</small></header>
+        <svg viewBox="0 0 500 190" preserveAspectRatio="none" aria-label="Cumulative expected goals chart">
+          <line x1="0" y1="166" x2="480" y2="166"></line><line x1="0" y1="95" x2="480" y2="95"></line>
+          <line x1="160" y1="10" x2="160" y2="166"></line><line x1="320" y1="10" x2="320" y2="166"></line>
+          <polyline class="home-xg" [attr.points]="xgPoints('home')"></polyline>
+          <polyline class="away-xg" [attr.points]="xgPoints('away')"></polyline>
+          <g *ngFor="let shot of shots"><circle [class.home]="shot.teamId === teamId1" [class.goal]="shot.outcome === 'GOAL'" [attr.cx]="shot.minute / 90 * 480" [attr.cy]="166 - (shot.teamId === teamId1 ? shot.homeCumulative : shot.awayCumulative) / xgMax * 142" r="3"></circle></g>
+          <text x="0" y="184">0'</text><text x="235" y="184">45'</text><text x="457" y="184">90'</text>
+        </svg>
+        <div class="chart-legend"><span><i></i>{{ summary.homeTeamName }}</span><span><i></i>{{ summary.awayTeamName }}</span></div>
+        <p *ngIf="!shots.length">No shot timeline available.</p>
+      </article>
+
+      <article class="report-panel momentum-panel">
+        <header><span>MATCH MOMENTUM</span><small>xG pressure by 10'</small></header>
+        <div class="momentum-chart">
+          <div *ngFor="let bucket of momentum"><i *ngIf="bucket.value >= 0" [style.height.px]="momentumHeight(bucket.value)"></i><em *ngIf="bucket.value < 0" [style.height.px]="momentumHeight(bucket.value)"></em><small>{{ bucket.fromMinute }}'</small></div>
+        </div>
+        <p *ngIf="!momentum.length">No momentum timeline available.</p>
+      </article>
+    </section>
+
+    <article class="report-panel formation-panel away-formation">
+      <header><span>{{ abbreviation(summary.awayTeamName) }} FORMATION</span><small>{{ formationLabel(lineups.awayFormation) }}</small></header>
+      <div class="formation-pitch">
+        <i class="half"></i><i class="circle"></i><i class="box top"></i><i class="box bottom"></i>
+        <a class="pitch-player" *ngFor="let player of awayStarters"
+           [routerLink]="['/player2', player.playerId]"
+           [style.grid-column]="gridColumn(player.positionIndex)" [style.grid-row]="gridRow(player.positionIndex)">
+          <app-player-face [baseFaceId]="player.baseFaceId" [skinTone]="player.skinTone" [hairStyle]="player.hairStyle"
+            [hairColor]="player.hairColor" [eyeColor]="player.eyeColor" [faceShape]="player.faceShape"
+            [noseShape]="player.noseShape" [eyeShape]="player.eyeShape" [mouthShape]="player.mouthShape"
+            [browShape]="player.browShape" [species]="player.species || 'human'" [size]="42"></app-player-face>
+          <b [ngClass]="ratingClass(player.performanceRating)">{{ player.performanceRating ? (player.performanceRating | number:'1.1-1') : '—' }} <em>{{ player.role || player.position }}</em></b>
+          <span>{{ player.playerName }}</span>
+          <small *ngIf="player.goals || player.assists">{{ player.goals ? '⚽ ' + player.goals : '' }}{{ player.assists ? ' A ' + player.assists : '' }}</small>
+        </a>
+      </div>
+    </article>
+  </section>
+</main>
