@@ -17,10 +17,10 @@
       <span>{{ identitySubtitle }}</span>
     </div>
     <nav aria-label="Player profile sections">
-      <a class="active">Overview</a>
-      <a [routerLink]="['/player', playerId]" [queryParams]="tabQuery('stats')">Statistics</a>
-      <a [routerLink]="['/player', playerId]" [queryParams]="tabQuery('contract')">Contract</a>
-      <a [routerLink]="['/player', playerId]" [queryParams]="tabQuery('history')">History</a>
+      <button type="button" [class.active]="activeTab === 'overview'" (click)="selectPrimaryTab('overview')">Overview</button>
+      <button type="button" [class.active]="activeTab === 'stats'" (click)="selectPrimaryTab('stats')">Statistics</button>
+      <button type="button" [class.active]="activeTab === 'contract'" (click)="selectPrimaryTab('contract')">Contract</button>
+      <button type="button" [class.active]="activeTab === 'history'" (click)="selectPrimaryTab('history')">History</button>
     </nav>
     <button type="button" class="shortlist" (click)="toggleShortlistFromPlayer()">
       {{ isInShortlist ? '★ Shortlisted' : '☆ Shortlist' }}
@@ -87,11 +87,16 @@
   </section>
 
   <nav class="subnav">
-    <a class="active">Overview</a><a>Analysis</a><a>Recent form</a><a>Happiness</a><a>Reports</a><a>Training</a>
-    <a [routerLink]="['/player', playerId]" [queryParams]="profileQueryParams">Full profile & actions ↗</a>
+    <button type="button" [class.active]="activeTab === 'overview' && workspaceTab === 'overview'" (click)="setWorkspaceTab('overview')">Overview</button>
+    <button type="button" [class.active]="activeTab === 'overview' && workspaceTab === 'analysis'" (click)="setWorkspaceTab('analysis')">Analysis</button>
+    <button type="button" [class.active]="activeTab === 'overview' && workspaceTab === 'recent-form'" (click)="setWorkspaceTab('recent-form')">Recent form</button>
+    <button type="button" [class.active]="activeTab === 'overview' && workspaceTab === 'happiness'" (click)="setWorkspaceTab('happiness')">Happiness</button>
+    <button type="button" [class.active]="activeTab === 'overview' && workspaceTab === 'reports'" (click)="setWorkspaceTab('reports')">Reports</button>
+    <button type="button" [class.active]="activeTab === 'overview' && workspaceTab === 'training'" (click)="setWorkspaceTab('training')">Training</button>
+    <button type="button" class="milestones-link" [class.active]="activeTab === 'trophies'" (click)="selectPrimaryTab('trophies')">Milestones & honours ↗</button>
   </nav>
 
-  <section class="profile-workspace">
+  <section class="profile-workspace" *ngIf="activeTab === 'overview' && workspaceTab === 'overview'">
     <aside class="left-rail">
       <article class="fm-panel positions-panel">
         <header>POSITIONS</header>
@@ -172,6 +177,213 @@
       </article>
     </aside>
   </section>
+
+  <section class="detail-workspace" *ngIf="activeTab === 'overview' && workspaceTab === 'analysis'">
+    <ng-container *ngTemplateOutlet="performanceAnalysis"></ng-container>
+  </section>
+
+  <section class="detail-workspace" *ngIf="activeTab === 'overview' && workspaceTab === 'recent-form'">
+    <article class="fm-panel detail-panel wide">
+      <header><span>RECENT FORM</span><small *ngIf="playerForm">{{ playerForm.trend || 'Current trend' }}</small></header>
+      <div class="loading-line" *ngIf="playerFormLoading">Loading match form…</div>
+      <div class="empty-line" *ngIf="playerFormLoaded && !playerForm?.form?.length">No recent appearances recorded.</div>
+      <div class="form-summary-grid" *ngIf="playerForm?.form?.length">
+        <div><span>Average rating</span><strong>{{ playerForm.avgRating | number:'1.2-2' }}</strong></div>
+        <div><span>Goals</span><strong>{{ playerForm.totalGoals || 0 }}</strong></div>
+        <div><span>Assists</span><strong>{{ playerForm.totalAssists || 0 }}</strong></div>
+        <div><span>Trend</span><strong>{{ getTrendIcon(playerForm.trend) }} {{ playerForm.trend || 'Stable' }}</strong></div>
+      </div>
+      <div class="table-scroll" *ngIf="playerForm?.form?.length">
+        <table class="classic-table">
+          <thead><tr><th>Result</th><th>Opponent</th><th>Competition</th><th>Score</th><th>G</th><th>A</th><th>Rating</th></tr></thead>
+          <tbody><tr *ngFor="let match of playerForm.form">
+            <td><b class="result-chip" [ngClass]="getFormResultClass(match.result)">{{ match.result }}</b></td>
+            <td>{{ match.opponentName }}</td><td>{{ match.competitionName }}</td>
+            <td>{{ match.teamScore }}–{{ match.opponentScore }}</td><td>{{ match.goals || 0 }}</td><td>{{ match.assists || 0 }}</td>
+            <td><strong>{{ match.rating | number:'1.2-2' }}</strong></td>
+          </tr></tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+
+  <section class="detail-workspace two-column" *ngIf="activeTab === 'overview' && workspaceTab === 'happiness'">
+    <article class="fm-panel detail-panel">
+      <header>HAPPINESS & READINESS</header>
+      <div class="status-hero"><strong>{{ moraleLabel() }}</strong><span>Overall morale · {{ playerView.morale | number:'1.0-0' }}/100</span></div>
+      <div class="status-meter"><i [style.width.%]="metricWidth(playerView.morale)"></i></div>
+      <dl class="detail-list">
+        <div><dt>Playing-time status</dt><dd>{{ playerView.currentStatus || playerView.squadStatus || 'Not specified' }}</dd></div>
+        <div><dt>Transfer request</dt><dd>{{ playerView.transferListed || playerView.requestedTransfer ? 'Wants a move' : 'None' }}</dd></div>
+        <div><dt>Personality</dt><dd>{{ playerView.personalityLabel || playerView.personality || 'Unknown' }}</dd></div>
+        <div><dt>Club loyalty</dt><dd>{{ playerView.willNeverLeave ? 'One-club commitment' : (playerView.loyalty || 'No concern recorded') }}</dd></div>
+      </dl>
+    </article>
+    <article class="fm-panel detail-panel">
+      <header>PHYSICAL AVAILABILITY</header>
+      <div class="status-hero fitness"><strong>{{ fitnessLabel() }}</strong><span>Condition · {{ playerView.fitness | number:'1.0-0' }}%</span></div>
+      <div class="status-meter fitness"><i [style.width.%]="metricWidth(playerView.fitness)"></i></div>
+      <dl class="detail-list">
+        <div><dt>Injury status</dt><dd>{{ playerView.injured ? (playerView.injuryType || 'Injured') : 'Fit' }}</dd></div>
+        <div><dt>Natural fitness</dt><dd>{{ playerView.naturalFitness ?? '—' }}</dd></div>
+        <div><dt>Match sharpness</dt><dd>{{ playerView.matchSharpness ?? playerView.fitness ?? '—' }}%</dd></div>
+        <div><dt>Contract security</dt><dd>{{ isContractExpiring() ? 'Expiring soon' : ('Until season ' + (playerView.contractEndSeason || '—')) }}</dd></div>
+      </dl>
+    </article>
+  </section>
+
+  <section class="detail-workspace two-column" *ngIf="activeTab === 'overview' && workspaceTab === 'reports'">
+    <article class="fm-panel detail-panel">
+      <header><span>SCOUT REPORT</span><small>{{ scoutCard?.tier || 'Live assessment' }}</small></header>
+      <div class="report-score"><strong>{{ abilityStars(currentAbility) }}</strong><span>Current ability · {{ currentAbility | number:'1.0-1' }}</span></div>
+      <div class="report-split">
+        <div><b>KEY STRENGTHS</b><span *ngFor="let attr of strongestAttributes">{{ attr.name }} <strong>{{ attr.value }}</strong></span></div>
+        <div><b>DEVELOPMENT FOCUS</b><span *ngFor="let attr of developmentAreas">{{ attr.name }} <strong>{{ attr.value }}</strong></span></div>
+      </div>
+    </article>
+    <article class="fm-panel detail-panel">
+      <header>ROLE SUITABILITY</header>
+      <div class="report-role" *ngFor="let role of rolesClassic">
+        <span>{{ roleName(role) }}</span><i><b [style.width.%]="roleScore(role)"></b></i><strong>{{ roleScore(role) | number:'1.0-0' }}</strong>
+      </div>
+      <div class="empty-line" *ngIf="roleSuitabilitiesLoaded && !rolesClassic.length">No role report available.</div>
+    </article>
+  </section>
+
+  <section class="detail-workspace" *ngIf="activeTab === 'overview' && workspaceTab === 'training'">
+    <article class="fm-panel detail-panel wide">
+      <header><span>INDIVIDUAL TRAINING</span><small>Live backend training plan</small></header>
+      <div class="training-layout">
+        <div class="training-current">
+          <span>Current assignment</span>
+          <strong>{{ individualTraining?.individualAttribute || individualTraining?.individualFocus || individualTraining?.individualRole || 'Team training only' }}</strong>
+          <small>{{ fitnessLabel() }} · morale {{ moraleLabel() }}</small>
+        </div>
+        <form class="training-form" (ngSubmit)="saveIndividualTraining()">
+          <label>Focus<select name="trainingFocus" [(ngModel)]="trainingFocus"><option [ngValue]="null">Team focus</option><option *ngFor="let option of individualTrainingOptions?.focusCategories" [value]="option">{{ option }}</option></select></label>
+          <label>Attribute<select name="trainingAttribute" [(ngModel)]="trainingAttribute"><option [ngValue]="null">None</option><option *ngFor="let option of individualTrainingOptions?.attributes" [value]="option">{{ option }}</option></select></label>
+          <label>Role<select name="trainingRole" [(ngModel)]="trainingRole"><option [ngValue]="null">None</option><option *ngFor="let option of individualTrainingOptions?.roles" [value]="option">{{ option }}</option></select></label>
+          <div class="form-actions" *ngIf="isOwnPlayer(); else readOnlyTraining"><button type="button" (click)="clearIndividualTraining()" [disabled]="trainingSaving">Clear</button><button class="primary" type="submit" [disabled]="trainingSaving">{{ trainingSaving ? 'Saving…' : 'Save training' }}</button></div>
+          <ng-template #readOnlyTraining><p class="muted">Training can only be changed for your own player.</p></ng-template>
+          <p class="action-message" *ngIf="trainingMessage">{{ trainingMessage }}</p>
+        </form>
+      </div>
+    </article>
+  </section>
+
+  <section class="detail-workspace" *ngIf="activeTab === 'stats'">
+    <article class="fm-panel detail-panel wide">
+      <header><span>SEASON STATISTICS</span><small>{{ seasonStats?.teamName || teamLabel }}</small></header>
+      <div class="season-picker"><button type="button" [disabled]="selectedSeason <= 1" (click)="prevSeason()">‹ Previous</button><strong>Season {{ selectedSeason }}</strong><button type="button" [disabled]="selectedSeason >= maxSeason" (click)="nextSeason()">Next ›</button></div>
+      <div class="loading-line" *ngIf="seasonStatsLoading">Loading season statistics…</div>
+      <div class="empty-line" *ngIf="!seasonStatsLoading && !seasonStats">No statistics recorded for this season.</div>
+      <div class="table-scroll" *ngIf="!seasonStatsLoading && seasonStats">
+        <table class="classic-table"><thead><tr><th>Competition</th><th>Starts</th><th>Sub</th><th>Goals</th><th>Assists</th><th>Average rating</th></tr></thead>
+          <tbody><tr *ngFor="let competition of seasonStats.competitions"><td>{{ competition.name }}</td><td>{{ competition.games }}</td><td>{{ competition.subApps }}</td><td>{{ competition.goals }}</td><td>{{ competition.assists }}</td><td>{{ competition.avgRating ? (competition.avgRating | number:'1.2-2') : '—' }}</td></tr>
+          <tr class="total"><td>Total</td><td>{{ seasonTotals.games }}</td><td>{{ seasonTotals.subApps }}</td><td>{{ seasonTotals.goals }}</td><td>{{ seasonTotals.assists }}</td><td>{{ seasonTotals.avgRating ? (seasonTotals.avgRating | number:'1.2-2') : '—' }}</td></tr></tbody>
+        </table>
+      </div>
+    </article>
+    <article class="fm-panel detail-panel wide">
+      <header>ALL-TIME BY COMPETITION</header>
+      <div class="table-scroll"><table class="classic-table"><thead><tr><th>Competition</th><th>Apps</th><th>Goals</th><th>Assists</th><th>Average rating</th></tr></thead><tbody>
+        <tr *ngFor="let competition of competitionBreakdown"><td>{{ competition.competitionName || competition.name }}</td><td>{{ competition.appearances ?? competition.games ?? 0 }}</td><td>{{ competition.goals || 0 }}</td><td>{{ competition.assists || 0 }}</td><td>{{ competition.avgRating ? (competition.avgRating | number:'1.2-2') : '—' }}</td></tr>
+      </tbody></table></div>
+      <div class="empty-line" *ngIf="!extendedDataLoading && !competitionBreakdown.length">No all-time competition totals available.</div>
+    </article>
+  </section>
+
+  <section class="detail-workspace two-column" *ngIf="activeTab === 'contract'">
+    <article class="fm-panel detail-panel">
+      <header>CURRENT CONTRACT</header>
+      <dl class="contract-list">
+        <div><dt>Club</dt><dd>{{ teamLabel }}</dd></div><div><dt>Expires</dt><dd>Season {{ playerView.contractEndSeason || '—' }}</dd></div>
+        <div><dt>Weekly wage</dt><dd>{{ money(playerView.wage) }}</dd></div><div><dt>Transfer value</dt><dd>{{ money(playerView.transferValue) }}</dd></div>
+        <div><dt>Release clause</dt><dd>{{ money(playerView.releaseClause) }}</dd></div><div><dt>Squad status</dt><dd>{{ playerView.currentStatus || 'Not specified' }}</dd></div>
+        <div><dt>Sell-on clause</dt><dd>{{ playerView.sellOnPercentage || 0 }}%</dd></div><div><dt>Extension option</dt><dd>{{ playerView.optionalExtensionYears || 0 }} years</dd></div>
+        <div><dt>Appearance bonus</dt><dd>{{ money(playerView.appearanceBonus) }}</dd></div><div><dt>Goal bonus</dt><dd>{{ money(playerView.goalBonus) }}</dd></div>
+      </dl>
+      <div class="contract-alert" *ngIf="isContractExpiring()">Contract expires within one season.</div>
+      <div class="form-actions">
+        <button type="button" *ngIf="canRenewContract()" (click)="toggleRenewForm()">{{ showRenewForm ? 'Close offer' : 'Offer new contract' }}</button>
+        <button type="button" *ngIf="isOwnPlayer()" (click)="toggleClausesForm()">{{ showClausesForm ? 'Close clauses' : 'Edit clauses' }}</button>
+        <button type="button" class="primary" *ngIf="canMakeTransferOffer()" (click)="openTransferOffer()">Make transfer offer</button>
+        <button type="button" class="primary" *ngIf="canOfferFreeAgentContract()" (click)="openFreeAgentContract()">Offer contract</button>
+      </div>
+    </article>
+    <article class="fm-panel detail-panel contract-editor">
+      <header>NEGOTIATION</header>
+      <form *ngIf="showRenewForm" (ngSubmit)="submitRenewal()">
+        <p>Player request: <strong>{{ money(renewalDemand) }}</strong></p>
+        <label>Weekly wage<input name="renewWage" type="number" min="0" [(ngModel)]="renewWage"></label>
+        <label>Contract years<select name="renewYears" [(ngModel)]="renewYears"><option *ngFor="let year of [1,2,3,4,5]" [value]="year">{{ year }}</option></select></label>
+        <button class="primary" type="submit">Submit offer</button><p class="action-message" *ngIf="renewMessage">{{ renewMessage }}</p>
+      </form>
+      <form *ngIf="showClausesForm" (ngSubmit)="submitClauses()">
+        <label>Release clause<input name="releaseClause" type="number" min="0" [(ngModel)]="clauseReleaseClause"></label>
+        <label>Sell-on %<input name="sellOn" type="number" min="0" max="50" [(ngModel)]="clauseSellOnPercentage"></label>
+        <label>Extension years<input name="extension" type="number" min="0" max="2" [(ngModel)]="clauseOptionalExtensionYears"></label>
+        <label>Appearance bonus<input name="appearanceBonus" type="number" min="0" [(ngModel)]="clauseAppearanceBonus"></label>
+        <label>Goal bonus<input name="goalBonus" type="number" min="0" [(ngModel)]="clauseGoalBonus"></label>
+        <label>Relegation wage drop %<input name="wageDrop" type="number" min="0" max="50" [(ngModel)]="clauseRelegationWageDrop"></label>
+        <button class="primary" type="submit">Save clauses</button><p class="action-message" *ngIf="clausesMessage">{{ clausesMessage }}</p>
+      </form>
+      <div class="empty-line" *ngIf="!showRenewForm && !showClausesForm">Choose an available contract action to begin.</div>
+    </article>
+  </section>
+
+  <section class="detail-workspace" *ngIf="activeTab === 'history'">
+    <article class="fm-panel detail-panel wide">
+      <header>CAREER HISTORY</header>
+      <div class="table-scroll"><table class="classic-table"><thead><tr><th>Season</th><th>Club</th><th>Apps</th><th>Sub</th><th>Goals</th><th>Assists</th></tr></thead><tbody>
+        <ng-container *ngFor="let row of careerHistory"><tr *ngIf="careerSeasonTotals(row) as totals"><td>{{ row.seasonNumber }}</td><td>{{ row.teamName || 'Unknown club' }}</td><td>{{ totals.apps }}</td><td>{{ totals.subApps }}</td><td>{{ totals.goals }}</td><td>{{ totals.assists }}</td></tr></ng-container>
+      </tbody></table></div><div class="empty-line" *ngIf="!extendedDataLoading && !careerHistory.length">No career seasons recorded.</div>
+    </article>
+    <article class="fm-panel detail-panel wide">
+      <header>TRANSFER HISTORY</header>
+      <div class="table-scroll" *ngIf="transferHistory.length"><table class="classic-table"><thead><tr><th>Season</th><th>From</th><th>To</th><th>Fee</th></tr></thead><tbody><tr *ngFor="let transfer of transferHistory"><td>{{ transfer.seasonNumber }}</td><td>{{ transfer.sellTeamName || 'Free agent' }}</td><td>{{ transfer.buyTeamName || 'Free agent' }}</td><td>{{ transfer.playerTransferValue > 0 ? money(transfer.playerTransferValue) : 'Free' }}</td></tr></tbody></table></div>
+      <div class="empty-line" *ngIf="transferHistoryLoaded && !transferHistory.length">No transfers recorded for this player.</div>
+    </article>
+  </section>
+
+  <section class="detail-workspace" *ngIf="activeTab === 'analytics'">
+    <ng-container *ngTemplateOutlet="performanceAnalysis"></ng-container>
+  </section>
+
+  <section class="detail-workspace" *ngIf="activeTab === 'trophies'">
+    <article class="fm-panel detail-panel wide">
+      <header><span>MILESTONES & HONOURS</span><small>{{ majorAwardSummary?.awards?.length || 0 }} individual awards</small></header>
+      <div class="honour-summary"><div><strong>{{ trophies.length }}</strong><span>Team trophies</span></div><div><strong>{{ majorAwardSummary.goldenBoots || 0 }}</strong><span>Golden Boots</span></div><div><strong>{{ majorAwardSummary.ballonDors || 0 }}</strong><span>Ballon d'Or</span></div></div>
+      <div class="loading-line" *ngIf="loadingTrophies">Checking honours…</div>
+      <div class="honour-grid" *ngIf="!loadingTrophies"><article *ngFor="let trophy of trophies"><b>🏆</b><strong>{{ trophy.competitionName }}</strong><span>{{ trophy.teamName }} · Season {{ trophy.seasonNumber }}</span></article></div>
+      <div class="empty-line" *ngIf="!loadingTrophies && !trophies.length">No team trophies recorded yet.</div>
+    </article>
+  </section>
+
+  <ng-template #performanceAnalysis>
+    <article class="fm-panel detail-panel wide">
+      <header><span>PLAYER PERFORMANCE LAB</span><small *ngIf="performanceLab">Season {{ performanceLab.seasonNumber }} · {{ performanceLab.positionGroup }}</small></header>
+      <div class="loading-line" *ngIf="extendedDataLoading && !performanceLab">Building performance profile…</div>
+      <div class="empty-line" *ngIf="!extendedDataLoading && !performanceLab">{{ extendedDataError || 'No performance sample is available.' }}</div>
+      <ng-container *ngIf="performanceLab">
+        <div class="lab-overview"><div><strong>{{ performanceLab.appearances || 0 }}</strong><span>Appearances</span></div><div><strong>{{ performanceLab.minutes || 0 }}</strong><span>Minutes</span></div><div><strong>{{ performanceLab.peerCount || 0 }}</strong><span>Position peers</span></div><div><strong>{{ performanceLab.contexts?.teamImpact?.pointsPerGameWith | number:'1.2-2' }}</strong><span>Team PPG with player</span></div></div>
+        <div class="metric-lab"><div class="lab-metric" *ngFor="let metric of performanceLab.metrics"><span>{{ metric.label }}</span><strong>{{ metric.valuePer90 | number:'1.2-2' }} <small>/90</small></strong><i><b [style.width.%]="metricWidth(metric.percentile)"></b></i><em>P{{ metric.percentile | number:'1.0-0' }} · {{ metric.quality }}</em></div></div>
+      </ng-container>
+    </article>
+    <article class="fm-panel detail-panel" *ngIf="performanceLab">
+      <header>ROLE & SYSTEM IMPACT</header>
+      <div class="report-role" *ngFor="let role of performanceLab.roleSuitability"><span>{{ role.role }}</span><i><b [style.width.%]="role.score"></b></i><strong>{{ role.score | number:'1.0-0' }}</strong></div>
+      <dl class="detail-list"><div><dt>Home rating</dt><dd>{{ performanceLab.contexts?.home?.averageRating | number:'1.2-2' }}</dd></div><div><dt>Away rating</dt><dd>{{ performanceLab.contexts?.away?.averageRating | number:'1.2-2' }}</dd></div><div><dt>Starter rating</dt><dd>{{ performanceLab.contexts?.starter?.averageRating | number:'1.2-2' }}</dd></div><div><dt>Substitute rating</dt><dd>{{ performanceLab.contexts?.substitute?.averageRating | number:'1.2-2' }}</dd></div></dl>
+    </article>
+    <article class="fm-panel detail-panel" *ngIf="performanceLab">
+      <header>CHEMISTRY & SIMILAR PLAYERS</header>
+      <a class="person-row" *ngFor="let mate of performanceLab.chemistry" [routerLink]="['/player2', mate.playerId]" [queryParams]="profileQueryParams"><span>{{ mate.playerName }}<small>{{ mate.coAppearances }} matches together</small></span><strong>{{ mate.score | number:'1.0-0' }}</strong></a>
+      <a class="person-row" *ngFor="let similar of performanceLab.similarPlayers" [routerLink]="['/player2', similar.playerId]" [queryParams]="profileQueryParams"><span>{{ similar.playerName }}<small>{{ similar.position }} · similar profile</small></span><strong>{{ similar.similarity | number:'1.0-0' }}%</strong></a>
+    </article>
+    <article class="fm-panel detail-panel wide" *ngIf="goalkeeperHub?.eligible">
+      <header>GOALKEEPER HUB</header><div class="gk-grid"><div *ngFor="let metric of goalkeeperHub.metrics"><strong>{{ metric.value | number:'1.2-2' }}<small>{{ metric.unit }}</small></strong><span>{{ metric.label }}</span><em>{{ metric.quality }}</em></div></div>
+    </article>
+  </ng-template>
 </main>
 
 <div class="offer-backdrop" *ngIf="showTransferOfferForm" (click)="closeTransferOffer()">

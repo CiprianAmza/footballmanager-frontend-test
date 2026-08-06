@@ -15,6 +15,10 @@ interface AttributeRow {
   value: number;
 }
 
+const PLAYER_WORKSPACE_TABS = ['overview', 'analysis', 'recent-form', 'happiness', 'reports', 'training'] as const;
+type PlayerWorkspaceTab = typeof PLAYER_WORKSPACE_TABS[number];
+type PlayerPrimaryTab = 'overview' | 'stats' | 'contract' | 'history' | 'analytics' | 'trophies';
+
 @Component({
   selector: 'app-player2',
   standalone: true,
@@ -24,14 +28,28 @@ interface AttributeRow {
 })
 export class Player2Component extends PlayerComponent implements OnInit, OnDestroy {
   private readonly classicSubscriptions = new Subscription();
+  workspaceTab: PlayerWorkspaceTab = 'overview';
   scoutCard: any = null;
   squadPlayers: any[] = [];
   supplementaryLoading = false;
+  careerHistory: any[] = [];
+  competitionBreakdown: any[] = [];
+  performanceLab: any = null;
+  goalkeeperHub: any = null;
+  extendedDataLoading = false;
+  extendedDataError = '';
+  individualTraining: any = null;
+  individualTrainingOptions: any = null;
+  trainingFocus: string | null = null;
+  trainingAttribute: string | null = null;
+  trainingRole: string | null = null;
+  trainingSaving = false;
+  trainingMessage = '';
 
   constructor(
     private readonly classicHttp: HttpClient,
     private readonly classicRoute: ActivatedRoute,
-    classicRouter: Router,
+    private readonly classicRouter: Router,
     private readonly classicTeamService: TeamService,
     classicAuthService: AuthService,
     classicAdminService: AdminService
@@ -41,6 +59,10 @@ export class Player2Component extends PlayerComponent implements OnInit, OnDestr
 
   override ngOnInit(): void {
     super.ngOnInit();
+    this.classicSubscriptions.add(this.classicRoute.queryParamMap.subscribe(params => {
+      const view = params.get('view') as PlayerWorkspaceTab | null;
+      this.workspaceTab = view && PLAYER_WORKSPACE_TABS.includes(view) ? view : 'overview';
+    }));
     this.classicSubscriptions.add(this.classicRoute.params.subscribe(params => {
       const playerId = Number(params['playerId']);
       if (!Number.isSafeInteger(playerId) || playerId <= 0) return;
@@ -48,6 +70,7 @@ export class Player2Component extends PlayerComponent implements OnInit, OnDestr
       this.maxSeason = this.selectedSeason;
       this.fetchSeasonStats();
       this.loadSupplementary(playerId);
+      this.loadExtendedData(playerId);
     }));
   }
 
@@ -60,6 +83,23 @@ export class Player2Component extends PlayerComponent implements OnInit, OnDestr
     this.retry();
     this.fetchSeasonStats();
     this.loadSupplementary(this.playerId);
+    this.loadExtendedData(this.playerId);
+  }
+
+  selectPrimaryTab(tab: PlayerPrimaryTab): void {
+    void this.classicRouter.navigate([], {
+      relativeTo: this.classicRoute,
+      queryParams: { tab: tab === 'overview' ? null : tab, view: null },
+      queryParamsHandling: 'merge'
+    });
+  }
+
+  setWorkspaceTab(tab: PlayerWorkspaceTab): void {
+    void this.classicRouter.navigate([], {
+      relativeTo: this.classicRoute,
+      queryParams: { tab: null, view: tab === 'overview' ? null : tab },
+      queryParamsHandling: 'merge'
+    });
   }
 
   private loadSupplementary(playerId: number): void {
@@ -74,6 +114,7 @@ export class Player2Component extends PlayerComponent implements OnInit, OnDestr
 
     this.classicSubscriptions.add(this.classicHttp.get<any>(`${urlApp}/humans/${playerId}`).subscribe({
       next: player => {
+        if (!this.individualTrainingOptions) this.loadTrainingOptions(player?.position || '');
         const teamId = Number(player?.teamId);
         if (!Number.isSafeInteger(teamId) || teamId <= 0) {
           this.supplementaryLoading = false;
@@ -92,6 +133,142 @@ export class Player2Component extends PlayerComponent implements OnInit, OnDestr
       },
       error: () => this.supplementaryLoading = false
     }));
+  }
+
+  private loadExtendedData(playerId: number): void {
+    this.extendedDataLoading = true;
+    this.extendedDataError = '';
+    this.careerHistory = [];
+    this.competitionBreakdown = [];
+    this.performanceLab = null;
+    this.goalkeeperHub = null;
+    this.individualTraining = null;
+    this.individualTrainingOptions = null;
+
+    let pending = 5;
+    const done = () => {
+      pending--;
+      if (pending <= 0) this.extendedDataLoading = false;
+    };
+
+    this.classicSubscriptions.add(this.classicHttp.get<any>(`${urlApp}/stats/getStats/${playerId}`).subscribe({
+      next: data => {
+        const rows = Array.isArray(data) ? data : Object.values(data || {});
+        this.careerHistory = rows.sort((a: any, b: any) => Number(b.seasonNumber || 0) - Number(a.seasonNumber || 0));
+        done();
+      },
+      error: () => done()
+    }));
+
+    this.classicSubscriptions.add(this.classicHttp.get<any>(`${urlApp}/stats/player/${playerId}/competitionBreakdown`).subscribe({
+      next: data => {
+        const rows = data?.byCompetition;
+        this.competitionBreakdown = Array.isArray(rows) ? rows : Object.values(rows || {});
+        done();
+      },
+      error: () => done()
+    }));
+
+    const season = Number(this.classicTeamService.currentSeason || 1);
+    this.classicSubscriptions.add(this.classicHttp.get<any>(`${urlApp}/stats/player/${playerId}/season/${season}/performance-lab`).subscribe({
+      next: data => { this.performanceLab = data; done(); },
+      error: () => { this.extendedDataError = 'Some performance-lab data is unavailable.'; done(); }
+    }));
+
+    this.classicSubscriptions.add(this.classicHttp.get<any>(`${urlApp}/stats/player/${playerId}/season/${season}/goalkeeper-hub`).subscribe({
+      next: data => { this.goalkeeperHub = data; done(); },
+      error: () => done()
+    }));
+
+    this.classicSubscriptions.add(this.classicHttp.get<any>(`${urlApp}/training/individual/${playerId}`).subscribe({
+      next: data => {
+        this.individualTraining = data;
+        this.trainingFocus = data?.individualFocus || null;
+        this.trainingAttribute = data?.individualAttribute || null;
+        this.trainingRole = data?.individualRole || null;
+        this.loadTrainingOptions(this.playerView?.position || '');
+        done();
+      },
+      error: () => done()
+    }));
+  }
+
+  private loadTrainingOptions(position: string): void {
+    if (!position) return;
+    this.classicSubscriptions.add(this.classicHttp.get<any>(`${urlApp}/training/individual/options/${encodeURIComponent(position)}`).subscribe({
+      next: data => this.individualTrainingOptions = data,
+      error: () => this.individualTrainingOptions = null
+    }));
+  }
+
+  saveIndividualTraining(): void {
+    if (!this.isOwnPlayer() || this.trainingSaving) return;
+    this.trainingSaving = true;
+    this.trainingMessage = '';
+    this.classicSubscriptions.add(this.classicHttp.post<any>(`${urlApp}/training/individual/${this.playerId}`, {
+      focus: this.trainingFocus || null,
+      attribute: this.trainingAttribute || null,
+      role: this.trainingRole || null
+    }).subscribe({
+      next: data => {
+        this.individualTraining = data;
+        this.trainingSaving = false;
+        this.trainingMessage = 'Individual training updated.';
+      },
+      error: () => {
+        this.trainingSaving = false;
+        this.trainingMessage = 'Individual training could not be updated.';
+      }
+    }));
+  }
+
+  clearIndividualTraining(): void {
+    if (!this.isOwnPlayer() || this.trainingSaving) return;
+    this.trainingSaving = true;
+    this.classicSubscriptions.add(this.classicHttp.delete<any>(`${urlApp}/training/individual/${this.playerId}`).subscribe({
+      next: data => {
+        this.individualTraining = data;
+        this.trainingFocus = null;
+        this.trainingAttribute = null;
+        this.trainingRole = null;
+        this.trainingSaving = false;
+        this.trainingMessage = 'Individual training cleared.';
+      },
+      error: () => {
+        this.trainingSaving = false;
+        this.trainingMessage = 'Individual training could not be cleared.';
+      }
+    }));
+  }
+
+  metricWidth(value: unknown): number {
+    return Math.max(0, Math.min(100, Number(value || 0)));
+  }
+
+  moraleLabel(): string {
+    const morale = Number(this.playerView?.morale || 0);
+    if (morale >= 85) return 'Superb';
+    if (morale >= 70) return 'Good';
+    if (morale >= 50) return 'Okay';
+    if (morale >= 30) return 'Low';
+    return 'Very low';
+  }
+
+  fitnessLabel(): string {
+    const fitness = Number(this.playerView?.fitness || 0);
+    if (fitness >= 90) return 'Match ready';
+    if (fitness >= 75) return 'Available';
+    if (fitness >= 55) return 'Needs conditioning';
+    return 'High injury risk';
+  }
+
+  careerSeasonTotals(row: any): { apps: number; subApps: number; goals: number; assists: number } {
+    return (row?.competitionEntries || []).reduce((totals: any, competition: any) => ({
+      apps: totals.apps + Number(competition.games || 0),
+      subApps: totals.subApps + Number(competition.gamesAsSubstitute || 0),
+      goals: totals.goals + Number(competition.goals || 0),
+      assists: totals.assists + Number(competition.assists || 0)
+    }), { apps: 0, subApps: 0, goals: 0, assists: 0 });
   }
 
   get profileQueryParams(): Record<string, number> | null {
