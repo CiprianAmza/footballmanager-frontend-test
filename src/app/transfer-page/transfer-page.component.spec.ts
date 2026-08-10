@@ -17,7 +17,8 @@ describe('TransferPageComponent incoming offer groups', () => {
       {} as Router,
       {} as TransferService,
       {} as TeamService,
-      {} as GameEventsService
+      {} as GameEventsService,
+      { save: () => {} } as any
     );
   });
 
@@ -47,7 +48,8 @@ describe('TransferPageComponent incoming offer groups', () => {
       {} as Router,
       transferService,
       {} as TeamService,
-      {} as GameEventsService
+      {} as GameEventsService,
+      { save: () => {} } as any
     );
     component.teamId = 9;
 
@@ -56,6 +58,45 @@ describe('TransferPageComponent incoming offer groups', () => {
     expect(component.errorMessage).toBe('The player has already left the selling club');
     expect(component.incomingOffers).toEqual([]);
     expect(transferService.getIncomingOffers).toHaveBeenCalledWith(9);
+  });
+
+  it('sorts text columns ascending first and toggles the active column', () => {
+    spyOn(component, 'loadMarket');
+
+    component.toggleSort('club');
+    expect(component.sortField).toBe('club');
+    expect(component.sortDirection).toBe('asc');
+    expect(component.marketPage).toBe(0);
+
+    component.toggleSort('club');
+    expect(component.sortDirection).toBe('desc');
+    expect(component.loadMarket).toHaveBeenCalledTimes(2);
+  });
+
+  it('exposes badges through the shared transfer tabs model', () => {
+    component.incomingOffers = [offer(1, 10, 'Player A', 'Club One', 20_000_000)];
+    component.loansIn = [{} as any];
+
+    expect(component.transferTabs.find(tab => tab.id === 'incoming')?.badge).toBe(1);
+    expect(component.transferTabs.find(tab => tab.id === 'loans')?.badge).toBe(1);
+  });
+
+  it('keeps only one contextual action menu open and closes it when changing tabs', () => {
+    const event = new MouseEvent('click');
+    spyOn(event, 'stopPropagation');
+    spyOn(component, 'loadTabData');
+
+    component.toggleActionMenu('market-12', event);
+    expect(component.isActionMenuOpen('market-12')).toBeTrue();
+    expect(event.stopPropagation).toHaveBeenCalled();
+
+    component.toggleActionMenu('market-20', event);
+    expect(component.isActionMenuOpen('market-12')).toBeFalse();
+    expect(component.isActionMenuOpen('market-20')).toBeTrue();
+
+    component.switchTab('incoming');
+    expect(component.openActionMenu).toBeNull();
+    expect(component.activeTab).toBe('incoming');
   });
 
   function offer(id: number, playerId: number, playerName: string,

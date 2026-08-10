@@ -4,6 +4,7 @@ import { forkJoin, Subscription } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { ChairmanClubService } from '../services/chairman-club.service';
 import { AuthService } from '../services/auth.service';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
 import {
   ChairmanClubDashboard, ChairmanClubSummary, ChairmanCommandCentreView, ClubCatalogScope,
   ClubCashTransferDirection, TakeoverQuoteView
@@ -59,7 +60,8 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
   constructor(private clubsApi: ChairmanClubService,
               private route: ActivatedRoute,
               private router: Router,
-              private authService: AuthService) {}
+              private authService: AuthService,
+              private feedback: UiFeedbackService = new UiFeedbackService()) {}
 
   get canOpenTacticalMandate(): boolean {
     return this.authService.isLoggedIn && this.authService.careerRole === 'CHAIRMAN'
@@ -245,13 +247,16 @@ export class ChairmanClubComponent implements OnInit, OnDestroy {
     });
   }
 
-  confirmTransfer(): void {
+  async confirmTransfer(): Promise<void> {
     const amount = Number(this.amount);
     if (!this.selectedClub || !this.dashboard || !Number.isSafeInteger(amount) || amount <= 0) return;
     this.pendingTransferConfirmation = this.direction === 'INJECTION'
       ? `Source: personal available cash. Destination: ${this.selectedClub.name}. Inject ${this.money(amount)}?`
       : `Source: ${this.selectedClub.name} distributable treasury. Destination: personal account. Withdraw ${this.money(amount)}?`;
-    if (typeof window !== 'undefined' && window.confirm(this.pendingTransferConfirmation)) {
+    if (await this.feedback.confirm(this.pendingTransferConfirmation, {
+      title: this.direction === 'INJECTION' ? 'Inject club funds' : 'Withdraw club funds',
+      confirmLabel: this.direction === 'INJECTION' ? 'Inject funds' : 'Withdraw funds'
+    })) {
       this.pendingTransferConfirmation = '';
       this.transfer();
     }

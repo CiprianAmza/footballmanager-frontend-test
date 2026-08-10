@@ -16,6 +16,92 @@
     </div>
   </div>
 
+  <nav class="lab-nav" aria-label="Player analytics sections">
+    <button type="button" [class.active]="analyticsSection === 'lab'" (click)="setAnalyticsSection('lab')">Performance Lab</button>
+    <button type="button" [class.active]="analyticsSection === 'legacy'" (click)="setAnalyticsSection('legacy')">Competition radar</button>
+    <button type="button" [class.active]="analyticsSection === 'goalkeeper'" (click)="setAnalyticsSection('goalkeeper')">Goalkeeper Hub</button>
+  </nav>
+
+  <div *ngIf="labLoading" class="state-msg">Building season lab…</div>
+  <div *ngIf="labError" class="state-msg error">{{ labError }}</div>
+
+  <section *ngIf="analyticsSection === 'lab' && lab && !labLoading" class="performance-lab fade-in">
+    <div class="lab-hero">
+      <div>
+        <span class="lab-kicker">Season {{ lab.seasonNumber }} · {{ lab.positionGroup }}</span>
+        <h2>Player Performance Lab</h2>
+        <p>{{ lab.appearances }} appearances · {{ lab.minutes }} minutes · compared with {{ lab.peerCount }} positional peers</p>
+      </div>
+      <div class="quality-legend">
+        <span class="quality observed">Observed</span><span class="quality derived">Derived</span><span class="quality modeled">Modelled</span>
+      </div>
+    </div>
+
+    <div class="lab-card metric-card">
+      <h3>Per 90 & positional percentiles</h3>
+      <div class="lab-metrics">
+        <article *ngFor="let metric of lab.metrics" class="lab-metric">
+          <div class="metric-heading"><span>{{ metric.label }}</span><strong>{{ metric.valuePer90 | number:'1.0-2' }}</strong></div>
+          <div class="percentile-track"><span [style.width.%]="barWidthPct(metric.percentile)" [style.backgroundColor]="percentileColor(metric.percentile)"></span></div>
+          <div class="metric-foot"><span>P{{ metric.percentile | number:'1.0-0' }}</span><span class="quality" [ngClass]="qualityLabel(metric.quality).toLowerCase()">{{ qualityLabel(metric.quality) }}</span></div>
+        </article>
+      </div>
+    </div>
+
+    <div class="lab-grid two-col">
+      <section class="lab-card">
+        <h3>Last five matches</h3>
+        <div class="form-list" *ngIf="lab.lastFive?.length; else noForm">
+          <div class="form-row" *ngFor="let match of lab.lastFive">
+            <span class="result-chip" [ngClass]="resultClass(match)">{{ match.goalsFor }}–{{ match.goalsAgainst }}</span>
+            <span class="opponent">{{ match.opponent || 'Unknown opponent' }}</span>
+            <span>{{ match.substitute ? 'SUB' : 'XI' }}</span><span>G {{ match.goals }} · A {{ match.assists }}</span><strong>{{ match.rating | number:'1.1-2' }}</strong>
+          </div>
+        </div>
+        <ng-template #noForm><p class="muted">No appearances recorded in this season.</p></ng-template>
+      </section>
+      <section class="lab-card">
+        <h3>Usage context</h3>
+        <div class="split-grid">
+          <div *ngFor="let split of [lab.contexts.home, lab.contexts.away, lab.contexts.starter, lab.contexts.substitute]">
+            <span>{{ split.label }}</span><strong>{{ split.averageRating | number:'1.1-2' }}</strong><small>{{ split.appearances }} apps · {{ split.goals }}G {{ split.assists }}A</small>
+          </div>
+        </div>
+        <div class="impact-row"><span>Team points/game with him</span><strong>{{ lab.contexts.teamImpact.pointsPerGameWith | number:'1.2-2' }}</strong></div>
+        <div class="impact-row"><span>Team points/game without him</span><strong>{{ lab.contexts.teamImpact.pointsPerGameWithout | number:'1.2-2' }}</strong></div>
+        <p class="context-note"><strong>Role/system:</strong> {{ lab.contexts.roleAndSystem.recordedRole }} · avg {{ lab.contexts.roleAndSystem.averageRating | number:'1.2-2' }}. {{ lab.contexts.roleAndSystem.note }}</p>
+      </section>
+    </div>
+
+    <div class="lab-grid three-col">
+      <section class="lab-card">
+        <h3>Role suitability</h3>
+        <div class="rank-row" *ngFor="let role of lab.roleSuitability"><span>{{ role.role }}</span><div class="mini-track"><i [style.width.%]="role.score"></i></div><strong>{{ role.score | number:'1.0-0' }}</strong></div>
+      </section>
+      <section class="lab-card">
+        <h3>Best chemistry</h3>
+        <a class="rank-row linked" *ngFor="let mate of lab.chemistry" [routerLink]="['/player', mate.playerId]"><span>{{ mate.playerName }}<small>{{ mate.coAppearances }} matches together</small></span><strong>{{ mate.score | number:'1.0-0' }}</strong></a>
+        <p class="muted" *ngIf="!lab.chemistry?.length">No shared lineup sample.</p>
+      </section>
+      <section class="lab-card">
+        <h3>Similar players</h3>
+        <a class="rank-row linked" *ngFor="let similar of lab.similarPlayers" [routerLink]="['/player', similar.playerId]"><span>{{ similar.playerName }}<small>{{ similar.position }}</small></span><strong>{{ similar.similarity | number:'1.0-0' }}%</strong></a>
+      </section>
+    </div>
+  </section>
+
+  <section *ngIf="analyticsSection === 'goalkeeper' && goalkeeperHub && !labLoading" class="goalkeeper-hub fade-in">
+    <div class="lab-hero goalkeeper-hero"><div><span class="lab-kicker">Season {{ goalkeeperHub.seasonNumber }}</span><h2>Goalkeeper Hub</h2><p *ngIf="goalkeeperHub.eligible">{{ goalkeeperHub.matches }} matches · {{ goalkeeperHub.minutes }} minutes</p></div></div>
+    <div *ngIf="!goalkeeperHub.eligible" class="not-applicable"><strong>Not applicable</strong><p>{{ goalkeeperHub.message }}</p></div>
+    <div *ngIf="goalkeeperHub.eligible" class="gk-metrics">
+      <article *ngFor="let metric of goalkeeperHub.metrics" class="gk-metric"><span class="quality" [ngClass]="qualityLabel(metric.quality).toLowerCase()">{{ qualityLabel(metric.quality) }}</span><strong>{{ metric.value | number:'1.0-2' }}</strong><small>{{ metric.unit }}</small><h3>{{ metric.label }}</h3></article>
+    </div>
+    <p *ngIf="goalkeeperHub.eligible" class="context-note">Position height and distance to the defensive line are modelled from the team's line height and the goalkeeper's sweeping attributes; they are not individual optical-tracking observations.</p>
+  </section>
+  <div *ngIf="analyticsSection === 'goalkeeper' && goalkeeperError" class="state-msg error">{{ goalkeeperError }}</div>
+
+  <ng-container *ngIf="analyticsSection === 'legacy'">
+
   <div *ngIf="loadingPicker || loading" class="state-msg">Loading analytics…</div>
   <div *ngIf="error" class="state-msg error">{{ error }}</div>
   <div *ngIf="!loadingPicker && !competitions.length" class="state-msg">No competition data for this player.</div>
@@ -92,4 +178,5 @@
 
     </div>
   </div>
+  </ng-container>
 </div>

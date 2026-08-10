@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
-import { distinctUntilChanged, filter } from 'rxjs/operators';
+import { distinctUntilChanged, filter, skip } from 'rxjs/operators';
 import { TeamService } from '../services/team.service';
 import { urlApp } from '../app.component';
 
@@ -81,16 +81,20 @@ export class HomeComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Check if manager is fired
     this.managerFired = this.teamService.managerFired;
-    this.teamService.managerFired$.subscribe(fired => this.managerFired = fired);
 
     // Reload data after each game advance / live-match commit / press conference
     this.refreshSub = this.teamService.refresh$.subscribe(() => this.loadData());
+    this.refreshSub.add(
+      this.teamService.managerFired$.subscribe(fired => this.managerFired = fired)
+    );
     // Also reload once the team id becomes known (setup check resolves async) so
     // the first paint isn't stuck on a teamId=0 request. Only react to a *real*
     // (non-zero) id and ignore repeat emissions so we never spin on the seeded 0.
+    // Skip the BehaviorSubject's immediate value because loadData() below already
+    // handles it; otherwise an already-loaded career issues every Home request twice.
     this.refreshSub.add(
       this.teamService.teamId$
-        .pipe(filter(id => !!id), distinctUntilChanged())
+        .pipe(skip(1), filter(id => !!id), distinctUntilChanged())
         .subscribe(() => this.loadData())
     );
 

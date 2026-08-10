@@ -1,0 +1,102 @@
+<main class="people-shell">
+  <header class="people-hero">
+    <div>
+      <p class="eyebrow">PEOPLE & CULTURE · SEASON {{ overview?.season || '—' }}</p>
+      <h1>{{ overview?.teamName || 'Squad dynamics' }}</h1>
+      <p class="subtitle">Understand the person behind the player — and act before a concern becomes a crisis.</p>
+    </div>
+    <nav class="variant-nav" aria-label="Squad views">
+      <a routerLink="/squad">Classic</a>
+      <a [routerLink]="['/squad2', teamId]">Matchday board</a>
+      <a [routerLink]="['/squad3', teamId]" class="active">People & culture</a>
+    </nav>
+  </header>
+
+  <section class="state-card" *ngIf="loading">Building the dressing-room profile…</section>
+  <section class="state-card error" *ngIf="!loading && error">{{ error }}</section>
+
+  <ng-container *ngIf="!loading && !error">
+    <section class="culture-strip">
+      <div class="culture-name"><span>TEAM CULTURE</span><strong>{{ cultureLabel }}</strong><small>{{ attentionCount }} player{{ attentionCount === 1 ? '' : 's' }} requiring attention</small></div>
+      <div class="culture-stat"><span>PROFESSIONALISM</span><strong>{{ avgProfessionalism }}<small>/20</small></strong><i><b [style.width.%]="scoreWidth(avgProfessionalism)"></b></i></div>
+      <div class="culture-stat"><span>AMBITION</span><strong>{{ avgAmbition }}<small>/20</small></strong><i><b [style.width.%]="scoreWidth(avgAmbition)"></b></i></div>
+      <div class="culture-stat"><span>LOYALTY</span><strong>{{ avgLoyalty }}<small>/20</small></strong><i><b [style.width.%]="scoreWidth(avgLoyalty)"></b></i></div>
+      <div class="culture-stat"><span>LEADERSHIP</span><strong>{{ avgLeadership }}<small>/20</small></strong><i><b [style.width.%]="scoreWidth(avgLeadership)"></b></i></div>
+    </section>
+
+    <section class="people-toolbar">
+      <label><span>⌕</span><input #peopleSearch [(ngModel)]="search" placeholder="Search name, personality or ambition…" /></label>
+      <div class="filter-tabs">
+        <button [class.active]="filter === 'ALL'" (click)="setFilter('ALL')"><kbd>1</kbd> Everyone</button>
+        <button [class.active]="filter === 'ATTENTION'" (click)="setFilter('ATTENTION')"><kbd>2</kbd> Attention</button>
+        <button [class.active]="filter === 'AMBITION'" (click)="setFilter('AMBITION')"><kbd>3</kbd> Ambitious</button>
+        <button [class.active]="filter === 'LEADERS'" (click)="setFilter('LEADERS')"><kbd>4</kbd> Leaders</button>
+        <button [class.active]="filter === 'YOUTH'" (click)="setFilter('YOUTH')"><kbd>5</kbd> Youth</button>
+      </div>
+    </section>
+
+    <section class="people-workspace">
+      <div class="people-list">
+        <button *ngFor="let player of people; trackBy: trackByPlayer" class="person-card"
+                [class.selected]="selectedPlayer?.id === player.id" (click)="select(player)">
+          <app-player-face [size]="48" [baseFaceId]="player.face.baseFaceId || 0"
+            [skinTone]="player.face.skinTone || 0" [hairStyle]="player.face.hairStyle || 0"
+            [hairColor]="player.face.hairColor || 0" [eyeColor]="player.face.eyeColor || 0"
+            [faceShape]="player.face.faceShape || 0" [noseShape]="player.face.noseShape || 0"
+            [eyeShape]="player.face.eyeShape || 0" [mouthShape]="player.face.mouthShape || 0"
+            [browShape]="player.face.browShape || 0" [nationId]="player.face.nationId || 0"
+            [species]="player.face.species || 'human'"></app-player-face>
+          <span class="person-main"><strong>{{ player.name }}</strong><small>{{ player.position }} · {{ player.age }} · {{ player.profile.personalityLabel }}</small></span>
+          <span class="trait"><small>PRO</small><strong>{{ player.profile.professionalism }}</strong></span>
+          <span class="trait"><small>AMB</small><strong>{{ player.profile.ambition }}</strong></span>
+          <span class="trait"><small>LDR</small><strong>{{ player.profile.leadership }}</strong></span>
+          <span class="risk" [ngClass]="player.transferRisk.toLowerCase()">{{ player.transferRisk }}</span>
+          <span class="chevron">›</span>
+        </button>
+        <p class="empty" *ngIf="!people.length">No player matches this people filter.</p>
+      </div>
+
+      <article class="profile" *ngIf="selectedPlayer as player">
+        <header class="profile-head">
+          <div><span class="position">{{ player.position }}</span><h2>{{ player.name }}</h2><p>{{ player.profile.personalityLabel }} · {{ player.profile.mediaStyle }} with media</p></div>
+          <span class="risk large" [ngClass]="player.transferRisk.toLowerCase()">{{ player.transferRisk }} RISK</span>
+        </header>
+
+        <section class="profile-alert" [class.clear]="player.concern === 'No active concern'">
+          <span>MANAGER BRIEF</span><strong>{{ player.concern }}</strong><p>{{ player.nextAction }}</p>
+          <p *ngIf="player.wantsTransfer && player.desiredTeamName" class="destination">Preferred move: <b>{{ player.desiredTeamName }}</b></p>
+        </section>
+
+        <section class="profile-section">
+          <div class="section-title"><span>CHARACTER SIGNALS</span><small>1–20 · known only inside your club</small></div>
+          <div class="score-list">
+            <div><label>Professionalism <em>{{ scoreLabel(player.profile.professionalism) }}</em></label><i><b [style.width.%]="scoreWidth(player.profile.professionalism)"></b></i><strong>{{ player.profile.professionalism }}</strong></div>
+            <div><label>Ambition <em>{{ scoreLabel(player.profile.ambition) }}</em></label><i><b [style.width.%]="scoreWidth(player.profile.ambition)"></b></i><strong>{{ player.profile.ambition }}</strong></div>
+            <div><label>Loyalty <em>{{ scoreLabel(player.profile.loyalty) }}</em></label><i><b [style.width.%]="scoreWidth(player.profile.loyalty)"></b></i><strong>{{ player.profile.loyalty }}</strong></div>
+            <div><label>Pressure handling <em>{{ scoreLabel(player.profile.pressureHandling) }}</em></label><i><b [style.width.%]="scoreWidth(player.profile.pressureHandling)"></b></i><strong>{{ player.profile.pressureHandling }}</strong></div>
+            <div><label>Consistency <em>{{ scoreLabel(player.profile.consistency) }}</em></label><i><b [style.width.%]="scoreWidth(player.profile.consistency)"></b></i><strong>{{ player.profile.consistency }}</strong></div>
+            <div><label>Leadership <em>{{ scoreLabel(player.profile.leadership) }}</em></label><i><b [style.width.%]="scoreWidth(player.profile.leadership)"></b></i><strong>{{ player.profile.leadership }}</strong></div>
+          </div>
+        </section>
+
+        <section class="human-grid">
+          <div><span>LIFE AWAY FROM FOOTBALL</span><strong>{{ player.profile.lifestyle }}</strong><p>{{ player.profile.personalSituation }}</p><ul><li *ngFor="let hobby of player.profile.hobbies">{{ hobby }}</li></ul></div>
+          <div><span>CAREER DIRECTION</span><strong>{{ player.profile.careerGoal }}</strong><p>{{ player.destinationPreference }}</p><small>{{ player.appearances }} apps · {{ player.goals }} goals · {{ player.assists }} assists this season</small></div>
+          <div><span>BEST TRAINING ENVIRONMENT</span><strong>{{ player.profile.preferredTrainingStyle }}</strong><p>{{ player.profile.preferredCoachingApproach }}</p><small>Current: {{ player.individualTrainingFocus || 'team focus' }}</small></div>
+          <div><span>ROLE & STATUS</span><strong>{{ player.agreedPlayingTime || 'No agreed role' }}</strong><p>{{ player.consecutiveBenched }} consecutive matches benched</p><small>Morale {{ player.morale | number:'1.0-0' }} · fitness {{ player.fitness | number:'1.0-0' }}</small></div>
+        </section>
+
+        <footer class="profile-actions">
+          <button (click)="openProfile(player)">Open player profile</button>
+          <button *ngIf="player.consecutiveBenched >= 3 || player.morale < 60" (click)="promisePlayingTime(player)" [disabled]="actionLoading">{{ actionLoading ? 'Talking…' : 'Promise playing time' }}</button>
+          <a routerLink="/training">Adjust training</a>
+          <a [routerLink]="['/squad2', teamId]">Matchday board</a>
+        </footer>
+        <p class="action-message" *ngIf="actionMessage">{{ actionMessage }}</p>
+      </article>
+    </section>
+
+    <aside class="method-note"><strong>Design note:</strong> lifestyle is a fictional, non-sensitive preference signal. It never exposes diagnoses, religion, relationships or other invasive personal data. Professionalism affects long-term training development; the other signals support management decisions and future interaction systems.</aside>
+    <footer class="shortcut-bar"><span><kbd>/</kbd> Search</span><span><kbd>1–5</kbd> Filters</span><span><kbd>J</kbd><kbd>K</kbd> Navigate</span><span><kbd>P</kbd> Profile</span><span><kbd>C</kbd> Matchday board</span></footer>
+  </ng-container>
+</main>

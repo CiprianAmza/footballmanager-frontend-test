@@ -1,6 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { urlApp } from '../app.component';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
 
 export interface ScorerStats {
   id: number;
@@ -40,6 +43,7 @@ export interface ScorerStats {
 }
 
 type TabType = 'total' | 'league' | 'cup' | 'second';
+const SCORER_TABS: TabType[] = ['total', 'league', 'cup', 'second'];
 type ViewMode = 'currentSeason' | 'allTime'; // 🔹 Tip nou pentru switch
 
 @Component({
@@ -47,7 +51,9 @@ type ViewMode = 'currentSeason' | 'allTime'; // 🔹 Tip nou pentru switch
   templateUrl: './scorer-leaderboard.component.html',
   styleUrls: ['./scorer-leaderboard.component.css']
 })
-export class ScorerLeaderboardComponent implements OnInit {
+export class ScorerLeaderboardComponent implements OnInit, OnDestroy {
+
+  private tabSub?: Subscription;
 
   allPlayers: ScorerStats[] = [];
   displayedPlayers: ScorerStats[] = [];
@@ -64,10 +70,15 @@ export class ScorerLeaderboardComponent implements OnInit {
   sortColumn: string = 'goals';
   sortDirection: 'desc' | 'asc' = 'desc';
 
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private route: ActivatedRoute, private router: Router) { }
 
   ngOnInit(): void {
+    this.tabSub = bindTabToUrl(this.route, SCORER_TABS, 'total', tab => this.activateTab(tab));
     this.fetchStats();
+  }
+
+  ngOnDestroy(): void {
+    this.tabSub?.unsubscribe();
   }
 
   fetchStats() {
@@ -88,6 +99,10 @@ export class ScorerLeaderboardComponent implements OnInit {
   }
 
   setTab(tab: TabType) {
+    void navigateToTab(this.router, this.route, SCORER_TABS, 'total', tab);
+  }
+
+  private activateTab(tab: TabType): void {
     this.activeTab = tab;
     this.sortColumn = 'goals'; 
     this.sortDirection = 'desc';

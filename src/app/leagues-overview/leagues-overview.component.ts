@@ -61,7 +61,14 @@ interface CompetitionCatalogItem {
   name: string;
   nationId: number;
   typeId: number;
-  tier: number;
+  tier?: number;
+  kind?: string;
+  categoryLabel?: string;
+  scopeLabel?: string;
+  formatLabel?: string;
+  tierLabel?: string | null;
+  shortCode?: string;
+  description?: string;
 }
 
 interface CompetitionCatalogResponse {
@@ -71,6 +78,13 @@ interface CompetitionCatalogResponse {
   nationId?: number;
   typeId: number;
   tier?: number;
+  kind?: string;
+  categoryLabel?: string;
+  scopeLabel?: string;
+  formatLabel?: string;
+  tierLabel?: string | null;
+  shortCode?: string;
+  description?: string;
 }
 
 interface StatisticLeader {
@@ -527,7 +541,7 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
   ratingHistoryCompetitionLink(row: RatingImpactHistoryRow): any[] {
     return row.competitionTypeId === 4 || row.competitionTypeId === 5
       ? ['/european-rounds', row.competitionId, row.seasonNumber]
-      : ['/comp', row.competitionId];
+      : ['/competition', row.competitionId];
   }
 
   setTeamValueSort(sort: TeamValueSort): void {
@@ -579,10 +593,10 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
   loadCompetitionCatalog(): void {
     this.catalogLoading = true;
     this.catalogError = '';
-    this.http.get<CompetitionCatalogResponse[]>(`${urlApp}/competition/getAllCompetitions`).subscribe({
-      next: data => {
+    this.http.get<{ competitions: CompetitionCatalogResponse[] }>(`${urlApp}/competition/catalogOverview`).subscribe({
+      next: response => {
         const unique = new Map<number, CompetitionCatalogItem>();
-        for (const item of data || []) {
+        for (const item of response?.competitions || []) {
           const competitionId = item.competitionId ?? item.id;
           if (!competitionId || unique.has(competitionId)) continue;
           unique.set(competitionId, {
@@ -590,7 +604,14 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
             name: item.name,
             nationId: item.nationId ?? 0,
             typeId: item.typeId,
-            tier: item.tier ?? 1
+            tier: item.tier ?? 1,
+            kind: item.kind,
+            categoryLabel: item.categoryLabel,
+            scopeLabel: item.scopeLabel,
+            formatLabel: item.formatLabel,
+            tierLabel: item.tierLabel,
+            shortCode: item.shortCode,
+            description: item.description
           });
         }
         this.competitions = Array.from(unique.values())
@@ -613,7 +634,7 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
       ]);
       return;
     }
-    this.router.navigate(['/comp', competition.competitionId]);
+    this.router.navigate(['/competition', competition.competitionId]);
   }
 
   isEuropean(competition: CompetitionCatalogItem): boolean {
@@ -621,29 +642,16 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
   }
 
   competitionType(competition: CompetitionCatalogItem): string {
-    switch (competition.typeId) {
-      case 1: return 'First League';
-      case 2: return 'National Cup';
-      case 3: return 'Second League';
-      case 4: return 'Champions Competition';
-      case 5: return 'European Cup';
-      case 6: return 'Super Cup';
-      default: return 'Competition';
-    }
+    return competition.categoryLabel || competition.formatLabel || 'Competition';
   }
 
   competitionMark(competition: CompetitionCatalogItem): string {
-    if (competition.typeId === 4) return 'CL';
-    if (competition.typeId === 5) return 'SC';
-    if (competition.typeId === 2) return 'CUP';
-    if (competition.typeId === 6) return 'SUP';
-    // Level comes from tier now, so a third division reads L3 without a code change.
-    return 'L' + (competition.tier || 1);
+    return competition.shortCode || 'COMP';
   }
 
   competitionColor(competition: CompetitionCatalogItem): string {
     switch (competition.typeId) {
-      case 1: return competition.tier > 1 ? '#3ba4d8' : '#7c5cff';
+      case 1: return (competition.tier || 1) > 1 ? '#3ba4d8' : '#7c5cff';
       case 2: return '#ff5d5d';
       case 4: return '#2d6cdf';
       case 5: return '#14a37f';
@@ -653,18 +661,11 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
   }
 
   competitionDescription(competition: CompetitionCatalogItem): string {
-    if (competition.typeId === 1) {
-      return 'Standings, fixtures, results and season statistics.';
-    }
-    if (competition.typeId === 2) return 'Cup rounds, fixtures and results.';
-    if (competition.typeId === 6) return 'League champion versus cup winner.';
-    return 'Group stage and knockout rounds.';
+    return competition.description || 'Fixtures, results and season statistics.';
   }
 
   competitionScope(competition: CompetitionCatalogItem): string {
-    return this.isEuropean(competition) || competition.nationId === 0
-      ? 'International'
-      : 'Domestic';
+    return competition.scopeLabel || (competition.nationId === 0 ? 'Continental' : 'Domestic');
   }
 
   trackCompetition(_index: number, competition: CompetitionCatalogItem): number {

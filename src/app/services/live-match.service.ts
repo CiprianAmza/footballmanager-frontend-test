@@ -96,9 +96,9 @@ export class LiveMatchService {
 
   /** `POST /match/live/{key}/advance?untilMinute=N` — returns the full
    *  cumulative LiveMatchData each call. */
-  advance(untilMinute: number): Observable<LiveMatchData> {
+  advance(untilMinute: number, key: string | null = this.key): Observable<LiveMatchData> {
     return this.http
-      .post<LiveMatchData>(`${urlApp}/match/live/${this.key}/advance?untilMinute=${untilMinute}`, {})
+      .post<LiveMatchData>(`${urlApp}/match/live/${key}/advance?untilMinute=${untilMinute}`, {})
       .pipe(tap(data => { if (data) this.state$.next(data); }));
   }
 
@@ -110,7 +110,7 @@ export class LiveMatchService {
   }
 
   /** `POST /match/live/{key}/commit`. */
-  commit(): Observable<LiveMatchCommitResult> {
-    return this.http.post<LiveMatchCommitResult>(`${urlApp}/match/live/${this.key}/commit`, {});
+  commit(key: string | null = this.key): Observable<LiveMatchCommitResult> {
+    return this.http.post<LiveMatchCommitResult>(`${urlApp}/match/live/${key}/commit`, {});
   }
 }

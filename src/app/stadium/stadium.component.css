@@ -6,6 +6,10 @@
   font-family: 'Segoe UI', 'Roboto Condensed', sans-serif;
 }
 
+app-page-header { display: block; margin-bottom: 24px; }
+app-ui-state { display: block; margin: 28px 0; }
+.stat-icon,.section-icon,.facility-icon-box,.construction-icon,.completed-icon{display:flex;align-items:center;justify-content:center}
+
 /* HEADER */
 .page-header {
   background: rgba(0,0,0,0.4);

@@ -15,10 +15,15 @@
     display: flex;
     align-items: center;
     gap: 20px;
+    justify-content: space-between;
 }
 
 .page-header h1 { margin: 0; font-size: 1.5em; color: white; font-weight: 900; }
 .subtitle { color: #aaa; font-size: 0.9em; font-weight: bold; }
+.competition-view-nav { display: flex; gap: 4px; padding: 4px; border-radius: 7px; background: #191919; }
+.competition-view-nav a { padding: 7px 10px; border-radius: 5px; color: #929292; text-decoration: none; font-size: 11px; font-weight: 800; }
+.competition-view-nav a:hover, .competition-view-nav a.active { color: #fff; background: #3a3a3a; }
+@media (max-width: 760px) { .page-header { align-items: flex-start; flex-direction: column; }.competition-view-nav { max-width: 100%; overflow-x: auto; } }
 
 .club-context {
     align-items: center;

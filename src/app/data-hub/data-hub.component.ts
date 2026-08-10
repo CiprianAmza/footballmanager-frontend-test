@@ -1,8 +1,46 @@
-import { Component, OnInit } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { TeamService } from '../services/team.service';
 import { urlApp } from '../app.component';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, map, of, Subscription } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
+
+interface UnderlyingMatchPerformance {
+  matchId: number;
+  round: number;
+  home: boolean;
+  goals: number;
+  goalsConceded: number;
+  xg: number;
+  xga: number;
+  actualPoints: number;
+  expectedPoints: number;
+}
+
+interface UnderlyingPerformance {
+  teamId: number;
+  seasonNumber: number;
+  matches: number;
+  actualPoints: number;
+  expectedPoints: number;
+  pointsDelta: number;
+  goals: number;
+  xg: number;
+  finishingDelta: number;
+  goalsConceded: number;
+  xga: number;
+  goalsPrevented: number;
+  actualConversionPercentage: number;
+  expectedConversionPercentage: number;
+  conversionDeltaPercentagePoints: number;
+  xgPer90: number;
+  xgaPer90: number;
+  xgDifferencePer90: number;
+  confidence: string;
+  methodology: string;
+  recentMatches: UnderlyingMatchPerformance[];
+}
 
 interface RadarStat {
   label: string;
@@ -59,18 +97,58 @@ interface TeamDataHubStats {
   leagueAvgWinPct: number;
 }
 
+type PerfectRatingLevel = 'ALL' | 'CHAMPIONSHIP' | 'CUP';
+
+interface PerfectRatingCompetition {
+  competitionId: number;
+  competitionName: string;
+  level: Exclude<PerfectRatingLevel, 'ALL'>;
+  perfectRatings: number;
+  players: number;
+}
+
+interface PerfectRatingLeader {
+  rank: number;
+  playerId: number;
+  playerName: string;
+  teamId: number;
+  teamName: string;
+  perfectRatings: number;
+  championshipPerfectRatings: number;
+  cupPerfectRatings: number;
+  competitionCount: number;
+  firstSeason: number;
+  lastSeason: number;
+}
+
+interface PerfectRatingLeaderboard {
+  scope: string;
+  level: PerfectRatingLevel;
+  competitionId: number | null;
+  competitionName: string | null;
+  totalPerfectRatings: number;
+  totalPlayers: number;
+  leaders: PerfectRatingLeader[];
+  competitions: PerfectRatingCompetition[];
+  methodology: string;
+}
+
 @Component({
   selector: 'app-data-hub',
   templateUrl: './data-hub.component.html',
   styleUrls: ['./data-hub.component.css']
 })
-export class DataHubComponent implements OnInit {
+export class DataHubComponent implements OnInit, OnDestroy {
 
-  activeTab: string = 'Overview';
-  tabs: string[] = ['Overview', 'Match Stats', 'Team', 'Player', 'Matches', 'Next Opponent'];
+  activeTab: string = 'Underlying Performance';
+  tabs: string[] = ['Underlying Performance', 'Shot & Chance Creation', 'Possession & Progression', 'Pressing & Defence', 'Set Pieces Hub', 'Perfect 10s', 'Overview', 'Match Stats'];
+  private seasonSubscription?: Subscription;
+  private tabSubscription?: Subscription;
+  private perfectRatingSubscription?: Subscription;
 
   teamName: string = 'Team';
   loading: boolean = true;
+  errorMessage = '';
 
   // Radar data - will be populated from API
   generalStats: RadarStat[] = [];
@@ -95,31 +173,70 @@ export class DataHubComponent implements OnInit {
 
   // Raw stats for modal detail
   hubStats: TeamDataHubStats | null = null;
+  underlyingPerformance: UnderlyingPerformance | null = null;
+  shotCreation: any = null;
+  possessionProgression: any = null;
+  pressingDefence: any = null;
+  setPieces: any = null;
 
   // Season match stats (Opta-style)
   seasonStats: any = null;
   loadingSeasonStats: boolean = false;
 
-  constructor(private http: HttpClient, private teamService: TeamService) { }
+  perfectRatings: PerfectRatingLeaderboard | null = null;
+  perfectRatingsLoading = false;
+  perfectRatingsError = '';
+  perfectRatingLevel: PerfectRatingLevel = 'ALL';
+  perfectRatingCompetitionId: number | null = null;
+
+  constructor(private http: HttpClient, private teamService: TeamService,
+              private route: ActivatedRoute, private router: Router) { }
 
   ngOnInit(): void {
+    this.tabSubscription = bindTabToUrl(this.route, this.tabs, 'Underlying Performance', tab => {
+      this.activeTab = tab;
+      if (tab === 'Match Stats' && !this.seasonStats) this.loadSeasonStats();
+      if (tab === 'Perfect 10s' && !this.perfectRatings) this.loadPerfectRatings();
+    });
     this.loadData();
   }
 
+  ngOnDestroy(): void {
+    this.seasonSubscription?.unsubscribe();
+    this.tabSubscription?.unsubscribe();
+    this.perfectRatingSubscription?.unsubscribe();
+  }
+
   loadData(): void {
+    this.seasonSubscription?.unsubscribe();
     this.loading = true;
+    this.errorMessage = '';
     const teamId = this.teamService.teamId;
 
     // Wait for currentSeason to be loaded
-    this.teamService.currentSeason$.subscribe(season => {
+    this.seasonSubscription = this.teamService.currentSeason$.subscribe(season => {
       if (season < 1) return;
 
       forkJoin({
         hubStats: this.http.get<TeamDataHubStats>(`${urlApp}/stats/teamDataHub/${teamId}/${season}`),
-        inboxMessages: this.http.get<any[]>(`${urlApp}/inbox/messages/${teamId}/${season}`)
+        inboxMessages: this.http.get<any[]>(`${urlApp}/inbox/messages/${teamId}/${season}`),
+        underlyingPerformance: this.loadUnderlyingPerformance(teamId, season),
+        shotCreation: this.http.get<any>(`${urlApp}/stats/team/${teamId}/season/${season}/shot-creation`)
+          .pipe(catchError(() => of(null))),
+        possessionProgression: this.http.get<any>(`${urlApp}/stats/team/${teamId}/season/${season}/possession-progression`)
+          .pipe(catchError(() => of(null))),
+        pressingDefence: this.http.get<any>(`${urlApp}/stats/team/${teamId}/season/${season}/pressing-defence`)
+          .pipe(catchError(() => of(null))),
+        setPieces: this.http.get<any>(`${urlApp}/stats/team/${teamId}/season/${season}/set-pieces`)
+          .pipe(catchError(() => of(null)))
       }).subscribe({
         next: (data) => {
           this.hubStats = data.hubStats;
+          this.underlyingPerformance = data.underlyingPerformance;
+          this.shotCreation = data.shotCreation;
+          this.possessionProgression = data.possessionProgression;
+          this.pressingDefence = data.pressingDefence;
+          this.setPieces = data.setPieces;
           this.teamName = data.hubStats.teamName || 'Team';
           this.buildRadarStats(data.hubStats);
           this.buildKeyFindings(data.hubStats);
@@ -127,13 +244,148 @@ export class DataHubComponent implements OnInit {
           this.calculateRadarPaths();
           this.buildSummaries(data.hubStats);
           this.loading = false;
+          this.errorMessage = '';
         },
         error: (err) => {
           console.error('Error loading data hub stats:', err);
           this.loading = false;
+          this.errorMessage = 'Analytics could not be loaded for this season.';
         }
       });
     });
+  }
+
+  private loadUnderlyingPerformance(teamId: number, season: number) {
+    return this.http.get<UnderlyingPerformance>(
+      `${urlApp}/stats/team/${teamId}/season/${season}/underlying-performance`
+    ).pipe(
+      catchError(() => this.http.get<any>(
+        `${urlApp}/stats/team/${teamId}/season/${season}/intelligence`
+      ).pipe(
+        map(data => this.buildUnderlyingFallback(teamId, season, data?.matches || [])),
+        catchError(() => of(this.emptyUnderlyingPerformance(teamId, season)))
+      ))
+    );
+  }
+
+  private buildUnderlyingFallback(teamId: number, season: number, rows: any[]): UnderlyingPerformance {
+    const matches = [...rows].sort((a, b) => Number(a.matchId) - Number(b.matchId));
+    const goals = matches.reduce((total, row) => total + Number(row.goals || 0), 0);
+    const goalsConceded = matches.reduce((total, row) => total + Number(row.conceded || 0), 0);
+    const xg = matches.reduce((total, row) => total + Number(row.xg || 0), 0);
+    const xga = matches.reduce((total, row) => total + Number(row.xga || 0), 0);
+    const shots = matches.reduce((total, row) => total + Number(row.shots || 0), 0);
+    const actualPoints = matches.reduce((total, row) => {
+      const scored = Number(row.goals || 0);
+      const allowed = Number(row.conceded || 0);
+      return total + (scored > allowed ? 3 : scored === allowed ? 1 : 0);
+    }, 0);
+    const expectedPoints = matches.reduce(
+      (total, row) => total + this.calculateExpectedPoints(Number(row.xg || 0), Number(row.xga || 0)), 0);
+    const actualConversion = shots ? goals * 100 / shots : 0;
+    const expectedConversion = shots ? xg * 100 / shots : 0;
+    const count = matches.length;
+    const xgPer90 = count ? xg / count : 0;
+    const xgaPer90 = count ? xga / count : 0;
+
+    return {
+      teamId,
+      seasonNumber: season,
+      matches: count,
+      actualPoints,
+      expectedPoints: this.roundMetric(expectedPoints),
+      pointsDelta: this.roundMetric(actualPoints - expectedPoints),
+      goals,
+      xg: this.roundMetric(xg),
+      finishingDelta: this.roundMetric(goals - xg),
+      goalsConceded,
+      xga: this.roundMetric(xga),
+      goalsPrevented: this.roundMetric(xga - goalsConceded),
+      actualConversionPercentage: this.roundMetric(actualConversion),
+      expectedConversionPercentage: this.roundMetric(expectedConversion),
+      conversionDeltaPercentagePoints: this.roundMetric(actualConversion - expectedConversion),
+      xgPer90: this.roundMetric(xgPer90),
+      xgaPer90: this.roundMetric(xgaPer90),
+      xgDifferencePer90: this.roundMetric(xgPer90 - xgaPer90),
+      confidence: count >= 12 ? 'HIGH' : count >= 5 ? 'MEDIUM' : 'LOW',
+      methodology: 'Expected Points uses Poisson goal probabilities derived from each match\'s xG and xGA.',
+      recentMatches: matches.slice(-10).map(row => {
+        const scored = Number(row.goals || 0);
+        const allowed = Number(row.conceded || 0);
+        return {
+          matchId: Number(row.matchId),
+          round: Number(row.round),
+          home: Boolean(row.home),
+          goals: scored,
+          goalsConceded: allowed,
+          xg: this.roundMetric(Number(row.xg || 0)),
+          xga: this.roundMetric(Number(row.xga || 0)),
+          actualPoints: scored > allowed ? 3 : scored === allowed ? 1 : 0,
+          expectedPoints: this.roundMetric(this.calculateExpectedPoints(Number(row.xg || 0), Number(row.xga || 0)))
+        };
+      })
+    };
+  }
+
+  private emptyUnderlyingPerformance(teamId: number, season: number): UnderlyingPerformance {
+    return this.buildUnderlyingFallback(teamId, season, []);
+  }
+
+  private calculateExpectedPoints(xg: number, xga: number): number {
+    const scoring = this.poissonProbabilities(Math.max(0, xg));
+    const conceding = this.poissonProbabilities(Math.max(0, xga));
+    let winProbability = 0;
+    let drawProbability = 0;
+    for (let scored = 0; scored < scoring.length; scored++) {
+      for (let allowed = 0; allowed < conceding.length; allowed++) {
+        const probability = scoring[scored] * conceding[allowed];
+        if (scored > allowed) winProbability += probability;
+        if (scored === allowed) drawProbability += probability;
+      }
+    }
+    return 3 * winProbability + drawProbability;
+  }
+
+  private poissonProbabilities(expectedGoals: number): number[] {
+    const maxGoals = 10;
+    const probabilities = new Array(maxGoals + 1).fill(0);
+    probabilities[0] = Math.exp(-expectedGoals);
+    let accountedFor = probabilities[0];
+    for (let goals = 1; goals < maxGoals; goals++) {
+      probabilities[goals] = probabilities[goals - 1] * expectedGoals / goals;
+      accountedFor += probabilities[goals];
+    }
+    probabilities[maxGoals] = Math.max(0, 1 - accountedFor);
+    return probabilities;
+  }
+
+  private roundMetric(value: number): number {
+    if (Math.abs(value) < 0.005) return 0;
+    return Math.round(value * 100) / 100;
+  }
+
+  signed(value: number, digits: number = 2): string {
+    const normalized = Math.abs(value) < Math.pow(10, -digits) / 2 ? 0 : value;
+    return `${normalized > 0 ? '+' : ''}${normalized.toFixed(digits)}`;
+  }
+
+  deltaTone(value: number, positiveIsGood: boolean = true): string {
+    if (Math.abs(value) < 0.05) return 'neutral';
+    const positive = positiveIsGood ? value > 0 : value < 0;
+    return positive ? 'positive' : 'negative';
+  }
+
+  metricShare(value: number, total: number): number {
+    return total > 0 ? Math.max(0, Math.min(100, value * 100 / total)) : 0;
+  }
+
+  shotRadius(xg: number): number {
+    return Math.max(1.5, Math.min(6, 1.5 + xg * 7));
+  }
+
+  analyticsLabel(value: string): string {
+    if (!value) return 'Unknown';
+    return value.toLowerCase().split('_').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
   }
 
   private buildRadarStats(stats: TeamDataHubStats): void {
@@ -424,10 +676,61 @@ export class DataHubComponent implements OnInit {
   }
 
   setTab(tab: string) {
-    this.activeTab = tab;
-    if (tab === 'Match Stats' && !this.seasonStats) {
-      this.loadSeasonStats();
+    void navigateToTab(this.router, this.route, this.tabs, 'Underlying Performance', tab);
+  }
+
+  loadPerfectRatings(): void {
+    this.perfectRatingSubscription?.unsubscribe();
+    this.perfectRatingsLoading = true;
+    this.perfectRatingsError = '';
+    let params = new HttpParams()
+      .set('level', this.perfectRatingLevel)
+      .set('limit', '100');
+    if (this.perfectRatingCompetitionId !== null) {
+      params = params.set('competitionId', String(this.perfectRatingCompetitionId));
     }
+    this.perfectRatingSubscription = this.http.get<PerfectRatingLeaderboard>(
+      `${urlApp}/stats/perfect-ratings`, { params }
+    ).subscribe({
+      next: data => {
+        this.perfectRatings = data;
+        this.perfectRatingsLoading = false;
+      },
+      error: () => {
+        this.perfectRatingsLoading = false;
+        this.perfectRatingsError = 'The perfect-rating leaderboard could not be loaded.';
+      }
+    });
+  }
+
+  setPerfectRatingLevel(level: PerfectRatingLevel): void {
+    if (this.perfectRatingCompetitionId === null && this.perfectRatingLevel === level) return;
+    this.perfectRatingLevel = level;
+    this.perfectRatingCompetitionId = null;
+    this.loadPerfectRatings();
+  }
+
+  selectPerfectRatingCompetition(value: string): void {
+    const competitionId = Number(value);
+    this.perfectRatingCompetitionId = Number.isFinite(competitionId) && competitionId > 0
+      ? competitionId : null;
+    this.loadPerfectRatings();
+  }
+
+  perfectRatingScopeLabel(data: PerfectRatingLeaderboard): string {
+    if (data.competitionName) return data.competitionName;
+    if (data.level === 'CHAMPIONSHIP') return 'All championships';
+    if (data.level === 'CUP') return 'All cups';
+    return 'All competitions';
+  }
+
+  perfectRatingSeasonSpan(player: PerfectRatingLeader): string {
+    return player.firstSeason === player.lastSeason
+      ? `S${player.firstSeason}` : `S${player.firstSeason}–S${player.lastSeason}`;
+  }
+
+  get actingTeamId(): number {
+    return this.teamService.teamId;
   }
 
   loadSeasonStats(): void {

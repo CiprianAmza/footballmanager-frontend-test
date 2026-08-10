@@ -1,0 +1,56 @@
+<main class="settings-page">
+  <header class="settings-hero">
+    <div>
+      <span class="settings-eyebrow">PERSONALISATION</span>
+      <h1>Choose your football world</h1>
+      <p>The selected theme changes the complete game shell, navigation, typography, tables, cards and controls.</p>
+    </div>
+    <div class="current-theme-mark" aria-live="polite">
+      <small>Active theme</small>
+      <strong>{{ selectedThemeName }}</strong>
+    </div>
+  </header>
+
+  <section class="theme-grid" aria-label="Application themes">
+    <button *ngFor="let theme of themes; trackBy: trackTheme" type="button"
+            class="theme-card" [class.selected]="selectedTheme === theme.id"
+            [attr.data-preview-theme]="theme.id"
+            [attr.aria-pressed]="selectedTheme === theme.id"
+            (click)="chooseTheme(theme.id)">
+      <span class="theme-selected" *ngIf="selectedTheme === theme.id">Selected</span>
+      <span class="theme-glyph">{{ theme.glyph }}</span>
+      <span class="theme-copy">
+        <small>{{ theme.era }}</small>
+        <strong>{{ theme.name }}</strong>
+        <span>{{ theme.description }}</span>
+      </span>
+      <span class="theme-swatches" aria-hidden="true">
+        <i *ngFor="let color of theme.colors" [style.background]="color"></i>
+      </span>
+      <span class="theme-mini-ui" aria-hidden="true">
+        <i></i><b></b><em></em><span>6.9</span>
+      </span>
+    </button>
+  </section>
+
+  <section class="settings-preview" aria-label="Theme preview">
+    <div class="preview-heading">
+      <div><small>LIVE PREVIEW</small><h2>Matchday workspace</h2></div>
+      <button type="button" class="reset-theme" (click)="resetTheme()" [disabled]="selectedTheme === 'classic'">
+        Restore Classic
+      </button>
+    </div>
+    <div class="preview-dashboard">
+      <article><small>Next match</small><strong>Northbridge FC</strong><span>Saturday · Home</span></article>
+      <article><small>Squad condition</small><strong>91%</strong><span class="positive">Ready</span></article>
+      <article><small>Board confidence</small><strong>Very good</strong><span>Season objective on track</span></article>
+      <div class="preview-table">
+        <span class="preview-row header"><b>Player</b><b>Pos</b><b>Form</b></span>
+        <span class="preview-row"><b>A. Romano</b><i>MC</i><em>7.42</em></span>
+        <span class="preview-row"><b>D. Ionescu</b><i>ST</i><em>7.18</em></span>
+      </div>
+    </div>
+  </section>
+
+  <p class="settings-saved" *ngIf="savedMessage" role="status">{{ savedMessage }}</p>
+</main>

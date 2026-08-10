@@ -6,6 +6,7 @@ import { urlApp } from '../app.component';
 import { forkJoin } from 'rxjs';
 import { TeamService } from '../services/team.service';
 import { RatingTierService } from '../services/rating-tier.service';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
 
 // ... (Interfețele Player, PositionedPlayer, SavedTactic rămân la fel) ...
 interface Player {
@@ -90,7 +91,8 @@ export class TacticsComponent implements OnInit, OnChanges {
   };
 
   constructor(private route: ActivatedRoute, private http: HttpClient,
-              private teamService: TeamService, public ratingTiers: RatingTierService) {}
+              private teamService: TeamService, public ratingTiers: RatingTierService,
+              private feedback: UiFeedbackService = new UiFeedbackService()) {}
 
   ngOnInit(): void {
     if (this.teamId) {
@@ -341,7 +343,7 @@ export class TacticsComponent implements OnInit, OnChanges {
           width: this.selectedOptions.width
       };
       this.http.post(urlApp + '/tactic/saveFormation', payload).subscribe(
-          () => alert('Tactics saved successfully!'),
+          () => this.feedback.success('Tactics saved successfully.'),
           (error) => console.error('Error saving tactics:', error)
       );
   }

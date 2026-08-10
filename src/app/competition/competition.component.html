@@ -15,7 +15,7 @@
     <div class="header-right">
       <a class="fm-action-link"
          *ngIf="competitionType === 'League'"
-         [routerLink]="['/mediaPrediction', parameterCompetitionId]"
+         [routerLink]="['/media-prediction', parameterCompetitionId]"
          title="See the media's pre-season predicted finishing order">
         📊 Media Prediction
       </a>
@@ -41,6 +41,123 @@
       [competitionId]="parameterCompetitionId"
       [season]="selectedSeason">
   </app-competition-insights>
+
+  <section class="competition-underlying">
+    <div class="cu-header">
+      <div>
+        <span class="cu-eyebrow">PROCESS & RESULTS</span>
+        <h2>Underlying performance</h2>
+        <p>xG control, rolling form, opponent strength and the gap between points and xPts.</p>
+      </div>
+      <div class="cu-meta" *ngIf="underlyingStats">
+        <strong>{{ underlyingStats.matches }}</strong>
+        <span>matches analysed</span>
+      </div>
+    </div>
+
+    <app-ui-state *ngIf="underlyingStatsLoading" kind="loading" title="Loading underlying performance"></app-ui-state>
+    <app-ui-state *ngIf="!underlyingStatsLoading && underlyingStatsError" kind="error"
+      title="Underlying analytics unavailable" [message]="underlyingStatsError"
+      (retry)="loadUnderlyingStats()"></app-ui-state>
+
+    <div class="cu-table-wrap" *ngIf="!underlyingStatsLoading && underlyingStats as underlying">
+      <table class="cu-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th class="cu-team-head">Team</th>
+            <th>MP</th>
+            <th>xGD / 90</th>
+            <th>xG won</th>
+            <th>Last 5</th>
+            <th>Last 10</th>
+            <th>Last 20</th>
+            <th>Luck index</th>
+            <th aria-label="Details"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let team of underlying.teamPerformance">
+            <tr class="cu-team-row" [class.expanded]="expandedUnderlyingTeamId === team.teamId">
+              <td class="cu-rank">{{ team.rank }}</td>
+              <td class="cu-team-name">
+                <app-team-crest [teamId]="team.teamId" [teamName]="team.teamName" [size]="23"></app-team-crest>
+                <a [routerLink]="['/team', team.teamId]">{{ team.teamName }}</a>
+              </td>
+              <td>{{ team.matches }}</td>
+              <td class="cu-metric" [ngClass]="underlyingTone(team.xgDifferencePer90)">
+                {{ signedMetric(team.xgDifferencePer90) }}
+              </td>
+              <td>{{ team.higherXgMatchPercentage | number:'1.0-1' }}%</td>
+              <td class="cu-metric" [ngClass]="underlyingTone(team.rolling5.xgDifferencePer90)">
+                {{ signedMetric(team.rolling5.xgDifferencePer90) }}
+                <small>n={{ team.rolling5.sampleMatches }}</small>
+              </td>
+              <td class="cu-metric" [ngClass]="underlyingTone(team.rolling10.xgDifferencePer90)">
+                {{ signedMetric(team.rolling10.xgDifferencePer90) }}
+                <small>n={{ team.rolling10.sampleMatches }}</small>
+              </td>
+              <td class="cu-metric" [ngClass]="underlyingTone(team.rolling20.xgDifferencePer90)">
+                {{ signedMetric(team.rolling20.xgDifferencePer90) }}
+                <small>n={{ team.rolling20.sampleMatches }}</small>
+              </td>
+              <td class="cu-luck" [ngClass]="underlyingTone(team.luckIndex)">
+                {{ signedMetric(team.luckIndex) }} <small>pts/m</small>
+              </td>
+              <td>
+                <button class="cu-expand" type="button" (click)="toggleUnderlyingTeam(team.teamId)"
+                  [attr.aria-expanded]="expandedUnderlyingTeamId === team.teamId"
+                  [attr.aria-label]="'Underlying details for ' + team.teamName">
+                  {{ expandedUnderlyingTeamId === team.teamId ? '−' : '+' }}
+                </button>
+              </td>
+            </tr>
+            <tr class="cu-detail-row" *ngIf="expandedUnderlyingTeamId === team.teamId">
+              <td colspan="10">
+                <div class="cu-detail-grid">
+                  <article class="cu-result-card balanced">
+                    <span>BALANCED MATCHES</span>
+                    <strong>{{ segmentRecord(team.balancedMatches) }}</strong>
+                    <p>{{ team.balancedMatches.points }} pts vs {{ team.balancedMatches.expectedPoints | number:'1.2-2' }} xPts</p>
+                    <small>|xG − xGA| ≤ {{ underlying.balancedXgThreshold }}</small>
+                  </article>
+                  <article class="cu-result-card">
+                    <span>vs TOP 4</span>
+                    <strong>{{ segmentRecord(team.versusTop4) }}</strong>
+                    <p>{{ team.versusTop4.points }} pts vs {{ team.versusTop4.expectedPoints | number:'1.2-2' }} xPts</p>
+                    <small>{{ signedMetric(team.versusTop4.xgDifferencePer90) }} xGD / 90</small>
+                  </article>
+                  <article class="cu-result-card">
+                    <span>vs TOP HALF</span>
+                    <strong>{{ segmentRecord(team.versusUpperHalf) }}</strong>
+                    <p>{{ team.versusUpperHalf.points }} pts vs {{ team.versusUpperHalf.expectedPoints | number:'1.2-2' }} xPts</p>
+                    <small>{{ signedMetric(team.versusUpperHalf.xgDifferencePer90) }} xGD / 90 · includes Top 4</small>
+                  </article>
+                  <article class="cu-result-card">
+                    <span>vs LOWER HALF</span>
+                    <strong>{{ segmentRecord(team.versusLowerHalf) }}</strong>
+                    <p>{{ team.versusLowerHalf.points }} pts vs {{ team.versusLowerHalf.expectedPoints | number:'1.2-2' }} xPts</p>
+                    <small>{{ signedMetric(team.versusLowerHalf.xgDifferencePer90) }} xGD / 90</small>
+                  </article>
+                  <article class="cu-result-card luck-card">
+                    <span>LUCK INDEX</span>
+                    <strong [ngClass]="underlyingTone(team.luckIndex)">{{ signedMetric(team.luckIndex) }}</strong>
+                    <p>{{ team.actualPoints }} points vs {{ team.expectedPoints | number:'1.2-2' }} xPts</p>
+                    <small>{{ signedMetric(team.luckPoints) }} total points above/below expectation</small>
+                  </article>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+
+      <div class="cu-empty" *ngIf="!underlying.teamPerformance.length">
+        Underlying metrics will appear after teams and match data are registered for this season.
+      </div>
+      <div class="cu-methodology">{{ underlying.methodology }}</div>
+    </div>
+  </section>
 
   <!-- 2. CONTENT SWITCHER -->
 
@@ -83,20 +200,27 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let team of _teams; let i = index" [class.my-team]="team.name === currentTeam">
+                    <tr *ngFor="let team of _teams" [class.my-team]="team.name === currentTeam">
                         <td class="pos-col">
                             <div class="pos-wrapper">
                                 <span class="pos-bar"
-                                      [class.ucl]="team.position <= locSpots"
-                                      [class.uel]="team.position > locSpots && team.position <= locSpots + starsCupSpots"
-                                      [class.rel]="team.position >= relegationFrom">
+                                      [class.ucl]="qualificationFor(team) === 'LOC'"
+                                      [class.uel]="qualificationFor(team) === 'STARS_CUP'"
+                                      [class.rel]="isRelegatedPosition(team.position)">
                                 </span>
                                 <span class="pos-num">{{ team.position }}</span>
                             </div>
                         </td>
                         <td class="inf-col">
-                            <span class="status-dot" *ngIf="i === 0">C</span>
-                            <span class="status-dot rel" *ngIf="team.position >= relegationFrom">R</span>
+                            <div class="status-stack">
+                              <span class="status-dot champion" *ngIf="team.position === 1" title="League leader / champion">C</span>
+                              <span class="status-dot cup-winner" *ngIf="isCupWinner(team)" title="Domestic cup winner">CW</span>
+                              <span class="status-dot loc" *ngIf="qualificationFor(team) === 'LOC'"
+                                    [title]="qualificationTitle(team)">LoC</span>
+                              <span class="status-dot stars" *ngIf="qualificationFor(team) === 'STARS_CUP'"
+                                    [title]="qualificationTitle(team)">SC</span>
+                              <span class="status-dot rel" *ngIf="isRelegatedPosition(team.position)" title="Relegation">R</span>
+                            </div>
                         </td>
                         <td class="team-col">
                             <div class="team-flex">
@@ -129,16 +253,24 @@
         </div>
 
         <!-- Qualification Zone Legend -->
-        <div class="zone-legend" *ngIf="locSpots > 0 || starsCupSpots > 0">
+        <div class="zone-legend"
+             *ngIf="locSpots > 0 || starsCupSpots > 0 || hasLowerTier || cupWinnerTeamId">
           <div class="legend-item" *ngIf="locSpots > 0">
             <span class="legend-bar ucl"></span>
             <span class="legend-text">League of Champions (1-{{ locSpots }})</span>
           </div>
           <div class="legend-item" *ngIf="starsCupSpots > 0">
             <span class="legend-bar uel"></span>
-            <span class="legend-text">Stars Cup ({{ locSpots + 1 }}-{{ locSpots + starsCupSpots }})</span>
+            <span class="legend-text">Stars Cup qualification (league and cup routes)</span>
           </div>
-          <div class="legend-item">
+          <div class="legend-item cup-winner-legend" *ngIf="cupWinnerTeamId">
+            <span class="legend-cup">🏆</span>
+            <span class="legend-text">
+              {{ cupWinnerTeamName }} — Cup winner ·
+              {{ cupWinnerRoute === 'LOC' ? 'League of Champions' : 'Stars Cup' }}
+            </span>
+          </div>
+          <div class="legend-item" *ngIf="hasLowerTier && relegationFrom !== null">
             <span class="legend-bar rel"></span>
             <span class="legend-text">Relegation ({{ relegationFrom }}+)</span>
           </div>

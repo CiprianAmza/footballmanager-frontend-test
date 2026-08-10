@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, OnInit, OnDestroy, Input, OnChanges, SimpleChanges, HostListener } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -6,12 +6,54 @@ import { urlApp } from '../app.component';
 import { TransferService, TransferOffer, AvailablePlayer, ScoutReport, Loan, FreeAgent, PreContractPlayer } from '../services/transfer.service';
 import { TeamService } from '../services/team.service';
 import { GameEventsService } from '../services/game-events.service';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
+import { UiFormatService } from '../shared/ui-formatters';
+import { UiTabItem } from '../shared/tabs.component';
+import { TablePreferencesService } from '../shared/table-preferences.service';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
+
+const TRANSFER_TABS = ['market', 'incoming', 'outgoing', 'history', 'loans', 'loanHistory', 'freeAgents', 'preContract'] as const;
+type TransferTab = typeof TRANSFER_TABS[number];
 
 interface IncomingOfferGroup {
   playerId: number;
   player: TransferOffer;
   offers: TransferOffer[];
 }
+
+type MarketColumnKey = 'name' | 'position' | 'age' | 'estimatedRating' | 'club' | 'transferValue' | 'action';
+
+interface MarketTablePreferences {
+  positionFilter: string;
+  minValue: number;
+  maxValue: number;
+  maxRating: number;
+  sortField: string;
+  sortDirection: 'asc' | 'desc';
+  columns: MarketColumnKey[];
+  marketStatusFilter: 'ALL' | 'AVAILABLE' | 'TRANSFERRED' | 'LOANED';
+}
+
+interface MarketColumnDefinition {
+  key: MarketColumnKey;
+  label: string;
+  required?: boolean;
+}
+
+const MARKET_PREFERENCE_KEY = 'transfers.market';
+const DEFAULT_MARKET_COLUMNS: MarketColumnKey[] = [
+  'name', 'position', 'age', 'estimatedRating', 'club', 'transferValue', 'action'
+];
+const DEFAULT_MARKET_PREFERENCES: MarketTablePreferences = {
+  positionFilter: 'ALL',
+  minValue: 0,
+  maxValue: 1_000_000_000,
+  maxRating: 300,
+  sortField: 'estimatedRating',
+  sortDirection: 'desc',
+  columns: DEFAULT_MARKET_COLUMNS,
+  marketStatusFilter: 'AVAILABLE'
+};
 
 @Component({
   selector: 'app-transfer-page',
@@ -26,7 +68,21 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
   teamName: string = '';
 
   // Tab control
-  activeTab: string = 'market';
+  activeTab: TransferTab = 'market';
+  openActionMenu: string | null = null;
+
+  get transferTabs(): UiTabItem[] {
+    return [
+      { id: 'market', label: 'Transfer Market' },
+      { id: 'incoming', label: 'Incoming Offers', badge: this.incomingOfferGroups.length || undefined },
+      { id: 'outgoing', label: 'Outgoing Offers' },
+      { id: 'history', label: 'Transfer History' },
+      { id: 'loans', label: 'Loans', badge: this.loansIn.length + this.loansOut.length || undefined, tone: 'neutral' },
+      { id: 'loanHistory', label: 'Loan History' },
+      { id: 'freeAgents', label: 'Free Agents' },
+      { id: 'preContract', label: 'Pre-Contract' }
+    ];
+  }
 
   // Transfer Market
   availablePlayers: AvailablePlayer[] = [];
@@ -34,13 +90,27 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
   positionFilter: string = 'ALL';
   sortField: string = 'estimatedRating';
   sortDirection: 'asc' | 'desc' = 'desc';
-  positions: string[] = ['ALL', 'GK', 'DC', 'DL', 'DR', 'MC', 'ML', 'MR', 'ST'];
+  positions: string[] = ['ALL'];
+  minValue: number = 0;
+  maxValue: number = 1_000_000_000;
   maxRating: number = 300;
+  marketStatusFilter: 'ALL' | 'AVAILABLE' | 'TRANSFERRED' | 'LOANED' = 'AVAILABLE';
   marketPage: number = 0;
   marketPageSize: number = 50;
   marketTotalPages: number = 0;
   marketTotalElements: number = 0;
   marketLoading: boolean = false;
+  showMarketColumns = false;
+  readonly marketColumns: MarketColumnDefinition[] = [
+    { key: 'name', label: 'Name', required: true },
+    { key: 'position', label: 'Position' },
+    { key: 'age', label: 'Age' },
+    { key: 'estimatedRating', label: 'Estimated rating' },
+    { key: 'club', label: 'Club' },
+    { key: 'transferValue', label: 'Asking price' },
+    { key: 'action', label: 'Action' }
+  ];
+  visibleMarketColumns: MarketColumnKey[] = [...DEFAULT_MARKET_COLUMNS];
 
   // Scout Report
   scoutReport: ScoutReport | null = null;
@@ -136,27 +206,42 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
     private router: Router,
     private transferService: TransferService,
     private teamService: TeamService,
-    private gameEvents: GameEventsService
+    private gameEvents: GameEventsService,
+    private tablePreferences: TablePreferencesService,
+    private feedback: UiFeedbackService = new UiFeedbackService(),
+    private uiFormat: UiFormatService = new UiFormatService()
   ) {}
 
   ngOnInit(): void {
+    this.sub.add(bindTabToUrl(this.route, TRANSFER_TABS, 'market', tab => {
+      this.activeTab = tab;
+      if (this.teamId) this.loadTabData();
+    }));
+    this.sub.add(this.tablePreferences.load(MARKET_PREFERENCE_KEY, DEFAULT_MARKET_PREFERENCES)
+      .subscribe(preferences => {
+        this.applyMarketPreferences(preferences);
+        this.initializeTransferPage();
+      }));
+  }
+
+  private initializeTransferPage(): void {
     if (this.teamId) {
       this.fetchData();
     } else {
-      this.route.params.subscribe(params => {
+      this.sub.add(this.route.params.subscribe(params => {
         this.teamId = params['teamId'] || this.teamService.teamId;
         this.currentSeason = params['season'] || this.teamService.currentSeason;
         this.fetchData();
-      });
+      }));
     }
 
     // Refresh transfer window status after each game advance
-    this.teamService.refresh$.subscribe(() => {
+    this.sub.add(this.teamService.refresh$.subscribe(() => {
       this.http.get<boolean>(urlApp + `/competition/isTransferWindowOpen`)
         .subscribe((open) => {
           this.transferWindowOpen = open;
         });
-    });
+    }));
 
     // Live-reload the active tab when transfers or the squad change.
     this.sub.add(this.gameEvents.on('transfers').subscribe(() => this.loadTabData()));
@@ -187,6 +272,18 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
       .subscribe((open) => {
         this.transferWindowOpen = open;
       });
+
+    this.transferService.getPlayerPositions().subscribe({
+      next: positions => {
+        this.positions = ['ALL', ...(positions || []).filter(Boolean)];
+        if (!this.positions.includes(this.positionFilter)) {
+          this.positionFilter = 'ALL';
+          this.saveMarketPreferences();
+          this.loadMarket(0);
+        }
+      },
+      error: () => this.positions = ['ALL']
+    });
 
     this.loadTabData();
   }
@@ -221,8 +318,34 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   switchTab(tab: string): void {
-    this.activeTab = tab;
-    this.loadTabData();
+    if (!TRANSFER_TABS.includes(tab as TransferTab)) return;
+    this.openActionMenu = null;
+    void navigateToTab(this.router, this.route, TRANSFER_TABS, 'market', tab as TransferTab);
+  }
+
+  toggleActionMenu(key: string, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openActionMenu = this.openActionMenu === key ? null : key;
+  }
+
+  isActionMenuOpen(key: string): boolean {
+    return this.openActionMenu === key;
+  }
+
+  closeActionMenu(): void {
+    this.openActionMenu = null;
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    this.closeActionMenu();
+    this.showMarketColumns = false;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeActionMenu();
+    this.showMarketColumns = false;
   }
 
   // --- Transfer Market ---
@@ -237,7 +360,10 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
       this.positionFilter,
       backendSort,
       this.sortDirection,
-      this.maxRating
+      this.minValue,
+      this.maxValue,
+      this.maxRating,
+      this.marketStatusFilter
     ).subscribe({
       next: (result) => {
         this.availablePlayers = result.content;
@@ -261,8 +387,23 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   onFilterChange(): void {
+    this.normalizeMarketFilters();
     this.marketPage = 0;
+    this.saveMarketPreferences();
     this.loadMarket(0);
+  }
+
+  private normalizeMarketFilters(): void {
+    const parsedMin = Number(this.minValue);
+    const parsedMax = Number(this.maxValue);
+    this.minValue = Number.isFinite(parsedMin) ? Math.max(0, parsedMin) : 0;
+    this.maxValue = Number.isFinite(parsedMax)
+      ? Math.max(this.minValue, parsedMax)
+      : 1_000_000_000;
+    const parsedMaxRating = Number(this.maxRating);
+    this.maxRating = Number.isFinite(parsedMaxRating)
+      ? Math.max(0, Math.min(300, parsedMaxRating))
+      : 300;
   }
 
   toggleSort(field: string): void {
@@ -270,10 +411,88 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
       this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
     } else {
       this.sortField = field;
-      this.sortDirection = field === 'name' ? 'asc' : 'desc';
+      this.sortDirection = ['name', 'position', 'club'].includes(field) ? 'asc' : 'desc';
     }
     this.marketPage = 0;
+    this.saveMarketPreferences();
     this.loadMarket(0);
+  }
+
+  isMarketColumnVisible(column: MarketColumnKey): boolean {
+    return this.visibleMarketColumns.includes(column);
+  }
+
+  get visibleMarketColumnCount(): number {
+    return this.visibleMarketColumns.length;
+  }
+
+  toggleMarketColumns(event: MouseEvent): void {
+    event.stopPropagation();
+    this.showMarketColumns = !this.showMarketColumns;
+  }
+
+  toggleMarketColumn(column: MarketColumnDefinition): void {
+    if (column.required) return;
+    if (this.isMarketColumnVisible(column.key)) {
+      this.visibleMarketColumns = this.visibleMarketColumns.filter(key => key !== column.key);
+    } else {
+      this.visibleMarketColumns = DEFAULT_MARKET_COLUMNS.filter(key =>
+        key === column.key || this.visibleMarketColumns.includes(key));
+    }
+    this.saveMarketPreferences();
+  }
+
+  resetMarketView(): void {
+    this.tablePreferences.reset(MARKET_PREFERENCE_KEY);
+    this.applyMarketPreferences(DEFAULT_MARKET_PREFERENCES);
+    this.showMarketColumns = false;
+    this.marketPage = 0;
+    this.loadMarket(0);
+  }
+
+  private applyMarketPreferences(preferences: MarketTablePreferences): void {
+    const sortableFields = ['name', 'position', 'age', 'estimatedRating', 'club', 'transferValue'];
+    const storedColumns = Array.isArray(preferences.columns)
+      ? preferences.columns.filter(column => DEFAULT_MARKET_COLUMNS.includes(column)) : [];
+    this.positionFilter = typeof preferences.positionFilter === 'string' ? preferences.positionFilter : 'ALL';
+    this.minValue = Number.isFinite(Number(preferences.minValue)) ? Math.max(0, Number(preferences.minValue)) : 0;
+    this.maxValue = Number.isFinite(Number(preferences.maxValue))
+      ? Math.max(this.minValue, Number(preferences.maxValue)) : 1_000_000_000;
+    this.maxRating = Number.isFinite(Number(preferences.maxRating))
+      ? Math.max(0, Math.min(300, Number(preferences.maxRating))) : 300;
+    this.sortField = sortableFields.includes(preferences.sortField) ? preferences.sortField : 'estimatedRating';
+    this.sortDirection = preferences.sortDirection === 'asc' ? 'asc' : 'desc';
+    this.marketStatusFilter = ['ALL', 'AVAILABLE', 'TRANSFERRED', 'LOANED'].includes(preferences.marketStatusFilter)
+      ? preferences.marketStatusFilter : 'AVAILABLE';
+    this.visibleMarketColumns = ['name', ...storedColumns.filter(column => column !== 'name')]
+      .filter((column, index, columns) => columns.indexOf(column) === index) as MarketColumnKey[];
+  }
+
+  private saveMarketPreferences(): void {
+    this.tablePreferences.save<MarketTablePreferences>(MARKET_PREFERENCE_KEY, {
+      positionFilter: this.positionFilter,
+      minValue: this.minValue,
+      maxValue: this.maxValue,
+      maxRating: this.maxRating,
+      sortField: this.sortField,
+      sortDirection: this.sortDirection,
+      columns: this.visibleMarketColumns,
+      marketStatusFilter: this.marketStatusFilter
+    });
+  }
+
+  marketStatusLabel(player: AvailablePlayer): string {
+    if (player.loaned) return `On loan${player.parentTeamName ? ' from ' + player.parentTeamName : ''}`;
+    if (player.transferredThisSeason) return 'Transferred this season';
+    if (player.loanedThisSeason) return 'Loaned this season';
+    return 'Available';
+  }
+
+  isMarketActionAvailable(player: AvailablePlayer): boolean {
+    return (!player.marketStatus || player.marketStatus === 'AVAILABLE')
+      && player.transferredThisSeason !== true
+      && player.loanedThisSeason !== true
+      && player.loaned !== true;
   }
 
   changeMarketPage(delta: number): void {
@@ -283,8 +502,18 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   getSortIcon(field: string): string {
-    if (this.sortField !== field) return '';
+    if (this.sortField !== field) return ' ↕';
     return this.sortDirection === 'asc' ? ' ▲' : ' ▼';
+  }
+
+  getAriaSort(field: string): 'ascending' | 'descending' | 'none' {
+    if (this.sortField !== field) return 'none';
+    return this.sortDirection === 'asc' ? 'ascending' : 'descending';
+  }
+
+  marketContractSummary(player: AvailablePlayer): string {
+    return player.contractEndSeason > 0
+      ? `Through Season ${player.contractEndSeason}` : 'Not available';
   }
 
   openOfferModal(player: AvailablePlayer): void {
@@ -565,8 +794,11 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
-  recallLoan(loan: Loan): void {
-    if (!confirm(`Recall ${loan.playerName} from ${loan.loanTeamName}?`)) return;
+  async recallLoan(loan: Loan): Promise<void> {
+    const confirmed = await this.feedback.confirm(`Recall ${loan.playerName} from ${loan.loanTeamName}?`, {
+      title: 'Recall player', confirmLabel: 'Recall player'
+    });
+    if (!confirmed) return;
     this.recallLoading[loan.id] = true;
     this.transferService.recallLoan(loan.id).subscribe({
       next: (res) => {
@@ -586,8 +818,12 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
 
   // --- Exercise Buy Option ---
 
-  exerciseBuyOption(loan: Loan): void {
-    if (!confirm(`Exercise buy option for ${loan.playerName} at ${this.formatCurrency(loan.buyOptionFee)}?`)) return;
+  async exerciseBuyOption(loan: Loan): Promise<void> {
+    const confirmed = await this.feedback.confirm(
+      `Exercise the buy option for ${loan.playerName} at ${this.formatCurrency(loan.buyOptionFee)}?`,
+      { title: 'Exercise buy option', confirmLabel: 'Buy player' }
+    );
+    if (!confirmed) return;
     this.buyOptionLoading[loan.id] = true;
 
     this.transferService.exerciseBuyOption(loan.id, this.teamId).subscribe({
@@ -720,14 +956,7 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
   // --- Utility ---
 
   formatCurrency(amount: number): string {
-    if (amount == null) return '-';
-    if (amount >= 1_000_000) {
-      return '\u20AC' + (amount / 1_000_000).toFixed(1) + 'M';
-    }
-    if (amount >= 1_000) {
-      return '\u20AC' + (amount / 1_000).toFixed(0) + 'K';
-    }
-    return '\u20AC' + amount.toFixed(0);
+    return this.uiFormat.money(amount, true);
   }
 
   private mutationError(error: any, fallback: string): string {

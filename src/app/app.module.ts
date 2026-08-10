@@ -1,132 +1,76 @@
+import { HTTP_INTERCEPTORS, HttpClientModule } from '@angular/common/http';
 import { NgModule } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 
-import { AppRoutingModule } from './app-routing.module';
-import { AppComponent } from './app.component';
-import { CompetitionComponent } from './competition/competition.component';
-import { TacticDisplayComponent } from './tacticdisplay/tacticdisplay.component';
-import { FormsModule } from '@angular/forms';
-import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
-import { AuthInterceptor } from './services/auth.interceptor';
-import { DisplayComponent } from './display/display.component';
-import { CompetitionDisplayComponent } from './competitiondisplay/competitiondisplay.component';
-import { CompetitionOveriewComponent } from './competitionoveriew/competitionoveriew.component';
-import { SquadComponent } from './squad/squad.component';
-import { TransferPageComponent } from './transfer-page/transfer-page.component';
-import { Top3FinishersComponent } from './top3-finishers/top3-finishers.component';
-import { TacticPageComponent } from './tactic-page/tactic-page.component';
-import { PlayerComponent } from './player/player.component';
-import { TacticComponent } from './tactic/tactic.component';
-import { MediaPredictionComponent } from './media-prediction/media-prediction.component';
-import { PlayerCompetitionHistoryComponent } from './player-competition-history/player-competition-history.component';
-import { PlayerHistoryComponent } from './player-history/player-history.component';
-import { FixturesComponent } from './fixtures/fixtures.component';
-import { PlayerLeaderboardComponent } from './player-leaderboard/player-leaderboard.component';
-import { ScorerLeaderboardComponent } from './scorer-leaderboard/scorer-leaderboard.component';
-import { HomeComponent } from './home/home.component';
-import { AdminComponent } from './admin/admin.component';
-import { AdminScoresComponent } from './admin/admin-scores/admin-scores.component';
-import { AdminOffersComponent } from './admin/admin-offers/admin-offers.component';
-import { AdminPlayersComponent } from './admin/admin-players/admin-players.component';
 import { AdminAwardsComponent } from './admin/admin-awards/admin-awards.component';
 import { AdminDrawsComponent } from './admin/admin-draws/admin-draws.component';
+import { AdminOffersComponent } from './admin/admin-offers/admin-offers.component';
+import { AdminPlayersComponent } from './admin/admin-players/admin-players.component';
+import { AdminScoresComponent } from './admin/admin-scores/admin-scores.component';
 import { AdminTransfersComponent } from './admin/admin-transfers/admin-transfers.component';
-import { TacticsAdvisorComponent } from './tactics-advisor/tactics-advisor.component';
-import { SimulateComponent } from './simulate/simulate.component';
-import { InboxComponent } from './inbox/inbox.component';
-import { SocialFeedComponent } from './social-feed/social-feed.component';
-import { TacticsComponent } from './tactics/tactics.component';
-import { Tactics1Component } from './tactics1/tactics1.component';
-import { Tactics2Component } from './tactics2/tactics2.component';
-import { Tactics3Component } from './tactics3/tactics3.component';
-import { Tactics4Component } from './tactics4/tactics4.component';
-import { Tactics5Component } from './tactics5/tactics5.component';
-import { PlayerAnalyticsComponent } from './player-analytics/player-analytics.component';
-import { BoardroomHubComponent } from './boardroom/boardroom-hub.component';
-import { BoardroomWealthComponent } from './boardroom/boardroom-wealth.component';
+import { AdminComponent } from './admin/admin.component';
+import { AppRoutingModule } from './app-routing.module';
+import { AppComponent } from './app.component';
 import { BoardroomAssetsComponent } from './boardroom/boardroom-assets.component';
+import { BoardroomHubComponent } from './boardroom/boardroom-hub.component';
 import { BoardroomOwnershipComponent } from './boardroom/boardroom-ownership.component';
-import { ScoutingComponent } from './scouting/scouting.component';
-import { SquadPlannerComponent } from './squad-planner/squad-planner.component';
-import { CommonModule } from '@angular/common';
-import { CompetitionsListComponent } from './competition-list/competition-list.component';
-import { FinancesComponent } from './finances/finances.component';
-import { CupOverviewComponent } from './competition/cup-overview/cup-overview.component';
-import { ClubInfoComponent } from './club-info/club-info.component';
-import { TrainingComponent } from './training/training.component';
-import { Training1Component } from './training1/training1.component';
-import { Training2Component } from './training2/training2.component';
-import { Training3Component } from './training3/training3.component';
-import { Training4Component } from './training4/training4.component';
-import { MedicalCentreComponent } from './medical-centre/medical-centre.component';
-import { StaffComponent } from './staff/staff.component';
-import { DataHubComponent } from './data-hub/data-hub.component';
-import { StadiumComponent } from './stadium/stadium.component';
-import { TeamHistoryComponent } from './team-history/team-history.component';
-import { TeamSquadComponent } from './team-squad/team-squad.component';
-import { TeamTacticsComponent } from './team-tactics/team-tactics.component';
-import { TeamTransfersComponent } from './team-transfers/team-transfers.component';
-import { CoefficientsComponent } from './coefficients/coefficients.component';
-import { EuropeanRoundsComponent } from './european-rounds/european-rounds.component';
-import { ManagerLeaderboardComponent } from './manager-leaderboard/manager-leaderboard.component';
-import { ManagerProfileComponent } from './manager-profile/manager-profile.component';
-import { JobSearchComponent } from './job-search/job-search.component';
-import { YouthAcademyComponent } from './youth-academy/youth-academy.component';
-import { GameSetupComponent } from './game-setup/game-setup.component';
-import { SeasonSummaryComponent } from './season-summary/season-summary.component';
-import { ShortlistComponent } from './shortlist/shortlist.component';
-import { LoginComponent } from './login/login.component';
-import { CompareComponent } from './compare/compare.component';
-import { AllTimeChampionsComponent } from './all-time-champions/all-time-champions.component';
-import { AnimationPreviewComponent } from './animation-preview/animation-preview.component';
-import { AssistantManagerComponent } from './assistant-manager/assistant-manager.component';
-import { FriendlyComponent } from './friendly/friendly.component';
-import { LeaguesOverviewComponent } from './leagues-overview/leagues-overview.component';
-import { RatingColorPipe, RatingTierClassPipe, RatingTierNamePipe } from './services/rating-color.pipe';
-import { PlayerFaceComponent } from './player-face/player-face.component';
-import { PlayerCardComponent } from './player-card/player-card.component';
-import { MatchRatingsComponent } from './match-ratings/match-ratings.component';
+import { BoardroomWealthComponent } from './boardroom/boardroom-wealth.component';
 import { CoachControlComponent } from './boardroom/coach-control.component';
-import { PlayerGalleryComponent } from './player-gallery/player-gallery.component';
-import { TeamCrestComponent } from './team-crest/team-crest.component';
-import { AwardHistoryComponent } from './award-history/award-history.component';
-import { AwardCentreComponent } from './award-centre/award-centre.component';
-import { CompetitionInsightsComponent } from './competition-insights/competition-insights.component';
-import { CompetitionRatingImpactComponent } from './competition-rating-impact/competition-rating-impact.component';
-import { CompetitionRecordsComponent } from './competition-records/competition-records.component';
-import { EconomyDashboardComponent } from './economy/economy-dashboard.component';
-import { WealthRankingsComponent } from './economy/wealth-rankings.component';
-import { PublicEconomyProfileComponent } from './economy/public-economy-profile.component';
-import { MarketComponent } from './market/market.component';
-import { PortfolioComponent } from './market/portfolio.component';
-import { FeatureUnavailableComponent } from './feature-unavailable/feature-unavailable.component';
-import { NotFoundComponent } from './not-found/not-found.component';
 import { ChairmanClubComponent } from './chairman-club/chairman-club.component';
-import { MultiplayerRoomComponent } from './multiplayer/multiplayer-room.component';
-import { MultiplayerContinueComponent } from './multiplayer/multiplayer-continue.component';
-import { LiveMatchComponent } from './live-match/live-match.component';
-import { MatchPitchComponent } from './live-match/match-pitch.component';
+import { EconomyDashboardComponent } from './economy/economy-dashboard.component';
+import { PublicEconomyProfileComponent } from './economy/public-economy-profile.component';
+import { WealthRankingsComponent } from './economy/wealth-rankings.component';
 import { FaceGalleryComponent } from './face-lab/face-gallery.component';
 import { ParametricFaceComponent } from './face-lab/parametric-face.component';
+import { FeatureUnavailableComponent } from './feature-unavailable/feature-unavailable.component';
+import { GameSetupComponent } from './game-setup/game-setup.component';
+import { HomeComponent } from './home/home.component';
+import { Home2Component } from './home2/home2.component';
+import { Home3Component } from './home3/home3.component';
+import { InboxComponent } from './inbox/inbox.component';
+import { Inbox2Component } from './inbox2/inbox2.component';
+import { Inbox3Component } from './inbox3/inbox3.component';
+import { SocialFeedComponent } from './social-feed/social-feed.component';
+import { LiveMatchComponent } from './live-match/live-match.component';
+import { LoginComponent } from './login/login.component';
+import { MarketComponent } from './market/market.component';
+import { PortfolioComponent } from './market/portfolio.component';
+import { MultiplayerContinueComponent } from './multiplayer/multiplayer-continue.component';
+import { MultiplayerRoomComponent } from './multiplayer/multiplayer-room.component';
+import { NotFoundComponent } from './not-found/not-found.component';
+import { PhaseLabComponent } from './phase-lab/phase-lab.component';
+import { AuthInterceptor } from './services/auth.interceptor';
+import { SharedModule } from './shared/shared.module';
+import { SettingsComponent } from './settings/settings.component';
 
 @NgModule({
   declarations: [
     AppComponent,
+    LoginComponent,
+    GameSetupComponent,
     LiveMatchComponent,
-    MatchPitchComponent,
-    PlayerFaceComponent,
-    PlayerCardComponent,
-    MatchRatingsComponent,
+    MultiplayerRoomComponent,
+    MultiplayerContinueComponent,
+    HomeComponent,
+    Home2Component,
+    Home3Component,
+    InboxComponent,
+    Inbox2Component,
+    Inbox3Component,
+    SocialFeedComponent,
+    AdminComponent,
+    AdminScoresComponent,
+    AdminOffersComponent,
+    AdminPlayersComponent,
+    AdminAwardsComponent,
+    AdminDrawsComponent,
+    AdminTransfersComponent,
+    BoardroomHubComponent,
+    BoardroomWealthComponent,
+    BoardroomAssetsComponent,
+    BoardroomOwnershipComponent,
     CoachControlComponent,
-    PlayerGalleryComponent,
-    FaceGalleryComponent,
-    ParametricFaceComponent,
-    TeamCrestComponent,
-    AwardHistoryComponent,
-    AwardCentreComponent,
-    CompetitionInsightsComponent,
-    CompetitionRatingImpactComponent,
-    CompetitionRecordsComponent,
     EconomyDashboardComponent,
     WealthRankingsComponent,
     PublicEconomyProfileComponent,
@@ -135,98 +79,13 @@ import { ParametricFaceComponent } from './face-lab/parametric-face.component';
     FeatureUnavailableComponent,
     NotFoundComponent,
     ChairmanClubComponent,
-    MultiplayerRoomComponent,
-    MultiplayerContinueComponent,
-    CompetitionComponent,
-    TacticDisplayComponent,
-    CompetitionComponent,
-    DisplayComponent,
-    SquadComponent,
-    CompetitionDisplayComponent,
-    CompetitionOveriewComponent,
-    TransferPageComponent,
-    Top3FinishersComponent,
-    TacticPageComponent,
-    PlayerComponent,
-    TacticComponent,
-    MediaPredictionComponent,
-    PlayerCompetitionHistoryComponent,
-    PlayerHistoryComponent,
-    FixturesComponent,
-    PlayerLeaderboardComponent,
-    ScorerLeaderboardComponent,
-    HomeComponent,
-    AdminComponent,
-    AdminScoresComponent,
-    AdminOffersComponent,
-    AdminPlayersComponent,
-    AdminAwardsComponent,
-    AdminDrawsComponent,
-    AdminTransfersComponent,
-    TacticsAdvisorComponent,
-    SimulateComponent,
-    InboxComponent,
-    SocialFeedComponent,
-    TacticsComponent,
-    Tactics1Component,
-    Tactics2Component,
-    Tactics3Component,
-    Tactics4Component,
-    Tactics5Component,
-    PlayerAnalyticsComponent,
-    BoardroomHubComponent,
-    BoardroomWealthComponent,
-    BoardroomAssetsComponent,
-    BoardroomOwnershipComponent,
-    ScoutingComponent,
-    SquadPlannerComponent,
-    CompetitionsListComponent,
-    FinancesComponent,
-    CupOverviewComponent,
-    ClubInfoComponent,
-    TrainingComponent,
-    Training1Component,
-    Training2Component,
-    Training3Component,
-    Training4Component,
-    MedicalCentreComponent,
-    StaffComponent,
-    DataHubComponent,
-    StadiumComponent,
-    TeamHistoryComponent,
-    TeamSquadComponent,
-    TeamTacticsComponent,
-    TeamTransfersComponent,
-    CoefficientsComponent,
-    EuropeanRoundsComponent,
-    ManagerLeaderboardComponent,
-    ManagerProfileComponent,
-    JobSearchComponent,
-    YouthAcademyComponent,
-    GameSetupComponent,
-    SeasonSummaryComponent,
-    ShortlistComponent,
-    LoginComponent,
-    CompareComponent,
-    AllTimeChampionsComponent,
-    AnimationPreviewComponent,
-    AssistantManagerComponent,
-    FriendlyComponent,
-    LeaguesOverviewComponent,
-    RatingColorPipe,
-    RatingTierClassPipe,
-    RatingTierNamePipe
+    FaceGalleryComponent,
+    ParametricFaceComponent,
+    PhaseLabComponent,
+    SettingsComponent
   ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    FormsModule,
-    HttpClientModule,
-    CommonModule
-  ],
-  providers: [
-    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
-  ],
+  imports: [BrowserModule, FormsModule, HttpClientModule, SharedModule, AppRoutingModule],
+  providers: [{ provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }],
   bootstrap: [AppComponent]
 })
-export class AppModule { }
+export class AppModule {}

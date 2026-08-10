@@ -36,6 +36,29 @@ export interface AvailablePlayer {
   teamName: string;
   teamId: number;
   transferValue: number;
+  wage: number;
+  contractEndSeason: number;
+  fitness: number;
+  morale: number;
+  currentStatus?: string;
+  releaseClause: number;
+  seasonAppearances: number;
+  seasonGoals: number;
+  seasonAssists: number;
+  importantAttributes: PlayerPreviewAttribute[];
+  marketStatus: 'AVAILABLE' | 'TRANSFERRED_THIS_SEASON' | 'LOANED';
+  transferredThisSeason: boolean;
+  loanedThisSeason: boolean;
+  loaned: boolean;
+  parentTeamId?: number;
+  parentTeamName?: string;
+  loanTeamId?: number;
+  loanTeamName?: string;
+}
+
+export interface PlayerPreviewAttribute {
+  name: string;
+  value: number;
 }
 
 export interface AvailablePlayersPage {
@@ -131,6 +154,10 @@ export class TransferService {
     return this.http.get<AvailablePlayer[]>(urlApp + `/transferOffer/availablePlayers/${teamId}`);
   }
 
+  getPlayerPositions(): Observable<string[]> {
+    return this.http.get<string[]>(urlApp + '/humans/playerPositions');
+  }
+
   getAvailablePlayersPage(
     teamId: number,
     page: number,
@@ -138,16 +165,28 @@ export class TransferService {
     position: string,
     sort: string,
     direction: 'asc' | 'desc',
-    maxRating: number = 300
+    minValue: number = 0,
+    maxValue: number = Number.MAX_SAFE_INTEGER,
+    maxRating: number = 300,
+    marketStatus: 'ALL' | 'AVAILABLE' | 'TRANSFERRED' | 'LOANED' = 'AVAILABLE'
   ): Observable<AvailablePlayersPage> {
-    const safeMaxRating = Number.isFinite(maxRating) ? Math.max(0, Math.min(300, maxRating)) : 300;
+    const safeMinValue = Number.isFinite(minValue) ? Math.max(0, minValue) : 0;
+    const safeMaxValue = Number.isFinite(maxValue)
+      ? Math.max(safeMinValue, maxValue)
+      : Number.MAX_SAFE_INTEGER;
+    const safeMaxRating = Number.isFinite(maxRating)
+      ? Math.max(0, Math.min(300, maxRating))
+      : 300;
     const params = new URLSearchParams({
       page: String(page),
       size: String(size),
       position,
       sort,
       direction,
-      maxRating: String(safeMaxRating)
+      minValue: String(safeMinValue),
+      maxValue: String(safeMaxValue),
+      maxRating: String(safeMaxRating),
+      marketStatus
     });
     return this.http.get<AvailablePlayersPage>(
       `${urlApp}/transferOffer/availablePlayersPage/${teamId}?${params.toString()}`

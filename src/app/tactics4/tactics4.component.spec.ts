@@ -75,6 +75,20 @@ describe('Tactics4Component chairman mandate mode', () => {
     expect(built.component.isShadowActive(slot)).toBeTrue();
   });
 
+  it('includes the tactical SHADOW selection in the saved formation payload', () => {
+    const built = build(null, { isLoggedIn: true, careerRole: 'MANAGER', chairmanEnabled: false });
+    built.component.teamId = 10;
+    built.http.post.and.returnValue(of({}));
+    const slot = built.component.fieldPositions[7];
+    slot.player = { id: 1, name: 'Shadow', rating: 100, position: 'AMC' } as any;
+    slot.shadow = true;
+
+    built.component.saveData();
+
+    const payload = built.http.post.calls.mostRecent().args[1];
+    expect(payload.formationDataList[0].shadow).toBeTrue();
+  });
+
   it('enters Chairman mode only for the authenticated enabled Chairman', () => {
     const enabled = build('chairman-mandate');
     enabled.component.ngOnInit();

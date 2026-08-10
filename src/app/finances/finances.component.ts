@@ -4,6 +4,8 @@ import { Subscription } from 'rxjs';
 import { TeamService } from '../services/team.service';
 import { GameEventsService } from '../services/game-events.service';
 import { urlApp } from '../app.component';
+import { ActivatedRoute, Router } from '@angular/router';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
 
 @Component({
   selector: 'app-finances',
@@ -14,11 +16,14 @@ export class FinancesComponent implements OnInit, OnDestroy {
 
   private refreshInterval: any;
   private refreshSub?: Subscription;
+  private tabSub?: Subscription;
 
   activeTab: string = 'Overview';
   tabs: string[] = ['Overview', 'Transfers', 'Competition Stats', 'Sponsorships', 'Facilities'];
 
   teamName: string = '';
+  loading = true;
+  errorMessage = '';
 
   // Transfer data
   boughtPlayers: any[] = [];
@@ -75,9 +80,11 @@ export class FinancesComponent implements OnInit, OnDestroy {
   viewSeason: number = 1;
 
   constructor(private http: HttpClient, public teamService: TeamService,
-              private gameEvents: GameEventsService) {}
+              private gameEvents: GameEventsService, private route: ActivatedRoute,
+              private router: Router) {}
 
   ngOnInit(): void {
+    this.tabSub = bindTabToUrl(this.route, this.tabs, 'Overview', tab => this.activateTab(tab));
     this.viewSeason = this.teamService.currentSeason;
     this.reportSeason = this.teamService.currentSeason;
     this.loadTeamName();
@@ -115,6 +122,7 @@ export class FinancesComponent implements OnInit, OnDestroy {
       clearInterval(this.refreshInterval);
     }
     this.refreshSub?.unsubscribe();
+    this.tabSub?.unsubscribe();
   }
 
   loadTeamName(): void {
@@ -145,9 +153,25 @@ export class FinancesComponent implements OnInit, OnDestroy {
           this.boardConfidence = data.boardConfidence ?? 50;
           this.transferBudgetPercentage = data.transferBudgetPercentage ?? 50;
           this.stadiumCapacity = data.stadiumCapacity || 0;
+          this.loading = false;
+          this.errorMessage = '';
         },
-        error: (err) => console.error('Error loading finances:', err)
+        error: (err) => {
+          console.error('Error loading finances:', err);
+          this.loading = false;
+          this.errorMessage = 'Financial data could not be loaded.';
+        }
       });
+  }
+
+  retry(): void {
+    this.loading = true;
+    this.errorMessage = '';
+    this.loadFinances();
+    this.loadFinancialReport();
+    this.loadTransfers();
+    this.loadSponsors();
+    this.loadFacilities();
   }
 
   loadFinancialReport(): void {
@@ -283,6 +307,10 @@ export class FinancesComponent implements OnInit, OnDestroy {
   }
 
   setTab(tab: string): void {
+    void navigateToTab(this.router, this.route, this.tabs, 'Overview', tab);
+  }
+
+  private activateTab(tab: string): void {
     this.activeTab = tab;
     this.loadFinances();
     if (tab === 'Overview') {

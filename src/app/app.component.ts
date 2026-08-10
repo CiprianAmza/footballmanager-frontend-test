@@ -1,13 +1,15 @@
 import { Component, HostListener, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { HttpClient, HttpEventType, HttpRequest, HttpResponse } from '@angular/common/http';
-import { Router } from '@angular/router';
-import { forkJoin, of } from 'rxjs';
+import { NavigationEnd, Router } from '@angular/router';
+import { forkJoin, of, Subscription } from 'rxjs';
 import { FastForwardStatus, TeamService } from './services/team.service';
 import { AuthService } from './services/auth.service';
 import { CareerService, JobOffer } from './services/career.service';
 import { MultiplayerRoomService } from './services/multiplayer-room.service';
 import { LiveMatchService } from './services/live-match.service';
 import { LiveMatchClosed } from './models/live-match.model';
+import { UiFeedbackService } from './shared/ui-feedback.service';
+import { ThemeService } from './services/theme.service';
 
 export const urlApp: string = "http://localhost:8086";
 @Component({
@@ -51,6 +53,12 @@ export class AppComponent implements OnDestroy {
   tutorialStep = 0;
   private tutorialChecked = false;
   lastEvents: any[] = [];
+  compactNextMatch: any = null;
+  compactUnreadCount = 0;
+  compactPanel: 'calendar' | 'notifications' | null = null;
+  compactDataLoading = false;
+  mobileSidebarOpen = false;
+  private routerNavigationSubscription: Subscription;
 
   // Press conference modal state
   showPressConference = false;
@@ -99,8 +107,13 @@ export class AppComponent implements OnDestroy {
   constructor(public teamService: TeamService, public authService: AuthService,
               private http: HttpClient, public careerService: CareerService,
               private router: Router, private multiplayerRoomService: MultiplayerRoomService,
-              private liveMatchService: LiveMatchService) {
+              private liveMatchService: LiveMatchService, private feedback: UiFeedbackService,
+              public themeService: ThemeService) {
     this.teamService.lastEvents$.subscribe(events => this.lastEvents = events);
+    this.teamService.refresh$.subscribe(() => this.loadCompactCommandData());
+    this.teamService.teamId$.subscribe(teamId => {
+      if (teamId > 0) this.loadCompactCommandData();
+    });
     // Watch pending job offers — banner + modal auto-react
     this.careerService.pendingOffers$.subscribe(offers => {
       this.pendingOffers = offers;
@@ -110,6 +123,7 @@ export class AppComponent implements OnDestroy {
     if (this.authService.isLoggedIn) this.careerService.refresh();
 
     this.authService.sessionRestored$.subscribe(user => {
+      if (user) this.themeService.loadForCurrentUser();
       if (!this.authService.sessionChecked || !user) return;
       this.teamService.checkSetup();
       if (user.careerRole === 'MANAGER') this.careerService.refresh();
@@ -126,9 +140,13 @@ export class AppComponent implements OnDestroy {
     // (otherwise we'd race the login/setup screens).
     this.teamService.setupComplete$.subscribe(complete => {
       if (!complete) return;
+      this.loadCompactCommandData();
       this.maybeResumeLiveMatch();
       this.maybeStartTutorial();
       this.resumeFastForward();
+    });
+    this.routerNavigationSubscription = this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) this.closeMobileSidebar();
     });
   }
 
@@ -148,6 +166,88 @@ export class AppComponent implements OnDestroy {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+  }
+
+  get compactNotificationCount(): number {
+    return Math.max(0, Number(this.compactUnreadCount) || 0) + this.pendingOffers.length;
+  }
+
+  get compactNextMatchLabel(): string {
+    if (!this.compactNextMatch) return 'No match scheduled';
+    return this.compactNextMatch.opponentTeam
+      || this.compactNextMatch.opponentTeamName
+      || 'Next fixture';
+  }
+
+  loadCompactCommandData(): void {
+    if (!this.authService.isLoggedIn || !this.teamService.setupComplete) return;
+
+    this.http.get<number>(`${urlApp}/inbox/me/unreadCount`).subscribe({
+      next: count => this.compactUnreadCount = Math.max(0, Number(count) || 0),
+      error: () => this.compactUnreadCount = 0
+    });
+
+    const teamId = this.teamService.teamId;
+    if (!teamId) {
+      this.compactNextMatch = null;
+      return;
+    }
+
+    this.compactDataLoading = true;
+    this.http.get<any[]>(`${urlApp}/match/getScheduleForCurrentSeasonAndTeamId/${teamId}`).subscribe({
+      next: schedule => {
+        this.compactNextMatch = (schedule || []).find(match => {
+          const score = String(match?.score ?? '').trim();
+          return score === '' || score === '-';
+        });
+        this.compactDataLoading = false;
+      },
+      error: () => {
+        this.compactNextMatch = null;
+        this.compactDataLoading = false;
+      }
+    });
+  }
+
+  toggleCompactPanel(panel: 'calendar' | 'notifications', event: MouseEvent): void {
+    event.stopPropagation();
+    this.compactPanel = this.compactPanel === panel ? null : panel;
+  }
+
+  openCompactCalendar(): void {
+    this.compactPanel = null;
+    const teamId = this.teamService.teamId;
+    this.router.navigate(teamId ? ['/fixtures', teamId] : ['/overview']);
+  }
+
+  openCompactInbox(): void {
+    this.compactPanel = null;
+    this.router.navigate(['/inbox']);
+  }
+
+  toggleMobileSidebar(): void {
+    this.setMobileSidebarOpen(!this.mobileSidebarOpen);
+  }
+
+  closeMobileSidebar(): void {
+    this.setMobileSidebarOpen(false);
+  }
+
+  onSidebarInteraction(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('a, button')) this.closeMobileSidebar();
+  }
+
+  private setMobileSidebarOpen(open: boolean): void {
+    this.mobileSidebarOpen = open;
+    if (typeof document !== 'undefined') {
+      document.body.classList.toggle('mobile-drawer-open', open);
+    }
+  }
+
+  @HostListener('document:click')
+  closeCompactPanels(): void {
+    this.compactPanel = null;
   }
 
   openFastForward(): void {
@@ -674,10 +774,11 @@ export class AppComponent implements OnDestroy {
         a.click();
         window.URL.revokeObjectURL(url);
         this.saving = false;
+        this.feedback.success('Game saved successfully.');
       },
       error: (err) => {
         console.error('Error saving game:', err);
-        alert('Failed to save game.');
+        this.feedback.error('Failed to save game. Please try again.');
         this.saving = false;
       }
     });
@@ -713,9 +814,6 @@ export class AppComponent implements OnDestroy {
       try {
         const saveData = JSON.parse(reader.result as string);
         const currentUsername = this.authService.currentUsername;
-        const savedUsers = Array.isArray(saveData?.users) ? saveData.users : [];
-        const savedUser = savedUsers.find((user: any) =>
-          String(user?.username || '').toLowerCase() === String(currentUsername || '').toLowerCase());
 
         if (!Array.isArray(saveData?.rounds) || saveData.rounds.length === 0
             || !Array.isArray(saveData?.gameCalendars) || saveData.gameCalendars.length === 0
@@ -724,10 +822,15 @@ export class AppComponent implements OnDestroy {
           this.showLoadGameError('This file is incomplete and cannot restore a playable career.');
           return;
         }
-        if (!currentUsername || !savedUser) {
-          this.showLoadGameError(`This save does not contain the logged-in profile “${currentUsername || 'Unknown'}”.`);
+        if (!currentUsername) {
+          this.showLoadGameError('Your login session is no longer available. Sign in again before loading a game.');
           return;
         }
+
+        // Accounts and PersonProfile rows are installation state, not portable
+        // world state, so current saves intentionally contain no `users` section.
+        // The backend preflight safely checks that this installation's current
+        // team/manager references exist in the imported world before changing it.
 
         this.loadGameStage = 'uploading';
         this.loadGameProgress = 15;
@@ -754,7 +857,7 @@ export class AppComponent implements OnDestroy {
                 this.showLoadGameError(result.error || 'The backend could not restore this save.');
                 return;
               }
-              this.verifyLoadedGame(result, savedUser.username);
+              this.verifyLoadedGame(result, currentUsername);
             }
           },
           error: err => {
@@ -850,6 +953,11 @@ export class AppComponent implements OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
+    if (this.mobileSidebarOpen && event.key === 'Escape') {
+      event.preventDefault();
+      this.closeMobileSidebar();
+      return;
+    }
     if (this.showTutorial) {
       if (event.key === 'Escape') this.completeTutorial();
       if (event.key === 'ArrowRight' || event.key === 'Enter') this.nextTutorialStep();
@@ -882,7 +990,8 @@ export class AppComponent implements OnDestroy {
     if (this.showLiveMatch) return;
 
     // Space → CONTINUE (only when no modal is showing)
-    if (event.key === ' ' && !this.showPressConference && !this.showMatchResult) {
+    if (event.key === ' ' && !this.showPressConference && !this.showMatchResult
+        && !this.advancing && !this.fastForwardRunning && this.pendingOffers.length === 0) {
       event.preventDefault();
       this.advanceGame();
     }
@@ -1021,6 +1130,8 @@ export class AppComponent implements OnDestroy {
     this.clearAutoAdvanceTimer();
     this.clearFastForwardPoll();
     this.stopSimulationUx();
+    this.routerNavigationSubscription.unsubscribe();
+    this.closeMobileSidebar();
     if (this.loadGameRedirectTimer) clearTimeout(this.loadGameRedirectTimer);
   }
 }

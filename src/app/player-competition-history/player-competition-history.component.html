@@ -16,9 +16,6 @@
         <tr *ngFor="let row of byCompetition">
           <td class="comp-name">
             {{ row.competitionName }}
-            <small class="sub-count" *ngIf="competitionTypeLabel(row.competitionTypeId)">
-              ({{ competitionTypeLabel(row.competitionTypeId) }})
-            </small>
           </td>
           <td class="center stat-val">{{ row.appearances ?? 0 }}</td>
           <td class="center goal-val">{{ (row.goals ?? 0) > 0 ? row.goals : '-' }}</td>

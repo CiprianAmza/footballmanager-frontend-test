@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { UiFeedbackService } from '../../shared/ui-feedback.service';
 import {
   AdminMovementExecution,
   AdminMovementType,
@@ -39,7 +40,8 @@ export class AdminTransfersComponent implements OnInit {
   error = '';
   message = '';
 
-  constructor(public adminService: AdminService, private router: Router) {}
+  constructor(public adminService: AdminService, private router: Router,
+              private feedback: UiFeedbackService = new UiFeedbackService()) {}
 
   ngOnInit(): void {
     if (!this.adminService.isAuthenticated) {
@@ -120,7 +122,7 @@ export class AdminTransfersComponent implements OnInit {
     this.loanSeasons = Math.max(1, Math.min(this.loanSeasons, this.maxLoanSeasons));
   }
 
-  submit(): void {
+  async submit(): Promise<void> {
     const validation = this.validationMessage;
     if (validation) {
       this.error = validation;
@@ -131,7 +133,9 @@ export class AdminTransfersComponent implements OnInit {
     const timing = this.executionMode === 'NOW'
       ? 'immediately'
       : `at the start of Season ${this.executionSeason}`;
-    if (!window.confirm(`${this.typeLabel}: ${player.name} → ${destination?.name}, ${timing}?`)) return;
+    if (!await this.feedback.confirm(`${this.typeLabel}: ${player.name} → ${destination?.name}, ${timing}?`, {
+      title: 'Confirm player movement', confirmLabel: 'Continue'
+    })) return;
 
     this.saving = true;
     this.error = '';
@@ -163,8 +167,10 @@ export class AdminTransfersComponent implements OnInit {
     });
   }
 
-  cancel(movement: AdminPlayerMovement): void {
-    if (!window.confirm(`Cancel the scheduled movement for ${movement.playerName}?`)) return;
+  async cancel(movement: AdminPlayerMovement): Promise<void> {
+    if (!await this.feedback.confirm(`Cancel the scheduled movement for ${movement.playerName}?`, {
+      title: 'Cancel movement', confirmLabel: 'Cancel movement', tone: 'error'
+    })) return;
     this.adminService.cancelAdminTransfer(movement.id).subscribe({
       next: () => {
         this.message = `Scheduled movement for ${movement.playerName} cancelled.`;

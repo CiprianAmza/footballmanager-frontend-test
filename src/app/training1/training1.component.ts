@@ -1,10 +1,14 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { TrainingPlanService } from '../training-lab/training-plan.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
 import {
   DevelopmentArea, MAX_SESSIONS_PER_DAY, PlannedDay, PlannedSession,
   SessionCategory, SessionTemplate, SquadPlayer, TRAINING_ROLES, TRAINING_UNITS, TrainingUnit
 } from '../training-lab/training-plan.model';
+
+const TRAINING_LAB_TABS = ['week', 'individual', 'analysis'] as const;
 
 /**
  * Skin 1 — "COACH'S LAB". The tactics4 language applied to training: dark
@@ -37,9 +41,10 @@ export class Training1Component implements OnInit, OnDestroy {
   private sub = new Subscription();
   private pushedHistory = 0;
 
-  constructor(public plan: TrainingPlanService) {}
+  constructor(public plan: TrainingPlanService, private route: ActivatedRoute, private router: Router) {}
 
   ngOnInit(): void {
+    this.sub.add(bindTabToUrl(this.route, TRAINING_LAB_TABS, 'week', tab => this.activeTab = tab));
     this.plan.init();
     this.sub.add(this.plan.changes.subscribe(() => {
       if (this.selectedPlayerId === null && this.plan.players.length) {
@@ -50,6 +55,10 @@ export class Training1Component implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub.unsubscribe();
+  }
+
+  setTab(tab: 'week' | 'individual' | 'analysis'): void {
+    void navigateToTab(this.router, this.route, TRAINING_LAB_TABS, 'week', tab);
   }
 
   // ------------------------------------------------------------ week grid

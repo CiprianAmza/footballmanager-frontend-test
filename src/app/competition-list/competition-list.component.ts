@@ -11,6 +11,12 @@ interface CompetitionData {
   competitionId: number;
   name: string;
   typeId: number;
+  tier?: number;
+  kind?: string;
+  categoryLabel?: string;
+  scopeLabel?: string;
+  formatLabel?: string;
+  tierLabel?: string;
   games?: number;
   wins?: number;
   draws?: number;
@@ -72,6 +78,10 @@ export class CompetitionsListComponent implements OnInit {
   errorMessage = '';
   emptyMessage = '';
 
+  get viewTeamId(): number {
+    return this.selectedTeamId || this.teamService.teamId;
+  }
+
   constructor(private http: HttpClient,
               private teamService: TeamService,
               private router: Router,
@@ -80,17 +90,17 @@ export class CompetitionsListComponent implements OnInit {
               private chairmanClubService: ChairmanClubService) {}
 
   openCompetition(comp: CompetitionData): void {
-    if (comp.typeId === 4 || comp.typeId === 5) {
+    if (comp.kind === 'MULTI_STAGE' || comp.typeId === 4 || comp.typeId === 5) {
       this.router.navigate(['/european-rounds', comp.competitionId, this.teamService.currentSeason]);
     } else {
-      this.router.navigate(['/comp', comp.competitionId]);
+      this.router.navigate(['/competition', comp.competitionId]);
     }
   }
 
   competitionLink(comp: CompetitionData): any[] {
-    return comp.typeId === 4 || comp.typeId === 5
+    return comp.kind === 'MULTI_STAGE' || comp.typeId === 4 || comp.typeId === 5
       ? ['/european-rounds', comp.competitionId, this.teamService.currentSeason]
-      : ['/comp', comp.competitionId];
+      : ['/competition', comp.competitionId];
   }
 
   ngOnInit(): void {
@@ -202,15 +212,15 @@ export class CompetitionsListComponent implements OnInit {
   }
 
   isLeague(comp: CompetitionData): boolean {
-    return comp.typeId === 1;
+    return comp.kind === 'LEAGUE' || comp.typeId === 1 || comp.typeId === 3;
   }
 
   isCup(comp: CompetitionData): boolean {
-    return comp.typeId === 2 || comp.typeId === 6;
+    return comp.kind === 'KNOCKOUT' || comp.kind === 'SHOWCASE' || comp.typeId === 2 || comp.typeId === 6;
   }
 
   isEuropean(comp: CompetitionData): boolean {
-    return comp.typeId === 4 || comp.typeId === 5;
+    return comp.kind === 'MULTI_STAGE' || comp.typeId === 4 || comp.typeId === 5;
   }
 
   getFormArray(form: string | undefined): string[] {
@@ -227,18 +237,6 @@ export class CompetitionsListComponent implements OnInit {
       case 5: return '#009460'; // Stars Cup green
       case 6: return '#d5a500'; // Super Cup gold
       default: return '#95a5a6';
-    }
-  }
-
-  getTypeLabel(comp: CompetitionData): string {
-    switch (comp.typeId) {
-      case 1: return 'First League';
-      case 2: return 'Cup';
-      case 3: return 'Second League';
-      case 4: return 'European';
-      case 5: return 'European';
-      case 6: return 'Super Cup';
-      default: return '';
     }
   }
 

@@ -82,7 +82,7 @@ describe('CompetitionsListComponent', () => {
 
     const hrefs = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLAnchorElement>('a'))
       .map(link => link.getAttribute('href'));
-    expect(hrefs).toContain('/comp/20');
+    expect(hrefs).toContain('/competition/20');
     expect(hrefs).toContain('/team/31');
     expect(hrefs).toContain('/team/32');
   });

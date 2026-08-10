@@ -39,7 +39,7 @@ describe('LeaguesOverviewComponent', () => {
   afterEach(() => httpController.verify());
 
   function flushPage(catalog: any[]): void {
-    httpController.expectOne(urlApp + '/competition/getAllCompetitions').flush(catalog);
+    httpController.expectOne(urlApp + '/competition/catalogOverview').flush({ competitions: catalog });
     httpController.expectOne(urlApp + '/competition/leaguesOverview?topN=5').flush({
       season: 3,
       topN: 5,
@@ -75,7 +75,7 @@ describe('LeaguesOverviewComponent', () => {
     component.openCompetition({ competitionId: 4, nationId: 3, typeId: 2, name: 'Khess Cup' });
     component.openCompetition({ competitionId: 10, nationId: 0, typeId: 4, name: 'League of Champions' });
 
-    expect(navigate.calls.argsFor(0)).toEqual([['/comp', 4]]);
+    expect(navigate.calls.argsFor(0)).toEqual([['/competition', 4]]);
     expect(navigate.calls.argsFor(1)).toEqual([['/european-rounds', 10, 3]]);
   });
 

@@ -3,6 +3,65 @@
   color: #e8e8e8;
 }
 
+.lab-nav { display:flex; gap:8px; margin:16px 0; flex-wrap:wrap; }
+.lab-nav button { border:1px solid #39445d; background:#171d2d; color:#aeb8ca; padding:10px 16px; border-radius:8px; font-weight:700; cursor:pointer; }
+.lab-nav button.active { color:#fff; border-color:#36c98f; background:#17362f; }
+.performance-lab,.goalkeeper-hub { display:grid; gap:16px; }
+.lab-hero { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; padding:20px; border-radius:12px; border:1px solid #303a50; background:linear-gradient(135deg,#18263b,#17202f); }
+.lab-hero h2 { margin:4px 0; color:#fff; font-size:24px; }
+.lab-hero p,.muted,.context-note { color:#98a4b8; margin:5px 0 0; }
+.lab-kicker { color:#52d6a2; text-transform:uppercase; letter-spacing:.08em; font-size:12px; font-weight:800; }
+.quality-legend { display:flex; gap:6px; flex-wrap:wrap; }
+.quality { display:inline-block; padding:2px 6px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; font-size:9px; font-weight:800; background:#3a4050; color:#d7dce7; }
+.quality.observed { background:#164934; color:#69e3ae; }
+.quality.derived,.quality.inferred { background:#213e63; color:#73baff; }
+.quality.modeled { background:#4d3b1d; color:#f2c46d; }
+.lab-card { background:#171d2d; border:1px solid #30384a; border-radius:12px; padding:16px; min-width:0; }
+.lab-card h3 { margin:0 0 14px; color:#edf1f7; font-size:14px; text-transform:uppercase; letter-spacing:.05em; }
+.lab-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(205px,1fr)); gap:10px; }
+.lab-metric { background:#111725; border-radius:8px; padding:11px; }
+.metric-heading,.metric-foot,.impact-row { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+.metric-heading { color:#cad2df; font-size:12px; }
+.metric-heading strong { color:#fff; font-size:16px; }
+.percentile-track,.mini-track { height:6px; background:#303747; border-radius:999px; overflow:hidden; margin:9px 0; }
+.percentile-track span,.mini-track i { height:100%; display:block; border-radius:inherit; background:#36c98f; }
+.metric-foot { color:#7f8b9d; font-size:10px; }
+.lab-grid { display:grid; gap:16px; }
+.lab-grid.two-col { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.lab-grid.three-col { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.form-list { display:grid; gap:7px; }
+.form-row { display:grid; grid-template-columns:44px minmax(120px,1fr) 32px 90px 42px; align-items:center; gap:8px; color:#aeb8ca; font-size:12px; }
+.form-row strong,.rank-row strong,.impact-row strong { color:#fff; }
+.result-chip { text-align:center; padding:5px; border-radius:5px; font-weight:800; }
+.result-chip.win { background:#174b36;color:#71e5b0; }
+.result-chip.draw { background:#4b421e;color:#efd36e; }
+.result-chip.loss { background:#522630;color:#ff8e9d; }
+.split-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px; }
+.split-grid>div { background:#111725; border-radius:8px; padding:10px; display:grid; gap:3px; color:#96a2b4; }
+.split-grid strong { font-size:20px;color:#fff; }
+.split-grid small { color:#727f92; }
+.impact-row { border-top:1px solid #30384a; padding:8px 0; color:#aeb8ca; font-size:12px; }
+.context-note { font-size:11px; line-height:1.5; }
+.rank-row { display:grid; grid-template-columns:minmax(0,1fr) 80px 38px; align-items:center; gap:8px; padding:8px 0; color:#c5cedb; border-bottom:1px solid #292f3e; font-size:12px; }
+.rank-row:last-child { border-bottom:0; }
+.rank-row small { display:block;color:#758196;margin-top:2px; }
+.rank-row.linked { text-decoration:none;grid-template-columns:minmax(0,1fr) 42px; }
+.rank-row.linked:hover { color:#55dbaa; }
+.goalkeeper-hero { background:linear-gradient(135deg,#17372f,#17202f); }
+.gk-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:10px; }
+.gk-metric { background:#171d2d;border:1px solid #30384a;border-radius:10px;padding:14px; }
+.gk-metric strong { display:block;color:#fff;font-size:25px;margin-top:10px; }
+.gk-metric small { color:#7d899c; }
+.gk-metric h3 { color:#c8d1de;font-size:12px;margin:9px 0 0; }
+.not-applicable { padding:28px;text-align:center;background:#171d2d;border:1px dashed #3e485c;border-radius:12px;color:#d4d9e2; }
+.not-applicable strong { font-size:18px; }
+.not-applicable p { color:#8793a6; }
+@media(max-width:900px) {
+  .lab-grid.two-col,.lab-grid.three-col { grid-template-columns:1fr; }
+  .lab-hero { align-items:flex-start;flex-direction:column; }
+  .form-row { grid-template-columns:42px minmax(100px,1fr) 30px 80px 38px; }
+}
+
 .picker-row {
   display: flex;
   gap: 16px;

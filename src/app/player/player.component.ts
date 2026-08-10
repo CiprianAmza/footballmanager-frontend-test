@@ -1,19 +1,25 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { urlApp } from '../app.component';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { TeamService } from '../services/team.service';
 import { AdminService } from '../services/admin.service';
 import { AuthService } from '../services/auth.service';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
+
+const PLAYER_TABS = ['overview', 'stats', 'contract', 'history', 'analytics', 'trophies'] as const;
+type PlayerTab = typeof PLAYER_TABS[number];
 
 @Component({
     selector: 'player',
     templateUrl: './player.component.html',
     styleUrls: ['./player.component.css']
 })
-export class PlayerComponent implements OnInit {
+export class PlayerComponent implements OnInit, OnDestroy {
+
+    private readonly subscriptions = new Subscription();
 
     playerId: number;
     playerView: any;
@@ -23,12 +29,16 @@ export class PlayerComponent implements OnInit {
     majorAwardSummary: any = { goldenBoots: 0, ballonDors: 0, awards: [] };
 
     // Tab Management (Default: Overview)
-    activeTab: string = 'overview'; // 'overview', 'stats', 'contract', 'history', 'analytics', 'trophies'
+    activeTab: PlayerTab = 'overview';
 
     // Trophies
     loadingTrophies: boolean = false;
     trophies: any[] = [];
     trophiesLoaded: boolean = false;
+
+    // Transfer history (all moves + fees, oldest first)
+    transferHistory: any[] = [];
+    transferHistoryLoaded: boolean = false;
 
     // Contract
     currentSeason: number = 1;
@@ -78,6 +88,20 @@ export class PlayerComponent implements OnInit {
     editorMessage: string = '';
     editorSuccess: boolean = false;
 
+    // Direct market actions from the player profile
+    showTransferOfferForm: boolean = false;
+    transferOfferAmount: number = 0;
+    transferOfferLoading: boolean = false;
+    transferOfferResult: any = null;
+    showFreeAgentContractForm: boolean = false;
+    freeAgentWageOffer: number = 0;
+    freeAgentContractYears: number = 3;
+    freeAgentOfferLoading: boolean = false;
+    freeAgentOfferMessage: string = '';
+    freeAgentOfferSuccess: boolean = false;
+    marketActionMessage: string = '';
+    marketActionSuccess: boolean = false;
+
     constructor(
         private http: HttpClient,
         private route: ActivatedRoute,
@@ -88,11 +112,10 @@ export class PlayerComponent implements OnInit {
     ) { }
 
     ngOnInit(): void {
-        this.route.params.subscribe(params => {
+        this.subscriptions.add(this.route.params.subscribe(params => {
             this.playerId = Number(params['playerId']);
             // Reset state on player change
             this.majorAwardSummary = { goldenBoots: 0, ballonDors: 0, awards: [] };
-            this.activeTab = 'overview';
             this.trophies = [];
             this.trophiesLoaded = false;
             this.seasonStats = null;
@@ -107,8 +130,35 @@ export class PlayerComponent implements OnInit {
             this.emptyMessage = '';
             this.maxSeason = this.teamService.currentSeason;
             this.selectedSeason = this.maxSeason;
+            this.transferHistory = [];
+            this.transferHistoryLoaded = false;
+            this.resetMarketActions();
             this.fetchData();
             this.fetchMajorAwards();
+            this.fetchTransferHistory();
+        }));
+        this.subscriptions.add(bindTabToUrl(
+            this.route,
+            PLAYER_TABS,
+            'overview',
+            tab => this.activateTab(tab)
+        ));
+    }
+
+    ngOnDestroy(): void {
+        this.subscriptions.unsubscribe();
+    }
+
+    fetchTransferHistory(): void {
+        this.http.get<any[]>(urlApp + `/transferOffer/playerHistory/${this.playerId}`).subscribe({
+            next: data => {
+                this.transferHistory = data || [];
+                this.transferHistoryLoaded = true;
+            },
+            error: () => {
+                this.transferHistory = [];
+                this.transferHistoryLoaded = true;
+            }
         });
     }
 
@@ -207,7 +257,7 @@ export class PlayerComponent implements OnInit {
     competitionLink(competition: { competitionId: number; competitionTypeId?: number | null }): any[] {
         return competition.competitionTypeId === 4 || competition.competitionTypeId === 5
             ? ['/european-rounds', competition.competitionId, this.teamService.currentSeason]
-            : ['/comp', competition.competitionId];
+            : ['/competition', competition.competitionId];
     }
 
     saveWillNeverLeave(): void {
@@ -273,6 +323,173 @@ export class PlayerComponent implements OnInit {
         return this.authService.careerRole === 'CHAIRMAN'
             && Number.isSafeInteger(actingTeamId) && actingTeamId > 0
             && this.playerView.teamId === actingTeamId;
+    }
+
+    get actingTeamId(): number {
+        const queryTeamId = Number(this.route.snapshot.queryParamMap.get('actingTeamId'));
+        if (this.authService.careerRole === 'CHAIRMAN'
+            && Number.isSafeInteger(queryTeamId) && queryTeamId > 0) {
+            return queryTeamId;
+        }
+        return Number(this.teamService.teamId) || 0;
+    }
+
+    get isTransferWindowOpen(): boolean {
+        return this.teamService.transferWindowOpen;
+    }
+
+    canMakeTransferOffer(): boolean {
+        const playerTeamId = Number(this.playerView?.teamId);
+        return !!this.playerView
+            && this.actingTeamId > 0
+            && !this.isOwnPlayer()
+            && !this.playerView.isFreeAgent
+            && !this.playerView.isRetired
+            && !this.playerView.willNeverLeave
+            && Number.isSafeInteger(playerTeamId)
+            && playerTeamId > 0;
+    }
+
+    canOfferFreeAgentContract(): boolean {
+        const playerTeamId = Number(this.playerView?.teamId);
+        const isFreeAgent = this.playerView?.isFreeAgent === true
+            || !Number.isFinite(playerTeamId) || playerTeamId <= 0;
+        return !!this.playerView
+            && this.actingTeamId > 0
+            && isFreeAgent
+            && !this.playerView.isRetired
+            && !this.playerView.willNeverLeave;
+    }
+
+    openTransferOffer(): void {
+        this.marketActionMessage = '';
+        if (!this.isTransferWindowOpen) {
+            this.marketActionSuccess = false;
+            this.marketActionMessage = 'Transfer window is closed. Offers can only be made during the transfer window.';
+            return;
+        }
+        if (!this.canMakeTransferOffer()) return;
+        this.transferOfferAmount = Math.max(1, Number(this.playerView.transferValue) || 0);
+        this.transferOfferResult = null;
+        this.showTransferOfferForm = true;
+    }
+
+    closeTransferOffer(): void {
+        if (this.transferOfferLoading) return;
+        this.showTransferOfferForm = false;
+        this.transferOfferResult = null;
+    }
+
+    submitTransferOffer(amount: number = this.transferOfferAmount): void {
+        if (!this.canMakeTransferOffer() || this.transferOfferLoading || amount <= 0) return;
+        this.transferOfferLoading = true;
+        this.transferOfferResult = null;
+        const body = {
+            playerId: this.playerId,
+            offerAmount: amount,
+            teamId: this.actingTeamId
+        };
+        this.http.post<any>(urlApp + '/transferOffer/makeOffer', body).subscribe({
+            next: result => {
+                this.transferOfferLoading = false;
+                this.transferOfferResult = result;
+                const status = String(result?.status || '').toLowerCase();
+                if (status === 'accepted') {
+                    this.showTransferOfferForm = false;
+                    this.marketActionSuccess = true;
+                    this.marketActionMessage = `${result.playerName || this.playerView.name} has joined your club.`;
+                    this.fetchData();
+                    this.fetchTransferHistory();
+                }
+            },
+            error: error => {
+                this.transferOfferLoading = false;
+                this.marketActionSuccess = false;
+                this.marketActionMessage = this.marketMutationError(error, 'The transfer offer could not be submitted.');
+                this.showTransferOfferForm = false;
+            }
+        });
+    }
+
+    acceptTransferCounter(): void {
+        const askingPrice = Number(this.transferOfferResult?.askingPrice);
+        if (!Number.isFinite(askingPrice) || askingPrice <= 0) return;
+        this.transferOfferAmount = askingPrice;
+        this.submitTransferOffer(askingPrice);
+    }
+
+    openFreeAgentContract(): void {
+        if (!this.canOfferFreeAgentContract()) return;
+        const currentWage = Math.max(0, Number(this.playerView.wage) || 0);
+        const rating = Math.max(1, Number(this.playerView.rating) || 1);
+        const estimatedDemand = Math.round(Math.pow(rating / 10, 2.5) * 400);
+        this.freeAgentWageOffer = Math.max(1, Math.round(currentWage * 0.8), estimatedDemand);
+        this.freeAgentContractYears = 3;
+        this.freeAgentOfferMessage = '';
+        this.freeAgentOfferSuccess = false;
+        this.marketActionMessage = '';
+        this.showFreeAgentContractForm = true;
+    }
+
+    closeFreeAgentContract(): void {
+        if (this.freeAgentOfferLoading) return;
+        this.showFreeAgentContractForm = false;
+        this.freeAgentOfferMessage = '';
+    }
+
+    submitFreeAgentContract(): void {
+        if (!this.canOfferFreeAgentContract() || this.freeAgentOfferLoading
+            || this.freeAgentWageOffer <= 0 || this.freeAgentContractYears <= 0) return;
+        this.freeAgentOfferLoading = true;
+        const body = {
+            playerId: this.playerId,
+            offeredWage: this.freeAgentWageOffer,
+            contractYears: this.freeAgentContractYears,
+            teamId: this.actingTeamId
+        };
+        this.http.post<any>(urlApp + '/transferOffer/signFreeAgent', body).subscribe({
+            next: result => {
+                this.freeAgentOfferLoading = false;
+                this.freeAgentOfferSuccess = !!result?.success;
+                this.freeAgentOfferMessage = result?.message || (result?.success
+                    ? 'Contract accepted.' : 'Contract offer rejected.');
+                if (result?.success) {
+                    this.showFreeAgentContractForm = false;
+                    this.marketActionSuccess = true;
+                    this.marketActionMessage = this.freeAgentOfferMessage;
+                    this.fetchData();
+                    this.fetchTransferHistory();
+                } else if (Number(result?.wageDemand) > 0) {
+                    this.freeAgentWageOffer = Number(result.wageDemand);
+                }
+            },
+            error: error => {
+                this.freeAgentOfferLoading = false;
+                this.freeAgentOfferSuccess = false;
+                this.freeAgentOfferMessage = this.marketMutationError(error, 'The contract offer could not be submitted.');
+            }
+        });
+    }
+
+    private resetMarketActions(): void {
+        this.showTransferOfferForm = false;
+        this.transferOfferAmount = 0;
+        this.transferOfferLoading = false;
+        this.transferOfferResult = null;
+        this.showFreeAgentContractForm = false;
+        this.freeAgentWageOffer = 0;
+        this.freeAgentContractYears = 3;
+        this.freeAgentOfferLoading = false;
+        this.freeAgentOfferMessage = '';
+        this.freeAgentOfferSuccess = false;
+        this.marketActionMessage = '';
+        this.marketActionSuccess = false;
+    }
+
+    private marketMutationError(error: any, fallback: string): string {
+        const payload = error?.error;
+        if (typeof payload === 'string' && payload.trim()) return payload;
+        return payload?.message || payload?.error || error?.message || fallback;
     }
 
     // Grouped attributes for FM-style display
@@ -397,7 +614,11 @@ export class PlayerComponent implements OnInit {
     }
 
     // Tab switching
-    setTab(tabName: string) {
+    setTab(tabName: PlayerTab) {
+        void navigateToTab(this.router, this.route, PLAYER_TABS, 'overview', tabName);
+    }
+
+    private activateTab(tabName: PlayerTab): void {
         this.activeTab = tabName;
 
         if (tabName === 'trophies' && !this.trophiesLoaded) {

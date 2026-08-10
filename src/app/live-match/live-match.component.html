@@ -7,16 +7,36 @@
       <!-- Render style of the pitch canvas — only meaningful while the pitch
            is actually on screen (inline pane or a zoomed moment/replay). -->
       <div class="lm-pitch-toggles" *ngIf="pitchPresentation !== 'hidden'">
-        <button class="lm-style-toggle" type="button"
+        <button class="lm-style-toggle" type="button" *ngIf="!pitch3dEnabled"
                 (click)="togglePitchStyle()"
                 [title]="pitchStyle === 'broadcast' ? 'Switch to the flat 2D pitch' : 'Switch to the 2.5D broadcast camera'">
           {{ pitchStyle === 'broadcast' ? '2D view' : 'Broadcast' }}
         </button>
-        <button class="lm-detail-toggle" type="button"
+        <button class="lm-detail-toggle" type="button" *ngIf="!pitch3dEnabled"
                 (click)="togglePitchDetail()"
                 [title]="pitchDetail === 'sprites' ? 'Switch back to numbered discs' : 'Switch to animated player figures'">
           {{ pitchDetail === 'sprites' ? 'Discs' : 'Sprites' }}
         </button>
+        <button class="lm-style-toggle" type="button"
+                (click)="togglePitch3d()"
+                [title]="pitch3dEnabled ? 'Back to the 2D canvas pitch' : 'Switch to the experimental 3D pitch'">
+          {{ pitch3dEnabled ? '2D pitch' : '3D pitch' }}
+        </button>
+        <button class="lm-style-toggle" type="button"
+                (click)="toggleAutoContinue()"
+                [title]="autoContinue ? 'Highlights wait for the Continue click' : 'Highlights continue by themselves'">
+          {{ autoContinue ? 'Auto ▶' : 'Manual ▶' }}
+        </button>
+        <button class="lm-style-toggle" type="button"
+                (click)="toggleSound()"
+                [title]="soundEnabled ? 'Mute crowd audio' : 'Enable crowd audio'">
+          {{ soundEnabled ? '🔊' : '🔇' }}
+        </button>
+        <button class="lm-style-toggle" type="button"
+                (click)="adjustPhaseSpeed(-1)" title="Slow the action down">−</button>
+        <span class="lm-phase-speed" title="Action playback speed">{{ phaseSpeed }}x</span>
+        <button class="lm-style-toggle" type="button"
+                (click)="adjustPhaseSpeed(1)" title="Speed the action up">+</button>
       </div>
       <button class="lm-view-toggle" type="button" (click)="toggleMatchViewMode()"
               [title]="matchViewMode === 'PITCH_2D' ? 'Switch to the text view' : 'Switch to the 2D pitch'">
@@ -80,14 +100,24 @@
         <span class="lm-zoom-minute">{{ zoomMinute }}</span>
       </div>
 
-      <app-match-pitch [responsive]="true"
+      <app-match-pitch *ngIf="!pitch3dEnabled"
+                       [responsive]="true"
                        [pitchStyle]="pitchStyle"
                        [pitchDetail]="pitchDetail"
                        [clip]="goalClip"
+                       [faces]="liveMatchData.faces || null"
                        [homeTeamId]="liveMatchData.homeTeamId"
                        [homeKit]="matchHomeKit"
                        [awayKit]="matchAwayKit"
                        (clipFinished)="onGoalClipFinished()"></app-match-pitch>
+      <app-match-pitch-3d *ngIf="pitch3dEnabled"
+                          [responsive]="true"
+                          [clip]="goalClip"
+                          [faces]="liveMatchData.faces || null"
+                          [homeTeamId]="liveMatchData.homeTeamId"
+                          [homeKit]="matchHomeKit"
+                          [awayKit]="matchAwayKit"
+                          (clipFinished)="onGoalClipFinished()"></app-match-pitch-3d>
 
       <!-- Controls for a live moment -->
       <div class="lm-zoom-controls" *ngIf="pitchPresentation === 'zoom' && !replayAnimation">

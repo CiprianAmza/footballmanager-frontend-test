@@ -76,6 +76,24 @@
             <strong>×{{ majorAwardSummary.ballonDors }}</strong>
           </a>
         </div>
+        <div class="profile-market-actions" *ngIf="canMakeTransferOffer() || canOfferFreeAgentContract()">
+          <button type="button" class="profile-market-btn transfer-action"
+                  *ngIf="canMakeTransferOffer()" (click)="openTransferOffer()">
+            Make Offer
+          </button>
+          <button type="button" class="profile-market-btn contract-action"
+                  *ngIf="canOfferFreeAgentContract()" (click)="openFreeAgentContract()">
+            Offer Contract
+          </button>
+          <span class="transfer-window-note" *ngIf="canMakeTransferOffer() && !isTransferWindowOpen">
+            Transfer window closed
+          </span>
+        </div>
+        <div class="profile-action-feedback" *ngIf="marketActionMessage"
+             [class.success]="marketActionSuccess" [class.error]="!marketActionSuccess"
+             role="status" aria-live="polite">
+          {{ marketActionMessage }}
+        </div>
       </div>
 
       <div class="header-stats">
@@ -516,6 +534,34 @@
                 <player-competition-history [playerId]="playerId"></player-competition-history>
             </div>
         </div>
+
+        <div class="fm-panel full-width">
+            <div class="panel-header">TRANSFER HISTORY</div>
+            <div class="history-wrapper">
+                <p *ngIf="transferHistoryLoaded && transferHistory.length === 0"
+                   style="padding: 10px 14px; opacity: 0.7;">No transfers recorded for this player.</p>
+                <table class="fm-table" *ngIf="transferHistory.length > 0" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th>Season</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th style="text-align:right;">Fee</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let t of transferHistory">
+                            <td>{{ t.seasonNumber }}</td>
+                            <td>{{ t.sellTeamName || 'Free Agent' }}</td>
+                            <td>{{ t.buyTeamName }}</td>
+                            <td style="text-align:right;">
+                                {{ t.playerTransferValue > 0 ? (t.playerTransferValue | number) : 'Free' }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- TAB: ANALYTICS (synthetic StatsBomb-style) -->
@@ -541,7 +587,7 @@
                 <div class="trophy-card" *ngFor="let trophy of trophies">
                     <div class="trophy-icon">🏆</div>
                     <div class="trophy-info">
-                        <div class="trophy-name"><a [routerLink]="['/comp', trophy.competitionId]">{{ trophy.competitionName }}</a></div>
+                        <div class="trophy-name"><a [routerLink]="['/competition', trophy.competitionId]">{{ trophy.competitionName }}</a></div>
                         <div class="trophy-year">{{ trophy.seasonNumber | number }}</div>
                         <div class="trophy-team"><a [routerLink]="['/team', trophy.teamId]">{{ trophy.teamName }}</a></div>
                     </div>
@@ -551,4 +597,109 @@
     </div>
 
   </div>
+</div>
+
+<!-- Direct transfer offer -->
+<div class="profile-action-overlay" *ngIf="showTransferOfferForm" (click)="closeTransferOffer()">
+  <section class="profile-action-dialog" (click)="$event.stopPropagation()"
+           role="dialog" aria-modal="true" aria-labelledby="transfer-offer-title">
+    <div class="profile-action-dialog-header">
+      <div>
+        <span class="profile-action-kicker">Transfer offer</span>
+        <h2 id="transfer-offer-title">Sign {{ playerView?.name }}</h2>
+      </div>
+      <button type="button" class="profile-action-close" (click)="closeTransferOffer()"
+              [disabled]="transferOfferLoading" aria-label="Close">&times;</button>
+    </div>
+
+    <ng-container *ngIf="!transferOfferResult">
+      <div class="profile-action-player-summary">
+        <span>{{ playerView?.position }}</span>
+        <span>{{ playerView?.teamName }}</span>
+        <strong>{{ playerView?.transferValue | currency:'EUR':'symbol':'1.0-0' }}</strong>
+      </div>
+      <label class="profile-action-field">
+        <span>Offer amount</span>
+        <input type="number" [(ngModel)]="transferOfferAmount" min="1" step="1000"
+               [disabled]="transferOfferLoading">
+      </label>
+      <div class="profile-action-dialog-buttons">
+        <button type="button" class="profile-market-btn secondary-action" (click)="closeTransferOffer()"
+                [disabled]="transferOfferLoading">Cancel</button>
+        <button type="button" class="profile-market-btn transfer-action" (click)="submitTransferOffer()"
+                [disabled]="transferOfferLoading || transferOfferAmount <= 0">
+          {{ transferOfferLoading ? 'Submitting…' : 'Submit Offer' }}
+        </button>
+      </div>
+    </ng-container>
+
+    <div class="profile-offer-result" *ngIf="transferOfferResult as result"
+         [ngClass]="(result.status || '').toLowerCase()">
+      <h3 *ngIf="result.status?.toLowerCase() === 'counter'">Counter offer received</h3>
+      <h3 *ngIf="result.status?.toLowerCase() === 'rejected'">Offer rejected</h3>
+      <p *ngIf="result.status?.toLowerCase() === 'counter'">
+        {{ result.toTeamName }} wants
+        <strong>{{ result.askingPrice | currency:'EUR':'symbol':'1.0-0' }}</strong>.
+      </p>
+      <p *ngIf="result.status?.toLowerCase() === 'rejected'">
+        {{ result.toTeamName }} rejected the offer of
+        <strong>{{ result.offerAmount | currency:'EUR':'symbol':'1.0-0' }}</strong>.
+      </p>
+      <div class="profile-action-dialog-buttons">
+        <button type="button" class="profile-market-btn secondary-action" (click)="closeTransferOffer()"
+                [disabled]="transferOfferLoading">
+          {{ result.status?.toLowerCase() === 'counter' ? 'Walk Away' : 'Close' }}
+        </button>
+        <button type="button" class="profile-market-btn transfer-action"
+                *ngIf="result.status?.toLowerCase() === 'counter'"
+                (click)="acceptTransferCounter()" [disabled]="transferOfferLoading">
+          {{ transferOfferLoading ? 'Submitting…' : 'Accept Counter' }}
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Direct free-agent contract -->
+<div class="profile-action-overlay" *ngIf="showFreeAgentContractForm" (click)="closeFreeAgentContract()">
+  <section class="profile-action-dialog" (click)="$event.stopPropagation()"
+           role="dialog" aria-modal="true" aria-labelledby="free-agent-contract-title">
+    <div class="profile-action-dialog-header">
+      <div>
+        <span class="profile-action-kicker">Free agent</span>
+        <h2 id="free-agent-contract-title">Offer contract to {{ playerView?.name }}</h2>
+      </div>
+      <button type="button" class="profile-action-close" (click)="closeFreeAgentContract()"
+              [disabled]="freeAgentOfferLoading" aria-label="Close">&times;</button>
+    </div>
+
+    <label class="profile-action-field">
+      <span>Monthly wage</span>
+      <input type="number" [(ngModel)]="freeAgentWageOffer" min="1" step="100"
+             [disabled]="freeAgentOfferLoading">
+    </label>
+    <label class="profile-action-field">
+      <span>Contract length</span>
+      <select [(ngModel)]="freeAgentContractYears" [disabled]="freeAgentOfferLoading">
+        <option [ngValue]="1">1 season</option>
+        <option [ngValue]="2">2 seasons</option>
+        <option [ngValue]="3">3 seasons</option>
+        <option [ngValue]="4">4 seasons</option>
+        <option [ngValue]="5">5 seasons</option>
+      </select>
+    </label>
+    <div class="profile-contract-result" *ngIf="freeAgentOfferMessage"
+         [class.success]="freeAgentOfferSuccess" [class.error]="!freeAgentOfferSuccess"
+         role="status" aria-live="polite">
+      {{ freeAgentOfferMessage }}
+    </div>
+    <div class="profile-action-dialog-buttons">
+      <button type="button" class="profile-market-btn secondary-action" (click)="closeFreeAgentContract()"
+              [disabled]="freeAgentOfferLoading">Cancel</button>
+      <button type="button" class="profile-market-btn contract-action" (click)="submitFreeAgentContract()"
+              [disabled]="freeAgentOfferLoading || freeAgentWageOffer <= 0 || freeAgentContractYears <= 0">
+        {{ freeAgentOfferLoading ? 'Submitting…' : 'Offer Contract' }}
+      </button>
+    </div>
+  </section>
 </div>

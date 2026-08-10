@@ -70,8 +70,8 @@ describe('ClubInfoComponent Phase 1A', () => {
     expect(text).toContain('N/A');
     const hrefs = Array.from(page.querySelectorAll<HTMLAnchorElement>('.membership-group a'))
       .map(link => link.getAttribute('href'));
-    expect(hrefs).toContain('/comp/11');
-    expect(hrefs).toContain('/comp/12');
+    expect(hrefs).toContain('/competition/11');
+    expect(hrefs).toContain('/competition/12');
     expect(hrefs).toContain('/european-rounds/13/3');
   });
 

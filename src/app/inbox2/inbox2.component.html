@@ -1,0 +1,66 @@
+<div class="decision-inbox">
+  <header class="decision-header">
+    <div><span class="eyebrow">Club communications</span><h1>Decision Desk</h1></div>
+    <div class="header-centre"><strong>{{ decisionCount }}</strong><span>unread decisions</span></div>
+    <nav><a routerLink="/inbox">Classic</a><a class="active" routerLink="/inbox2">Decision Desk</a><a routerLink="/inbox3">Media Centre</a></nav>
+  </header>
+
+  <main class="decision-layout">
+    <aside class="folder-rail">
+      <button type="button" [class.active]="workspaceView === 'priority'" (click)="setWorkspaceView('priority')"><span>◆</span><b>Priority</b><em>{{ decisionCount }}</em></button>
+      <button type="button" [class.active]="workspaceView === 'unread'" (click)="setWorkspaceView('unread')"><span>●</span><b>Unread</b><em>{{ unreadCount }}</em></button>
+      <button type="button" [class.active]="workspaceView === 'all'" (click)="setWorkspaceView('all')"><span>▤</span><b>All messages</b><em>{{ messages.length }}</em></button>
+      <div class="folder-label">WORKSPACES</div>
+      <button type="button" [class.active]="workspaceView === 'media'" (click)="setWorkspaceView('media')"><span>◉</span><b>Media</b><em>{{ mediaUnreadCount }}</em></button>
+      <button type="button" [class.active]="workspaceView === 'transfers'" (click)="setWorkspaceView('transfers')"><span>⇄</span><b>Transfers</b><em>{{ transferCount }}</em></button>
+      <button type="button" [class.active]="workspaceView === 'club'" (click)="setWorkspaceView('club')"><span>▣</span><b>Club</b></button>
+      <div class="folder-actions"><button type="button" (click)="markAllRead()">Mark all read</button><button type="button" (click)="loadMessages(); loadUnreadCount()">Refresh</button></div>
+    </aside>
+
+    <section class="message-column">
+      <div class="message-toolbar">
+        <label><span>⌕</span><input #messageSearch type="search" [(ngModel)]="searchText" placeholder="Search messages…"></label>
+        <span>{{ visibleMessages.length }} items</span>
+      </div>
+      <div class="load-state" *ngIf="loading">Loading communications…</div>
+      <div class="load-state error" *ngIf="error">{{ error }} <button (click)="loadMessages()">Retry</button></div>
+      <div class="decision-list" *ngIf="!loading">
+        <button type="button" *ngFor="let message of visibleMessages" class="decision-item"
+                [class.active]="selectedMessage?.id === message.id" [class.unread]="!message.isRead"
+                (click)="selectMessage(message)">
+          <span class="category-symbol" [attr.data-category]="message.category">{{ categoryIcon(message) }}</span>
+          <span class="message-copy"><span class="message-source">{{ sourceLabel(message) }} · S{{ message.seasonNumber }} D{{ message.roundNumber }}</span><strong>{{ message.title }}</strong><small>{{ message.content | slice:0:92 }}{{ message.content.length > 92 ? '…' : '' }}</small></span>
+          <span class="message-flags"><b [attr.data-priority]="priorityLabel(message)">{{ priorityLabel(message) }}</b><time>{{ message.createdAt | fmGameDate }}</time></span>
+        </button>
+        <div class="load-state" *ngIf="!visibleMessages.length">No messages match this workspace.</div>
+      </div>
+    </section>
+
+    <article class="reader-column" *ngIf="selectedMessage as message; else emptyReader">
+      <div class="reader-toolbar">
+        <div><button type="button" (click)="selectRelative(-1)" title="Previous (K)">↑</button><button type="button" (click)="selectRelative(1)" title="Next (J)">↓</button></div>
+        <div><button type="button" *ngIf="message.isRead" (click)="markAsUnread(message)">Mark unread</button><button type="button" *ngIf="!message.isRead" (click)="markAsRead(message)">Mark read</button></div>
+      </div>
+      <header class="reader-header">
+        <span class="reader-category">{{ getCategoryLabel(message.category) }}</span>
+        <h2>{{ message.title }}</h2>
+        <div><strong>{{ sourceLabel(message) }}</strong><span>Season {{ message.seasonNumber }}, day {{ message.roundNumber }}</span><time>{{ message.createdAt | fmGameDate:true }}</time></div>
+      </header>
+      <div class="reader-body"><div class="content-rule" [attr.data-category]="message.category"></div><p>{{ message.content }}</p></div>
+
+      <section class="offer-panel" *ngIf="isJobOfferMessage(message)">
+        <ng-container *ngIf="getOfferForMessage(message) as offer">
+          <div><span>Contract proposal</span><h3>{{ offer.teamName }}</h3><small>Reputation {{ offer.teamReputation }}</small></div>
+          <dl><div><dt>Wage</dt><dd>{{ offer.offeredWage | currency:'EUR':'symbol':'1.0-0' }}/mo</dd></div><div><dt>Bonus</dt><dd>{{ offer.signingBonus | currency:'EUR':'symbol':'1.0-0' }}</dd></div><div><dt>Length</dt><dd>{{ offer.contractLengthSeasons }} seasons</dd></div></dl>
+          <div class="offer-actions"><button type="button" (click)="declineOfferMsg(message)" [disabled]="offerActionInFlight">Decline</button><button type="button" (click)="acceptOfferMsg(message)" [disabled]="offerActionInFlight">Accept offer</button></div>
+        </ng-container>
+        <p *ngIf="offerActionMessage">{{ offerActionMessage }}</p>
+      </section>
+
+      <footer class="reader-action" *ngIf="actionLabel(message) as label"><div><span>Suggested next step</span><strong>{{ label }}</strong></div><button type="button" (click)="openMessageAction(message)">{{ label }} →</button></footer>
+    </article>
+    <ng-template #emptyReader><div class="empty-reader"><span>◇</span><strong>Select a message</strong><small>Use J/K to move through the list.</small></div></ng-template>
+  </main>
+
+  <footer class="shortcut-footer"><span><kbd>J</kbd><kbd>K</kbd> Navigate</span><span><kbd>U</kbd> Unread</span><span><kbd>O</kbd> Open action</span><span><kbd>A</kbd> Mark all read</span><span><kbd>/</kbd> Search</span></footer>
+</div>

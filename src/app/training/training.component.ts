@@ -4,6 +4,9 @@ import { Subscription } from 'rxjs';
 import { urlApp } from '../app.component';
 import { TeamService } from '../services/team.service';
 import { GameEventsService } from '../services/game-events.service';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
 
 export interface TrainingSession {
   type: 'Physical' | 'General' | 'Match' | 'Extra' | 'Rest' | 'Tactical';
@@ -141,9 +144,12 @@ export class TrainingComponent implements OnInit, OnDestroy {
   indRole: string | null = null;
 
   constructor(private http: HttpClient, private teamService: TeamService,
-              private gameEvents: GameEventsService) { }
+              private gameEvents: GameEventsService,
+              private route: ActivatedRoute, private router: Router,
+              private feedback: UiFeedbackService = new UiFeedbackService()) { }
 
   ngOnInit(): void {
+    this.sub.add(bindTabToUrl(this.route, this.tabs, 'Overview', tab => this.activateTab(tab)));
     this.loadSchedule();
     this.loadTrainingFocus();
     this.loadNextSessionInfo();
@@ -164,6 +170,10 @@ export class TrainingComponent implements OnInit, OnDestroy {
   }
 
   setTab(tab: string) {
+    void navigateToTab(this.router, this.route, this.tabs, 'Overview', tab);
+  }
+
+  private activateTab(tab: string): void {
     this.activeTab = tab;
     if (tab === 'Individual' && this.individualPlayers.length === 0) {
       this.loadIndividualPlayers();
@@ -329,11 +339,11 @@ export class TrainingComponent implements OnInit, OnDestroy {
     this.http.post<TrainingScheduleEntry[]>(urlApp + `/training/schedule/${teamId}`, entries).subscribe({
       next: () => {
         this.gameEvents.emit('training');
-        alert('Training schedule saved successfully!');
+        this.feedback.success('Training schedule saved successfully.');
       },
       error: (err) => {
         console.error('Error saving training schedule:', err);
-        alert('Error saving training schedule.');
+        this.feedback.error('The training schedule could not be saved.');
       }
     });
   }

@@ -5,6 +5,7 @@ import { catchError, forkJoin, map, of, Subscription } from 'rxjs';
 import { urlApp } from '../app.component';
 import { GameEventsService } from '../services/game-events.service';
 import { TeamService } from '../services/team.service';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
 
 type ClubInfoTab = 'overview' | 'squad' | 'tactics' | 'matches' | 'stats';
 
@@ -139,13 +140,7 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
       this.setCompetitionBreakdown([]);
       this.loadData();
     }));
-    // The tab lives in the URL so that Back steps between tabs instead of leaving the
-    // club page: opening Tactics from Squad and pressing Back used to unmount the whole
-    // page and drop the user back on the squad screen.
-    this.sub.add(this.route.queryParams.subscribe(params => {
-      const requested = params['tab'];
-      this.activeTab = CLUB_INFO_TABS.includes(requested) ? requested : 'overview';
-    }));
+    this.sub.add(bindTabToUrl(this.route, CLUB_INFO_TABS, 'overview', tab => this.activeTab = tab));
     this.sub.add(this.gameEvents.on('stadium').subscribe(() => this.loadStadiumData()));
   }
 
@@ -154,24 +149,17 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
   }
 
   switchTab(tab: ClubInfoTab): void {
-    if (tab === this.activeTab) return;
-    // Navigate rather than assign: the queryParams subscription above is the single
-    // writer of activeTab, so Back and a tab click go through exactly the same path.
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tab: tab === 'overview' ? null : tab },
-      queryParamsHandling: 'merge'
-    });
+    void navigateToTab(this.router, this.route, CLUB_INFO_TABS, 'overview', tab);
   }
 
   competitionTypeLabel(typeId: number): string {
     switch (typeId) {
-      case 1: return 'League';
-      case 2: return 'Cup';
-      case 3: return 'Second League';
-      case 4: return 'League of Champions';
-      case 5: return 'Stars Cup';
-      case 6: return 'Super Cup';
+      case 1:
+      case 3: return 'League competition';
+      case 2: return 'Knockout competition';
+      case 4:
+      case 5: return 'Continental competition';
+      case 6: return 'Season showcase';
       default: return 'Competition';
     }
   }
@@ -179,7 +167,7 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
   competitionLink(competition: Pick<ClubCompetition, 'competitionId' | 'typeId'>): any[] {
     return competition.typeId === 4 || competition.typeId === 5
       ? ['/european-rounds', competition.competitionId, this.currentSeason]
-      : ['/comp', competition.competitionId];
+      : ['/competition', competition.competitionId];
   }
 
   competitionStatLink(line: { competitionId: number; competitionTypeId: number }): any[] {

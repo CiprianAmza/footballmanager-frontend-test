@@ -1,0 +1,197 @@
+<div class="desk-shell">
+  <header class="desk-header">
+    <div class="club-heading">
+      <span class="eyebrow">Manager workspace · Season {{ teamService.currentSeason }}</span>
+      <h1>{{ teamName || 'Your club' }}</h1>
+      <div class="date-line">{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }} · {{ teamService.currentPhase }}</div>
+    </div>
+    <div class="header-actions">
+      <a class="view-switch" routerLink="/home">Classic</a>
+      <a class="view-switch active" routerLink="/home2">Desk</a>
+      <a class="view-switch" routerLink="/home3">Cockpit</a>
+      <button type="button" class="command-trigger" (click)="openCommandPalette()">
+        Quick jump <kbd>Ctrl K</kbd>
+      </button>
+    </div>
+  </header>
+
+  <section class="sacked-callout" *ngIf="managerFired">
+    <strong>Your contract has been terminated.</strong>
+    <span>Review available positions and continue your career.</span>
+    <a routerLink="/job-search">Open job search →</a>
+  </section>
+
+  <nav class="quick-strip" aria-label="Quick actions">
+    <a *ngFor="let command of commands.slice(0, 8)" [routerLink]="command.route"
+       class="quick-link" [attr.data-accent]="command.accent">
+      <span class="quick-icon">{{ command.icon }}</span>
+      <span>{{ command.label }}</span>
+    </a>
+  </nav>
+
+  <main class="desk-grid">
+    <section class="match-brief surface">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Next assignment</span>
+          <h2>Match brief</h2>
+        </div>
+        <a [routerLink]="['/fixtures', teamService.teamId]">Full schedule →</a>
+      </div>
+
+      <ng-container *ngIf="matchPreview; else simpleMatch">
+        <div class="competition-line">
+          <span>{{ matchPreview.competitionName }}</span>
+          <strong>Day {{ matchPreview.round }}</strong>
+        </div>
+        <div class="matchup">
+          <div class="match-team">
+            <app-team-crest [teamId]="matchPreview.homeTeamId" [teamName]="matchPreview.homeTeamName" [size]="72"></app-team-crest>
+            <a [routerLink]="['/team', matchPreview.homeTeamId]">{{ matchPreview.homeTeamName }}</a>
+            <small *ngIf="matchPreview.homeLeaguePosition > 0">#{{ matchPreview.homeLeaguePosition }} in league</small>
+          </div>
+          <div class="match-centre">
+            <span>VS</span>
+            <strong>{{ matchPreview.prediction || 'No prediction' }}</strong>
+          </div>
+          <div class="match-team">
+            <app-team-crest [teamId]="matchPreview.awayTeamId" [teamName]="matchPreview.awayTeamName" [size]="72"></app-team-crest>
+            <a [routerLink]="['/team', matchPreview.awayTeamId]">{{ matchPreview.awayTeamName }}</a>
+            <small *ngIf="matchPreview.awayLeaguePosition > 0">#{{ matchPreview.awayLeaguePosition }} in league</small>
+          </div>
+        </div>
+        <div class="power-comparison">
+          <div class="power-labels"><span>{{ matchPreview.homePowerRating }}</span><span>Power comparison</span><span>{{ matchPreview.awayPowerRating }}</span></div>
+          <div class="power-track"><span class="power-home" [style.width.%]="powerHomeShare"></span></div>
+        </div>
+        <div class="match-actions">
+          <a [routerLink]="['/tactics', teamService.teamId]">Set match plan</a>
+          <a [routerLink]="['/team', teamService.teamId]">Review squad</a>
+          <a routerLink="/data-hub">Opponent analysis</a>
+        </div>
+      </ng-container>
+      <ng-template #simpleMatch>
+        <div class="empty-block" *ngIf="!nextMatch">No upcoming match is scheduled.</div>
+        <div class="simple-match" *ngIf="nextMatch">
+          <strong>{{ nextMatch.opponentTeam }}</strong>
+          <span>{{ nextMatch.date }} · {{ nextMatch.competitionName }}</span>
+          <a [routerLink]="['/tactics', teamService.teamId]">Prepare tactics →</a>
+        </div>
+      </ng-template>
+    </section>
+
+    <aside class="focus-column">
+      <section class="surface focus-card">
+        <div class="section-heading compact">
+          <div><span class="section-kicker">Attention</span><h2>Manager focus</h2></div>
+          <span class="focus-count">{{ focusItems.length }}</span>
+        </div>
+        <a *ngFor="let item of focusItems" [routerLink]="item.route" class="focus-item" [attr.data-tone]="item.tone">
+          <span class="focus-dot"></span>
+          <span><strong>{{ item.label }}</strong><small>{{ item.detail }}</small></span>
+          <b>→</b>
+        </a>
+      </section>
+
+      <section class="metrics-grid">
+        <a class="metric-card" [routerLink]="leagueCompetition ? ['/competition', leagueCompetition.competitionId] : ['/competition-list']">
+          <span>League</span><strong>#{{ leaguePosition || '—' }}</strong><small>{{ leaguePoints }} pts</small>
+        </a>
+        <a class="metric-card" routerLink="/finances">
+          <span>Budget</span><strong>{{ formatCompactMoney(transferBudget) }}</strong><small>Transfers</small>
+        </a>
+        <a class="metric-card" routerLink="/finances" [class.metric-alert]="boardConfidence < 40">
+          <span>Board</span><strong>{{ boardConfidence }}%</strong><small>Confidence</small>
+        </a>
+        <a class="metric-card" routerLink="/data-hub">
+          <span>Form</span><strong class="form-word">{{ form || '—' }}</strong><small>Last matches</small>
+        </a>
+      </section>
+    </aside>
+
+    <section class="surface table-card">
+      <div class="section-heading compact">
+        <div><span class="section-kicker">Competition</span><h2>League position</h2></div>
+        <a *ngIf="leagueCompetition" [routerLink]="['/competition', leagueCompetition.competitionId]">Open table →</a>
+      </div>
+      <div class="mini-table" *ngIf="displayedTable.length; else noTable">
+        <div class="table-row table-head"><span>#</span><span>Club</span><span>P</span><span>GD</span><span>Pts</span></div>
+        <a class="table-row" *ngFor="let row of displayedTable" [routerLink]="['/team', row.teamId]"
+           [class.current]="row.isHumanTeam || row.name === teamName || row.teamName === teamName">
+          <span>{{ row.position }}</span><strong>{{ row.name || row.teamName }}</strong><span>{{ row.games }}</span>
+          <span>{{ row.goalDifference }}</span><b>{{ row.points }}</b>
+        </a>
+      </div>
+      <ng-template #noTable><div class="empty-block">League table is not available yet.</div></ng-template>
+    </section>
+
+    <section class="surface contributors-card">
+      <div class="section-heading compact">
+        <div><span class="section-kicker">Season {{ playerStatsSeason || teamService.currentSeason }}</span><h2>Key contributors</h2></div>
+        <a routerLink="/stats/scorers">All players →</a>
+      </div>
+      <div class="contributor-list" *ngIf="playerStats.length">
+        <a *ngFor="let stat of playerStats" [routerLink]="['/player', stat.playerId]" class="contributor">
+          <span class="rank">{{ stat.rank }}</span>
+          <span class="player-copy"><strong>{{ stat.playerName }}</strong><small>{{ stat.position }} · {{ stat.appearances }} apps</small></span>
+          <span class="player-numbers"><b>{{ stat.goals }}</b><small>G</small></span>
+          <span class="player-numbers" *ngIf="stat.assists !== null"><b>{{ stat.assists }}</b><small>A</small></span>
+          <span class="player-numbers rating"><b>{{ (stat.averageRating !== null ? stat.averageRating : stat.overallRating) | number:'1.0-2' }}</b><small>{{ stat.averageRating !== null ? 'AVG' : 'OVR' }}</small></span>
+        </a>
+      </div>
+      <div class="empty-block" *ngIf="playerStatsLoading">Loading player data…</div>
+      <div class="empty-block" *ngIf="!playerStatsLoading && !playerStats.length">No appearances recorded.</div>
+    </section>
+
+    <section class="surface timeline-card">
+      <div class="section-heading compact">
+        <div><span class="section-kicker">Calendar</span><h2>What comes next</h2></div>
+        <a [routerLink]="['/fixtures', teamService.teamId]">Schedule →</a>
+      </div>
+      <div class="fixture-timeline" *ngIf="upcomingFixtures.length">
+        <div class="timeline-row" *ngFor="let match of upcomingFixtures.slice(0, 4)">
+          <span class="fixture-date">{{ match.date }}</span>
+          <span class="fixture-opponent">{{ match.homeTeamAbbr || '???' }} <b>vs</b> {{ match.awayTeamAbbr || '???' }}</span>
+          <small>{{ match.competitionName }}</small>
+        </div>
+      </div>
+      <div class="empty-block" *ngIf="!upcomingFixtures.length">No upcoming fixtures.</div>
+    </section>
+
+    <section class="surface objectives-card">
+      <div class="section-heading compact">
+        <div><span class="section-kicker">Board</span><h2>Objectives & requests</h2></div>
+      </div>
+      <div class="objective-list" *ngIf="activeObjectives.length || activeBoardRequests.length; else noObjectives">
+        <div class="objective-line" *ngFor="let objective of activeObjectives">
+          <span class="objective-type">{{ getObjectiveTypeLabel(objective.objectiveType) }}</span>
+          <span><strong>{{ objective.description || getObjectiveDescription(objective) }}</strong><small>{{ objective.competitionName }}</small></span>
+          <b>{{ objective.actualValue || 0 }} / {{ objective.targetValue }}</b>
+        </div>
+        <div class="objective-line request" *ngFor="let request of activeBoardRequests">
+          <span class="objective-type">REQ</span><span><strong>{{ request.description }}</strong><small>Board request</small></span>
+          <b *ngIf="request.deadline">Day {{ request.deadline }}</b>
+        </div>
+      </div>
+      <ng-template #noObjectives><div class="empty-block">No active board actions.</div></ng-template>
+    </section>
+  </main>
+</div>
+
+<div class="command-backdrop" *ngIf="commandPaletteOpen" (click)="closeCommandPalette()">
+  <section class="command-palette" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Quick jump">
+    <div class="command-search">
+      <span>⌕</span>
+      <input type="text" [(ngModel)]="commandQuery" placeholder="Go to squad, tactics, transfers…" autofocus>
+      <kbd>Esc</kbd>
+    </div>
+    <div class="command-results">
+      <button type="button" *ngFor="let command of filteredCommands" (click)="runCommand(command)">
+        <span class="command-icon" [attr.data-accent]="command.accent">{{ command.icon }}</span>
+        <span><strong>{{ command.label }}</strong><small>{{ command.description }}</small></span>
+        <b>↵</b>
+      </button>
+      <div class="empty-command" *ngIf="!filteredCommands.length">No shortcut matches “{{ commandQuery }}”.</div>
+    </div>
+  </section>
+</div>

@@ -124,8 +124,13 @@
 .pos-bar.rel { background-color: #e74c3c; } /* Relegation Red */
 .pos-num { font-weight: bold; }
 
-.inf-col { width: 30px; font-size: 0.75em; font-weight: bold; }
+.inf-col { width: 112px; min-width: 112px; font-size: 0.75em; font-weight: bold; }
+.status-stack { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; }
 .status-dot { background-color: #2ecc71; color: black; padding: 1px 4px; border-radius: 3px; }
+.status-dot.champion { background-color: #f1c40f; color: #211b00; }
+.status-dot.cup-winner { background-color: #d6a84b; color: #211600; }
+.status-dot.loc { background-color: #2ecc71; color: #071d10; }
+.status-dot.stars { background-color: #3498db; color: white; }
 .status-dot.rel { background-color: #e74c3c; color: white; }
 
 .team-col { text-align: left; }
@@ -186,6 +191,7 @@
 /* --- ZONE LEGEND --- */
 .zone-legend {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
   padding: 12px 15px;
   border-top: 1px solid #333;
@@ -207,6 +213,8 @@
 .legend-bar.ucl { background-color: #2ecc71; }
 .legend-bar.uel { background-color: #3498db; }
 .legend-bar.rel { background-color: #e74c3c; }
+.legend-cup { font-size: 0.9em; line-height: 1; }
+.cup-winner-legend { padding-left: 2px; }
 
 .legend-text {
   font-size: 0.75em;
@@ -357,4 +365,98 @@
 
 .champ-loading {
   text-align: center; color: #888; font-style: italic; padding: 20px;
+}
+
+/* ===== Competition underlying performance ===== */
+.competition-underlying {
+  margin: 18px 20px 24px;
+  overflow: hidden;
+  border: 1px solid #343b45;
+  border-top: 3px solid #52a9dc;
+  border-radius: 7px;
+  background: linear-gradient(145deg, #22272d, #1c2025);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .22);
+}
+
+.cu-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid #343b45;
+}
+
+.cu-eyebrow {
+  color: #62b8e8;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+}
+
+.cu-header h2 { margin: 4px 0; color: #f6f8fa; font-size: 22px; }
+.cu-header p { margin: 0; color: #929aa4; font-size: 13px; }
+.cu-meta { display: flex; align-items: baseline; gap: 7px; color: #929aa4; text-transform: uppercase; font-size: 10px; }
+.cu-meta strong { color: #fff; font-size: 23px; }
+
+.cu-table-wrap { overflow-x: auto; }
+.cu-table { width: 100%; min-width: 1060px; border-collapse: collapse; }
+.cu-table th {
+  padding: 10px 9px;
+  border-bottom: 1px solid #3a424c;
+  background: #1b1f24;
+  color: #7f8994;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.cu-table th.cu-team-head { text-align: left; }
+.cu-team-row td {
+  padding: 10px 9px;
+  border-bottom: 1px solid #303740;
+  color: #c5cbd1;
+  font-size: 12px;
+  text-align: center;
+}
+.cu-team-row:hover, .cu-team-row.expanded { background: rgba(82, 169, 220, .075); }
+.cu-rank { width: 32px; color: #727c86 !important; font-weight: 800; }
+.cu-team-name { display: flex; align-items: center; gap: 8px; min-width: 190px; text-align: left !important; }
+.cu-team-name a { color: #f1f3f5; font-weight: 700; text-decoration: none; }
+.cu-team-name a:hover { color: #72c5f1; }
+
+.cu-metric, .cu-luck { font-weight: 900; font-variant-numeric: tabular-nums; }
+.cu-metric small, .cu-luck small { display: block; margin-top: 2px; color: #737d87; font-size: 8px; font-weight: 600; }
+.cu-metric.positive, .cu-luck.positive, .luck-card strong.positive { color: #54d48b; }
+.cu-metric.negative, .cu-luck.negative, .luck-card strong.negative { color: #ff6d78; }
+.cu-metric.neutral, .cu-luck.neutral, .luck-card strong.neutral { color: #c7cbd0; }
+.cu-expand {
+  width: 25px; height: 25px; border: 1px solid #46515c; border-radius: 4px;
+  background: #29313a; color: #91cceb; cursor: pointer; font-size: 17px; line-height: 1;
+}
+.cu-expand:hover { border-color: #62b8e8; color: #fff; }
+
+.cu-detail-row td { padding: 0; border-bottom: 1px solid #3b4651; }
+.cu-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(160px, 1fr));
+  gap: 8px;
+  padding: 12px 18px 16px 51px;
+  background: #191d22;
+}
+.cu-result-card { padding: 12px; border: 1px solid #333c45; border-radius: 5px; background: #22282e; }
+.cu-result-card > span { color: #78bfe5; font-size: 9px; font-weight: 900; letter-spacing: .8px; }
+.cu-result-card > strong { display: block; margin: 7px 0 4px; color: #fff; font-size: 16px; }
+.cu-result-card p { margin: 0 0 5px; color: #b1b7bd; font-size: 11px; }
+.cu-result-card small { color: #7e8790; font-size: 9px; }
+.cu-result-card.balanced { border-top: 2px solid #a36ec4; }
+.cu-result-card.luck-card { border-top: 2px solid #d8b24d; }
+.cu-methodology { padding: 11px 18px; border-top: 1px solid #343b45; color: #77818b; font-size: 10px; }
+.cu-empty { padding: 28px; color: #8c959e; text-align: center; }
+
+@media (max-width: 760px) {
+  .competition-underlying { margin: 12px 10px 18px; }
+  .cu-header { align-items: flex-start; flex-direction: column; padding: 16px; }
+  .cu-detail-grid { grid-template-columns: repeat(2, minmax(190px, 1fr)); padding-left: 18px; }
 }

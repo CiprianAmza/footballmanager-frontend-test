@@ -6,7 +6,11 @@
  * model so the renderer keeps owning the drawing decisions:
  *
  *   - `PlayerSpriteCache` bakes one small offscreen canvas per
- *     (kit x facing x animation phase) combination. A figure is a couple of
+ *     (kit x appearance variant x facing x animation phase) combination —
+ *     the variant is a bounded skin/hair index resolved from the backend face
+ *     descriptor when one is supplied (matching the player card) and hashed
+ *     from the playerId otherwise, so players look individual without
+ *     unbounded bitmaps. A figure is a couple of
  *     dozen path operations; doing that 22 times a frame at 60fps would be
  *     wasteful, so every combination is drawn ONCE and every later frame is a
  *     single `drawImage`. The bitmaps are supersampled (`SS`) and drawn back
@@ -27,6 +31,14 @@
  * actually touches the grass — the ground shadow and the painter's ordering
  * both key off it.
  */
+
+import {
+  FaceDescriptor, SpriteHairStyle, spriteAppearance
+} from './appearance';
+
+// The legacy hash tables moved to appearance.ts (one module owns both the
+// descriptor path and the fallback); re-exported so this file's API is stable.
+export { APPEARANCE_VARIANTS, appearanceVariant } from './appearance';
 
 // ------------------------------------------------------------ persistence
 
@@ -74,12 +86,54 @@ export const RUN_PHASES = 4;
 
 // ---------------------------------------------------------------- palette
 
-const SKIN = '#d3a06d';
-const HAIR = '#2c2118';
 const BOOT = '#15181c';
+const GLOVE = '#e9e9e4';
 /** The 1px readability outline: sprites sit on green, and a mid-tone kit on
  *  grass loses its silhouette without it. */
 const OUTLINE = 'rgba(0, 0, 0, 0.55)';
+
+// ------------------------------------------------------------- appearance
+
+/**
+ * Per-player looks come from `spriteAppearance` (appearance.ts): the backend
+ * FaceDescriptor when one is available (so the pitch matches the card), the
+ * playerId hash otherwise — never `Math.random`: the same player must get the
+ * same face in every frame, every clip and every session. Either way only a
+ * BOUNDED variant id reaches the bake cache, never the raw playerId space.
+ */
+
+/** Deterministic hash of a colour string, for the kit-pattern pick. */
+function hashString(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = (Math.imul(h, 33) ^ s.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
+
+type KitPattern = 'plain' | 'stripes' | 'hoops' | 'sash';
+
+const KIT_PATTERNS: readonly KitPattern[] = ['plain', 'stripes', 'hoops', 'sash'];
+
+/** The pattern is a pure function of the two kit colours: every player of a
+ *  team gets the same shirt, and a kit change re-picks it via a cache miss. */
+function kitPattern(primary: string, secondary: string | undefined): KitPattern {
+  if (!secondary || secondary === primary) return 'plain';
+  return KIT_PATTERNS[hashString(primary + '|' + secondary) % KIT_PATTERNS.length];
+}
+
+interface Appearance {
+  skin: string;
+  hair: SpriteHairStyle;
+  hairColor: string;
+  /** Per-player boot colour (modern football boots, seeded from playerId). */
+  boots: string;
+  /** Goalkeepers get gloves and never a shirt pattern. */
+  goalkeeper: boolean;
+  pattern: KitPattern;
+  /** Pattern paint colour; undefined collapses the pattern to plain. */
+  secondary?: string;
+}
 
 /**
  * Run cycle, 4 phases, as `[swing, lift]` per leg:
@@ -138,7 +192,9 @@ function drawLimb(ctx: CanvasRenderingContext2D,
  * animation `phase` (`IDLE_PHASE` or 0..3).
  */
 function drawFigure(ctx: CanvasRenderingContext2D, dir: number, phase: number,
-                    primary: string, accent: string): void {
+                    primary: string, accent: string, look: Appearance): void {
+  const SKIN = look.skin;
+  const HAIR = look.hairColor;
   const angle = (dir * Math.PI) / 4;
   const fx = Math.cos(angle);
   const fy = Math.sin(angle);
@@ -175,9 +231,10 @@ function drawFigure(ctx: CanvasRenderingContext2D, dir: number, phase: number,
     const hipX = cx + lean * 0.5 + leg.sign * (1.5 - 0.9 * side);
     const footX = hipX + leg.swing * 2.4 * fx;
     const footY = groundY + leg.swing * 1.2 * fy - leg.lift;
-    drawLimb(ctx, hipX, hipY, footX, footY, SKIN, accent, 2.1);
-    // Boot.
-    ctx.fillStyle = BOOT;
+    // Lower leg painted in the kit primary = the sock (jambiera); thigh skin.
+    drawLimb(ctx, hipX, hipY, footX, footY, SKIN, primary, 2.1);
+    // Boot, in the player's own boot colour.
+    ctx.fillStyle = look.boots;
     ctx.beginPath();
     ctx.ellipse(footX + fx * 0.4, footY + 0.3, 1.5, 1.0, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -204,6 +261,43 @@ function drawFigure(ctx: CanvasRenderingContext2D, dir: number, phase: number,
   ctx.closePath();
   ctx.fillStyle = primary;
   ctx.fill();
+
+  // Pattern strokes are clipped to the torso path so they cannot bleed onto
+  // the grass; sleeves stay plain, which is enough at this sprite size.
+  const pattern = look.secondary ? look.pattern : 'plain';
+  if (pattern !== 'plain') {
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = look.secondary!;
+    ctx.strokeStyle = look.secondary!;
+    if (pattern === 'stripes') {
+      const stripeW = Math.max(0.7, torsoHalf * 0.34);
+      for (const k of [-1, 0, 1]) {
+        const x = (shoulderX + waistX) / 2 + k * torsoHalf * 0.62;
+        ctx.fillRect(x - stripeW / 2, shoulderY - 0.5, stripeW, hipY - shoulderY);
+      }
+    } else if (pattern === 'hoops') {
+      for (const y of [shoulderY + 1.0, shoulderY + 2.8]) {
+        ctx.fillRect(shoulderX - torsoHalf - 0.5, y, torsoHalf * 2 + 1, 1.0);
+      }
+    } else { // sash
+      ctx.lineCap = 'butt';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(shoulderX - torsoHalf, shoulderY - 0.3);
+      ctx.lineTo(waistX + torsoHalf * 0.86, hipY - 1.3);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // The sash variant opened its own path; rebuild the torso path so the
+    // outline stroke below follows the torso, not the last pattern stroke.
+    ctx.beginPath();
+    ctx.moveTo(shoulderX - torsoHalf, shoulderY);
+    ctx.lineTo(shoulderX + torsoHalf, shoulderY);
+    ctx.lineTo(waistX + torsoHalf * 0.86, hipY - 1.6);
+    ctx.lineTo(waistX - torsoHalf * 0.86, hipY - 1.6);
+    ctx.closePath();
+  }
   ctx.strokeStyle = OUTLINE;
   ctx.lineWidth = 0.8;
   ctx.stroke();
@@ -220,32 +314,91 @@ function drawFigure(ctx: CanvasRenderingContext2D, dir: number, phase: number,
     const hy = sy + 4.2 - Math.abs(swing) * 0.9 + swing * 0.8 * fy;
     // Short sleeve in the kit colour, forearm in skin.
     drawLimb(ctx, sx, sy, hx, hy, primary, SKIN, 1.7);
+    // Goalkeeper gloves: a light pad over the hand end of the forearm.
+    if (look.goalkeeper) {
+      ctx.beginPath();
+      ctx.arc(hx, hy, 1.0, 0, Math.PI * 2);
+      ctx.fillStyle = GLOVE;
+      ctx.fill();
+      ctx.strokeStyle = OUTLINE;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
   });
 
   // ---- head ----
+  const bald = look.hair === 'bald';
   ctx.beginPath();
   ctx.arc(headX, headY, headR, 0, Math.PI * 2);
-  ctx.fillStyle = back ? HAIR : SKIN;
+  // A bald back-of-head is skin, not hair — that IS the haircut.
+  ctx.fillStyle = back && !bald ? HAIR : SKIN;
   ctx.fill();
   ctx.strokeStyle = OUTLINE;
   ctx.lineWidth = 0.8;
   ctx.stroke();
 
-  if (!back) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(headX, headY, headR, 0, Math.PI * 2);
-    ctx.clip();
+  // Styles with mass OUTSIDE the skull silhouette, so they read at 3px radius
+  // and stay visible from every facing (they are not gated on `back`).
+  if (look.hair === 'curly') {
+    // Three bumps across the crown.
     ctx.fillStyle = HAIR;
-    // Cap over the top of the skull...
-    ctx.fillRect(headX - headR, headY - headR, headR * 2, headR * 0.95);
-    // ...and around the back of the head when seen from the side.
-    if (side > 0.5) {
-      const backSign = fx >= 0 ? -1 : 1;
-      ctx.fillRect(headX + (backSign > 0 ? 0.6 : -headR), headY - headR,
-                   headR - 0.6, headR * 1.7);
+    for (const [ox, oy] of [[-0.65, -0.8], [0, -1.02], [0.65, -0.8]] as const) {
+      ctx.beginPath();
+      ctx.arc(headX + ox * headR, headY + oy * headR, headR * 0.45, 0, Math.PI * 2);
+      ctx.fill();
     }
-    ctx.restore();
+  } else if (look.hair === 'long') {
+    // Strands hanging past the jawline on both sides of the head.
+    ctx.fillStyle = HAIR;
+    ctx.fillRect(headX - headR - 0.3, headY - 0.5, 1.0, headR * 1.5);
+    ctx.fillRect(headX + headR - 0.7, headY - 0.5, 1.0, headR * 1.5);
+  } else if (look.hair === 'mohawk') {
+    // Vertical crest strip rising over the crown.
+    ctx.fillStyle = HAIR;
+    ctx.fillRect(headX - 0.55, headY - headR - 1.2, 1.1, headR + 1.2);
+  } else if (look.hair === 'spiky') {
+    // Three small spikes poking above the outline.
+    ctx.fillStyle = HAIR;
+    for (const [ox, h] of [[-0.6, 0.9], [0, 1.25], [0.6, 0.9]] as const) {
+      const bx = headX + ox * headR;
+      const by = headY - headR + 0.35;
+      ctx.beginPath();
+      ctx.moveTo(bx - 0.55, by);
+      ctx.lineTo(bx, by - h);
+      ctx.lineTo(bx + 0.55, by);
+      ctx.closePath();
+      ctx.fill();
+    }
+  } else if (look.hair === 'bun') {
+    // A small knot sitting on the crown.
+    ctx.fillStyle = HAIR;
+    ctx.beginPath();
+    ctx.arc(headX, headY - headR - 0.45, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  if (!back) {
+    if (!bald) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(headX, headY, headR, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = HAIR;
+      // Cap over the top of the skull — a buzz cut keeps it high and tight,
+      // and the mohawk/spiky hairlines stay thin so the crest/spikes carry
+      // the style instead of a full cap.
+      const capH = look.hair === 'buzz' ? headR * 0.55
+        : (look.hair === 'mohawk' || look.hair === 'spiky') ? headR * 0.4
+        : headR * 0.95;
+      ctx.fillRect(headX - headR, headY - headR, headR * 2, capH);
+      // ...and around the back of the head when seen from the side.
+      if (side > 0.5 && look.hair !== 'buzz' && look.hair !== 'mohawk') {
+        const backSign = fx >= 0 ? -1 : 1;
+        ctx.fillRect(headX + (backSign > 0 ? 0.6 : -headR), headY - headR,
+                     headR - 0.6, headR * 1.7);
+      }
+      ctx.restore();
+    }
 
     ctx.fillStyle = '#1b1b1b';
     if (side > 0.5) {
@@ -261,17 +414,23 @@ function drawFigure(ctx: CanvasRenderingContext2D, dir: number, phase: number,
 // ----------------------------------------------------------------- cache
 
 /**
- * Baked (kit x facing x phase) bitmaps. A match uses at most four kits
- * (home/away outfield + the two goalkeepers) x 8 facings x 5 phases = 160
- * cells of ~54x72 device pixels, and they are only created on first use, so a
- * typical clip ends up with a few dozen. Keys include the colours, so a kit
- * change simply misses the cache instead of showing the wrong shirt.
+ * Baked (kit x appearance variant x facing x phase) bitmaps. A match uses at
+ * most four kits (home/away outfield + the two goalkeepers), and the 22
+ * players hash into at most 22 distinct appearance variants, so the realistic
+ * ceiling is ~22 looks x 8 facings x 5 phases of ~54x72 device pixels — and
+ * they are only created on first use, so a typical clip ends up with far
+ * fewer. Keys include the colours AND the bounded variant id (never the raw
+ * playerId), so a kit change simply misses the cache instead of showing the
+ * wrong shirt, and the id space cannot grow the map.
  */
 export class PlayerSpriteCache {
 
   /** Hard ceiling: a pathological stream of colours can never grow this
-   *  unbounded. Reaching it drops everything and starts again. */
-  private static readonly MAX_ENTRIES = 240;
+   *  unbounded. Sized above the realistic working set (22 looks x 8 x 5)
+   *  so normal playback never thrashes; raised for the descriptor-driven
+   *  variant band, which is wider than the 36-look legacy hash band.
+   *  Reaching it drops everything and starts again. */
+  private static readonly MAX_ENTRIES = 2048;
 
   private readonly cache = new Map<string, HTMLCanvasElement>();
 
@@ -286,9 +445,26 @@ export class PlayerSpriteCache {
   /**
    * The bitmap for one pose. `phase` is `IDLE_PHASE` or 0..RUN_PHASES-1.
    * Returns null only if the browser refuses a 2D context.
+   *
+   * The trailing parameters are additive so older call sites keep compiling:
+   *   - `playerId` seeds skin tone + hair (bounded via `appearanceVariant`);
+   *     omitted, every figure gets the same default look as before.
+   *   - `secondary` enables the shirt pattern (stripes/hoops/sash, picked by
+   *     colour hash); omitted or equal to `primary`, the shirt stays plain.
+   *   - `goalkeeper` adds gloves and suppresses the outfield pattern.
+   *   - `face` is the backend card descriptor; when present it OVERRIDES the
+   *     playerId hash so the sprite matches the player card. Its variant band
+   *     starts above the legacy one, so the two can never share a cache key.
    */
-  get(primary: string, accent: string, dir: number, phase: number): HTMLCanvasElement | null {
-    const key = `${primary}|${accent}|${dir}|${phase}`;
+  get(primary: string, accent: string, dir: number, phase: number,
+      playerId?: number, secondary?: string,
+      goalkeeper: boolean = false,
+      face?: FaceDescriptor): HTMLCanvasElement | null {
+    // face → descriptor look; else playerId → hash look; else legacy figure.
+    const look = spriteAppearance(face, playerId);
+    const pat = goalkeeper ? undefined : secondary;
+    const key =
+      `${primary}|${accent}|${pat || ''}|${look.variantId}|${goalkeeper ? 1 : 0}|${dir}|${phase}`;
     const hit = this.cache.get(key);
     if (hit) return hit;
 
@@ -298,7 +474,15 @@ export class PlayerSpriteCache {
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
     ctx.scale(SS, SS);
-    drawFigure(ctx, dir, phase, primary, accent);
+    drawFigure(ctx, dir, phase, primary, accent, {
+      skin: look.skin,
+      hair: look.hairStyle,
+      hairColor: look.hairColor,
+      boots: look.boots,
+      goalkeeper,
+      pattern: kitPattern(primary, pat),
+      secondary: pat
+    });
 
     if (this.cache.size >= PlayerSpriteCache.MAX_ENTRIES) this.cache.clear();
     this.cache.set(key, canvas);

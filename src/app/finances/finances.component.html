@@ -1,27 +1,23 @@
 <div class="finances-container">
 
     <!-- HEADER -->
-    <div class="page-header">
-      <div class="title-section">
-          <div class="icon-circle">$</div>
-          <div>
-              <h1>FINANCES</h1>
-              <span class="status">{{ teamName }} - Season {{ viewSeason }}</span>
-          </div>
-      </div>
-
-      <!-- Navigation Tabs -->
+    <app-page-header eyebrow="Club" title="Finances" [subtitle]="teamName + ' · Season ' + viewSeason">
       <div class="nav-tabs">
           <button *ngFor="let tab of tabs"
+                  type="button"
                   class="tab-btn"
                   [class.active]="activeTab === tab"
                   (click)="setTab(tab)">
               {{ tab }}
           </button>
       </div>
-    </div>
+    </app-page-header>
 
-    <div class="content-area">
+    <app-ui-state *ngIf="loading" kind="loading" title="Loading finances"></app-ui-state>
+    <app-ui-state *ngIf="!loading && errorMessage" kind="error" title="Finances unavailable"
+      [message]="errorMessage" (retry)="retry()"></app-ui-state>
+
+    <div class="content-area" *ngIf="!loading && !errorMessage">
 
       <!-- OVERVIEW TAB -->
       <ng-container *ngIf="activeTab === 'Overview'">
@@ -30,23 +26,23 @@
         <div class="finance-cards-grid">
           <div class="finance-card card-finances">
             <div class="fc-label">TOTAL FINANCES</div>
-            <div class="fc-value">{{ totalFinances | number }}</div>
+            <div class="fc-value">{{ totalFinances | fmMoney }}</div>
           </div>
           <div class="finance-card card-budget">
             <div class="fc-label">TRANSFER BUDGET</div>
-            <div class="fc-value">{{ transferBudget | number }}</div>
+            <div class="fc-value">{{ transferBudget | fmMoney }}</div>
           </div>
           <div class="finance-card card-wages">
             <div class="fc-label">MONTHLY WAGES</div>
-            <div class="fc-value">{{ monthlyWages | number }}</div>
+            <div class="fc-value">{{ monthlyWages | fmMoney }}</div>
           </div>
           <div class="finance-card" [ngClass]="debt > 0 ? 'card-debt' : 'card-ok'">
             <div class="fc-label">DEBT</div>
-            <div class="fc-value">{{ debt > 0 ? (debt | number) : 'None' }}</div>
+            <div class="fc-value">{{ debt > 0 ? (debt | fmMoney) : 'None' }}</div>
           </div>
           <div class="finance-card card-confidence">
             <div class="fc-label">BOARD CONFIDENCE</div>
-            <div class="fc-value">{{ boardConfidence }}%</div>
+            <div class="fc-value">{{ boardConfidence | fmPercent }}</div>
             <div class="confidence-bar">
               <div class="confidence-fill" [style.width.%]="boardConfidence"
                    [style.background-color]="boardConfidence >= 70 ? '#2ecc71' : boardConfidence >= 40 ? '#f1c40f' : '#e74c3c'"></div>
@@ -61,7 +57,7 @@
         <!-- Budget Allocation Info -->
         <div class="budget-allocation-bar">
           <span class="alloc-label">Transfer Budget Allocation:</span>
-          <span class="alloc-value">{{ transferBudgetPercentage }}% of income goes to transfers</span>
+          <span class="alloc-value">{{ transferBudgetPercentage | fmPercent }} of income goes to transfers</span>
           <div class="alloc-bar">
             <div class="alloc-fill" [style.width.%]="transferBudgetPercentage"></div>
           </div>
@@ -89,11 +85,11 @@
                       <span class="cat-icon">{{ getCategoryIcon(item.category) }}</span>
                       {{ getCategoryLabel(item.category) }}
                     </td>
-                    <td class="right" style="color: #2ecc71;">{{ item.amount | number }}</td>
+                    <td class="right" style="color: #2ecc71;">{{ item.amount | fmMoney }}</td>
                   </tr>
                   <tr class="total-row">
                     <td class="text-left name-col"><strong>TOTAL INCOME</strong></td>
-                    <td class="right" style="color: #2ecc71; font-weight: bold;">{{ financialReport.totalIncome | number }}</td>
+                    <td class="right" style="color: #2ecc71; font-weight: bold;">{{ financialReport.totalIncome | fmMoney }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -109,11 +105,11 @@
                       <span class="cat-icon">{{ getCategoryIcon(item.category) }}</span>
                       {{ getCategoryLabel(item.category) }}
                     </td>
-                    <td class="right" style="color: #e74c3c;">{{ item.amount | number }}</td>
+                    <td class="right" style="color: #e74c3c;">{{ item.amount | fmMoney }}</td>
                   </tr>
                   <tr class="total-row">
                     <td class="text-left name-col"><strong>TOTAL EXPENSES</strong></td>
-                    <td class="right" style="color: #e74c3c; font-weight: bold;">-{{ financialReport.totalExpenses | number }}</td>
+                    <td class="right" style="color: #e74c3c; font-weight: bold;">{{ financialReport.totalExpenses | fmMoney:false:true }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -124,7 +120,7 @@
           <div class="net-result" *ngIf="financialReport"
                [ngClass]="financialReport.netProfit >= 0 ? 'net-positive' : 'net-negative'">
             <span class="net-label">NET PROFIT/LOSS</span>
-            <span class="net-value">{{ financialReport.netProfit | number }}</span>
+            <span class="net-value">{{ financialReport.netProfit | fmMoney }}</span>
           </div>
         </div>
 
@@ -149,7 +145,7 @@
                 </td>
                 <td class="text-left" style="font-size: 0.85em; color: #aaa;">{{ tx.description }}</td>
                 <td class="right" [style.color]="tx.amount >= 0 ? '#2ecc71' : '#e74c3c'">
-                  {{ tx.amount >= 0 ? '+' : '' }}{{ tx.amount | number }}
+                  {{ tx.amount | fmMoney }}
                 </td>
               </tr>
             </tbody>
@@ -164,15 +160,15 @@
         <div class="transfer-summary">
           <div class="summary-card budget">
             <div class="summary-label">TRANSFER BUDGET</div>
-            <div class="summary-value">{{ transferBudget | number }}</div>
+            <div class="summary-value">{{ transferBudget | fmMoney }}</div>
           </div>
           <div class="summary-card received">
             <div class="summary-label">TOTAL FINANCES</div>
-            <div class="summary-value">{{ totalFinances | number }}</div>
+            <div class="summary-value">{{ totalFinances | fmMoney }}</div>
           </div>
           <div class="summary-card spent">
             <div class="summary-label">MONTHLY WAGES</div>
-            <div class="summary-value">{{ monthlyWages | number }}</div>
+            <div class="summary-value">{{ monthlyWages | fmMoney }}</div>
           </div>
         </div>
 
@@ -187,15 +183,15 @@
         <div class="transfer-summary">
           <div class="summary-card spent">
             <div class="summary-label">TOTAL SPENT</div>
-            <div class="summary-value">{{ totalSpent | number }}</div>
+            <div class="summary-value">{{ totalSpent | fmMoney }}</div>
           </div>
           <div class="summary-card received">
             <div class="summary-label">TOTAL RECEIVED</div>
-            <div class="summary-value">{{ totalReceived | number }}</div>
+            <div class="summary-value">{{ totalReceived | fmMoney }}</div>
           </div>
           <div class="summary-card" [ngClass]="netTransfer >= 0 ? 'positive' : 'negative'">
             <div class="summary-label">NET BALANCE</div>
-            <div class="summary-value">{{ netTransfer | number }}</div>
+            <div class="summary-value">{{ netTransfer | fmMoney }}</div>
           </div>
         </div>
 
@@ -212,7 +208,7 @@
             <tbody>
               <tr *ngFor="let player of boughtPlayers" class="main-row">
                 <td class="text-left name-col">{{ player.playerName || player.name || 'Unknown' }}</td>
-                <td class="right">{{ (player.playerTransferValue || 0) | number }}</td>
+                <td class="right">{{ (player.playerTransferValue || 0) | fmMoney }}</td>
               </tr>
             </tbody>
           </table>
@@ -232,7 +228,7 @@
             <tbody>
               <tr *ngFor="let player of soldPlayers" class="main-row">
                 <td class="text-left name-col">{{ player.playerName || player.name || 'Unknown' }}</td>
-                <td class="right">{{ (player.playerTransferValue || 0) | number }}</td>
+                <td class="right">{{ (player.playerTransferValue || 0) | fmMoney }}</td>
               </tr>
             </tbody>
           </table>
@@ -301,7 +297,7 @@
               <tr *ngFor="let offer of pendingOffers" class="main-row">
                 <td class="text-left name-col">{{ offer.sponsorName }}</td>
                 <td>{{ offer.type || '-' }}</td>
-                <td class="right">{{ (offer.annualValue || 0) | number }}</td>
+                <td class="right">{{ (offer.annualValue || 0) | fmMoney }}</td>
                 <td class="right">{{ offer.endSeason - offer.startSeason + 1 }} season(s)</td>
                 <td class="right actions-cell">
                   <button class="action-btn accept" (click)="acceptSponsor(offer.id)">Accept</button>
@@ -328,7 +324,7 @@
               <tr *ngFor="let sponsor of activeSponsors" class="main-row">
                 <td class="text-left name-col">{{ sponsor.sponsorName }}</td>
                 <td>{{ sponsor.type || '-' }}</td>
-                <td class="right">{{ (sponsor.annualValue || 0) | number }}</td>
+                <td class="right">{{ (sponsor.annualValue || 0) | fmMoney }}</td>
                 <td class="right">Season {{ sponsor.endSeason }}</td>
               </tr>
             </tbody>
@@ -390,7 +386,7 @@
               </div>
               <!-- Upgrade cost/duration info -->
               <div class="upgrade-info-row" *ngIf="item.canUpgrade && !item.upgrading">
-                <span class="upgrade-cost-text">Cost: {{ item.upgradeCost | number }}</span>
+                <span class="upgrade-cost-text">Cost: {{ item.upgradeCost | fmMoney }}</span>
                 <span class="upgrade-dur-text">{{ item.upgradeDuration }} days</span>
               </div>
               <div class="upgrading-indicator" *ngIf="item.upgrading">

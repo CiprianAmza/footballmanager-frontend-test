@@ -5,6 +5,74 @@ import { Subscription } from 'rxjs';
 import { urlApp } from '../app.component';
 import { GameEventsService } from '../services/game-events.service';
 
+interface WindowPerformance {
+    requestedMatches: number;
+    sampleMatches: number;
+    xgDifferencePer90: number;
+}
+
+interface SegmentPerformance {
+    matches: number;
+    wins: number;
+    draws: number;
+    losses: number;
+    points: number;
+    expectedPoints: number;
+    xgDifferencePer90: number;
+}
+
+interface CompetitionUnderlyingTeam {
+    rank: number;
+    teamId: number;
+    teamName: string;
+    matches: number;
+    xgDifferencePer90: number;
+    rolling5: WindowPerformance;
+    rolling10: WindowPerformance;
+    rolling20: WindowPerformance;
+    higherXgMatchPercentage: number;
+    actualPoints: number;
+    expectedPoints: number;
+    luckPoints: number;
+    luckIndex: number;
+    balancedMatches: SegmentPerformance;
+    versusTop4: SegmentPerformance;
+    versusUpperHalf: SegmentPerformance;
+    versusLowerHalf: SegmentPerformance;
+}
+
+interface CompetitionUnderlyingPerformance {
+    competitionId: number;
+    seasonNumber: number;
+    matches: number;
+    teams: number;
+    balancedXgThreshold: number;
+    methodology: string;
+    teamPerformance: CompetitionUnderlyingTeam[];
+}
+
+interface TeamQualification {
+    teamId: number;
+    route: 'LOC' | 'STARS_CUP';
+    source: 'LEAGUE_POSITION' | 'CUP_WINNER' | 'CUP_REALLOCATION';
+    leaguePosition: number | null;
+}
+
+interface LeagueQualificationContext {
+    competitionId: number;
+    season: number;
+    hasLowerTier: boolean;
+    relegationFrom: number | null;
+    locSpots: number;
+    starsCupSpots: number;
+    cupCompetitionId: number | null;
+    cupCompetitionName: string | null;
+    cupWinnerTeamId: number | null;
+    cupWinnerTeamName: string | null;
+    cupWinnerRoute: 'LOC' | 'STARS_CUP' | null;
+    qualifications: TeamQualification[];
+}
+
 @Component({
     selector: 'competition',
     templateUrl: './competition.component.html',
@@ -24,7 +92,13 @@ export class CompetitionComponent implements OnInit, OnDestroy {
     // European qualification zones (dynamic per league coefficient)
     locSpots: number = 0;
     starsCupSpots: number = 0;
-    relegationFrom: number = 18;
+    hasLowerTier: boolean = false;
+    relegationFrom: number | null = null;
+    cupWinnerTeamId: number | null = null;
+    cupWinnerTeamName: string | null = null;
+    cupWinnerRoute: 'LOC' | 'STARS_CUP' | null = null;
+    qualificationContextLoaded: boolean = false;
+    teamQualifications: TeamQualification[] = [];
 
     // Seasons Logic
     currentSeason: string = "";
@@ -38,6 +112,10 @@ export class CompetitionComponent implements OnInit, OnDestroy {
     compStats: any = null;
     compStatsLoading: boolean = false;
     activeStatsTab: string = 'scorers';
+    underlyingStats: CompetitionUnderlyingPerformance | null = null;
+    underlyingStatsLoading: boolean = false;
+    underlyingStatsError: string = '';
+    expandedUnderlyingTeamId: number | null = null;
 
     constructor(private http: HttpClient, private route: ActivatedRoute, private router: Router,
                 private gameEvents: GameEventsService) {}
@@ -55,6 +133,7 @@ export class CompetitionComponent implements OnInit, OnDestroy {
             // Do not build stats URLs until both route and season are available.
             if (!this.parameterCompetitionId || !this.selectedSeason) return;
             if (this.competitionType === 'League' && this.selectedSeason === this.currentSeason) {
+                this.loadLeagueQualification();
                 this.loadLeagueData();
             }
             this.loadCompetitionStats();
@@ -94,7 +173,7 @@ export class CompetitionComponent implements OnInit, OnDestroy {
                     this.competitionType = 'League';
                     this.locSpots = info.locSpots || 0;
                     this.starsCupSpots = info.starsCupSpots || 0;
-                    this.relegationFrom = info.relegationFrom || 18;
+                    this.loadLeagueQualification();
                     this.loadLeagueData();
                 }
                 this.competitionName = info.name || "Competition";
@@ -129,9 +208,69 @@ export class CompetitionComponent implements OnInit, OnDestroy {
     // --- EVENT HANDLER ---
     onSeasonChange() {
         if (this.competitionType === 'League') {
+            this.loadLeagueQualification();
             this.loadLeagueData();
         }
         this.loadCompetitionStats();
+    }
+
+    loadLeagueQualification(): void {
+        if (!this.parameterCompetitionId || !this.selectedSeason) return;
+        this.qualificationContextLoaded = false;
+        this.http.get<LeagueQualificationContext>(
+            `${urlApp}/competition/leagueQualification/${this.parameterCompetitionId}/${this.selectedSeason}`
+        ).subscribe({
+            next: context => {
+                this.hasLowerTier = context.hasLowerTier;
+                this.relegationFrom = context.relegationFrom;
+                this.locSpots = context.locSpots;
+                this.starsCupSpots = context.starsCupSpots;
+                this.cupWinnerTeamId = context.cupWinnerTeamId;
+                this.cupWinnerTeamName = context.cupWinnerTeamName;
+                this.cupWinnerRoute = context.cupWinnerRoute;
+                this.teamQualifications = context.qualifications || [];
+                this.qualificationContextLoaded = true;
+            },
+            error: () => {
+                // A missing context must never invent relegation for a league
+                // whose nation may not have a lower tier.
+                this.hasLowerTier = false;
+                this.relegationFrom = null;
+                this.cupWinnerTeamId = null;
+                this.cupWinnerTeamName = null;
+                this.cupWinnerRoute = null;
+                this.teamQualifications = [];
+            }
+        });
+    }
+
+    qualificationFor(team: any): 'LOC' | 'STARS_CUP' | null {
+        const exact = this.teamQualifications.find(entry => Number(entry.teamId) === Number(team.teamId));
+        if (exact) return exact.route;
+        if (this.qualificationContextLoaded) return null;
+        if (team.position <= this.locSpots) return 'LOC';
+        if (team.position <= this.locSpots + this.starsCupSpots) return 'STARS_CUP';
+        return null;
+    }
+
+    qualificationTitle(team: any): string {
+        const qualification = this.teamQualifications.find(
+            entry => Number(entry.teamId) === Number(team.teamId));
+        if (!qualification) return '';
+        if (qualification.route === 'LOC') return 'Qualified for League of Champions';
+        if (qualification.source === 'CUP_WINNER') return 'Cup winner — qualified for Stars Cup';
+        if (qualification.source === 'CUP_REALLOCATION') {
+            return 'Qualified for Stars Cup via the reallocated cup-winner place';
+        }
+        return 'Qualified for Stars Cup through league position';
+    }
+
+    isCupWinner(team: any): boolean {
+        return this.cupWinnerTeamId != null && Number(team.teamId) === Number(this.cupWinnerTeamId);
+    }
+
+    isRelegatedPosition(position: number): boolean {
+        return this.hasLowerTier && this.relegationFrom != null && position >= this.relegationFrom;
     }
 
     loadCompetitionStats() {
@@ -149,6 +288,49 @@ export class CompetitionComponent implements OnInit, OnDestroy {
         });
         // Also load the aggregated team match-stats leaderboards (possession / xG / cards / etc.)
         this.loadChampionshipStats();
+        this.loadUnderlyingStats();
+    }
+
+    loadUnderlyingStats(): void {
+        if (!this.parameterCompetitionId || !this.selectedSeason) return;
+        this.underlyingStatsLoading = true;
+        this.underlyingStatsError = '';
+        this.http.get<CompetitionUnderlyingPerformance>(
+            `${urlApp}/stats/competition/${this.parameterCompetitionId}/${this.selectedSeason}/underlying-performance`
+        ).subscribe({
+            next: data => {
+                this.underlyingStats = data;
+                this.underlyingStatsLoading = false;
+                const currentExpandedStillExists = data.teamPerformance.some(
+                    row => row.teamId === this.expandedUnderlyingTeamId);
+                if (!currentExpandedStillExists) {
+                    this.expandedUnderlyingTeamId = data.teamPerformance[0]?.teamId ?? null;
+                }
+            },
+            error: () => {
+                this.underlyingStats = null;
+                this.underlyingStatsLoading = false;
+                this.underlyingStatsError = 'Underlying performance is unavailable until the analytics backend is restarted.';
+            }
+        });
+    }
+
+    toggleUnderlyingTeam(teamId: number): void {
+        this.expandedUnderlyingTeamId = this.expandedUnderlyingTeamId === teamId ? null : teamId;
+    }
+
+    signedMetric(value: number, digits: number = 2): string {
+        const normalized = Math.abs(value) < Math.pow(10, -digits) / 2 ? 0 : value;
+        return `${normalized > 0 ? '+' : ''}${normalized.toFixed(digits)}`;
+    }
+
+    underlyingTone(value: number): string {
+        if (Math.abs(value) < 0.05) return 'neutral';
+        return value > 0 ? 'positive' : 'negative';
+    }
+
+    segmentRecord(segment: SegmentPerformance): string {
+        return segment.matches ? `${segment.wins}W ${segment.draws}D ${segment.losses}L` : 'No matches';
     }
 
     // === Championship team-stat leaderboards (Most Possession, Best xG, etc.) ===

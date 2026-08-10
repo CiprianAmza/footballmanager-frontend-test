@@ -6,6 +6,9 @@ import { GameEventsService } from '../services/game-events.service';
 import { ScoutService, AvailableScout, TeamScout, ScoutAssignment, CompletedReport, ExpiringScout } from '../services/scout.service';
 import { TransferService, AvailablePlayer } from '../services/transfer.service';
 import { urlApp } from '../app.component';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
 
 interface StaffRole {
   name: string;
@@ -128,10 +131,14 @@ export class StaffComponent implements OnInit, OnDestroy {
     public teamService: TeamService,
     private scoutService: ScoutService,
     private transferService: TransferService,
-    private gameEvents: GameEventsService
+    private gameEvents: GameEventsService,
+    private route: ActivatedRoute,
+    private router: Router,
+    private feedback: UiFeedbackService = new UiFeedbackService()
   ) {}
 
   ngOnInit(): void {
+    this.sub.add(bindTabToUrl(this.route, this.tabs, 'Overview', tab => this.activateTab(tab)));
     this.loadStaffOverview();
     this.loadResponsibilities();
 
@@ -149,6 +156,10 @@ export class StaffComponent implements OnInit, OnDestroy {
   }
 
   setTab(tab: string) {
+    void navigateToTab(this.router, this.route, this.tabs, 'Overview', tab);
+  }
+
+  private activateTab(tab: string): void {
     this.activeTab = tab;
     if (tab === 'Overview') {
       this.loadStaffOverview();
@@ -301,8 +312,11 @@ export class StaffComponent implements OnInit, OnDestroy {
     });
   }
 
-  fireCoach(coach: CoachInfo): void {
-    if (!confirm('Release ' + coach.name + ' (' + coach.role + ')?')) return;
+  async fireCoach(coach: CoachInfo): Promise<void> {
+    const confirmed = await this.feedback.confirm('Release ' + coach.name + ' (' + coach.role + ')?', {
+      title: 'Release staff member', confirmLabel: 'Release', tone: 'error'
+    });
+    if (!confirmed) return;
 
     this.http.post<any>(urlApp + `/staff/fire/${coach.id}`, {}).subscribe({
       next: (res) => {
@@ -418,8 +432,12 @@ export class StaffComponent implements OnInit, OnDestroy {
   // FIRE SCOUT
   // ==========================================
 
-  fireScout(scout: TeamScout): void {
-    if (!confirm('Release ' + scout.name + '? This will cancel any active assignments.')) return;
+  async fireScout(scout: TeamScout): Promise<void> {
+    const confirmed = await this.feedback.confirm(
+      'Release ' + scout.name + '? This will cancel any active assignments.',
+      { title: 'Release scout', confirmLabel: 'Release', tone: 'error' }
+    );
+    if (!confirmed) return;
 
     this.scoutService.fireScout(scout.id).subscribe({
       next: () => {

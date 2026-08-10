@@ -1,0 +1,44 @@
+<div class="media-centre">
+  <header class="media-masthead">
+    <div class="brand"><span>THE</span><strong>FOOTBALL WIRE</strong><small>Career newsroom</small></div>
+    <div class="edition">Season {{ teamService.currentSeason }}<span>{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }}</span></div>
+    <nav><a routerLink="/inbox">Classic</a><a routerLink="/inbox2">Decision Desk <b *ngIf="unreadDecisions">{{ unreadDecisions }}</b></a><a class="active" routerLink="/inbox3">Media Centre</a></nav>
+  </header>
+
+  <div class="ticker"><strong>LIVE WIRE</strong><div><span *ngFor="let item of messages.slice(0, 5)">{{ item.title }}</span></div></div>
+
+  <div class="news-controls">
+    <nav><button type="button" [class.active]="newsroomView === 'all'" (click)="setNewsroomView('all')"><kbd>1</kbd> Top stories</button><button type="button" [class.active]="newsroomView === 'reaction'" (click)="setNewsroomView('reaction')"><kbd>2</kbd> Match reaction</button><button type="button" [class.active]="newsroomView === 'league'" (click)="setNewsroomView('league')"><kbd>3</kbd> League</button><button type="button" [class.active]="newsroomView === 'club'" (click)="setNewsroomView('club')"><kbd>4</kbd> Inside club</button></nav>
+    <label><span>⌕</span><input #newsSearch type="search" [(ngModel)]="newsQuery" placeholder="Search the wire…"><kbd>/</kbd></label>
+  </div>
+
+  <main class="news-grid" *ngIf="featuredStory as featured; else emptyNewsroom">
+    <article class="lead-story" [attr.data-tone]="storyTone(featured)">
+      <div class="lead-visual"><span>{{ storyTag(featured) }}</span><strong>{{ featured.seasonNumber }}</strong><small>SEASON</small></div>
+      <div class="lead-copy"><span class="story-source">{{ storySource(featured) }} · {{ featured.createdAt | fmGameDate:true }}</span><h1>{{ featured.title }}</h1><p>{{ featured.content }}</p><div class="story-meta"><span>Day {{ featured.roundNumber }}</span><button type="button" *ngIf="featured.isRead" (click)="markAsUnread(featured)">Save as unread</button><button type="button" *ngIf="!featured.isRead" (click)="markAsRead(featured)">Mark read</button></div></div>
+    </article>
+
+    <aside class="news-agenda">
+      <div class="agenda-title">NEWSROOM AGENDA</div>
+      <div class="agenda-stat"><strong>{{ reactionCount }}</strong><span>match stories</span></div><div class="agenda-stat"><strong>{{ pressCount }}</strong><span>press items</span></div><div class="agenda-stat alert"><strong>{{ unreadDecisions }}</strong><span>decisions waiting</span></div>
+      <a routerLink="/inbox2">Open Decision Desk →</a>
+      <div class="agenda-note"><b>Keyboard</b><span><kbd>N</kbd>/<kbd>P</kbd> next or previous story</span><span><kbd>/</kbd> search</span></div>
+    </aside>
+
+    <section class="story-feed">
+      <div class="section-title"><span>LATEST STORIES</span><b>{{ newsroomMessages.length }} items</b></div>
+      <div class="story-cards">
+        <button type="button" *ngFor="let story of newsroomMessages" (click)="selectStory(story)" [class.active]="featured.id === story.id" [attr.data-tone]="storyTone(story)">
+          <span class="card-tag">{{ storyTag(story) }}</span><h2>{{ story.title }}</h2><p>{{ storyExcerpt(story) }}</p><footer><span>{{ storySource(story) }}</span><time>{{ story.createdAt | fmGameDate }}</time><i *ngIf="!story.isRead"></i></footer>
+        </button>
+      </div>
+    </section>
+
+    <aside class="club-wire">
+      <div class="section-title"><span>CLUB WIRE</span><a routerLink="/inbox2">All messages →</a></div>
+      <button type="button" *ngFor="let item of clubWire" (click)="selectStory(item)"><span>{{ getCategoryLabel(item.category) }}</span><strong>{{ item.title }}</strong><small>S{{ item.seasonNumber }} · Day {{ item.roundNumber }}</small></button>
+      <div class="empty-wire" *ngIf="!clubWire.length">No club updates.</div>
+    </aside>
+  </main>
+  <ng-template #emptyNewsroom><div class="empty-newsroom"><span>NEWSROOM OFFLINE</span><h2>No media stories yet</h2><p>Match reports, press reactions and transfer stories will appear here as the career develops.</p></div></ng-template>
+</div>

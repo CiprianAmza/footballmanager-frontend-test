@@ -1,16 +1,24 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { TeamService } from '../services/team.service';
 import {
   TacticsService, AnalyticalResponse, SimulatedResponse,
   LeagueWithTeams, LeagueTeam
 } from '../services/tactics.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
+
+const ADVISOR_TABS = ['analytical', 'simulated'] as const;
+type AdvisorTab = typeof ADVISOR_TABS[number];
 
 @Component({
   selector: 'app-tactics-advisor',
   templateUrl: './tactics-advisor.component.html',
   styleUrls: ['./tactics-advisor.component.css']
 })
-export class TacticsAdvisorComponent implements OnInit {
+export class TacticsAdvisorComponent implements OnInit, OnDestroy {
+
+  private tabSub?: Subscription;
 
   // Shared controls
   teamId: number | null = null;
@@ -18,7 +26,7 @@ export class TacticsAdvisorComponent implements OnInit {
   formation = '442';
   seasons = 10;
 
-  activeTab: 'analytical' | 'simulated' = 'analytical';
+  activeTab: AdvisorTab = 'analytical';
 
   // Analytical state
   analytical: AnalyticalResponse | null = null;
@@ -36,9 +44,11 @@ export class TacticsAdvisorComponent implements OnInit {
   pickLeagueId: number | null = null;
   pickTeamId: number | null = null;
 
-  constructor(public tacticsService: TacticsService, private teamService: TeamService) {}
+  constructor(public tacticsService: TacticsService, private teamService: TeamService,
+              private route: ActivatedRoute, private router: Router) {}
 
   ngOnInit(): void {
+    this.tabSub = bindTabToUrl(this.route, ADVISOR_TABS, 'analytical', tab => this.activeTab = tab);
     this.teamId = this.teamService.teamId || null;
     this.tacticsService.getFormations().subscribe({
       next: (f) => {
@@ -58,8 +68,12 @@ export class TacticsAdvisorComponent implements OnInit {
     }
   }
 
-  setTab(tab: 'analytical' | 'simulated'): void {
-    this.activeTab = tab;
+  ngOnDestroy(): void {
+    this.tabSub?.unsubscribe();
+  }
+
+  setTab(tab: AdvisorTab): void {
+    void navigateToTab(this.router, this.route, ADVISOR_TABS, 'analytical', tab);
   }
 
   runAnalytical(): void {

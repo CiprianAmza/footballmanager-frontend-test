@@ -8,6 +8,8 @@
  * `@JsonInclude(NON_NULL)` or where older cached payloads may predate a field.
  */
 
+import { FaceDescriptor } from '../live-match/appearance';
+
 export interface KitColors {
   outfieldPrimary?: string;
   outfieldSecondary?: string;
@@ -26,6 +28,8 @@ export interface LiveMatchMinute {
   playerId?: number;
   teamId?: number;
   teamName?: string;
+  /** Faza B: shot flavour as data — OPEN_PLAY | PENALTY | FREE_KICK | CORNER. */
+  playType?: string;
 }
 
 export interface PlayerStaminaInfo {
@@ -164,6 +168,60 @@ export interface LiveMatchData {
   awayPitch?: PlayerStaminaInfo[];
   homeBench?: PlayerStaminaInfo[];
   awayBench?: PlayerStaminaInfo[];
+
+  /** Faza A/C: per-minute presentational possession chains from MatchPhaseEngine.
+   *  Present only when the backend flag match.engine.phase.enabled is on. */
+  phases?: MatchPhaseData[];
+
+  /** Card face descriptors by playerId, so pitch sprites can match the player
+   *  cards. Optional: older payloads without it keep the hash-based look. */
+  faces?: { [playerId: number]: FaceDescriptor };
+}
+
+/** One backend possession chain: a minute of continuous play as discrete
+ *  actions with ball coordinates in the shared 0-100 pitch space. */
+export interface MatchPhaseData {
+  minute: number;
+  /** Team in possession for the bulk of the chain. */
+  teamId: number;
+  /** True when that team attacks toward x=100 this half. */
+  attackingRight: boolean;
+  /** Timeline eventType the chain resolves into, or "possession". */
+  endEvent: string;
+  /** Strategy family the engine generated the buildup from (HIGH_PRESS,
+   *  POSSESSION, COUNTER, WING_PLAY, DIRECT, INDIVIDUAL). */
+  strategy?: string;
+  /** Concrete scenario within the strategy (e.g. PRESS_TRAP). */
+  scenario?: string;
+  actions: PhaseAction[];
+}
+
+export interface PhaseAction {
+  /** KICKOFF | PASS | BACK_PASS | LATERAL_PASS | THROUGH_BALL | DRIBBLE | CROSS
+   *  | SHOT | GOAL | SAVE | MISS | BLOCK | CLEARANCE | CORNER_KICK | HEADER
+   *  | TACKLE | INTERCEPTION | BALL_OUT | THROW_IN | FOUL | FREE_KICK
+   *  | PENALTY_KICK | YELLOW_CARD | RED_CARD | OFFSIDE_FLAG | TURNOVER */
+  type: string;
+  playerId: number;
+  playerName?: string;
+  targetPlayerId?: number;
+  targetPlayerName?: string;
+  teamId: number;
+  x: number;
+  y: number;
+  endX: number;
+  endY: number;
+  durationMs: number;
+  /** Peak of the ball's flight arc in world units; 0/absent = ground ball. */
+  peakHeight?: number;
+
+  // Faza B: match officials, authored per action by the backend. Referee
+  // trails play (walks to the spot for fouls/cards); assistants patrol their
+  // sideline halves tracking the offside lines.
+  refX?: number;
+  refY?: number;
+  assistantBottomX?: number;
+  assistantTopX?: number;
 }
 
 /** Body of `POST /match/live/{key}/substitute`. */
@@ -221,9 +279,23 @@ export interface PitchPlayerPosition {
   isGoalkeeper: boolean;
 }
 
+/** A match official on the pitch (Faza B): the referee or an assistant. */
+export interface OfficialPosition {
+  x: number;
+  y: number;
+  role: 'REF' | 'AR';
+}
+
 export interface PitchFrame {
-  ball: { x: number; y: number; carrierPlayerId: number | null };
+  /** `h` = ball height above the grass in world units (flight arcs on shots,
+   *  crosses, goal kicks); absent/0 = along the ground. */
+  ball: { x: number; y: number; carrierPlayerId: number | null; h?: number };
   players: PitchPlayerPosition[];
+  /** Present only on phase-clip frames; ambient frames have no officials. */
+  officials?: OfficialPosition[];
+  /** Camera hint: 1 = tight (dribbles, skill moves, shots), -1 = wide (long
+   *  balls), 0/absent = the normal broadcast frame. Renderers ease toward it. */
+  zoom?: number;
 }
 
 /** A playable sequence of `PitchFrame`s plus the overlay metadata the renderer

@@ -1,0 +1,36 @@
+<main class="ci-shell">
+  <header class="ci-header">
+    <div><span class="eyebrow">European intelligence · Season {{ data?.strength?.season || '—' }}</span><h1>Coefficient Command Centre</h1><p>See who leads, who is accelerating and what every ranking position unlocks.</p></div>
+    <nav class="view-switch"><a routerLink="/coefficients">Classic</a><a class="active" routerLink="/coefficients2">Command</a><a routerLink="/coefficients3">Access map</a><a routerLink="/competition-money">Prize money</a></nav>
+  </header>
+
+  <div class="state" *ngIf="loading">Building coefficient picture…</div><div class="state error" *ngIf="error">{{ error }}</div>
+  <ng-container *ngIf="data && !loading">
+    <section class="kpi-strip">
+      <article><span>Country leader</span><strong>{{ data.countries.length ? data.countries[0].leagueName : '—' }}</strong><small>{{ data.countries.length ? (data.countries[0].coefficient | number:'1.1-2') : '—' }} pts</small></article>
+      <article><span>Club leader</span><strong>{{ data.clubs.length ? data.clubs[0].teamName : '—' }}</strong><small>{{ data.clubs.length ? (data.clubs[0].coefficient | number:'1.1-2') : '—' }} pts</small></article>
+      <article><span>LoC field</span><strong>{{ data.summary?.loc?.totalTeams || '—' }} clubs</strong><small>{{ data.summary?.loc?.directToGroups || 0 }} direct</small></article>
+      <article class="money-kpi" routerLink="/competition-money"><span>Money in play</span><strong>Open economy</strong><small>Shortcut M</small></article>
+    </section>
+
+    <section class="ci-workspace">
+      <div class="ranking-panel">
+        <div class="toolbar"><div class="segmented"><button [class.active]="mode === 'countries'" (click)="setMode('countries')">Countries <kbd>C</kbd></button><button [class.active]="mode === 'clubs'" (click)="setMode('clubs')">Clubs <kbd>T</kbd></button></div><input [(ngModel)]="search" placeholder="Search ranking…" aria-label="Search ranking"></div>
+        <div class="ranking-list">
+          <button *ngFor="let row of rows; let i = index" class="ranking-item" [class.selected]="i === selected" (click)="select(i)">
+            <b>#{{ row.rank }}</b><span><strong>{{ row.teamName || row.leagueName }}</strong><small>{{ row.teamName ? row.leagueName : (row.locSpots + ' LoC · ' + row.starsCupSpots + ' Stars Cup') }}</small></span><em [class.positive]="momentum(row) > 0">{{ momentum(row) >= 0 ? '+' : '' }}{{ momentum(row) | number:'1.1-1' }}</em><strong>{{ row.coefficient | number:'1.1-2' }}</strong>
+          </button>
+        </div>
+      </div>
+
+      <aside class="inspector" *ngIf="active as row">
+        <span class="eyebrow">Rank #{{ row.rank }} · selected</span><h2>{{ row.teamName || row.leagueName }}</h2><p *ngIf="row.teamName">{{ row.leagueName }}</p>
+        <div class="score-ring"><strong>{{ row.coefficient | number:'1.1-2' }}</strong><span>5-season coefficient</span></div>
+        <div class="access-box" *ngIf="mode === 'countries'"><span>European access</span><strong>{{ row.locSpots }} League of Champions</strong><small>{{ row.locEntry }}</small><strong>{{ row.starsCupSpots }} Stars Cup</strong></div>
+        <h3>Season contribution</h3><div class="trend-row" *ngFor="let season of seasonKeys(row)"><span>S{{ season }}</span><i><b [style.width.%]="trendWidth(row, season)"></b></i><strong>{{ row.perSeason[season] | number:'1.1-1' }}</strong></div>
+        <a *ngIf="mode === 'clubs'" [routerLink]="['/team', row.teamId]" class="primary-link">Open club profile →</a>
+        <div class="shortcut-note"><kbd>J</kbd>/<kbd>K</kbd> navigate · <kbd>M</kbd> money</div>
+      </aside>
+    </section>
+  </ng-container>
+</main>

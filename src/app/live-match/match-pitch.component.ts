@@ -13,6 +13,8 @@ import {
   PitchDetail, PlayerSpriteCache, SPRITE_FOOT_X, SPRITE_FOOT_Y, SPRITE_H,
   SPRITE_HEAD_LIFT, SPRITE_NUMBER_LIFT, SPRITE_W, SpriteMotionTracker
 } from './player-sprites';
+import { FaceDescriptor } from './appearance';
+import { playBoo, playCheer, playGroan } from './match-sound';
 
 /** A transient icon pinned to a pitch location (corner, foul, offside, card). */
 export interface PitchMarker {
@@ -173,6 +175,9 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
    *  circle, `sprites` are the procedural animated figures. Independent of
    *  `pitchStyle` — all four combinations are supported. */
   @Input() pitchDetail: PitchDetail = 'discs';
+  /** Backend card face descriptors by playerId; a player with one gets the
+   *  card-matching sprite look instead of the playerId-hash fallback. */
+  @Input() faces: { [playerId: number]: FaceDescriptor } | null = null;
 
   /** Fired once the clip has run past its last frame (or was skipped). */
   @Output() clipFinished = new EventEmitter<void>();
@@ -375,6 +380,16 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
       if (event.type === 'GOAL' && this.clip.outcome === 'GOAL') {
         this.spawnConfetti();
       }
+      // Crowd audio at the exact moment of the outcome — this is the HOME
+      // crowd: they roar for their own goal and boo the away one.
+      if (event.type === 'GOAL') {
+        const homeGoal = !this.clip.shooterTeamId
+          || Number(this.clip.shooterTeamId) === Number(this.homeTeamId);
+        if (homeGoal) playCheer();
+        else { playGroan(); playBoo(); }
+      } else if (event.type === 'SAVE' || event.type === 'MISS' || event.type === 'BLOCKED') {
+        playGroan();
+      }
     }
   }
 
@@ -385,7 +400,13 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
       'GOAL': 'GOAL!',
       'SAVE': 'SAVED!',
       'MISS': 'MISSED!',
-      'BLOCKED': 'BLOCKED!'
+      'BLOCKED': 'BLOCKED!',
+      'STEPOVER': 'Stepover!',
+      'CUT_LEFT': 'Cut inside!',
+      'CUT_RIGHT': 'Cut inside!',
+      'ROULETTE': 'Roulette!',
+      'RABONA': 'RABONA!',
+      'ADVANTAGE': 'Advantage!'
     };
     this.eventText = labels[type] || type;
 
@@ -413,7 +434,27 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
   renderFrame(frame: PitchFrame,
               names: { [playerId: number]: string } = {},
               markers: PitchMarker[] = []): void {
+    // Confetti physics used to be stepped per clip frame; the persistent-world
+    // path renders through here, so step it here too.
+    if (this.confetti.length > 0) this.tickConfetti();
     this.paint(frame, names, { clipOverlays: false, markers });
+  }
+
+  /** Persistent-world action: event text, crowd sound, confetti. */
+  notifyAction(event: { type: string; playerId: number; targetPlayerId: number; teamId: number },
+               isHomeTeam: boolean): void {
+    const shown = new Set(['SHOT', 'GOAL', 'SAVE', 'MISS', 'BLOCK', 'STEPOVER',
+      'ROULETTE', 'CUT_LEFT', 'CUT_RIGHT', 'RABONA_CROSS', 'ADVANTAGE']);
+    if (shown.has(event.type)) {
+      this.showEventText(event.type === 'BLOCK' ? 'BLOCKED'
+        : event.type === 'RABONA_CROSS' ? 'RABONA' : event.type);
+    }
+    if (event.type === 'GOAL') {
+      if (isHomeTeam) { playCheer(); this.spawnConfetti(); }
+      else { playGroan(); playBoo(); }
+    } else if (event.type === 'SAVE' || event.type === 'MISS' || event.type === 'BLOCK') {
+      playGroan();
+    }
   }
 
   private paint(frame: PitchFrame,
@@ -436,6 +477,7 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
     this.projector = createProjector(this.pitchStyle, w, h);
 
     this.drawPitch(ctx, w, h);
+    this.drawOfficials(ctx, w, h, frame);
     this.drawPlayers(ctx, w, h, frame, names);
     this.drawBall(ctx, w, h, frame);
     if (options.clipOverlays) {
@@ -459,6 +501,39 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
       canvas.width = width;
       canvas.height = height;
     }
+  }
+
+  /** Faza B: referee + assistants during phase clips — smaller dark figures so
+   *  they never read as a 12th player. Assistants sit on their sidelines. */
+  private drawOfficials(ctx: CanvasRenderingContext2D, w: number, h: number,
+                        frame: PitchFrame): void {
+    const officials = frame.officials;
+    if (!officials?.length) return;
+    ctx.save();
+    for (const official of officials) {
+      if (!isFinite(official.x) || !isFinite(official.y)) continue;
+      const point = this.projector.project((official.x / 100) * w, (official.y / 100) * h);
+      const radius = (official.role === 'REF' ? 6 : 5) * point.scale;
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+      // Referee black with a strong white ring — distinct from every kit and
+      // from both goalkeepers.
+      ctx.fillStyle = '#15181c';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.lineWidth = 1.7 * point.scale;
+      ctx.stroke();
+      if (official.role === 'AR') {
+        // A tiny flag stub so the assistants read as linesmen.
+        ctx.strokeStyle = '#f6c945';
+        ctx.lineWidth = 1.5 * point.scale;
+        ctx.beginPath();
+        ctx.moveTo(point.x + radius * 0.6, point.y - radius * 0.4);
+        ctx.lineTo(point.x + radius * 1.6, point.y - radius * 1.4);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
 
   /** Transient event icons (corner, foul, offside, card) pinned to the pitch. */
@@ -521,6 +596,11 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
         const next = b.players[index];
         if (!next || next.playerId !== player.playerId) return player;
         return { ...player, x: lerp(player.x, next.x), y: lerp(player.y, next.y) };
+      }),
+      officials: a.officials?.map((official, index) => {
+        const next = b.officials?.[index];
+        if (!next) return official;
+        return { ...official, x: lerp(official.x, next.x), y: lerp(official.y, next.y) };
       })
     };
   }
@@ -716,7 +796,11 @@ export class MatchPitchComponent implements OnChanges, AfterViewChecked, OnDestr
     // World coordinates, never screen ones: the cycle must look the same in
     // every pitch style and at every canvas size.
     const pose = this.motion.pose(player.playerId, player.x, player.y);
-    const bitmap = this.spriteCache.get(primary, accent, pose.dir, pose.phase);
+    const bitmap = this.spriteCache.get(primary, accent, pose.dir, pose.phase,
+      player.playerId,
+      player.isGoalkeeper ? undefined : teamKit?.outfieldSecondary,
+      player.isGoalkeeper,
+      this.faces?.[player.playerId]);
     if (!bitmap) return;
 
     const width = SPRITE_W * scale;

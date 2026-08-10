@@ -13,7 +13,9 @@
     </div>
 
     <div class="nav-bar">
-      <button class="nav-btn active">Home</button>
+      <a class="nav-btn active" routerLink="/home">Classic Home</a>
+      <a class="nav-btn" routerLink="/home2">Manager Desk</a>
+      <a class="nav-btn" routerLink="/home3">Data Cockpit</a>
     </div>
 
     <div class="upper-section">
@@ -327,19 +329,19 @@
         <div class="standing-info">
           <div class="standing-row">
             <span>Total Finances</span>
-            <span class="standing-value" style="color: #2ecc71;">{{ totalFinances | number }}</span>
+            <span class="standing-value" style="color: #2ecc71;">{{ totalFinances | fmMoney }}</span>
           </div>
           <div class="standing-row">
             <span>Transfer Budget</span>
-            <span class="standing-value" style="color: #3498db;">{{ transferBudget | number }}</span>
+            <span class="standing-value" style="color: #3498db;">{{ transferBudget | fmMoney }}</span>
           </div>
           <div class="standing-row" *ngIf="debt > 0">
             <span>Debt</span>
-            <span class="standing-value" style="color: #e74c3c;">{{ debt | number }}</span>
+            <span class="standing-value" style="color: #e74c3c;">{{ debt | fmMoney }}</span>
           </div>
           <div class="standing-row">
             <span>Board Confidence</span>
-            <span class="standing-value">{{ boardConfidence }}%</span>
+            <span class="standing-value">{{ boardConfidence | fmPercent }}</span>
           </div>
         </div>
       </div>

@@ -386,3 +386,25 @@
   .rankings-intro { flex-direction: column; }
   .ranking-tiers { justify-content: flex-start; }
 }
+.coefficient-views {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.coefficient-views a {
+  padding: 8px 12px;
+  border: 1px solid #39405a;
+  border-radius: 8px;
+  color: #9ca6ba;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.coefficient-views a.active {
+  color: #fff;
+  background: #2877bb;
+  border-color: #2877bb;
+}

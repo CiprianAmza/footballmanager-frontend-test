@@ -1,5 +1,17 @@
 <div class="squad-container">
 
+  <div class="squad-view-switcher">
+    <div>
+      <strong>Squad views</strong>
+      <span>Choose the perspective that matches the decision you need to make.</span>
+    </div>
+    <nav aria-label="Squad views">
+      <a routerLink="/squad" class="active">Classic table</a>
+      <a [routerLink]="['/squad2', teamId]">Matchday board</a>
+      <a [routerLink]="['/squad3', teamId]">People & culture</a>
+    </nav>
+  </div>
+
   <div class="availability-panel" *ngIf="availability.length > 0">
     <div class="availability-heading">
       <div>

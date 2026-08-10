@@ -8,9 +8,15 @@ import {
   GoalAnimationData, KitColors, LineupPreviewData, LiveMatchClosed, LiveMatchData,
   LiveMatchMinute, PitchClip, PitchFrame, PlayerStaminaInfo, StaminaSnapshot
 } from '../models/live-match.model';
+import { phaseToClip } from './phase-clip';
 import {
   goalAnimationToFrames, kitColor, kitsFromAnimation, MatchPitchComponent, PitchMarker
 } from './match-pitch.component';
+import { MatchPitch3dComponent } from './match-pitch3d.component';
+import {
+  matchSoundEnabled, playChant, setMatchSoundEnabled,
+  startCrowdAmbience, stopCrowdAmbience
+} from './match-sound';
 import { PitchStyle, readPitchStyle, writePitchStyle } from './pitch-projection';
 import { PitchDetail, readPitchDetail, writePitchDetail } from './player-sprites';
 import { PlaybackClock } from './playback-clock';
@@ -41,8 +47,9 @@ const MARKER_ICONS: { [eventType: string]: string } = {
 };
 const MARKER_LIFETIME_MS = 2000;
 
-/** How long the pitch takes to slide from ambient into a clip and back. */
-const SPLICE_MS = 500;
+/** How long the pitch takes to slide from ambient into a clip and back. Short:
+ *  with back-to-back phase chains this is the only "dead air" between plays. */
+const SPLICE_MS = 350;
 
 /**
  * The live-match viewer: scoreboard, commentary feed, squad/stat panels,
@@ -72,7 +79,85 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
   /** The user dismissed the finished match. */
   @Output() closed = new EventEmitter<LiveMatchClosed>();
 
-  @ViewChild(MatchPitchComponent) pitch?: MatchPitchComponent;
+  @ViewChild(MatchPitchComponent) pitch2d?: MatchPitchComponent;
+  @ViewChild(MatchPitch3dComponent) pitch3d?: MatchPitch3dComponent;
+
+  /** Faza D: the active pitch renderer. Both components share the same
+   *  playback API and consume the same `PitchFrame` model, so every driver
+   *  call site works against this union unchanged. */
+  get pitch(): MatchPitchComponent | MatchPitch3dComponent | undefined {
+    return this.pitch3dEnabled ? this.pitch3d : this.pitch2d;
+  }
+
+  /** Persisted 3D toggle (Faza D). */
+  pitch3dEnabled = localStorage.getItem('fm_pitch3d') === '1';
+
+  togglePitch3d(): void {
+    this.pitch3dEnabled = !this.pitch3dEnabled;
+    localStorage.setItem('fm_pitch3d', this.pitch3dEnabled ? '1' : '0');
+  }
+
+  /** Auto-continue: zoomed moments close themselves shortly after their last
+   *  frame, so the match flows without a Continue click per highlight. */
+  autoContinue = localStorage.getItem('fm_autoContinue') !== '0';
+
+  toggleAutoContinue(): void {
+    this.autoContinue = !this.autoContinue;
+    localStorage.setItem('fm_autoContinue', this.autoContinue ? '1' : '0');
+  }
+
+  /** Crowd audio (goals/misses), synthesized client-side. */
+  soundEnabled = matchSoundEnabled();
+
+  toggleSound(): void {
+    this.soundEnabled = !this.soundEnabled;
+    setMatchSoundEnabled(this.soundEnabled);
+    if (this.soundEnabled && this.showLiveMatch) this.startAtmosphere();
+    else this.stopAtmosphere();
+  }
+
+  /** Continuous stadium sound: murmur bed + the home end periodically singing
+   *  the home team's name. Event sounds (cheer/groan/boo) come from the clips. */
+  private chantTimer: any = null;
+
+  private startAtmosphere(): void {
+    if (!this.soundEnabled) return;
+    startCrowdAmbience();
+    if (this.chantTimer) clearInterval(this.chantTimer);
+    this.chantTimer = setInterval(() => {
+      if (this.soundEnabled && this.showLiveMatch && !this.liveMatchFinished) {
+        playChant(this.liveMatchData?.homeTeamName || '');
+      }
+    }, 55000);
+    setTimeout(() => {
+      if (this.soundEnabled && this.showLiveMatch) {
+        playChant(this.liveMatchData?.homeTeamName || '');
+      }
+    }, 6000);
+  }
+
+  private stopAtmosphere(): void {
+    stopCrowdAmbience();
+    if (this.chantTimer) {
+      clearInterval(this.chantTimer);
+      this.chantTimer = null;
+    }
+  }
+
+  /** Action playback speed for the phase/goal clips (persisted). Independent
+   *  of the 1x-8x MATCH clock — this scales how fast a play unfolds. */
+  private static readonly PHASE_SPEEDS = [0.35, 0.5, 0.75, 1, 1.25, 1.5];
+  phaseSpeed = LiveMatchComponent.PHASE_SPEEDS.includes(
+      parseFloat(localStorage.getItem('fm_phaseSpeed') || '1'))
+    ? parseFloat(localStorage.getItem('fm_phaseSpeed') || '1') : 1;
+
+  adjustPhaseSpeed(step: number): void {
+    const speeds = LiveMatchComponent.PHASE_SPEEDS;
+    const index = Math.max(0, Math.min(speeds.length - 1,
+        speeds.indexOf(this.phaseSpeed) + step));
+    this.phaseSpeed = speeds[index];
+    localStorage.setItem('fm_phaseSpeed', String(this.phaseSpeed));
+  }
 
   private static readonly LINEUP_PREVIEW_MS = 2800;
 
@@ -198,6 +283,13 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
   private handledGoalAnimationKeys = new Set<string>();
   private goalAnimationScoreBefore: { home: number; away: number } | null = null;
 
+  // Faza C: backend possession chains (MatchPhaseData) spliced inline on the
+  // persistent pitch, one per minute at most. Shot minutes keep their engine
+  // goal animations; chains cover corners, fouls, offsides and open play.
+  private handledPhaseMinutes = new Set<number>();
+  /** Kill switch shared with QA: localStorage fm_phaseClips = '0' disables. */
+  private phaseClipsEnabled = (localStorage.getItem('fm_phaseClips') ?? '1') !== '0';
+
   // Lineup preview state — flashed once at the start of each live match so the
   // user sees both formations and team kits before the kickoff.
   showLineupPreview = false;
@@ -226,8 +318,9 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
 
   private readViewMode(): MatchViewMode {
     try {
-      return localStorage.getItem(LiveMatchComponent.VIEW_MODE_KEY) === 'PITCH_2D'
-        ? 'PITCH_2D' : 'TEXT';
+      // The pitch is the product now — TEXT only for users who chose it.
+      return localStorage.getItem(LiveMatchComponent.VIEW_MODE_KEY) === 'TEXT'
+        ? 'TEXT' : 'PITCH_2D';
     } catch { return 'TEXT'; }
   }
 
@@ -238,13 +331,17 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
       localStorage.setItem(LiveMatchComponent.VIEW_MODE_KEY, this.matchViewMode);
     } catch { /* storage disabled */ }
 
-    // A moment already on screen keeps playing on the very same canvas — the
-    // switch only changes how that canvas is presented. The splice state has to
-    // follow, or the inline path would sit in ambient with a clip that never
-    // finishes and a match clock that never resumes.
-    if (this.goalAnimationData) {
-      this.spliceState = this.matchViewMode === 'PITCH_2D' ? 'clip' : 'none';
+    // The pitch is the persistent world now — a zoomed TEXT moment cannot
+    // follow onto it. Entering PITCH_2D drops any V3 clip cleanly and lets
+    // the world (and the match clock) carry on.
+    if (this.matchViewMode === 'PITCH_2D' && (this.goalAnimationData || this.goalClip)) {
+      this.stopGoalAnimation();
+      this.goalAnimationData = null;
+      this.goalClip = null;
+      this.goalAnimationFinished = false;
+      this.spliceState = 'none';
       this.spliceFrom = null;
+      this.startLiveMatchTimer();
     }
   }
 
@@ -286,11 +383,13 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
    *  commentary anti-spoiler key off this; an on-demand replay must not
    *  rewind either of them. */
   get clipInFlight(): boolean {
-    return !!this.goalAnimationData || this.spliceState !== 'none';
+    return !!this.goalAnimationData || this.spliceState !== 'none'
+      || (!!this.goalClip && this.matchViewMode === 'TEXT');
   }
 
   ngOnDestroy(): void {
     this.clock.stop();
+    this.stopAtmosphere();
     this.stopGoalAnimation();
     if (this.suspenseShotTimer) clearTimeout(this.suspenseShotTimer);
     if (this.lineupPreviewTimer) clearTimeout(this.lineupPreviewTimer);
@@ -311,6 +410,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
    */
   private onFrame(scaledDt: number, realDt: number): void {
     this.drivePitch(realDt);
+    this.watchdog(realDt);
     if (this.clock.paused) return;
 
     this.minuteAccumulator += scaledDt;
@@ -342,7 +442,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
     // While a moment is zoomed (a live clip in TEXT view, or a replay) the clip
     // owns every frame.
     if (this.pitchPresentation === 'zoom') {
-      this.pitch.advance(realDt);
+      this.pitch.advance(realDt * this.phaseSpeed);
       return;
     }
     if (this.matchViewMode !== 'PITCH_2D' || !this.liveMatchData) return;
@@ -364,7 +464,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
         return;
       }
       case 'clip':
-        this.pitch.advance(realDt);
+        this.pitch.advance(realDt * this.phaseSpeed);
         return;
       case 'out': {
         this.spliceMs += realDt;
@@ -384,6 +484,63 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
 
   private clipNames(): { [playerId: number]: string } {
     return this.goalClip?.names ?? this.ambientNames;
+  }
+
+  // Anti-freeze watchdog state.
+  private pausedStallMs = 0;
+  private spliceStallMs = 0;
+
+  /**
+   * Self-healing for the rare states where the match stops advancing: a clock
+   * left paused with nothing legitimately blocking it, or a splice/clip that
+   * never reports finished. Recovers instead of freezing the minute forever.
+   */
+  private watchdog(realDt: number): void {
+    // A splice state that lives longer than any clip could is stuck.
+    if (this.spliceState !== 'none') {
+      this.spliceStallMs += realDt;
+      if (this.spliceStallMs > 25000) {
+        this.spliceStallMs = 0;
+        this.finishInlineClip();
+        return;
+      }
+    } else {
+      this.spliceStallMs = 0;
+    }
+
+    if (!this.clock.paused) {
+      this.pausedStallMs = 0;
+      return;
+    }
+    // Auto-continue safety net: a finished zoomed moment whose auto-close
+    // timer misfired would otherwise wait for a click forever.
+    if (this.goalAnimationFinished && this.autoContinue && !this.replayAnimation) {
+      this.pausedStallMs += realDt;
+      if (this.pausedStallMs > 3000) {
+        this.pausedStallMs = 0;
+        this.zone.run(() => this.closeGoalAnimation());
+      }
+      return;
+    }
+    const legitimatelyPaused = this.clipInFlight
+      || this.showSubModal
+      || this.showLineupPreview
+      || !!this.suspenseShotTimer
+      || !!this.replayAnimation
+      || this.goalAnimationFinished
+      || this.syntheticPhase !== 'none'
+      || this.liveMatchFinished
+      || this.liveAdvanceError !== null
+      || !this.showLiveMatch;
+    if (legitimatelyPaused) {
+      this.pausedStallMs = 0;
+      return;
+    }
+    this.pausedStallMs += realDt;
+    if (this.pausedStallMs > 2500) {
+      this.pausedStallMs = 0;
+      this.zone.run(() => this.startLiveMatchTimer());
+    }
   }
 
   /** Marker icons still inside their 2s fade window. */
@@ -508,7 +665,93 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
       setTimeout(() => this.playGoalAnimationData(next), 300);
     } else {
       this.startLiveMatchTimer();
+      // Continuous football: pull the next minute promptly instead of idling
+      // in ambient — but at reduced action speeds, leave a breather between
+      // chains proportional to how much the user slowed things down.
+      if (this.showLiveMatch && this.liveMatchData && !this.liveMatchFinished) {
+        const breather = Math.max(0, (1 - this.phaseSpeed) * 1600);
+        if (breather > 60) {
+          setTimeout(() => this.zone.run(() => {
+            if (this.showLiveMatch && this.liveMatchData
+                && !this.liveMatchFinished && !this.clipInFlight) {
+              this.onMinuteTick();
+            }
+          }), breather);
+        } else {
+          this.onMinuteTick();
+        }
+      }
     }
+  }
+
+  /**
+   * Faza C: splice this minute's backend possession chain into the persistent
+   * pitch, exactly like an inline goal clip (ambient → clip → ambient). Only
+   * on the 2D pitch, only when the engine has no richer animation for the
+   * minute, and paced so open-play chains don't slow the match to a crawl.
+   */
+  private maybePlayPhaseClip(data: LiveMatchData | null, minute: number): boolean {
+    if (!this.phaseClipsEnabled) return false;
+    if (!data?.phases?.length || this.spliceState !== 'none' || this.clipInFlight) return false;
+    if (this.handledPhaseMinutes.has(minute)) return false;
+    const phase = data.phases.find(p => p.minute === minute);
+    if (!phase || !phase.actions?.length) return false;
+    const isShotPhase = phase.endEvent === 'goal' || phase.endEvent === 'shot_saved'
+      || phase.endEvent === 'shot_wide' || phase.endEvent === 'shot_blocked';
+    // TEXT view = highlights: ONLY the goal/miss phases play, zoomed, exactly
+    // the presentation the Phase Lab ratings trained. Everything else stays
+    // text. The persistent pitch keeps playing the WHOLE match.
+    if (this.matchViewMode !== 'PITCH_2D' && !isShotPhase) return false;
+    const minuteAnims = this.animationsAtMinute(data, minute);
+    // Pace guards: at 1x every chain plays so the match reads as continuous
+    // football; at 2x possession chains thin out to every other minute; above
+    // that only event chains (and above 4x nothing) so fast-forward stays fast.
+    if (this.liveMatchSpeed > 4 && !isShotPhase) return false;
+    if (phase.endEvent === 'possession') {
+      if (this.liveMatchSpeed > 2) return false;
+      if (this.liveMatchSpeed === 2 && minute % 2 !== 0) return false;
+    }
+
+    this.handledPhaseMinutes.add(minute);
+    // The chain covers this minute's shot outcome — retire its V3 clips so
+    // they don't replay the same moment right after the chain showed it.
+    minuteAnims.forEach(a => this.handledGoalAnimationKeys.add(this.animationKey(a)));
+
+    // Clip-to-clip continuity: every player starts the new chain from where
+    // the last rendered frame left them, not from his formation anchor.
+    const lastFrame = this.pitch?.lastRenderedFrame();
+    const carried: { [id: number]: { x: number; y: number } } = {};
+    for (const p of lastFrame?.players || []) {
+      if (isFinite(p.x) && isFinite(p.y)) carried[p.playerId] = { x: p.x, y: p.y };
+    }
+    const clip = phaseToClip(phase, this.ambient.slots, this.ambientNames, carried);
+    if (!clip.frames.length) return false;
+
+    // Goal chain: hold the scoreboard at the pre-goal score until the clip
+    // lands, exactly like the V3 flow (finishInlineClip clears it).
+    if (phase.endEvent === 'goal') {
+      const goalEvent = (data.timeline || []).find(
+        e => e.minute === minute && e.eventType === 'goal');
+      if (goalEvent) {
+        const homeGoal = Number(goalEvent.teamId) === Number(data.homeTeamId);
+        this.goalAnimationScoreBefore = {
+          home: Math.max(0, (goalEvent.homeScore ?? 0) - (homeGoal ? 1 : 0)),
+          away: Math.max(0, (goalEvent.awayScore ?? 0) - (homeGoal ? 0 : 1))
+        };
+      }
+    }
+
+    this.stopLiveMatchTimer();
+    this.goalClip = clip;
+    if (this.matchViewMode === 'PITCH_2D') {
+      // Inline on the persistent pitch: ambient → clip → ambient.
+      this.spliceFrom = ambientFrame(this.ambient);
+      this.spliceMs = 0;
+      this.spliceState = 'in';
+    }
+    // TEXT view: `goalClip` alone puts the pitch in zoom presentation — the
+    // highlight plays full screen and auto-continue closes it.
+    return true;
   }
 
   /** What a match-clock beat means depends on the phase we're in. */
@@ -586,6 +829,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
     this.liveAdvanceError = null;
     this.goalAnimationPendingQueue = [];
     this.handledGoalAnimationKeys.clear();
+    this.handledPhaseMinutes.clear();
     this.goalAnimationScoreBefore = null;
     this.liveKnockoutResultText = null;
     // Reset the commit-idempotence guard for THIS match. The component instance
@@ -606,6 +850,7 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
           this.showLiveMatch = true;
           this.refreshAmbient();
           this.ensureClockRunning();
+          this.startAtmosphere();
 
           // Show the formations once at match start (replaces the previous
           // pre-animation flash). The timer doesn't tick until the user closes
@@ -660,7 +905,14 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
                          || current.eventType === 'shot_saved'
                          || current.eventType === 'shot_wide'
                          || current.eventType === 'shot_blocked';
-        if (anim && isShotEvent && this.playAnimationsAtMinute(this.liveMatchData, minute)) {
+        // Phase chains get first claim on the minute: for save/miss/block they
+        // continue play past the stop, where the V3 clip would freeze on it.
+        // Goal minutes are declined inside and fall through to the V3 clip.
+        if (this.maybePlayPhaseClip(this.liveMatchData, minute)) return;
+        // V3 zoom clips belong to the TEXT view only — the pitch is the
+        // persistent world now.
+        if (anim && isShotEvent && this.matchViewMode === 'TEXT'
+            && this.playAnimationsAtMinute(this.liveMatchData, minute)) {
           return;
         }
         // Anti-spoiler: events that would otherwise reveal instantly (no
@@ -765,8 +1017,12 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
         // the authoritative MatchPlan boundary; goalAnimations remains the
         // legacy/cosmetic boundary. Read both, not only the legacy map, or
         // every canonical goal is silently dropped from the visual playback.
+        // Same ordering as tickPlayback: phase chains first (fluid saves),
+        // V3 clips keep goal minutes, suspense only when neither played.
+        if (!state.finished && this.maybePlayPhaseClip(state, target)) return;
         const anim = this.animationsAtMinute(state, target)[0];
-        if (anim && this.playAnimationsAtMinute(state, target)) {
+        if (anim && this.matchViewMode === 'TEXT'
+            && this.playAnimationsAtMinute(state, target)) {
           return;
         }
         const last = state.timeline[this.liveCurrentIndex];
@@ -1281,7 +1537,32 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
   // ---------- /Substitution modal ----------
 
   closeLiveMatch(): void {
+    // Safety net against the reopen loop: closing must NEVER leave the
+    // backend session uncommitted — an unresolved fixture makes the
+    // day-advance reopen this same match from minute 0, forever. Whatever
+    // path missed the commit, finish + commit it here with a captured key
+    // (fire-and-forget; reset() below clears the service's own key).
+    if (this.interactive && this.matchKey && this.liveMatchData && !this.liveMatchCommitted) {
+      this.liveMatchCommitted = true;
+      const key = this.matchKey;
+      const total = 90 + (this.liveMatchData.firstHalfStoppage || 0)
+        + (this.liveMatchData.secondHalfStoppage || 0);
+      const commitNow = () => this.liveMatch.commit(key).subscribe({
+        next: () => this.teamService.notifyRefresh(),
+        error: (err) => console.error('Close-time commit failed:', err)
+      });
+      if (this.liveMatchData.finished) {
+        commitNow();
+      } else {
+        this.liveMatch.advance(total, key).subscribe({
+          next: () => commitNow(),
+          error: (err) => console.error('Close-time finish failed:', err)
+        });
+      }
+    }
+
     this.stopLiveMatchTimer();
+    this.stopAtmosphere();
     this.stopGoalAnimation();
     this.replayAnimation = null;
     this.goalAnimationData = null;
@@ -1359,12 +1640,12 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
 
   get liveMatchFinished(): boolean {
     if (!this.liveMatchData) return false;
-    // When the engine carries a `finished` flag (Session 4 interactive + new
-    // legacy sessions), trust it. Falls back to the index-based check for
-    // any cached data that predates the field.
-    if (typeof this.liveMatchData.finished === 'boolean') {
-      return !!this.liveMatchData.finished;
-    }
+    if (this.liveMatchData.finished === true) return true;
+    // Trust `finished=false` only while WE are driving the engine. A legacy /
+    // stale-cached payload carries finished=false forever even though its
+    // baked timeline is complete — without the index fallback the reveal and
+    // the Continue button never appear and the match cannot be dismissed.
+    if (this.interactive && this.liveMatchData.finished === false) return false;
     if (!this.liveMatchData.timeline) return false;
     return this.liveCurrentIndex >= this.liveMatchData.timeline.length - 1;
   }
@@ -1377,14 +1658,21 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
   get displayedHomeScore(): number {
     const cur = this.liveCurrentMinute?.homeScore ?? 0;
     if (!this.clipInFlight) return cur;
-    if (this.goalAnimationData?.outcome !== 'GOAL') return cur;
+    if (!this.goalMomentInFlight) return cur;
     const prev = this.goalAnimationScoreBefore || this.scoreBeforeCurrentGoal();
     return prev ? prev.home : cur;
+  }
+
+  /** True while the moment on screen ends in a goal — V3 moment or an inline
+   *  goal chain clip. */
+  private get goalMomentInFlight(): boolean {
+    return this.goalAnimationData?.outcome === 'GOAL'
+      || (!this.goalAnimationData && this.goalClip?.outcome === 'GOAL');
   }
   get displayedAwayScore(): number {
     const cur = this.liveCurrentMinute?.awayScore ?? 0;
     if (!this.clipInFlight) return cur;
-    if (this.goalAnimationData?.outcome !== 'GOAL') return cur;
+    if (!this.goalMomentInFlight) return cur;
     const prev = this.goalAnimationScoreBefore || this.scoreBeforeCurrentGoal();
     return prev ? prev.away : cur;
   }
@@ -1597,8 +1885,22 @@ export class LiveMatchComponent implements OnChanges, OnDestroy {
       this.spliceState = 'out';
       return;
     }
-    // Zoomed: hold the final frame until the user continues / closes.
-    this.zone.run(() => this.goalAnimationFinished = true);
+    // Zoomed: hold the final frame until the user continues / closes — or, with
+    // auto-continue on, close it ourselves after a short beat so the match
+    // flows highlight-to-highlight without a click. Replays stay manual.
+    this.zone.run(() => {
+      this.goalAnimationFinished = true;
+      if (this.autoContinue && !this.replayAnimation) {
+        setTimeout(() => {
+          // Phase-chain highlights have goalClip but no goalAnimationData —
+          // auto-continue must close both kinds.
+          if (this.goalAnimationFinished && (this.goalAnimationData || this.goalClip)
+              && !this.replayAnimation) {
+            this.closeGoalAnimation();
+          }
+        }, 1100);
+      }
+    });
   }
 
   closeGoalAnimation(): void {

@@ -5,7 +5,7 @@ import { CareerService, JobOffer } from '../services/career.service';
 import { urlApp } from '../app.component';
 import { AuthService } from '../services/auth.service';
 
-interface ManagerInbox {
+export interface ManagerInbox {
   id: number;
   teamId: number;
   seasonNumber: number;
@@ -14,7 +14,7 @@ interface ManagerInbox {
   content: string;
   category: string;
   isRead: boolean;
-  createdAt: string;
+  createdAt: number;
   deduplicationKey?: string | null;
 }
 
@@ -50,13 +50,13 @@ export class InboxComponent implements OnInit {
   error = '';
   get chairmanMode(): boolean { return this.authService.careerRole === 'CHAIRMAN'; }
 
-  categories: string[] = ['all', 'JOB_OFFER', 'CAREER', 'match_result', 'league_news', 'MEDIA_FORMER_PLAYER', 'MEDIA_FORMER_MANAGER', 'MEDIA_FINANCIAL_TROUBLE', 'TRANSFER_RUMOUR', 'transfer', 'european_prize', 'board', 'discipline', 'season_end', 'european',
+  categories: string[] = ['all', 'JOB_OFFER', 'CAREER', 'match_result', 'league_news', 'MEDIA_REACTION', 'MEDIA_FORMER_PLAYER', 'MEDIA_FORMER_MANAGER', 'MEDIA_FINANCIAL_TROUBLE', 'MEDIA_PREVIEW', 'TRANSFER_RUMOUR', 'PRESS_CONFERENCE', 'transfer', 'european_prize', 'board', 'discipline', 'season_end', 'european',
     'CHAIRMAN_WELCOME', 'CONTROL_ACQUIRED', 'TREASURY_TRANSFER', 'TACTICAL_MANDATE_UPDATED',
     'TRADER_ADVISER_HIRED', 'TRADER_ADVICE_AVAILABLE', 'CONTROLLED_CLUB_MATCH_RESULT'];
 
   constructor(
     private http: HttpClient,
-    private teamService: TeamService,
+    public teamService: TeamService,
     public careerService: CareerService,
     public authService: AuthService
   ) {}
@@ -236,6 +236,16 @@ export class InboxComponent implements OnInit {
     });
   }
 
+  markAsUnread(msg: ManagerInbox): void {
+    this.http.post(`${urlApp}/inbox/me/${msg.id}/unread`, {}).subscribe({
+      next: () => {
+        msg.isRead = false;
+        this.unreadCount = this.messages.filter(message => !message.isRead).length;
+      },
+      error: (err) => console.error('Error marking message as unread:', err)
+    });
+  }
+
   markAllRead(): void {
     this.http.post(`${urlApp}/inbox/me/markAllRead`, {}).subscribe({
       next: () => {
@@ -263,10 +273,13 @@ export class InboxComponent implements OnInit {
     switch (category) {
       case 'match_result': return 'Match Report';
       case 'league_news': return 'League News';
+      case 'MEDIA_REACTION': return 'Media Reaction';
       case 'MEDIA_FORMER_PLAYER': return 'Former Player';
       case 'MEDIA_FORMER_MANAGER': return 'Former Manager';
       case 'MEDIA_FINANCIAL_TROUBLE': return 'Financial Watch';
+      case 'MEDIA_PREVIEW': return 'Media Preview';
       case 'TRANSFER_RUMOUR': return 'Transfer Rumour';
+      case 'PRESS_CONFERENCE': return 'Press Conference';
       case 'transfer': return 'Transfer';
       case 'board': return 'Board';
       case 'discipline': return 'Discipline';

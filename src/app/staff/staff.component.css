@@ -552,3 +552,32 @@
 .p-team { flex: 1.5; color: #ccc; }
 .p-rating { flex: 0.5; color: #f1c40f; font-weight: bold; text-align: center; }
 .p-value { flex: 1; color: #2ecc71; text-align: right; }
+.staff-view-links {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-left: auto;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.staff-view-links a {
+  padding: 7px 10px;
+  border-radius: 6px;
+  color: #9aa6b5;
+  font-size: 10px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.staff-view-links a.active {
+  color: #fff;
+  background: #286d55;
+}
+
+@media (max-width: 1250px) {
+  .page-header { flex-wrap: wrap; }
+  .staff-view-links { order: 2; }
+  .nav-tabs { order: 3; width: 100%; overflow-x: auto; }
+}

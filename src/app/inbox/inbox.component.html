@@ -7,6 +7,11 @@
         <span class="unread-badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
         <button class="mark-all-btn" (click)="markAllRead()" title="Mark all as read">Mark all read</button>
       </div>
+      <nav class="inbox-variant-nav" aria-label="Inbox layout">
+        <a class="active" routerLink="/inbox">Classic</a>
+        <a routerLink="/inbox2">Decision Desk</a>
+        <a routerLink="/inbox3">Media Centre</a>
+      </nav>
       <div class="filter-bar">
         <button *ngFor="let cat of categories"
                 class="filter-btn"
@@ -19,9 +24,8 @@
     </div>
 
     <div class="message-list">
-      <div *ngIf="filteredMessages.length === 0" class="no-messages">
-        No messages found.
-      </div>
+      <app-ui-state *ngIf="!loading && !error && filteredMessages.length === 0" kind="empty"
+        title="No messages found" message="New club and media messages will appear here." [showRetry]="false"></app-ui-state>
       <div *ngFor="let msg of filteredMessages"
            class="msg-item"
            [class.unread]="!msg.isRead"
@@ -45,8 +49,9 @@
   </div>
 
   <div class="message-viewer">
-    <div *ngIf="loading" class="empty-state">Loading inbox…</div>
-    <div *ngIf="error" class="empty-state">{{ error }} <button (click)="loadMessages(); loadUnreadCount()">Retry</button></div>
+    <app-ui-state *ngIf="loading" kind="loading" title="Loading inbox"></app-ui-state>
+    <app-ui-state *ngIf="!loading && error" kind="error" title="Inbox unavailable" [message]="error"
+      (retry)="loadMessages(); loadUnreadCount()"></app-ui-state>
 
     <div *ngIf="selectedMessage; else noMessage" class="viewer-content">
 
@@ -58,7 +63,7 @@
           </div>
           <div class="header-meta">
             <span class="meta-season">Season {{ selectedMessage.seasonNumber }}, Round {{ selectedMessage.roundNumber }}</span>
-            <span class="meta-date">{{ selectedMessage.createdAt }}</span>
+            <time class="meta-date">{{ selectedMessage.createdAt | fmGameDate:true }}</time>
           </div>
         </div>
       </div>
@@ -156,7 +161,8 @@
     </div>
 
     <ng-template #noMessage>
-      <div class="empty-state">Select a message to read</div>
+      <app-ui-state *ngIf="!loading && !error" kind="empty" title="Select a message"
+        message="Choose a message from the list to read it." [showRetry]="false"></app-ui-state>
     </ng-template>
 
   </div>

@@ -40,9 +40,9 @@
 
   <!-- ================= TABS ================= -->
   <div class="lab-tabs">
-    <button [class.active]="activeTab === 'week'" (click)="activeTab = 'week'">WEEK</button>
-    <button [class.active]="activeTab === 'individual'" (click)="activeTab = 'individual'">INDIVIDUAL</button>
-    <button [class.active]="activeTab === 'analysis'" (click)="activeTab = 'analysis'">ANALYSIS</button>
+    <button [class.active]="activeTab === 'week'" (click)="setTab('week')">WEEK</button>
+    <button [class.active]="activeTab === 'individual'" (click)="setTab('individual')">INDIVIDUAL</button>
+    <button [class.active]="activeTab === 'analysis'" (click)="setTab('analysis')">ANALYSIS</button>
 
     <div class="tab-spacer"></div>
 

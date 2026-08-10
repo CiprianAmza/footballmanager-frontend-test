@@ -1,0 +1,13 @@
+<main class="ci-shell access-theme">
+  <header class="ci-header"><div><span class="eyebrow">Qualification planner</span><h1>European Access Map</h1><p>A visual alternative focused on slots, entry routes and the five-season contribution.</p></div><nav class="view-switch"><a routerLink="/coefficients">Classic</a><a routerLink="/coefficients2">Command</a><a class="active" routerLink="/coefficients3">Access map</a><a routerLink="/competition-money">Prize money</a></nav></header>
+  <div class="state" *ngIf="loading">Mapping qualification routes…</div>
+  <section class="access-layout" *ngIf="data">
+    <div class="access-lanes">
+      <button *ngFor="let country of data.countries" class="country-lane" [class.selected]="selected?.leagueId === country.leagueId" (click)="selected = country">
+        <b>#{{ country.rank }}</b><span class="country-title"><strong>{{ country.leagueName }}</strong><small>{{ country.coefficient | number:'1.1-2' }} coefficient</small></span>
+        <span class="slot loc"><b>{{ country.locSpots }}</b> LoC</span><span class="route">{{ country.locEntry }}</span><span class="slot stars"><b>{{ country.starsCupSpots }}</b> SC</span>
+      </button>
+    </div>
+    <aside class="access-detail" *ngIf="selected as country"><span class="eyebrow">Access dossier</span><h2>{{ country.leagueName }}</h2><div class="big-rank">#{{ country.rank }}</div><h3>Five-season matrix</h3><div class="matrix"><div *ngFor="let season of keys(country)"><span>S{{ season }}</span><i [style.height.%]="(country.perSeason[season] || 0) / max(country) * 100"></i><strong>{{ country.perSeason[season] || 0 | number:'1.1-1' }}</strong></div></div><div class="route-card"><span>League of Champions</span><strong>{{ country.locSpots }} places</strong><small>{{ country.locEntry }}</small></div><div class="route-card stars"><span>Stars Cup</span><strong>{{ country.starsCupSpots }} places</strong></div><a routerLink="/competition-money">See the money behind these competitions →</a></aside>
+  </section>
+</main>

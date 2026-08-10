@@ -1,0 +1,110 @@
+<div class="cockpit-shell">
+  <header class="cockpit-header">
+    <div class="club-block">
+      <app-team-crest [teamId]="teamService.teamId" [teamName]="teamName" [size]="58"></app-team-crest>
+      <div><span>Season {{ teamService.currentSeason }} · Operations room</span><h1>{{ teamName || 'Club cockpit' }}</h1></div>
+    </div>
+    <div class="clock-block">
+      <strong>{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }}</strong>
+      <span>{{ teamService.currentPhase }}</span>
+    </div>
+    <nav class="variant-nav"><a routerLink="/home">Classic</a><a routerLink="/home2">Desk</a><a class="active" routerLink="/home3">Cockpit</a></nav>
+  </header>
+
+  <section class="status-ribbon" *ngIf="managerFired">
+    <strong>MANAGER STATUS: DISMISSED</strong><span>The club dashboard is read-only until you accept a new role.</span><a routerLink="/job-search">Job search</a>
+  </section>
+
+  <nav class="hotkey-rail" aria-label="Keyboard shortcuts">
+    <a [routerLink]="['/team', teamService.teamId]"><kbd>Alt S</kbd><span>Squad</span></a>
+    <a [routerLink]="['/tactics', teamService.teamId]"><kbd>Alt T</kbd><span>Tactics</span></a>
+    <a routerLink="/inbox"><kbd>Alt I</kbd><span>Inbox</span></a>
+    <a [routerLink]="['/transfers', teamService.teamId, teamService.currentSeason]"><kbd>Alt M</kbd><span>Market</span></a>
+    <a [routerLink]="['/fixtures', teamService.teamId]"><kbd>Alt F</kbd><span>Fixtures</span></a>
+    <a routerLink="/data-hub"><kbd>Alt D</kbd><span>Data</span></a>
+  </nav>
+
+  <section class="kpi-ribbon">
+    <a [routerLink]="leagueCompetition ? ['/competition', leagueCompetition.competitionId] : ['/competition-list']" class="kpi">
+      <span>LEAGUE POSITION</span><strong>{{ leaguePosition ? '#' + leaguePosition : '—' }}</strong><small>{{ leaguePoints }} points</small>
+    </a>
+    <a routerLink="/data-hub" class="kpi"><span>FORM</span><strong class="form-kpi">{{ form || '—' }}</strong><small>{{ recentResults.length }} recent results</small></a>
+    <a routerLink="/finances" class="kpi"><span>TRANSFER BUDGET</span><strong>{{ formatCompactMoney(transferBudget) }}</strong><small>{{ teamService.transferWindowOpen ? 'Window open' : 'Window closed' }}</small></a>
+    <a routerLink="/finances" class="kpi" [class.alert]="boardConfidence < 40"><span>BOARD CONFIDENCE</span><strong>{{ boardConfidence }}%</strong><small>{{ boardRequests.length }} total requests</small></a>
+    <a routerLink="/finances" class="kpi" [class.alert]="debt > 0"><span>CLUB BALANCE</span><strong>{{ formatCompactMoney(totalFinances) }}</strong><small *ngIf="debt <= 0">No reported debt</small><small *ngIf="debt > 0">{{ formatCompactMoney(debt) }} debt</small></a>
+  </section>
+
+  <main class="cockpit-grid">
+    <section class="widget match-widget">
+      <div class="widget-title"><span>NEXT MATCH</span><a [routerLink]="['/tactics', teamService.teamId]">Open match plan ↗</a></div>
+      <ng-container *ngIf="matchPreview; else fallbackMatch">
+        <div class="match-meta"><span>{{ matchPreview.competitionName }}</span><b>DAY {{ matchPreview.round }}</b></div>
+        <div class="match-line">
+          <div class="side home"><app-team-crest [teamId]="matchPreview.homeTeamId" [teamName]="matchPreview.homeTeamName" [size]="54"></app-team-crest><strong>{{ matchPreview.homeTeamName }}</strong><small>#{{ matchPreview.homeLeaguePosition || '—' }}</small></div>
+          <div class="match-signal"><span>VS</span><b [attr.data-tone]="predictionTone">{{ matchPreview.prediction || 'EVEN' }}</b></div>
+          <div class="side away"><app-team-crest [teamId]="matchPreview.awayTeamId" [teamName]="matchPreview.awayTeamName" [size]="54"></app-team-crest><strong>{{ matchPreview.awayTeamName }}</strong><small>#{{ matchPreview.awayLeaguePosition || '—' }}</small></div>
+        </div>
+        <div class="comparison-grid">
+          <span>{{ matchPreview.homePowerRating }}</span><div><i [style.width.%]="matchPreview.homePowerRating / (matchPreview.homePowerRating + matchPreview.awayPowerRating) * 100"></i></div><span>{{ matchPreview.awayPowerRating }}</span>
+        </div>
+        <div class="match-links"><a [routerLink]="['/team', teamService.teamId]">Selection</a><a routerLink="/medical">Availability</a><a routerLink="/data-hub">Analysis</a></div>
+      </ng-container>
+      <ng-template #fallbackMatch><div class="widget-empty">{{ nextMatch ? nextMatch.opponentTeam + ' · ' + nextMatch.date : 'No upcoming fixture' }}</div></ng-template>
+    </section>
+
+    <section class="widget table-widget">
+      <div class="widget-title"><span>LEAGUE TABLE</span><a *ngIf="leagueCompetition" [routerLink]="['/competition', leagueCompetition.competitionId]">Full table ↗</a></div>
+      <div class="data-table" *ngIf="cockpitTable.length">
+        <div class="data-row head"><span>#</span><span>CLUB</span><span>P</span><span>GD</span><span>PTS</span></div>
+        <a class="data-row" *ngFor="let row of cockpitTable" [routerLink]="['/team', row.teamId]" [class.user]="row.isHumanTeam || row.name === teamName || row.teamName === teamName">
+          <span>{{ row.position }}</span><strong>{{ row.name || row.teamName }}</strong><span>{{ row.games }}</span><span>{{ row.goalDifference }}</span><b>{{ row.points }}</b>
+        </a>
+      </div>
+      <div class="widget-empty" *ngIf="!cockpitTable.length">No league table available.</div>
+    </section>
+
+    <section class="widget schedule-widget">
+      <div class="widget-title"><span>SCHEDULE & FORM</span><a [routerLink]="['/fixtures', teamService.teamId]">All fixtures ↗</a></div>
+      <div class="sub-label">RECENT</div>
+      <div class="result-row" *ngFor="let match of recentResults.slice(0, 4)">
+        <b [ngClass]="resultTone(match)">{{ resultCode(match) }}</b><span>{{ match.opponentTeam }}</span><strong>{{ match.score }}</strong><small>{{ match.competitionName }}</small>
+      </div>
+      <div class="row-empty" *ngIf="!recentResults.length">No results yet</div>
+      <div class="sub-label upcoming">UPCOMING</div>
+      <div class="fixture-row" *ngFor="let match of upcomingFixtures.slice(0, 4)">
+        <b>{{ match.date }}</b><span>{{ match.homeTeamAbbr || '???' }}–{{ match.awayTeamAbbr || '???' }}</span><small>{{ match.competitionName }}</small>
+      </div>
+      <div class="row-empty" *ngIf="!upcomingFixtures.length">No scheduled fixtures</div>
+    </section>
+
+    <section class="widget player-widget">
+      <div class="widget-title"><span>TOP CONTRIBUTORS · S{{ playerStatsSeason || teamService.currentSeason }}</span><a routerLink="/stats/scorers">Leaderboard ↗</a></div>
+      <a class="leader-row" *ngFor="let stat of playerStats" [routerLink]="['/player', stat.playerId]">
+        <b>{{ stat.rank }}</b><span><strong>{{ stat.playerName }}</strong><small>{{ stat.position }} · {{ stat.appearances }} apps</small></span>
+        <i><strong>{{ stat.goals }}</strong><small>G</small></i><i *ngIf="stat.assists !== null"><strong>{{ stat.assists }}</strong><small>A</small></i>
+        <i class="rating"><strong>{{ (stat.averageRating !== null ? stat.averageRating : stat.overallRating) | number:'1.0-2' }}</strong><small>{{ stat.averageRating !== null ? 'AVG' : 'OVR' }}</small></i>
+      </a>
+      <div class="widget-empty" *ngIf="playerStatsLoading">Loading contributors…</div>
+      <div class="widget-empty" *ngIf="!playerStatsLoading && !playerStats.length">No player data yet.</div>
+    </section>
+
+    <section class="widget board-widget">
+      <div class="widget-title"><span>BOARD MONITOR</span><span class="live-dot">LIVE</span></div>
+      <div class="board-line" *ngFor="let objective of seasonObjectives.slice(0, 4)">
+        <span [ngClass]="getObjectiveStatusClass(objective.status)"></span>
+        <div><strong>{{ objective.description || getObjectiveDescription(objective) }}</strong><small>{{ objective.competitionName || getObjectiveTypeLabel(objective.objectiveType) }}</small></div>
+        <b>{{ objective.status | uppercase }}</b>
+      </div>
+      <div class="board-line request" *ngFor="let request of boardRequests.slice(0, 3)">
+        <span></span><div><strong>{{ request.description }}</strong><small>{{ request.requestType }}</small></div><b>{{ request.status }}</b>
+      </div>
+      <div class="widget-empty" *ngIf="!seasonObjectives.length && !boardRequests.length">No board items.</div>
+    </section>
+
+    <section class="widget news-widget">
+      <div class="widget-title"><span>LEAGUE WIRE</span><a routerLink="/competition-list">Competitions ↗</a></div>
+      <article *ngFor="let item of leagueNews.slice(0, 5)"><span>{{ item.type || 'NEWS' }}</span><strong>{{ item.title }}</strong><p>{{ item.content }}</p></article>
+      <div class="widget-empty" *ngIf="!leagueNews.length">No league news.</div>
+    </section>
+  </main>
+</div>

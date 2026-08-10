@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { UiFeedbackService } from '../../shared/ui-feedback.service';
 import {
   AdminService,
   BallonDorAdminState,
@@ -18,7 +19,8 @@ export class AdminAwardsComponent implements OnInit {
   message = '';
   error = '';
 
-  constructor(public adminService: AdminService, private router: Router) {}
+  constructor(public adminService: AdminService, private router: Router,
+              private feedback: UiFeedbackService = new UiFeedbackService()) {}
 
   ngOnInit(): void {
     if (!this.adminService.isAuthenticated) {
@@ -40,10 +42,11 @@ export class AdminAwardsComponent implements OnInit {
     });
   }
 
-  selectWinner(candidate: BallonDorCandidate): void {
+  async selectWinner(candidate: BallonDorCandidate): Promise<void> {
     if (!this.state || this.state.finalized) return;
-    const confirmed = window.confirm(
-      `Select ${candidate.playerName} as the Ballon d’Or winner for Season ${this.state.season}?`
+    const confirmed = await this.feedback.confirm(
+      `Select ${candidate.playerName} as the Ballon d’Or winner for Season ${this.state.season}?`,
+      { title: 'Confirm award winner', confirmLabel: 'Select winner' }
     );
     if (!confirmed) return;
 

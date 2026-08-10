@@ -2,67 +2,87 @@
 .app-container {
     display: flex;
     min-height: 100vh;
-    background-color: #1b1b1b; /* Aceeași culoare ca fundalul de la Home */
+    min-height: 100dvh;
+    color: var(--fm-text);
+    background-color: var(--fm-page-bg);
+    font-family: var(--fm-font);
+}
+
+.mobile-nav-toggle,
+.sidebar-close,
+.sidebar-backdrop {
+    display: none;
 }
 
 /* --- SIDEBAR STYLING (FM Theme) --- */
 .sidebar {
-    background-color: #241225; /* Mov foarte închis, specific sidebar FM */
+    background-color: var(--fm-sidebar-bg);
     width: 220px; /* Lățime fixă în pixeli e mai sigură decât % */
     position: fixed; /* Rămâne pe loc când dai scroll */
     left: 0;
     top: 0;
     height: 100vh;
     z-index: 1000;
-    border-right: 1px solid #3a3a3a;
+    border-right: 1px var(--fm-line-style) var(--fm-border);
     display: flex;
     flex-direction: column;
     padding-top: 10px;
-    font-family: 'Segoe UI', Roboto, sans-serif; /* Font modern, nu serif */
+    font-family: var(--fm-font);
     overflow-y: auto; /* Dacă meniul e prea lung, facem scroll doar aici */
 }
 
 /* Header mic sus (opțional) */
 .sidebar-header {
     text-align: center;
-    color: white;
+    color: var(--fm-heading);
     font-weight: bold;
     font-size: 1.5em;
     padding-bottom: 20px;
-    border-bottom: 1px solid #3a3a3a;
+    border-bottom: 1px var(--fm-line-style) var(--fm-border);
     margin-bottom: 10px;
 }
-.fm-logo { color: #ff6b6b; }
+.fm-logo { color: var(--fm-accent); }
 
 /* Link-urile */
-.sidebar a {
+.sidebar a,
+.sidebar .menu-action {
     display: block;
-    color: #b0b0b0; /* Gri deschis */
+    width: 100%;
+    color: var(--fm-text-dim);
     padding: 10px 20px;
     font-size: 14px;
+    line-height: normal;
+    font-family: inherit;
+    text-align: left;
     text-decoration: none;
     transition: all 0.2s ease;
     border-left: 4px solid transparent; /* Pregătim bordura pentru Active */
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    background: transparent;
+    cursor: pointer;
 }
 
 /* Hover Effect */
-.sidebar a:hover {
-    background-color: #352036;
-    color: white;
+.sidebar a:hover,
+.sidebar .menu-action:hover {
+    background-color: var(--fm-sidebar-hover);
+    color: var(--fm-heading);
 }
 
 /* Active Link (pagina curentă) */
 .sidebar a.active {
-    background-color: #3e223f;
-    color: white;
+    background-color: var(--fm-sidebar-active);
+    color: var(--fm-heading);
     font-weight: 600;
-    border-left: 4px solid #d63031; /* Linia roșie din stânga specifică FM */
+    border-left: 4px solid var(--fm-accent);
 }
 
 /* Separatoare */
 .border {
     height: 1px;
-    background-color: #3a3a3a; /* Mult mai subtil decât galbenul vechi */
+    background-color: var(--fm-border);
     margin: 8px 20px;
 }
 
@@ -71,10 +91,10 @@
     width: 6px;
 }
 .sidebar::-webkit-scrollbar-track {
-    background: #241225;
+    background: var(--fm-sidebar-bg);
 }
 .sidebar::-webkit-scrollbar-thumb {
-    background: #444;
+    background: var(--fm-border);
 }
 
 /* Job Search link highlight when fired */
@@ -83,13 +103,18 @@
     font-weight: 600;
 }
 
+.sidebar a.mobile-only-sidebar-link { display: none; }
+
 /* --- MAIN CONTENT LAYOUT FIX --- */
 .main-content {
     /* Aici e secretul: Împingem conținutul la dreapta cât e lățimea meniului */
     margin-left: 220px;
     width: calc(100% - 220px);
-    background-color: #1b1b1b;
+    color: var(--fm-text);
+    background-color: var(--fm-page-bg);
+    font-family: var(--fm-font);
     min-height: 100vh;
+    min-width: 0;
 }
 
 /* Game Top Bar */
@@ -98,8 +123,9 @@
   align-items: center;
   gap: 20px;
   padding: 10px 20px;
-  background: #1a1a2e;
-  border-bottom: 2px solid #16213e;
+  color: var(--fm-text);
+  background: var(--fm-topbar-bg);
+  border-bottom: 2px var(--fm-line-style) var(--fm-border);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -129,10 +155,10 @@
 
 .fast-forward-btn {
   padding: 10px 16px;
-  color: #d6e5f6;
-  background: #26334a;
-  border: 1px solid #3d5172;
-  border-radius: 6px;
+  color: var(--fm-text);
+  background: var(--fm-bg-row);
+  border: 1px solid var(--fm-border);
+  border-radius: var(--fm-radius);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: .8px;
@@ -140,8 +166,8 @@
 }
 
 .fast-forward-btn:hover:not(:disabled), .fast-forward-btn.running {
-  color: #fff;
-  background: #315f8a;
+  color: var(--fm-heading);
+  background: var(--fm-bg-row-hover);
 }
 
 .fast-forward-btn:disabled { opacity: .55; cursor: not-allowed; }
@@ -225,6 +251,336 @@
   color: #3498db;
   font-size: 14px;
   font-weight: 600;
+}
+
+/* Compact command bar: the four high-frequency actions stay visible without
+   consuming the vertical space of a dashboard card. */
+.compact-game-bar {
+  min-height: 58px;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--fm-topbar-bg);
+  border-bottom: 1px solid var(--fm-border);
+  box-shadow: var(--fm-shadow-sm);
+}
+
+.compact-continue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 142px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  letter-spacing: .45px;
+}
+
+.compact-continue kbd {
+  padding: 2px 5px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, .76);
+  background: rgba(0, 0, 0, .16);
+  font: 700 9px/1.2 inherit;
+  letter-spacing: 0;
+}
+
+.compact-fast-forward {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  min-width: 38px;
+  min-height: 40px;
+  padding: 0;
+  font-size: 19px;
+}
+
+.compact-next-match {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  max-width: 390px;
+  min-height: 40px;
+  padding: 5px 10px;
+  border: 1px solid #313b55;
+  border-radius: 8px;
+  color: #e8edf7;
+  background: #20263d;
+  text-decoration: none;
+  transition: border-color .16s ease, background .16s ease;
+}
+
+.compact-next-match:hover {
+  border-color: #4a688e;
+  background: #252e49;
+}
+
+.compact-command-icon {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  color: #7bd0ff;
+  background: #293552;
+}
+
+.compact-next-copy {
+  min-width: 0;
+}
+
+.compact-next-copy small,
+.compact-next-copy strong {
+  display: block;
+}
+
+.compact-next-copy small {
+  margin-bottom: 2px;
+  color: #78869e;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+}
+
+.compact-next-copy strong {
+  overflow: hidden;
+  color: #f1f5fb;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-next-meta {
+  margin-left: auto;
+  color: #9ca9bc;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.compact-command-spacer {
+  flex: 1 1 auto;
+}
+
+.compact-popover-wrap {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.compact-command-button,
+.compact-icon-command {
+  position: relative;
+  min-height: 40px;
+  border: 1px solid #303b56;
+  border-radius: 8px;
+  color: #d7dfec;
+  background: #20263c;
+  cursor: pointer;
+}
+
+.compact-command-button:hover,
+.compact-command-button[aria-expanded='true'],
+.compact-icon-command:hover,
+.compact-icon-command[aria-expanded='true'] {
+  color: #fff;
+  border-color: #4b668b;
+  background: #29324d;
+}
+
+.compact-command-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  text-align: left;
+}
+
+.compact-date-copy strong,
+.compact-date-copy small {
+  display: block;
+  white-space: nowrap;
+}
+
+.compact-date-copy strong {
+  font-size: 11px;
+}
+
+.compact-date-copy small {
+  margin-top: 2px;
+  color: #7e8ca2;
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.compact-icon-command {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  padding: 0;
+}
+
+.compact-notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border: 2px solid #15192c;
+  border-radius: 999px;
+  color: #fff;
+  background: #e7505a;
+  font-size: 8px;
+  font-weight: 900;
+}
+
+.compact-command-popover {
+  position: absolute;
+  z-index: 1600;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(340px, calc(100vw - 250px));
+  padding: 16px;
+  border: 1px solid #3b4762;
+  border-radius: 11px;
+  color: #eaf0f8;
+  background: #171c2e;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, .56);
+}
+
+.compact-command-popover::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 14px;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid #3b4762;
+  border-left: 1px solid #3b4762;
+  background: #171c2e;
+  transform: rotate(45deg);
+}
+
+.compact-popover-eyebrow {
+  color: #55baf0;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.compact-command-popover h3 {
+  margin: 5px 0 4px;
+  font-size: 17px;
+}
+
+.compact-command-popover > p {
+  margin: 0 0 12px;
+  color: #8492a8;
+  font-size: 11px;
+}
+
+.compact-popover-fixture {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 13px 0;
+  padding: 11px;
+  border-radius: 7px;
+  background: #222a42;
+}
+
+.compact-popover-fixture small,
+.compact-popover-fixture span {
+  color: #8290a5;
+  font-size: 9px;
+}
+
+.compact-alert-row,
+.compact-event-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 7px;
+  color: #dce4f0;
+  background: #222a42;
+  text-align: left;
+}
+
+.compact-alert-row {
+  justify-content: space-between;
+  color: #ffd2a1;
+  cursor: pointer;
+}
+
+.compact-event-row > span {
+  flex: 0 0 auto;
+}
+
+.compact-event-row div,
+.compact-event-row strong,
+.compact-event-row small {
+  display: block;
+  min-width: 0;
+}
+
+.compact-event-row strong {
+  font-size: 11px;
+}
+
+.compact-event-row small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #8491a5;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-empty-note {
+  padding: 15px 0 5px;
+  text-align: center;
+}
+
+.compact-popover-action {
+  width: 100%;
+  margin-top: 12px;
+  padding: 9px 10px;
+  border: 1px solid #3b6e95;
+  border-radius: 6px;
+  color: #8ed5ff;
+  background: #1d3046;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 1050px) {
+  .compact-next-meta { display: none; }
+  .compact-next-match { max-width: 240px; }
+  .compact-date-copy strong { max-width: 125px; overflow: hidden; text-overflow: ellipsis; }
+}
+
+@media (max-width: 760px) {
+  .compact-game-bar { padding-inline: 8px; }
+  .compact-continue { min-width: 44px; padding-inline: 10px; }
+  .compact-continue > span,
+  .compact-continue kbd,
+  .compact-date-copy { display: none; }
+  .compact-next-match { flex: 1 1 auto; max-width: none; }
+  .compact-command-button { width: 42px; justify-content: center; padding: 0; }
+  .compact-command-popover { position: fixed; top: 70px; right: 10px; width: min(340px, calc(100vw - 20px)); }
 }
 
 /* Honest indeterminate matchday loading state. The API is synchronous, so the
@@ -742,13 +1098,13 @@
   letter-spacing: 0.5px;
 }
 
-.sidebar a.logout-link {
+.sidebar .logout-link {
   color: #e74c3c;
   font-size: 13px;
   padding: 6px 0;
 }
 
-.sidebar a.logout-link:hover {
+.sidebar .logout-link:hover {
   color: #ff6b6b;
   background: none;
 }
@@ -1000,6 +1356,118 @@
   .game-load-summary { grid-template-columns: 1fr; }
 }
 .chairman-phase-one { min-height:100vh; background:#0c1320; color:#eef4fb; }
-.chairman-nav { display:flex; align-items:center; gap:22px; padding:17px 28px; background:#121d2d; border-bottom:1px solid #2d4058; }
-.chairman-nav strong { color:#63c4ff; letter-spacing:2px; }.chairman-nav a { color:#bdc9d8; text-decoration:none; }.chairman-nav a.active { color:white; }.chairman-nav span { margin-left:auto; color:#92a4b8; }.chairman-nav button { padding:7px 12px; color:#fff; background:#753e47; border:0; border-radius:5px; cursor:pointer; }
-.chairman-content { min-height:calc(100vh - 65px); }
+.chairman-nav { display:flex; align-items:center; gap:22px; padding:17px 28px; color:var(--fm-text); background:var(--fm-topbar-bg); border-bottom:1px var(--fm-line-style) var(--fm-border); font-family:var(--fm-font); }
+.chairman-nav strong { color:var(--fm-accent); letter-spacing:2px; }.chairman-nav a { color:var(--fm-text-dim); text-decoration:none; }.chairman-nav a.active { color:var(--fm-heading); }.chairman-nav span { margin-left:auto; color:var(--fm-text-faded); }.chairman-nav button { padding:7px 12px; color:#fff; background:var(--fm-danger); border:0; border-radius:var(--fm-radius-sm); cursor:pointer; }
+.chairman-save-load{display:flex;gap:8px;padding:10px 28px;background:#101827;border-bottom:1px solid #26364b}.chairman-save-load button{padding:8px 13px;border:1px solid #3d506b;border-radius:6px;background:#202e43;color:#dce7f4;font-weight:700;cursor:pointer}.chairman-save-load button:hover{background:#2b3d58;color:#fff}
+.chairman-content { min-height:calc(100vh - 65px); color:var(--fm-text); background:var(--fm-page-bg); font-family:var(--fm-font); }
+
+/* Mobile navigation becomes an off-canvas drawer. Keeping it in the DOM
+   preserves router active states and avoids rebuilding the long menu. */
+@media (max-width: 860px) {
+  .app-container {
+    display: block;
+    width: 100%;
+    min-height: 100dvh;
+    overflow-x: clip;
+  }
+
+  .main-content {
+    width: 100%;
+    min-height: 100dvh;
+    margin-left: 0;
+  }
+
+  .mobile-nav-toggle {
+    position: fixed;
+    z-index: 2400;
+    top: max(9px, env(safe-area-inset-top));
+    left: max(9px, env(safe-area-inset-left));
+    display: flex;
+    width: 40px;
+    height: 40px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0;
+    border: 1px solid #45516c;
+    border-radius: 8px;
+    color: #fff;
+    background: rgba(27, 34, 53, .96);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .34);
+    cursor: pointer;
+  }
+
+  .mobile-nav-toggle span {
+    display: block;
+    width: 17px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    z-index: 2500;
+    inset: 0;
+    display: block;
+    background: rgba(4, 7, 14, .72);
+    backdrop-filter: blur(3px);
+  }
+
+  .sidebar {
+    z-index: 2600;
+    width: min(86vw, 320px);
+    max-width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    padding-top: 0;
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+    transform: translate3d(-105%, 0, 0);
+    transition: transform .22s cubic-bezier(.2, .8, .2, 1);
+    overscroll-behavior: contain;
+    box-shadow: none;
+  }
+
+  .sidebar.mobile-open {
+    transform: translate3d(0, 0, 0);
+    box-shadow: 20px 0 55px rgba(0, 0, 0, .55);
+  }
+
+  .sidebar-header {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    display: flex;
+    min-height: 58px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: max(10px, env(safe-area-inset-top)) 12px 10px 20px;
+    text-align: left;
+    background: rgba(36, 18, 37, .97);
+    backdrop-filter: blur(7px);
+  }
+
+  .sidebar-close {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid #533a55;
+    border-radius: 7px;
+    color: #cdbfd0;
+    background: #321d33;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .compact-game-bar {
+    padding-left: 58px;
+  }
+
+  .multiplayer-entry-link { display: none; }
+  .sidebar a.mobile-only-sidebar-link { display: block; }
+}

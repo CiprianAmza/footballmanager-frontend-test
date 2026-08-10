@@ -1,8 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TeamService } from '../services/team.service';
 import { urlApp } from '../app.component';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
+
+const SUMMARY_TABS = ['standings', 'scorers', 'bestXI', 'awards', 'objectives', 'transfers'];
 
 @Component({
   selector: 'app-season-summary',
@@ -19,15 +22,21 @@ export class SeasonSummaryComponent implements OnInit {
   constructor(
     private http: HttpClient,
     private route: ActivatedRoute,
+    private router: Router,
     private teamService: TeamService
   ) {}
 
   ngOnInit(): void {
+    bindTabToUrl(this.route, SUMMARY_TABS, 'standings', tab => this.activeTab = tab);
     this.route.params.subscribe(params => {
       this.season = +params['season'] || this.teamService.currentSeason - 1;
       if (this.season < 1) this.season = 1;
       this.loadSummary();
     });
+  }
+
+  setTab(tab: string): void {
+    void navigateToTab(this.router, this.route, SUMMARY_TABS, 'standings', tab);
   }
 
   loadSummary(): void {

@@ -36,6 +36,55 @@
 
 .bottom-row { font-size: 1.1em; color: #dcdcdc; font-weight: 300; }
 
+.profile-market-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.profile-market-btn {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 850;
+  letter-spacing: .04em;
+  min-height: 36px;
+  padding: 8px 16px;
+  text-transform: uppercase;
+  transition: filter .16s ease, transform .16s ease, opacity .16s ease;
+}
+
+.profile-market-btn:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
+.profile-market-btn:disabled { cursor: not-allowed; opacity: .55; }
+.profile-market-btn.transfer-action { background: #1976a8; border-color: #48a9da; }
+.profile-market-btn.contract-action { background: #21834a; border-color: #4fc77a; }
+.profile-market-btn.secondary-action { background: #343a44; border-color: #626b78; }
+
+.transfer-window-note {
+  color: #ffd09a;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.profile-action-feedback {
+  border-radius: 4px;
+  font-size: .82rem;
+  font-weight: 700;
+  margin-top: 10px;
+  max-width: 640px;
+  padding: 8px 11px;
+}
+
+.profile-action-feedback.success,
+.profile-contract-result.success { background: rgba(46, 204, 113, .16); color: #a7f3c5; }
+.profile-action-feedback.error,
+.profile-contract-result.error { background: rgba(231, 76, 60, .17); color: #ffc0ba; }
+
 .profile-trait-badges {
   display: flex;
   flex-wrap: wrap;
@@ -722,7 +771,7 @@
     max-width: 42rem;
     text-align: center;
  }
- .player-page-state button,
+.player-page-state button,
  .player-page-state a {
     background: #1f6ea5;
     border: 1px solid #3189c7;
@@ -739,3 +788,87 @@
  .comp-name-cell a:hover,
  .trophy-name a:hover,
  .trophy-team a:hover { color: #67b9ef; text-decoration: underline; }
+
+/* Direct player-profile transfer and free-agent contract dialogs */
+.profile-action-overlay {
+  align-items: center;
+  background: rgba(4, 7, 13, .84);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 1200;
+}
+
+.profile-action-dialog {
+  background: linear-gradient(160deg, #292d38, #1b1e26);
+  border: 1px solid #505a69;
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .62);
+  color: #eef2f5;
+  max-width: 520px;
+  padding: 22px;
+  width: 100%;
+}
+
+.profile-action-dialog-header {
+  align-items: flex-start;
+  border-bottom: 1px solid #424854;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 19px;
+  padding-bottom: 15px;
+}
+
+.profile-action-dialog h2 { font-size: 1.45rem; margin: 3px 0 0; }
+.profile-action-kicker { color: #63b9eb; font-size: .7rem; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+.profile-action-close { background: transparent; border: 0; color: #bfc6cf; cursor: pointer; font-size: 1.8rem; line-height: 1; }
+.profile-action-close:disabled { cursor: not-allowed; opacity: .5; }
+
+.profile-action-player-summary {
+  align-items: center;
+  background: rgba(255, 255, 255, .045);
+  border: 1px solid #3f4652;
+  border-radius: 5px;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 12px;
+}
+.profile-action-player-summary span { color: #c6cbd2; }
+.profile-action-player-summary strong { color: #f4d35e; margin-left: auto; }
+
+.profile-action-field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+.profile-action-field > span { color: #c3c8d0; font-size: .76rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+.profile-action-field input,
+.profile-action-field select {
+  background: #13161c;
+  border: 1px solid #58616f;
+  border-radius: 4px;
+  color: #fff;
+  font: inherit;
+  min-height: 42px;
+  padding: 8px 11px;
+}
+.profile-action-field input:focus,
+.profile-action-field select:focus { border-color: #55b7e8; outline: 2px solid rgba(85, 183, 232, .17); }
+
+.profile-action-dialog-buttons { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+.profile-offer-result { border-radius: 5px; padding: 15px; }
+.profile-offer-result.counter { background: rgba(243, 156, 18, .11); border: 1px solid rgba(243, 156, 18, .42); }
+.profile-offer-result.rejected { background: rgba(231, 76, 60, .1); border: 1px solid rgba(231, 76, 60, .4); }
+.profile-offer-result h3 { margin: 0 0 9px; }
+.profile-offer-result p { color: #d9dde3; margin: 0; }
+.profile-contract-result { border-radius: 4px; font-size: .84rem; font-weight: 700; margin: 3px 0 14px; padding: 10px 12px; }
+
+@media (max-width: 700px) {
+  .header-main { align-items: flex-start; flex-wrap: wrap; }
+  .header-stats { width: 100%; }
+  .profile-action-overlay { padding: 12px; }
+  .profile-action-dialog { padding: 17px; }
+  .profile-action-player-summary { align-items: flex-start; flex-direction: column; }
+  .profile-action-player-summary strong { margin-left: 0; }
+  .profile-action-dialog-buttons { flex-direction: column-reverse; }
+  .profile-action-dialog-buttons .profile-market-btn { width: 100%; }
+}

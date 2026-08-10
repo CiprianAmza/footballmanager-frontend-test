@@ -5,6 +5,29 @@
   font-family: 'Segoe UI', 'Roboto Condensed', sans-serif;
 }
 
+.friendly-view-switcher {
+  display: flex;
+  gap: 4px;
+  padding: 12px 30px 0;
+  background: #202020;
+  border-bottom: 1px solid #383838;
+}
+
+.friendly-view-switcher a {
+  color: #8f98a3;
+  text-decoration: none;
+  padding: 9px 14px;
+  border-bottom: 3px solid transparent;
+  font-size: .82em;
+  font-weight: 700;
+}
+
+.friendly-view-switcher a:hover,
+.friendly-view-switcher a.active {
+  color: #fff;
+  border-color: #3498db;
+}
+
 /* Header */
 .friendly-header {
   background: linear-gradient(to right, #2c2c2c, #3a3a3a);

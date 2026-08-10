@@ -285,13 +285,23 @@ export function ambientFrame(state: AmbientState): PitchFrame {
     };
   });
 
+  const ballX = lerp(state.previous.ball.x, state.current.ball.x, t);
+  const ballY = lerp(state.previous.ball.y, state.current.ball.y, t);
+
   return {
-    ball: {
-      x: lerp(state.previous.ball.x, state.current.ball.x, t),
-      y: lerp(state.previous.ball.y, state.current.ball.y, t),
-      carrierPlayerId: null
-    },
-    players
+    ball: { x: ballX, y: ballY, carrierPlayerId: null },
+    players,
+    // Faza B/D: officials are always on the pitch, not only during phase
+    // clips. Pure function of the ball position — deterministic like the rest.
+    officials: [
+      {
+        x: clamp(ballX + (ballX < 50 ? 7 : -7), 4, 96),
+        y: clamp(ballY + (50 - ballY) * 0.5 + 6, 8, 92),
+        role: 'REF'
+      },
+      { x: clamp(Math.min(ballX, 48), 2, 50), y: 1.5, role: 'AR' },
+      { x: clamp(Math.max(ballX, 52), 50, 98), y: 98.5, role: 'AR' }
+    ]
   };
 }
 
@@ -300,9 +310,16 @@ export function blendFrames(from: PitchFrame, to: PitchFrame, t: number): PitchF
   const amount = clamp(t, 0, 1);
   const byId = new Map(from.players.map(p => [p.playerId, p]));
   return {
+    // Officials exist only on phase-clip frames; take the destination's set so
+    // they pop in/out with the splice instead of being smeared between shapes.
+    officials: to.officials ?? from.officials,
+    // Camera zoom eases inside the renderer — pass the destination's hint (an
+    // ambient frame has none, easing the camera back to the normal frame).
+    zoom: to.zoom,
     ball: {
       x: lerp(from.ball.x, to.ball.x, amount),
       y: lerp(from.ball.y, to.ball.y, amount),
+      h: lerp(from.ball.h || 0, to.ball.h || 0, amount),
       carrierPlayerId: to.ball.carrierPlayerId
     },
     players: to.players.map(player => {

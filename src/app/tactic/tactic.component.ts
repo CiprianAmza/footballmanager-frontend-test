@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { urlApp } from '../app.component';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
 
 interface Player {
   id: number;
@@ -101,7 +102,8 @@ export class TacticComponent implements OnInit {
     width: 'Balanced'
   };
 
-  constructor(private route: ActivatedRoute, private http: HttpClient) {}
+  constructor(private route: ActivatedRoute, private http: HttpClient,
+              private feedback: UiFeedbackService = new UiFeedbackService()) {}
 
   ngOnInit(): void {
     this.route.params.subscribe(params => {
@@ -295,7 +297,7 @@ export class TacticComponent implements OnInit {
   // Funcția pentru a salva opțiunile
   saveData() {
     console.log('Tactic options saved:', this.selectedOptions);
-    alert('Tactics saved successfully!');
+    this.feedback.success('Tactics saved successfully.');
   }
 
   // Role assignment methods
@@ -472,7 +474,7 @@ export class TacticComponent implements OnInit {
     this.http.post(urlApp + '/tactic/saveFormation', payload, {
       headers: { 'Content-Type': 'application/json' }
     }).subscribe(
-      () => alert('Formation saved!'),
+      () => this.feedback.success('Formation saved successfully.'),
       (error) => console.error('Error saving formation:', error)
     );
   }

@@ -2,14 +2,30 @@ import { of, throwError } from 'rxjs';
 import { PlayerComponent } from './player.component';
 
 describe('PlayerComponent Phase 1A', () => {
-  function createComponent(getResponse: (url: string) => any): PlayerComponent {
+  function createFixture(getResponse: (url: string) => any): { component: PlayerComponent; http: jasmine.SpyObj<any> } {
     const http = jasmine.createSpyObj('HttpClient', ['get', 'post', 'delete']);
     http.get.and.callFake((url: string) => getResponse(url));
-    const route = { params: of({ playerId: '7' }) };
+    http.post.and.returnValue(of({}));
+    http.delete.and.returnValue(of({}));
+    const route = {
+      params: of({ playerId: '7' }),
+      queryParamMap: of({ get: () => null }),
+      snapshot: { queryParamMap: { get: () => null } }
+    };
     const router = jasmine.createSpyObj('Router', ['navigate']);
-    const teamService = { teamId: 99, currentSeason: 4 };
+    const teamService = { teamId: 99, currentSeason: 4, transferWindowOpen: true };
+    const authService = { careerRole: 'MANAGER' };
     const adminService = { isAuthenticated: false };
-    return new PlayerComponent(http as any, route as any, router, teamService as any, adminService as any);
+    return {
+      component: new PlayerComponent(
+        http as any, route as any, router, teamService as any, authService as any, adminService as any
+      ),
+      http
+    };
+  }
+
+  function createComponent(getResponse: (url: string) => any): PlayerComponent {
+    return createFixture(getResponse).component;
   }
 
   it('uses only reported identity values and honest missing-value labels', () => {
@@ -112,5 +128,56 @@ describe('PlayerComponent Phase 1A', () => {
     expect(component.seasonStats.competitions[0].competitionTypeId).toBe(4);
     expect(component.competitionLink(component.seasonStats.competitions[0]))
       .toEqual(['/european-rounds', 21, 4]);
+  });
+
+  it('shows the correct direct market action for club players and free agents', () => {
+    const component = createComponent(() => of(null));
+
+    component.playerView = { id: 7, teamId: 8, isFreeAgent: false, isRetired: false };
+    expect(component.canMakeTransferOffer()).toBeTrue();
+    expect(component.canOfferFreeAgentContract()).toBeFalse();
+
+    component.playerView = { id: 7, teamId: 0, isFreeAgent: true, isRetired: false };
+    expect(component.canMakeTransferOffer()).toBeFalse();
+    expect(component.canOfferFreeAgentContract()).toBeTrue();
+
+    component.playerView = { id: 7, teamId: 99, isFreeAgent: false, isRetired: false };
+    expect(component.canMakeTransferOffer()).toBeFalse();
+    expect(component.canOfferFreeAgentContract()).toBeFalse();
+  });
+
+  it('submits direct offers with the active club identity', () => {
+    const fixture = createFixture(() => of(null));
+    fixture.component.playerId = 7;
+    fixture.component.playerView = { id: 7, name: 'Target', teamId: 8, isFreeAgent: false };
+    fixture.http.post.and.returnValue(of({ status: 'counter', askingPrice: 125000 }));
+
+    fixture.component.submitTransferOffer(100000);
+
+    expect(fixture.http.post.calls.mostRecent().args[0]).toContain('/transferOffer/makeOffer');
+    expect(fixture.http.post.calls.mostRecent().args[1]).toEqual({
+      playerId: 7,
+      offerAmount: 100000,
+      teamId: 99
+    });
+  });
+
+  it('submits free-agent contract terms from the profile', () => {
+    const fixture = createFixture(() => of(null));
+    fixture.component.playerId = 7;
+    fixture.component.playerView = { id: 7, name: 'Free Player', teamId: 0, isFreeAgent: true };
+    fixture.component.freeAgentWageOffer = 12000;
+    fixture.component.freeAgentContractYears = 3;
+    fixture.http.post.and.returnValue(of({ success: false, message: 'Higher wage required.' }));
+
+    fixture.component.submitFreeAgentContract();
+
+    expect(fixture.http.post.calls.mostRecent().args[0]).toContain('/transferOffer/signFreeAgent');
+    expect(fixture.http.post.calls.mostRecent().args[1]).toEqual({
+      playerId: 7,
+      offeredWage: 12000,
+      contractYears: 3,
+      teamId: 99
+    });
   });
 });

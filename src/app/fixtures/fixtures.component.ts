@@ -4,6 +4,10 @@ import { HttpClient } from '@angular/common/http';
 import { Subscription } from 'rxjs';
 import { urlApp } from '../app.component';
 import { TeamService } from '../services/team.service';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
+
+const FIXTURE_TABS = ['fixtures', 'calendar'] as const;
+type FixtureTab = typeof FIXTURE_TABS[number];
 
 export interface ScheduleView {
   opponentTeam: string;
@@ -79,7 +83,7 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
   loadingSummary: boolean = false;
 
   // Calendar tab
-  activeTab: 'fixtures' | 'calendar' = 'fixtures';
+  activeTab: FixtureTab = 'fixtures';
   activeMatchTab: 'summary' | 'statistics' | 'lineups' | 'h2h' = 'summary';
   calendarEntries: CalendarEntry[] = [];
   currentRound: number = 0;
@@ -99,6 +103,7 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
 
   private refreshSub?: Subscription;
   private routeSub?: Subscription;
+  private tabSub?: Subscription;
   private initialized = false;
 
   constructor(private route: ActivatedRoute, private router: Router, private http: HttpClient, private teamService: TeamService) {}
@@ -109,6 +114,8 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
       this.teamId = this.teamIdInput || Number(params['teamId']) || this.teamService.teamId;
       this.loadAll();
     });
+    const tabParam = this.teamIdInput ? 'fixturesTab' : 'tab';
+    this.tabSub = bindTabToUrl(this.route, FIXTURE_TABS, 'fixtures', tab => this.activeTab = tab, tabParam);
 
     // Reload after each game advance (CONTINUE) so scores, fixtures and calendar refresh
     this.refreshSub = this.teamService.refresh$.subscribe(() => this.loadAll());
@@ -126,6 +133,7 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
   ngOnDestroy(): void {
     this.refreshSub?.unsubscribe();
     this.routeSub?.unsubscribe();
+    this.tabSub?.unsubscribe();
   }
 
   private loadAll(): void {
@@ -184,8 +192,11 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
       .subscribe({ next: name => this.teamName = name || 'Team', error: () => this.teamName = 'Team' });
   }
 
-  switchTab(tab: 'fixtures' | 'calendar'): void {
-    this.activeTab = tab;
+  switchTab(tab: FixtureTab): void {
+    void navigateToTab(
+      this.router, this.route, FIXTURE_TABS, 'fixtures', tab,
+      this.teamIdInput ? 'fixturesTab' : 'tab'
+    );
   }
 
   fetchCurrentRound(): void {

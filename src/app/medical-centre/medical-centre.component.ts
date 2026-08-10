@@ -5,6 +5,8 @@ import { urlApp } from '../app.component';
 import { InjuryService } from '../services/injury.service';
 import { TeamService } from '../services/team.service';
 import { GameEventsService } from '../services/game-events.service';
+import { ActivatedRoute, Router } from '@angular/router';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
 
 interface MedicalRiskPlayer {
   id: number;
@@ -77,10 +79,13 @@ export class MedicalCentreComponent implements OnInit, OnDestroy {
     private http: HttpClient,
     private injuryService: InjuryService,
     private teamService: TeamService,
-    private gameEvents: GameEventsService
+    private gameEvents: GameEventsService,
+    private route: ActivatedRoute,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
+    this.sub.add(bindTabToUrl(this.route, this.tabs, 'Risk Assessment', tab => this.activeTab = tab));
     this.teamId = this.teamService.teamId;
     this.loadAll();
     // Injuries change after matches/training (game advance) and squad moves.
@@ -100,7 +105,7 @@ export class MedicalCentreComponent implements OnInit, OnDestroy {
   }
 
   setTab(tab: string) {
-    this.activeTab = tab;
+    void navigateToTab(this.router, this.route, this.tabs, 'Risk Assessment', tab);
   }
 
   loadRiskAssessment() {

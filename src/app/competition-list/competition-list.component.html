@@ -1,8 +1,15 @@
 <div class="comps-container">
 
   <div class="page-header">
-    <h1>COMPETITIONS</h1>
-    <span class="subtitle">{{ chairmanView && selectedTeamName ? selectedTeamName + "'s Competitions" : "Your Team's Competitions" }}</span>
+    <div><h1>COMPETITIONS</h1>
+      <span class="subtitle">{{ chairmanView && selectedTeamName ? selectedTeamName + "'s Competitions" : "Your Team's Competitions" }}</span>
+    </div>
+    <nav class="competition-view-nav" aria-label="Competition views">
+      <a routerLink="/competition-list" class="active">Classic</a>
+      <a [routerLink]="['/competitions2', viewTeamId]">Mission control</a>
+      <a [routerLink]="['/competitions3', viewTeamId]">Season timeline</a>
+      <a routerLink="/competitions-world">World view</a>
+    </nav>
   </div>
 
   <div class="club-context" *ngIf="chairmanView && controlledClubs.length > 0">
@@ -34,7 +41,6 @@
         </div>
         <div class="comp-title">
           <a [routerLink]="competitionLink(comp)">{{ comp.name }}</a>
-          <small class="type-label">{{ getTypeLabel(comp) }}</small>
         </div>
       </div>
 

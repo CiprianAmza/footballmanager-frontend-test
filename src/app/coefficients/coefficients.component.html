@@ -1,6 +1,12 @@
 <div class="coefficients-container">
   <div class="page-header">
     <h1>COEFFICIENTS</h1>
+    <div class="coefficient-views" aria-label="Coefficient page variants">
+      <a class="active" routerLink="/coefficients">Classic</a>
+      <a routerLink="/coefficients2">Command Centre</a>
+      <a routerLink="/coefficients3">Access Map</a>
+      <a routerLink="/competition-money">Prize Money</a>
+    </div>
     <div class="tab-bar">
       <button [class.active]="activeTab === 'country'" (click)="setActiveTab('country')">Country Rankings</button>
       <button [class.active]="activeTab === 'club'" (click)="setActiveTab('club')">Club Rankings</button>
@@ -142,7 +148,7 @@
                     {{ league.competitionName }}
                   </a>
                 </td>
-                <td>{{ league.competitionTypeId === 1 ? 'First' : 'Second' }}</td>
+                <td>Tier {{ league.tier || 1 }}</td>
                 <td>{{ league.completeTeamCount }}/{{ league.teamCount }}</td>
                 <td class="strength-rating">{{ league.averageTopElevenRating | number:'1.2-2' }}</td>
                 <td><span class="multiplier-badge">× {{ league.multiplier | number:'1.0-1' }}</span></td>

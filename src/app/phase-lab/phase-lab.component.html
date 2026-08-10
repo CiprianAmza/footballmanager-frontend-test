@@ -1,0 +1,84 @@
+<div class="lab-shell">
+  <aside class="lab-sidebar">
+    <h2>Phase Lab</h2>
+    <p class="lab-meta" *ngIf="catalog">
+      {{ catalog.totalCombos }} combinații (scenariu × final) · variații nelimitate pe seed
+      · {{ catalog.totalRatings }} note date
+    </p>
+
+    <div class="lab-family" *ngFor="let family of catalog?.strategies || []">
+      <h3>{{ family.name }}</h3>
+      <button class="lab-scenario"
+              *ngFor="let scenario of family.scenarios"
+              [class.kept]="scenario.status === 'KEPT'"
+              [class.dropped]="scenario.status === 'DROPPED'"
+              [class.active]="preview?.scenario === scenario.name"
+              (click)="pickManual(family.name, scenario.name)">
+        <span class="name">{{ scenario.name }}</span>
+        <span class="stats" *ngIf="scenario.ratings > 0">
+          {{ scenario.avgRating | number:'1.1-1' }}★ ({{ scenario.ratings }})
+        </span>
+        <span class="status">{{ statusLabel(scenario.status) }}</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="lab-main">
+    <div class="lab-toolbar" *ngIf="preview">
+      <span class="crumb">
+        <strong>{{ preview.strategy }}</strong> › {{ preview.scenario }}
+        › final: <strong>{{ preview.outcome }}</strong> · seed {{ preview.seed }}
+      </span>
+      <span class="predicted" title="Nota prezisă de modelul învățat">
+        agentul prezice {{ preview.predictedRating | number:'1.1-1' }}★
+      </span>
+    </div>
+
+    <div class="lab-pitch">
+      <app-match-pitch [clip]="clip"
+                       [homeTeamId]="preview?.homeTeamId || 1"
+                       [homeKit]="homeKit"
+                       [awayKit]="awayKit"
+                       [responsive]="true"
+                       (clipFinished)="onClipFinished()"></app-match-pitch>
+      <div class="lab-loading" *ngIf="loading">se generează…</div>
+      <div class="lab-error" *ngIf="error">{{ error }}</div>
+    </div>
+
+    <div class="lab-rating">
+      <span class="hint">Nota ta antrenează agentul:</span>
+      <button *ngFor="let stars of [1,2,3,4,5]" class="star-btn"
+              (click)="rate(stars)" [disabled]="!preview || loading">
+        {{ stars }}★
+      </button>
+      <button class="ghost-btn" (click)="regenerate()" [disabled]="loading">altă variantă</button>
+      <button class="ghost-btn" (click)="agentNext()" [disabled]="loading">propunerea agentului</button>
+    </div>
+    <p class="lab-verdict" *ngIf="lastVerdict">
+      {{ lastVerdict.name }}: {{ lastVerdict.avgRating | number:'1.1-1' }}★
+      din {{ lastVerdict.ratings }} note — {{ statusLabel(lastVerdict.status) }}
+    </p>
+
+    <div class="lab-manual">
+      <label>Strategie
+        <select [(ngModel)]="manualStrategy">
+          <option *ngFor="let family of catalog?.strategies || []" [value]="family.name">{{ family.name }}</option>
+        </select>
+      </label>
+      <label>Scenariu
+        <select [(ngModel)]="manualScenario">
+          <option *ngFor="let scenario of scenariosOf(manualStrategy)" [value]="scenario.name">{{ scenario.name }}</option>
+        </select>
+      </label>
+      <label>Final
+        <select [(ngModel)]="manualOutcome">
+          <option *ngFor="let outcome of catalog?.outcomes || []" [value]="outcome">{{ outcome }}</option>
+        </select>
+      </label>
+      <label>Seed
+        <input type="number" [(ngModel)]="manualSeed">
+      </label>
+      <button class="ghost-btn" (click)="generateManual()" [disabled]="loading">Generează</button>
+    </div>
+  </main>
+</div>

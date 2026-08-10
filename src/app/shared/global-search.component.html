@@ -1,0 +1,56 @@
+<button #trigger type="button" class="global-search-trigger" (click)="show()" aria-label="Command palette">
+  <app-fm-icon name="search" [size]="17"></app-fm-icon>
+  <span>Commands</span>
+  <kbd>{{ shortcutLabel('MOD') }} K</kbd>
+</button>
+
+<div class="global-shortcut-hint" *ngIf="shortcutHint" role="status" aria-live="polite">
+  <kbd>G</kbd><span>then</span><strong>{{ shortcutHint }}</strong>
+</div>
+
+<div class="global-search-backdrop" *ngIf="open" (mousedown)="close()">
+  <section class="global-search-dialog" role="dialog" aria-modal="true" aria-label="Command palette"
+           (mousedown)="$event.stopPropagation()">
+    <header>
+      <app-fm-icon name="search" [size]="21"></app-fm-icon>
+      <input #searchInput type="search" autocomplete="off" spellcheck="false"
+             [ngModel]="query" (ngModelChange)="onQueryChange($event)"
+             placeholder="Search or type a command…"
+             aria-label="Search commands, players, clubs, competitions and pages">
+      <kbd>ESC</kbd>
+    </header>
+
+    <div class="global-search-body">
+      <div class="global-search-loading" *ngIf="loading">
+        <app-skeleton variant="text" [count]="4" [columns]="1" label="Searching"></app-skeleton>
+      </div>
+
+      <ng-container *ngIf="!loading">
+        <section class="global-search-group" *ngFor="let group of groups">
+          <h2>{{ group.label }}</h2>
+          <button type="button" *ngFor="let item of group.items" [class.selected]="isSelected(item)"
+                  [class.disabled]="isItemDisabled(item)" [disabled]="isItemDisabled(item)"
+                  (mouseenter)="selectedIndex = flatResults.indexOf(item)" (click)="select(item)">
+            <span class="global-result-icon"><app-fm-icon [name]="item.icon" [size]="18"></app-fm-icon></span>
+            <span class="global-result-copy"><strong>{{ item.name }}</strong><small>{{ item.meta }}</small></span>
+            <span class="global-result-shortcut" *ngIf="item.shortcut?.length">
+              <kbd *ngFor="let key of item.shortcut">{{ shortcutLabel(key) }}</kbd>
+            </span>
+            <span class="global-result-kind" *ngIf="!item.shortcut?.length">{{ item.kind }}</span>
+          </button>
+        </section>
+
+        <app-empty-state *ngIf="query.trim().length >= 2 && !hasResults"
+                         title="No results found" message="Try another name or page keyword."
+                         icon="search">
+        </app-empty-state>
+      </ng-container>
+    </div>
+
+    <footer>
+      <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+      <span><kbd>↵</kbd> Open</span>
+      <span><kbd>G</kbd> then a key · direct navigation</span>
+    </footer>
+  </section>
+</div>

@@ -4,6 +4,7 @@ import {
   AdminService,
   AdminTeamOption
 } from '../services/admin.service';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
 
 @Component({
   selector: 'app-admin',
@@ -37,7 +38,8 @@ export class AdminComponent implements OnInit {
   fundingMessage = '';
   fundingSuccess = false;
 
-  constructor(public adminService: AdminService) {}
+  constructor(public adminService: AdminService,
+              private feedback: UiFeedbackService = new UiFeedbackService()) {}
 
   ngOnInit(): void {
     if (this.adminService.isAuthenticated) this.loadAdminData();
@@ -134,7 +136,7 @@ export class AdminComponent implements OnInit {
     return this.financeAction === 'ADD' ? this.fundingOptions : this.withdrawalOptions;
   }
 
-  submitFinanceAdjustment(): void {
+  async submitFinanceAdjustment(): Promise<void> {
     const amount = Number(this.fundingAmount);
     if (this.fundingTeamId == null) {
       this.fundingMessage = 'Select a team.';
@@ -161,7 +163,9 @@ export class AdminComponent implements OnInit {
     const source = this.financeReasonOptions().find(item => item.code === this.fundingReason);
     const verb = this.financeAction === 'ADD' ? 'Add' : 'Remove';
     const preposition = this.financeAction === 'ADD' ? 'to' : 'from';
-    if (!window.confirm(`${verb} ${this.formatEuros(amount)} ${preposition} ${team?.name || 'the selected club'} — ${source?.label || this.fundingReason}?`)) {
+    if (!await this.feedback.confirm(`${verb} ${this.formatEuros(amount)} ${preposition} ${team?.name || 'the selected club'} — ${source?.label || this.fundingReason}?`, {
+      title: 'Confirm finance adjustment', confirmLabel: verb
+    })) {
       return;
     }
 
@@ -208,7 +212,7 @@ export class AdminComponent implements OnInit {
     }).format(value || 0);
   }
 
-  extendContracts(): void {
+  async extendContracts(): Promise<void> {
     const seasons = Number(this.extensionSeasons);
     if (!Number.isInteger(seasons) || seasons < 1 || seasons > 100) {
       this.contractMessage = 'Choose between 1 and 100 seasons.';
@@ -223,7 +227,9 @@ export class AdminComponent implements OnInit {
 
     const team = this.teams.find(item => item.id === Number(this.selectedTeamId));
     const target = this.contractScope === 'ALL' ? 'ALL teams' : (team?.name || 'the selected team');
-    if (!window.confirm(`Extend every player contract for ${target} by ${seasons} season(s)?`)) return;
+    if (!await this.feedback.confirm(`Extend every player contract for ${target} by ${seasons} season(s)?`, {
+      title: 'Extend contracts', confirmLabel: 'Extend contracts'
+    })) return;
 
     const payload: { seasons: number; allTeams: boolean; teamId?: number } = {
       seasons,

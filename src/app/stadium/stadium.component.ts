@@ -4,6 +4,8 @@ import { Subscription } from 'rxjs';
 import { TeamService } from '../services/team.service';
 import { GameEventsService } from '../services/game-events.service';
 import { urlApp } from '../app.component';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
+import { UiFormatService } from '../shared/ui-formatters';
 
 interface StadiumDesign {
   seed: number;
@@ -37,6 +39,7 @@ export class StadiumComponent implements OnInit, OnDestroy {
   private refreshSub?: Subscription;
 
   loading = true;
+  errorMessage = '';
   teamName = '';
 
   // Stadium data
@@ -61,7 +64,9 @@ export class StadiumComponent implements OnInit, OnDestroy {
   upgradeMessage = '';
 
   constructor(private http: HttpClient, public teamService: TeamService,
-              private gameEvents: GameEventsService) {}
+              private gameEvents: GameEventsService,
+              private feedback: UiFeedbackService = new UiFeedbackService(),
+              private uiFormat: UiFormatService = new UiFormatService()) {}
 
   ngOnDestroy(): void {
     this.refreshSub?.unsubscribe();
@@ -113,15 +118,24 @@ export class StadiumComponent implements OnInit, OnDestroy {
 
         this.upgradesInProgress = newInProgress;
         this.loading = false;
+        this.errorMessage = '';
       },
       error: (err) => {
         console.error('Error loading facilities:', err);
         this.loading = false;
+        this.errorMessage = 'Stadium and facility data could not be loaded.';
       }
     });
   }
 
-  startUpgrade(facilityType: string): void {
+  async startUpgrade(facilityType: string): Promise<void> {
+    const upgrade = this.availableUpgrades.find(item => item.type === facilityType);
+    const cost = this.uiFormat.money(upgrade?.upgradeCost || 0);
+    const confirmed = await this.feedback.confirm(
+      `Start the ${this.getFacilityLabel(facilityType)} upgrade for ${cost}?`,
+      { title: 'Start facility upgrade', confirmLabel: 'Start upgrade' }
+    );
+    if (!confirmed) return;
     const teamId = this.teamService.teamId;
     this.http.post<any>(urlApp + '/game/facilities/upgrade', { teamId, facilityType }).subscribe({
       next: (result) => {
@@ -141,6 +155,13 @@ export class StadiumComponent implements OnInit, OnDestroy {
         setTimeout(() => this.upgradeMessage = '', 4000);
       }
     });
+  }
+
+  retry(): void {
+    this.loading = true;
+    this.errorMessage = '';
+    this.loadTeamName();
+    this.loadFacilities();
   }
 
   getUpgradeInProgress(facilityType: string): any {
@@ -181,6 +202,7 @@ export class StadiumComponent implements OnInit, OnDestroy {
     const labels: { [key: string]: string } = {
       'TRAINING_GROUND': 'Training Ground',
       'YOUTH_ACADEMY': 'Youth Academy',
+      'YOUTH_TRAINING': 'Youth Training Centre',
       'MEDICAL_CENTER': 'Medical Center',
       'STADIUM_EXPANSION': 'Stadium Expansion',
       'VIP_BOXES': 'VIP Boxes',
@@ -198,6 +220,7 @@ export class StadiumComponent implements OnInit, OnDestroy {
     const icons: { [key: string]: string } = {
       'TRAINING_GROUND': '\uD83C\uDFCB\uFE0F',
       'YOUTH_ACADEMY': '\uD83C\uDF31',
+      'YOUTH_TRAINING': '\u26BD',
       'MEDICAL_CENTER': '\uD83C\uDFE5',
       'STADIUM_EXPANSION': '\uD83C\uDFDF\uFE0F',
       'VIP_BOXES': '\uD83C\uDFAB',
@@ -216,7 +239,7 @@ export class StadiumComponent implements OnInit, OnDestroy {
   }
 
   isClubFacility(type: string): boolean {
-    return ['TRAINING_GROUND', 'YOUTH_ACADEMY', 'MEDICAL_CENTER', 'HEADQUARTERS', 'TRAINING_PITCH'].includes(type);
+    return ['TRAINING_GROUND', 'YOUTH_ACADEMY', 'YOUTH_TRAINING', 'MEDICAL_CENTER', 'HEADQUARTERS', 'TRAINING_PITCH'].includes(type);
   }
 
   getStadiumUpgrades(): any[] {

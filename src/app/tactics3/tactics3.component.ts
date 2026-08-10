@@ -1,12 +1,16 @@
 // ... (Importurile și interfețele rămân la fel) ...
 import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { urlApp } from '../app.component';
 import { forkJoin } from 'rxjs';
 import { TeamService } from '../services/team.service';
 import { RatingTierService } from '../services/rating-tier.service';
 import { CoachPermissionsService, CoachLockState } from '../services/coach-permissions.service';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
+
+const TACTICS_VIEW_TABS = ['pitch', 'squad', 'settings'];
 
 // ... (Interfețele Player, PositionedPlayer, SavedTactic rămân la fel) ...
 interface Player {
@@ -48,7 +52,7 @@ export class Tactics3Component implements OnInit, OnChanges {
 
   // Tabbed layout state (single-column mobile-first variant)
   activeTab: string = 'pitch';
-  setTab(t: string){ this.activeTab = t; }
+  setTab(t: string){ void navigateToTab(this.router, this.route, TACTICS_VIEW_TABS, 'pitch', t, 'tacticsTab'); }
 
   // ... (restul variabilelor de state rămân la fel) ...
   players: Player[] = [];
@@ -98,7 +102,9 @@ export class Tactics3Component implements OnInit, OnChanges {
 
   constructor(private route: ActivatedRoute, private http: HttpClient,
               private teamService: TeamService, public ratingTiers: RatingTierService,
-              private coachPermissions: CoachPermissionsService) {}
+              private coachPermissions: CoachPermissionsService,
+              private router: Router,
+              private feedback: UiFeedbackService = new UiFeedbackService()) {}
 
   /** A pitch cell is locked when the owner revoked XI picking or pinned this slot. */
   isSlotLocked(positionIndex: number, position?: string): boolean {
@@ -106,6 +112,7 @@ export class Tactics3Component implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
+    bindTabToUrl(this.route, TACTICS_VIEW_TABS, 'pitch', tab => this.activeTab = tab, 'tacticsTab');
     if (this.teamId) {
         this.loadData();
     } else {
@@ -333,7 +340,7 @@ export class Tactics3Component implements OnInit, OnChanges {
           width: this.selectedOptions.width
       };
       this.http.post(urlApp + '/tactic/saveFormation', payload).subscribe(
-          () => alert('Tactics saved successfully!'),
+          () => this.feedback.success('Tactics saved successfully.'),
           (error) => console.error('Error saving tactics:', error)
       );
   }

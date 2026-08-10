@@ -9,12 +9,12 @@
 
   <!-- Tabs -->
   <div class="tabs">
-    <button [class.active]="activeTab === 'standings'" (click)="activeTab = 'standings'">Standings</button>
-    <button [class.active]="activeTab === 'scorers'" (click)="activeTab = 'scorers'">Top Scorers</button>
-    <button [class.active]="activeTab === 'bestXI'" (click)="activeTab = 'bestXI'">Best XI</button>
-    <button [class.active]="activeTab === 'awards'" (click)="activeTab = 'awards'">Awards</button>
-    <button [class.active]="activeTab === 'objectives'" (click)="activeTab = 'objectives'">Objectives</button>
-    <button [class.active]="activeTab === 'transfers'" (click)="activeTab = 'transfers'">Transfers</button>
+    <button [class.active]="activeTab === 'standings'" (click)="setTab('standings')">Standings</button>
+    <button [class.active]="activeTab === 'scorers'" (click)="setTab('scorers')">Top Scorers</button>
+    <button [class.active]="activeTab === 'bestXI'" (click)="setTab('bestXI')">Best XI</button>
+    <button [class.active]="activeTab === 'awards'" (click)="setTab('awards')">Awards</button>
+    <button [class.active]="activeTab === 'objectives'" (click)="setTab('objectives')">Objectives</button>
+    <button [class.active]="activeTab === 'transfers'" (click)="setTab('transfers')">Transfers</button>
   </div>
 
   <!-- Standings Tab -->

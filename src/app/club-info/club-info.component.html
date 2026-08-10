@@ -193,7 +193,7 @@
                 [attr.aria-pressed]="isCompetitionSelected(option.competitionId)" (click)="toggleCompetition(option.competitionId)">
                 {{ isCompetitionSelected(option.competitionId) ? '✓' : '+' }}
               </button>
-              <a [routerLink]="competitionStatLink(option)">{{ option.competitionName }} <small>{{ competitionTypeLabel(option.competitionTypeId) }}</small></a>
+              <a [routerLink]="competitionStatLink(option)">{{ option.competitionName }}</a>
             </div>
             <button type="button" class="clear-filter-btn" [disabled]="selectedCompetitionIds.size === 0" (click)="clearCompetitionSelection()">Clear</button>
           </div>

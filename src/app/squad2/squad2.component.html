@@ -1,0 +1,110 @@
+<main class="s2-shell">
+  <header class="s2-hero">
+    <div>
+      <p class="eyebrow">SQUAD · SEASON {{ overview?.season || '—' }}</p>
+      <h1>{{ overview?.teamName || 'Matchday Board' }}</h1>
+      <p class="subtitle">Build the matchday group around readiness, form and availability.</p>
+    </div>
+    <nav class="variant-nav" aria-label="Squad views">
+      <a routerLink="/squad">Classic</a>
+      <a [routerLink]="['/squad2', teamId]" class="active">Matchday board</a>
+      <a [routerLink]="['/squad3', teamId]">People & culture</a>
+    </nav>
+  </header>
+
+  <section class="state-card" *ngIf="loading">Loading the squad decision board…</section>
+  <section class="state-card error" *ngIf="!loading && error">{{ error }}</section>
+
+  <ng-container *ngIf="!loading && !error">
+    <section class="kpi-grid">
+      <article><span>AVAILABLE</span><strong>{{ availableCount }}/{{ players.length }}</strong><small>eligible today</small></article>
+      <article><span>MATCHDAY LIST</span><strong>{{ selectedCount }}</strong><small>saved on this device</small></article>
+      <article><span>AVG FITNESS</span><strong>{{ averageFitness }}%</strong><small>squad condition</small></article>
+      <article [class.warn]="riskCount > 0"><span>PEOPLE RISKS</span><strong>{{ riskCount }}</strong><small>need attention</small></article>
+    </section>
+
+    <section class="toolbar">
+      <label class="search-box"><span>⌕</span><input #searchInput [(ngModel)]="search" placeholder="Find player…" /></label>
+      <select [(ngModel)]="positionFilter" aria-label="Position filter">
+        <option value="ALL">All positions</option>
+        <option *ngFor="let position of positions" [value]="position">{{ position }}</option>
+      </select>
+      <select [(ngModel)]="statusFilter" aria-label="Status filter">
+        <option value="ALL">Every status</option>
+        <option value="AVAILABLE">Available</option>
+        <option value="UNAVAILABLE">Unavailable</option>
+        <option value="AT_RISK">People risk</option>
+        <option value="LOW_FITNESS">Fitness below 80</option>
+      </select>
+      <select [(ngModel)]="sortBy" aria-label="Sort players">
+        <option value="readiness">Readiness</option>
+        <option value="rating">Rating</option>
+        <option value="fitness">Fitness</option>
+        <option value="age">Age</option>
+        <option value="name">Name</option>
+      </select>
+      <a [routerLink]="['/tactics', teamId]" class="primary-action">Open tactics <span>→</span></a>
+    </section>
+
+    <section class="workspace">
+      <div class="roster-panel">
+        <div class="panel-title"><strong>{{ filteredPlayers.length }} players</strong><span>Space adds/removes from matchday list</span></div>
+        <button class="player-row" *ngFor="let player of filteredPlayers"
+                [class.selected]="selectedPlayer?.id === player.id"
+                [class.unavailable]="player.availability.length"
+                (click)="selectPlayer(player)">
+          <span class="pick" [class.checked]="matchdayIds.has(player.id)"
+                [class.disabled]="player.availability.length"
+                (click)="toggleMatchday(player, $event)">{{ matchdayIds.has(player.id) ? '✓' : '+' }}</span>
+          <app-player-face [size]="42" [baseFaceId]="player.face.baseFaceId || 0"
+            [skinTone]="player.face.skinTone || 0" [hairStyle]="player.face.hairStyle || 0"
+            [hairColor]="player.face.hairColor || 0" [eyeColor]="player.face.eyeColor || 0"
+            [faceShape]="player.face.faceShape || 0" [noseShape]="player.face.noseShape || 0"
+            [eyeShape]="player.face.eyeShape || 0" [mouthShape]="player.face.mouthShape || 0"
+            [browShape]="player.face.browShape || 0" [nationId]="player.face.nationId || 0"
+            [species]="player.face.species || 'human'"></app-player-face>
+          <span class="position">{{ player.position }}</span>
+          <span class="identity"><strong>{{ player.name }}</strong><small>{{ availabilityLabel(player) }} · {{ player.age }} yrs</small></span>
+          <span class="season-line"><strong>{{ player.appearances }}</strong><small>APP</small></span>
+          <span class="season-line"><strong>{{ player.goals }}</strong><small>G</small></span>
+          <span class="season-line"><strong>{{ player.assists }}</strong><small>A</small></span>
+          <span class="meter-cell"><small>FIT {{ player.fitness | number:'1.0-0' }}%</small><i><b [style.width.%]="player.fitness"></b></i></span>
+          <span class="readiness" [ngClass]="readinessTone(player.readiness)">{{ player.readiness }}</span>
+        </button>
+        <p class="empty" *ngIf="!filteredPlayers.length">No player matches these filters.</p>
+      </div>
+
+      <aside class="inspector" *ngIf="selectedPlayer as player">
+        <div class="inspector-top">
+          <app-player-face [size]="78" [baseFaceId]="player.face.baseFaceId || 0"
+            [skinTone]="player.face.skinTone || 0" [hairStyle]="player.face.hairStyle || 0"
+            [hairColor]="player.face.hairColor || 0" [eyeColor]="player.face.eyeColor || 0"
+            [faceShape]="player.face.faceShape || 0" [noseShape]="player.face.noseShape || 0"
+            [eyeShape]="player.face.eyeShape || 0" [mouthShape]="player.face.mouthShape || 0"
+            [browShape]="player.face.browShape || 0" [nationId]="player.face.nationId || 0"
+            [species]="player.face.species || 'human'"></app-player-face>
+          <div><span class="position">{{ player.position }}</span><h2>{{ player.name }}</h2><p>{{ player.age }} years · {{ player.agreedPlayingTime || 'Squad player' }}</p></div>
+        </div>
+        <div class="readiness-hero" [ngClass]="readinessTone(player.readiness)"><span>MATCH READINESS</span><strong>{{ player.readiness }}</strong></div>
+        <dl class="detail-grid">
+          <div><dt>Rating</dt><dd>{{ player.rating | number:'1.1-1' }}</dd></div>
+          <div><dt>Morale</dt><dd>{{ player.morale | number:'1.0-0' }}%</dd></div>
+          <div><dt>Value</dt><dd>{{ formatMoney(player.transferValue) }}</dd></div>
+          <div><dt>Contract</dt><dd>S{{ player.contractEndSeason }}</dd></div>
+        </dl>
+        <section class="decision-card" [class.alert]="player.concern !== 'No active concern'">
+          <span>MANAGEMENT NOTE</span><strong>{{ player.concern }}</strong><p>{{ player.nextAction }}</p>
+        </section>
+        <section class="training-note"><span>INDIVIDUAL PLAN</span><strong>{{ player.individualTrainingFocus || 'Team focus' }}</strong><p>{{ player.individualTrainingRole || player.profile.preferredTrainingStyle + ' work preferred' }}</p></section>
+        <div class="quick-actions">
+          <button (click)="openPlayer(player)">Player profile</button>
+          <a [routerLink]="['/squad3', teamId]" [queryParams]="{ playerId: player.id }">Human profile</a>
+          <a routerLink="/training">Training</a>
+          <a routerLink="/medical">Medical</a>
+        </div>
+      </aside>
+    </section>
+
+    <footer class="shortcut-bar"><span><kbd>F</kbd> Search</span><span><kbd>J</kbd><kbd>K</kbd> Navigate</span><span><kbd>Space</kbd> Matchday list</span><span><kbd>P</kbd> Profile</span><span><kbd>T</kbd> Tactics</span><span><kbd>M</kbd> Medical</span></footer>
+  </ng-container>
+</main>

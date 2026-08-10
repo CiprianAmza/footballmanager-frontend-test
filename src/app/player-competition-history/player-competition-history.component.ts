@@ -73,11 +73,11 @@ export class PlayerCompetitionHistoryComponent implements OnInit, OnChanges {
 
   competitionTypeLabel(typeId: number | undefined | null): string {
     switch (typeId) {
-      case 1: return 'League';
-      case 2: return 'Cup';
-      case 3: return 'Second League';
-      case 4: return 'League of Champions';
-      case 5: return 'Stars Cup';
+      case 1:
+      case 3: return 'League competition';
+      case 2: return 'Knockout competition';
+      case 4:
+      case 5: return 'Continental competition';
       default: return '';
     }
   }

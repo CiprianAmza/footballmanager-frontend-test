@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { urlApp } from '../app.component';
 import { TeamService } from '../services/team.service';
+import { bindTabToUrl, navigateToTab } from '../shared/url-tab-state';
 
 interface CountryCoefficient {
   leagueId: number;
@@ -42,6 +43,7 @@ interface LeagueStrengthEntry {
   competitionId: number;
   competitionName: string;
   competitionTypeId: number;
+  tier: number;
   averageTopElevenRating: number;
   multiplier: number;
   teamCount: number;
@@ -58,6 +60,7 @@ interface LeagueStrengthTable {
 }
 
 type CoefficientsTab = 'country' | 'club' | 'rankings';
+const COEFFICIENT_TABS: CoefficientsTab[] = ['country', 'club', 'rankings'];
 
 @Component({
   selector: 'app-coefficients',
@@ -84,6 +87,7 @@ export class CoefficientsComponent implements OnInit, OnDestroy {
   rankingsError = '';
   expandedLeagueId: number | null = null;
   private seasonSubscription?: Subscription;
+  private tabSubscription?: Subscription;
   private rankingRequestId = 0;
 
   constructor(
@@ -94,10 +98,12 @@ export class CoefficientsComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    const requestedTab = this.route.snapshot.queryParamMap.get('tab');
-    if (requestedTab === 'club' || requestedTab === 'rankings') {
-      this.activeTab = requestedTab;
-    }
+    this.tabSubscription = bindTabToUrl(this.route, COEFFICIENT_TABS, 'country', tab => {
+      this.activeTab = tab;
+      if (tab === 'rankings' && this.leagueStrength?.season !== this.teamService.currentSeason) {
+        this.loadLeagueRankings();
+      }
+    });
 
     this.loadCountryCoefficients();
     this.loadClubCoefficients();
@@ -112,20 +118,11 @@ export class CoefficientsComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.seasonSubscription?.unsubscribe();
+    this.tabSubscription?.unsubscribe();
   }
 
   setActiveTab(tab: CoefficientsTab): void {
-    this.activeTab = tab;
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams: { tab: tab === 'country' ? null : tab },
-      queryParamsHandling: 'merge',
-      replaceUrl: true
-    });
-
-    if (tab === 'rankings' && this.leagueStrength?.season !== this.teamService.currentSeason) {
-      this.loadLeagueRankings();
-    }
+    void navigateToTab(this.router, this.route, COEFFICIENT_TABS, 'country', tab);
   }
 
   loadCountryCoefficients(): void {

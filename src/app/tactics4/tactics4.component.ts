@@ -11,6 +11,7 @@ import { AdminService } from '../services/admin.service';
 import { AuthService } from '../services/auth.service';
 import { ChairmanClubService } from '../services/chairman-club.service';
 import { TacticalMandateSlot, TacticalMandateUpdate, TacticalMandateView } from '../chairman-club/chairman-club.models';
+import { UiFeedbackService } from '../shared/ui-feedback.service';
 
 // ... (Interfețele Player, PositionedPlayer, SavedTactic rămân la fel) ...
 interface Player {
@@ -273,7 +274,8 @@ export class Tactics4Component implements OnInit, OnChanges {
               private coachPermissions: CoachPermissionsService,
               private adminService: AdminService,
               private authService: AuthService,
-              private chairmanApi: ChairmanClubService) {}
+              private chairmanApi: ChairmanClubService,
+              private feedback: UiFeedbackService = new UiFeedbackService()) {}
 
   /** A pitch cell is locked when the owner revoked XI picking or pinned this slot. */
   isSlotLocked(positionIndex: number, position?: string): boolean {
@@ -1271,13 +1273,13 @@ export class Tactics4Component implements OnInit, OnChanges {
               this.managerTacticSnapshot = payload as SavedTactic;
               this.managerTacticSource = 'SAVED';
               this.tacticalViewMode = 'manager';
-              alert(this.isAdminEditingExternalTeam
+              this.feedback.success(this.isAdminEditingExternalTeam
                   ? `Tactics saved for ${this.managerName}'s team.`
                   : 'Tactics saved successfully!');
           },
           error: (error) => {
               console.error('Error saving tactics:', error);
-              alert(error?.error?.error || 'The tactic could not be saved.');
+              this.feedback.error(error?.error?.error || 'The tactic could not be saved.');
           }
       });
   }

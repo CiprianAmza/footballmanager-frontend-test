@@ -1,28 +1,24 @@
 <div class="stadium-page">
 
   <!-- HEADER -->
-  <div class="page-header">
-    <div class="header-left">
-      <span class="header-icon">&#127967;</span>
-      <div class="header-titles">
-        <h1>STADIUM & FACILITIES</h1>
-        <span class="header-sub">{{ teamName }}</span>
-      </div>
-    </div>
-  </div>
+  <app-page-header eyebrow="Club" title="Stadium & Facilities" [subtitle]="teamName"></app-page-header>
 
   <div *ngIf="upgradeMessage" class="upgrade-toast">{{ upgradeMessage }}</div>
 
   <!-- Completed Upgrade Notifications -->
   <div class="completed-banner" *ngFor="let done of completedUpgrades">
-    <div class="completed-icon">&#9989;</div>
+    <div class="completed-icon"><app-fm-icon name="check" [size]="22"></app-fm-icon></div>
     <div class="completed-text">
       <strong>{{ getFacilityLabel(done.facilityType) }}</strong> upgrade complete!
       Now at <strong>Level {{ done.targetLevel }}</strong>.
     </div>
   </div>
 
-  <div class="stadium-content" *ngIf="!loading">
+  <app-ui-state *ngIf="loading" kind="loading" title="Loading stadium and facilities"></app-ui-state>
+  <app-ui-state *ngIf="!loading && errorMessage" kind="error" title="Facilities unavailable"
+    [message]="errorMessage" (retry)="retry()"></app-ui-state>
+
+  <div class="stadium-content" *ngIf="!loading && !errorMessage">
 
     <!-- STADIUM OVERVIEW -->
     <div class="stadium-overview">
@@ -72,28 +68,28 @@
 
       <div class="stadium-stats-grid">
         <div class="stat-card">
-          <div class="stat-icon">&#127967;</div>
+          <div class="stat-icon"><app-fm-icon name="stadium" [size]="26"></app-fm-icon></div>
           <div class="stat-info">
             <span class="stat-label">BASE CAPACITY</span>
             <span class="stat-value">{{ (stadium?.capacity || 0) | number }}</span>
           </div>
         </div>
         <div class="stat-card highlight">
-          <div class="stat-icon">&#128101;</div>
+          <div class="stat-icon"><app-fm-icon name="users" [size]="26"></app-fm-icon></div>
           <div class="stat-info">
             <span class="stat-label">EFFECTIVE CAPACITY</span>
             <span class="stat-value">{{ effectiveCapacity | number }}</span>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">&#127941;</div>
+          <div class="stat-icon"><app-fm-icon name="trophy" [size]="26"></app-fm-icon></div>
           <div class="stat-info">
             <span class="stat-label">EXPANSION LEVEL</span>
             <span class="stat-value">{{ stadium?.expansionLevel || 0 }} / 10</span>
           </div>
         </div>
         <div class="stat-card accent">
-          <div class="stat-icon">&#128200;</div>
+          <div class="stat-icon"><app-fm-icon name="chart" [size]="26"></app-fm-icon></div>
           <div class="stat-info">
             <span class="stat-label">REVENUE MULTIPLIER</span>
             <span class="stat-value">x{{ revenueMultiplier.toFixed(2) }}</span>
@@ -105,12 +101,12 @@
     <!-- UPGRADES IN PROGRESS -->
     <div class="section" *ngIf="upgradesInProgress.length > 0">
       <div class="section-header construction-header">
-        <span class="section-icon">&#128679;</span>
+        <span class="section-icon"><app-fm-icon name="construction"></app-fm-icon></span>
         CONSTRUCTION IN PROGRESS
       </div>
       <div class="construction-list">
         <div class="construction-item" *ngFor="let upgrade of upgradesInProgress">
-          <div class="construction-icon">{{ getFacilityIcon(upgrade.facilityType) }}</div>
+          <div class="construction-icon"><app-fm-icon name="building" [size]="24"></app-fm-icon></div>
           <div class="construction-info">
             <div class="construction-name">
               {{ getFacilityLabel(upgrade.facilityType) }}
@@ -120,7 +116,7 @@
               <div class="progress-bar-fill" [style.width.%]="getUpgradeProgress(upgrade)"></div>
             </div>
             <div class="construction-meta">
-              <span>Cost: {{ upgrade.cost | number }}</span>
+              <span>Cost: {{ upgrade.cost | fmMoney }}</span>
               <span class="days-remaining">{{ getDaysRemaining(upgrade) }} days remaining</span>
             </div>
           </div>
@@ -131,13 +127,13 @@
     <!-- STADIUM FACILITIES -->
     <div class="section">
       <div class="section-header">
-        <span class="section-icon">&#127967;</span>
+        <span class="section-icon"><app-fm-icon name="stadium"></app-fm-icon></span>
         STADIUM FACILITIES
       </div>
       <div class="facilities-grid">
         <div class="facility-card" *ngFor="let item of getStadiumUpgrades()">
           <div class="facility-top">
-            <div class="facility-icon-box">{{ getFacilityIcon(item.type) }}</div>
+            <div class="facility-icon-box"><app-fm-icon name="stadium" [size]="25"></app-fm-icon></div>
             <div class="facility-header-info">
               <span class="facility-name">{{ item.name }}</span>
               <span class="facility-desc">{{ item.description }}</span>
@@ -180,7 +176,7 @@
             <div class="upgrade-details">
               <div class="upgrade-cost">
                 <span class="cost-label">Cost</span>
-                <span class="cost-value">{{ item.upgradeCost | number }}</span>
+                <span class="cost-value">{{ item.upgradeCost | fmMoney }}</span>
               </div>
               <div class="upgrade-duration">
                 <span class="dur-label">Duration</span>
@@ -203,13 +199,13 @@
     <!-- CLUB FACILITIES -->
     <div class="section">
       <div class="section-header">
-        <span class="section-icon">&#127970;</span>
+        <span class="section-icon"><app-fm-icon name="building"></app-fm-icon></span>
         CLUB FACILITIES
       </div>
       <div class="facilities-grid">
         <div class="facility-card" *ngFor="let item of getClubUpgrades()">
           <div class="facility-top">
-            <div class="facility-icon-box">{{ getFacilityIcon(item.type) }}</div>
+            <div class="facility-icon-box"><app-fm-icon name="building" [size]="25"></app-fm-icon></div>
             <div class="facility-header-info">
               <span class="facility-name">{{ item.name }}</span>
               <span class="facility-desc">{{ item.description }}</span>
@@ -252,7 +248,7 @@
             <div class="upgrade-details">
               <div class="upgrade-cost">
                 <span class="cost-label">Cost</span>
-                <span class="cost-value">{{ item.upgradeCost | number }}</span>
+                <span class="cost-value">{{ item.upgradeCost | fmMoney }}</span>
               </div>
               <div class="upgrade-duration">
                 <span class="dur-label">Duration</span>
@@ -272,11 +268,6 @@
       </div>
     </div>
 
-  </div>
-
-  <!-- Loading -->
-  <div *ngIf="loading" class="loading-container">
-    <div class="spinner"></div>
   </div>
 
 </div>

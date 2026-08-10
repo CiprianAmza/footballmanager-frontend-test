@@ -388,12 +388,12 @@ export class ManagerProfileComponent implements OnInit, OnDestroy {
   /** Human-readable label for a competition type id. */
   competitionTypeLabel(typeId: number): string {
     switch (typeId) {
-      case 1: return 'League';
-      case 2: return 'Cup';
-      case 3: return 'Second League';
-      case 4: return 'League of Champions';
-      case 5: return 'Stars Cup';
-      case 6: return 'Super Cup';
+      case 1:
+      case 3: return 'League competition';
+      case 2: return 'Knockout competition';
+      case 4:
+      case 5: return 'Continental competition';
+      case 6: return 'Season showcase';
       default: return 'Competition';
     }
   }

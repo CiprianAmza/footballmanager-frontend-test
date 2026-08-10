@@ -3,6 +3,11 @@
     <!-- HEADER -->
     <div class="hub-header">
       <h1>DATA HUB</h1>
+      <div class="hub-variants" aria-label="Data Hub page variants">
+          <a class="active" routerLink="/data-hub">Classic</a>
+          <a routerLink="/data-hub2">Decision Briefing</a>
+          <a routerLink="/data-hub3">Performance Lab</a>
+      </div>
       <div class="hub-tabs">
           <button *ngFor="let tab of tabs"
                   class="tab-btn"
@@ -14,12 +19,596 @@
     </div>
 
     <!-- LOADING STATE -->
-    <div class="loading-state" *ngIf="loading">
-      <div class="loading-spinner"></div>
-      <p>Loading analytics...</p>
-    </div>
+    <app-ui-state *ngIf="loading" kind="loading" title="Loading analytics"></app-ui-state>
+    <app-ui-state *ngIf="!loading && errorMessage" kind="error" title="Data Hub unavailable"
+      [message]="errorMessage" (retry)="loadData()"></app-ui-state>
 
-    <div class="hub-grid" *ngIf="activeTab === 'Overview' && !loading">
+    <!-- DEFAULT: UNDERLYING PERFORMANCE -->
+    <main class="underlying-page"
+          *ngIf="activeTab === 'Underlying Performance' && !loading && !errorMessage && underlyingPerformance as u">
+      <section class="underlying-hero">
+        <div>
+          <div class="underlying-eyebrow">SEASON {{ u.seasonNumber }} · ALL COMPETITIONS</div>
+          <h2>Underlying performance</h2>
+          <p>Are the results supported by the quality of chances created and conceded?</p>
+        </div>
+        <div class="underlying-sample" [class.low]="u.confidence === 'LOW'">
+          <strong>{{ u.matches }}</strong>
+          <span>matches · {{ u.confidence | lowercase }} confidence</span>
+        </div>
+      </section>
+
+      <section class="underlying-grid" aria-label="Underlying performance indicators">
+        <article class="underlying-card points-card">
+          <div class="underlying-card-label">POINTS vs EXPECTED POINTS</div>
+          <div class="underlying-comparison">
+            <strong>{{ u.actualPoints }}</strong>
+            <span>vs</span>
+            <strong>{{ u.expectedPoints | number:'1.2-2' }} <small>xPts</small></strong>
+          </div>
+          <div class="underlying-delta" [ngClass]="deltaTone(u.pointsDelta)">
+            {{ signed(u.pointsDelta) }} points vs process
+          </div>
+          <p>Results compared with the probability of winning or drawing each match.</p>
+        </article>
+
+        <article class="underlying-card">
+          <div class="underlying-card-label">GOALS vs xG</div>
+          <div class="underlying-comparison">
+            <strong>{{ u.goals }}</strong>
+            <span>vs</span>
+            <strong>{{ u.xg | number:'1.2-2' }} <small>xG</small></strong>
+          </div>
+          <div class="underlying-delta" [ngClass]="deltaTone(u.finishingDelta)">
+            {{ signed(u.finishingDelta) }} finishing difference
+          </div>
+          <p>Positive variance means finishing is running above chance quality.</p>
+        </article>
+
+        <article class="underlying-card">
+          <div class="underlying-card-label">GOALS CONCEDED vs xGA</div>
+          <div class="underlying-comparison">
+            <strong>{{ u.goalsConceded }}</strong>
+            <span>vs</span>
+            <strong>{{ u.xga | number:'1.2-2' }} <small>xGA</small></strong>
+          </div>
+          <div class="underlying-delta" [ngClass]="deltaTone(u.goalsPrevented)">
+            {{ signed(u.goalsPrevented) }} goals prevented
+          </div>
+          <p>Positive variance means fewer goals allowed than chance quality predicted.</p>
+        </article>
+
+        <article class="underlying-card">
+          <div class="underlying-card-label">CONVERSION DIFFERENCE</div>
+          <div class="underlying-comparison compact-values">
+            <strong>{{ u.actualConversionPercentage | number:'1.1-1' }}%</strong>
+            <span>vs</span>
+            <strong>{{ u.expectedConversionPercentage | number:'1.1-1' }}% <small>expected</small></strong>
+          </div>
+          <div class="underlying-delta" [ngClass]="deltaTone(u.conversionDeltaPercentagePoints)">
+            {{ signed(u.conversionDeltaPercentagePoints) }} percentage points
+          </div>
+          <p>Actual goals per shot compared with xG per shot.</p>
+        </article>
+
+        <article class="underlying-card xgd-card">
+          <div class="underlying-card-label">xG DIFFERENCE / 90</div>
+          <div class="underlying-primary" [ngClass]="deltaTone(u.xgDifferencePer90)">
+            {{ signed(u.xgDifferencePer90) }}
+          </div>
+          <div class="underlying-split">
+            <span><b>{{ u.xgPer90 | number:'1.2-2' }}</b> xG / 90</span>
+            <span><b>{{ u.xgaPer90 | number:'1.2-2' }}</b> xGA / 90</span>
+          </div>
+          <p>The clearest indicator of whether the team is consistently creating better chances.</p>
+        </article>
+      </section>
+
+      <section class="underlying-evidence" *ngIf="u.matches === 0">
+        <strong>Awaiting match evidence</strong>
+        <span>These indicators will populate after the first match with recorded xG and shot data.</span>
+      </section>
+
+      <section class="underlying-detail" *ngIf="u.recentMatches.length > 0">
+        <div class="underlying-detail-header">
+          <div>
+            <span>RECENT EVIDENCE</span>
+            <h3>Actual points vs xPts by match</h3>
+          </div>
+          <small>Last {{ u.recentMatches.length }} matches</small>
+        </div>
+        <div class="underlying-match-row" *ngFor="let match of u.recentMatches">
+          <span class="match-round">R{{ match.round }} · {{ match.home ? 'H' : 'A' }}</span>
+          <strong>{{ match.goals }}–{{ match.goalsConceded }}</strong>
+          <span>{{ match.xg | number:'1.2-2' }}–{{ match.xga | number:'1.2-2' }} xG</span>
+          <span class="match-points">{{ match.actualPoints }} pts</span>
+          <span class="match-xpts">{{ match.expectedPoints | number:'1.2-2' }} xPts</span>
+        </div>
+      </section>
+
+      <footer class="underlying-methodology">
+        <strong>How xPts is calculated</strong>
+        <span>{{ u.methodology }}</span>
+      </footer>
+    </main>
+
+    <!-- SHOT & CHANCE CREATION -->
+    <main class="shot-creation-page" *ngIf="activeTab === 'Shot & Chance Creation' && !loading && !errorMessage">
+      <app-ui-state *ngIf="!shotCreation" kind="error" title="Shot analytics unavailable"
+        message="Restart the backend to activate the Opta-style shot event endpoint."
+        (retry)="loadData()"></app-ui-state>
+
+      <ng-container *ngIf="shotCreation as shots">
+        <section class="shot-hero">
+          <div>
+            <div class="shot-eyebrow">SEASON {{ shots.seasonNumber }} · SHOT & CHANCE CREATION</div>
+            <h2>How chances are created</h2>
+            <p>Pre-shot quality, execution, location and the possession paths that lead to attempts.</p>
+          </div>
+          <div class="shot-quality-badge" [class.modeled]="shots.dataQuality.modeledShots > 0">
+            <strong>{{ shots.dataQuality.observedShots }}</strong> observed ·
+            <strong>{{ shots.dataQuality.modeledShots }}</strong> modeled
+          </div>
+        </section>
+
+        <section class="shot-kpis">
+          <article><span>SHOTS</span><strong>{{ shots.shots }}</strong><small>{{ shots.goals }} goals</small></article>
+          <article><span>TOTAL xG</span><strong>{{ shots.xg | number:'1.2-2' }}</strong><small>{{ shots.xgPerShot | number:'1.2-2' }} xG / shot</small></article>
+          <article><span>xGOT</span><strong>{{ shots.execution.xgot | number:'1.2-2' }}</strong><small>on-target execution</small></article>
+          <article><span>SHOOTING GOALS ADDED</span>
+            <strong [ngClass]="deltaTone(shots.execution.shootingGoalsAdded)">{{ signed(shots.execution.shootingGoalsAdded) }}</strong>
+            <small>xGOT − on-target xG</small>
+          </article>
+          <article><span>GOALS PREVENTED</span>
+            <strong [ngClass]="deltaTone(shots.execution.goalsPrevented)">{{ signed(shots.execution.goalsPrevented) }}</strong>
+            <small>{{ shots.execution.xgotFaced | number:'1.2-2' }} xGOT faced</small>
+          </article>
+        </section>
+
+        <app-ui-state *ngIf="shots.shots === 0" kind="empty" title="No shots recorded yet"
+          message="Shot maps and chance sources will populate after the first match." [showRetry]="false"></app-ui-state>
+
+        <section class="shot-main-grid" *ngIf="shots.shots > 0">
+          <article class="shot-panel shot-map-panel">
+            <header><div><span>SHOT MAP</span><h3>Location and chance quality</h3></div><small>Attacking →</small></header>
+            <div class="shot-map-wrap">
+              <svg class="shot-map" viewBox="0 0 100 100" role="img" aria-label="Team shot map">
+                <rect x="1" y="1" width="98" height="98" rx="1" class="pitch-outline"></rect>
+                <line x1="50" y1="1" x2="50" y2="99" class="pitch-line"></line>
+                <circle cx="50" cy="50" r="9" class="pitch-line"></circle>
+                <rect x="82.85" y="21" width="16.15" height="58" class="pitch-line"></rect>
+                <rect x="94.5" y="38" width="4.5" height="24" class="pitch-line"></rect>
+                <circle cx="89.5" cy="50" r=".8" class="pitch-spot"></circle>
+                <circle *ngFor="let shot of shots.shotMap"
+                  [attr.cx]="shot.x" [attr.cy]="shot.y" [attr.r]="shotRadius(shot.xg)"
+                  class="shot-dot" [ngClass]="shot.outcome.toLowerCase()"
+                  [class.big]="shot.bigChance" [class.pressured]="shot.underPressure">
+                  <title>R{{ shot.round }} · {{ analyticsLabel(shot.outcome) }} · {{ shot.xg | number:'1.2-2' }} xG · {{ analyticsLabel(shot.creationType) }}</title>
+                </circle>
+              </svg>
+            </div>
+            <div class="shot-map-legend">
+              <span><i class="goal"></i> Goal</span><span><i class="saved"></i> Saved</span>
+              <span><i class="wide"></i> Off target</span><span><i class="blocked"></i> Blocked</span>
+              <span><i class="big"></i> Big chance</span>
+            </div>
+          </article>
+
+          <article class="shot-panel shot-profile-panel">
+            <header><div><span>SHOT PROFILE</span><h3>Where and under what pressure</h3></div></header>
+            <div class="profile-stat"><span>Inside box</span><b>{{ shots.shotsInsideBox }}</b><i><em [style.width.%]="metricShare(shots.shotsInsideBox, shots.shots)"></em></i></div>
+            <div class="profile-stat"><span>Outside box</span><b>{{ shots.shotsOutsideBox }}</b><i><em [style.width.%]="metricShare(shots.shotsOutsideBox, shots.shots)"></em></i></div>
+            <div class="profile-stat"><span>Under pressure</span><b>{{ shots.shotsUnderPressure }}</b><i><em [style.width.%]="metricShare(shots.shotsUnderPressure, shots.shots)"></em></i></div>
+            <div class="profile-stat"><span>Big chances</span><b>{{ shots.bigChances }}</b><i><em [style.width.%]="metricShare(shots.bigChances, shots.shots)"></em></i></div>
+            <div class="profile-facts">
+              <div><strong>{{ shots.averageShotDistanceMeters | number:'1.1-1' }}m</strong><span>average distance</span></div>
+              <div><strong>{{ shots.averageShotAngleDegrees | number:'1.1-1' }}°</strong><span>average angle</span></div>
+              <div><strong>{{ shots.touchesInOppositionBox }}</strong><span>opposition-box touches</span></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="chance-funnel" *ngIf="shots.shots > 0">
+          <header><span>CHANCE CREATION FUNNEL</span><small>{{ analyticsLabel(shots.funnel.dataQuality) }}</small></header>
+          <div class="funnel-flow">
+            <div><strong>{{ shots.funnel.possessions }}</strong><span>Possessions</span></div><b>›</b>
+            <div><strong>{{ shots.funnel.finalThirdEntries }}</strong><span>Final-third entries</span></div><b>›</b>
+            <div><strong>{{ shots.funnel.boxEntries }}</strong><span>Box entries</span></div><b>›</b>
+            <div><strong>{{ shots.funnel.shots }}</strong><span>Shots</span></div><b>›</b>
+            <div class="funnel-goal"><strong>{{ shots.funnel.goals }}</strong><span>Goals</span></div>
+          </div>
+        </section>
+
+        <section class="chance-breakdown-grid" *ngIf="shots.shots > 0">
+          <article class="shot-panel">
+            <header><div><span>xG SOURCE</span><h3>Pattern of play</h3></div></header>
+            <div class="breakdown-row" *ngFor="let item of shots.xgBySituation">
+              <div><strong>{{ analyticsLabel(item.key) }}</strong><small>{{ item.shots }} shots · {{ item.goals }} goals</small></div>
+              <span>{{ item.xg | number:'1.2-2' }} xG</span>
+              <i><em [style.width.%]="metricShare(item.xg, shots.xg)"></em></i>
+            </div>
+          </article>
+
+          <article class="shot-panel">
+            <header><div><span>FINAL ACTION</span><h3>How the shot was created</h3></div></header>
+            <div class="breakdown-row" *ngFor="let item of shots.shotsByCreationType">
+              <div><strong>{{ analyticsLabel(item.key) }}</strong><small>{{ item.goals }} goals · {{ item.xg | number:'1.2-2' }} xG</small></div>
+              <span>{{ item.shots }}</span>
+              <i><em [style.width.%]="metricShare(item.shots, shots.shots)"></em></i>
+            </div>
+          </article>
+
+          <article class="shot-panel">
+            <header><div><span>CREATION ZONE</span><h3>Left, centre or right</h3></div></header>
+            <div class="zone-bars">
+              <div *ngFor="let item of shots.chancesByChannel">
+                <span>{{ analyticsLabel(item.key) }}</span>
+                <i><em [style.height.%]="metricShare(item.shots, shots.shots)"></em></i>
+                <strong>{{ item.shots }}</strong><small>{{ item.xg | number:'1.2-2' }} xG</small>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="shot-sequences" *ngIf="shots.shots > 0">
+          <header><div><span>TOP SHOT-PRODUCING SEQUENCES</span><h3>Repeatable routes to goal</h3></div></header>
+          <div class="sequence-grid">
+            <article *ngFor="let sequence of shots.topShotSequences; let index = index">
+              <b>{{ index + 1 }}</b><div><strong>{{ analyticsLabel(sequence.label) }}</strong>
+              <span>{{ analyticsLabel(sequence.creationType) }}</span></div>
+              <em>{{ sequence.shots }} shots</em><small>{{ sequence.xg | number:'1.2-2' }} xG · {{ sequence.goals }} goals</small>
+            </article>
+          </div>
+        </section>
+
+        <footer class="shot-methodology">{{ shots.methodology }}</footer>
+      </ng-container>
+    </main>
+
+    <!-- POSSESSION & PROGRESSION -->
+    <main class="progression-page" *ngIf="activeTab === 'Possession & Progression' && !loading && !errorMessage">
+      <app-ui-state *ngIf="!possessionProgression" kind="error" title="Progression analytics unavailable"
+        message="Restart the backend to activate the possession and progression endpoint."
+        (retry)="loadData()"></app-ui-state>
+
+      <ng-container *ngIf="possessionProgression as p">
+        <section class="progression-hero">
+          <div>
+            <div class="progression-eyebrow">SEASON {{ p.seasonNumber }} · USEFUL POSSESSION</div>
+            <h2>Possession with purpose</h2>
+            <p>Territory gained, lines broken and the players who move attacks towards goal.</p>
+          </div>
+          <div class="progression-quality">
+            {{ analyticsLabel(p.dataQuality.teamMetrics) }} · {{ p.dataQuality.modeledMatches }} matches
+          </div>
+        </section>
+
+        <app-ui-state *ngIf="p.matches === 0" kind="empty" title="No possession evidence yet"
+          message="Progression indicators will populate after the first played match." [showRetry]="false"></app-ui-state>
+
+        <ng-container *ngIf="p.matches > 0">
+          <section class="progression-kpis" aria-label="Possession and progression headline indicators">
+            <article><span>PROGRESSIVE PASSES</span><strong>{{ p.totals.progressivePasses }}</strong><small>{{ p.averages.progressivePassesPerMatch | number:'1.1-1' }} / match</small></article>
+            <article><span>PROGRESSIVE CARRIES</span><strong>{{ p.totals.progressiveCarries }}</strong><small>{{ p.averages.progressiveCarriesPerMatch | number:'1.1-1' }} / match</small></article>
+            <article class="territory"><span>FIELD TILT</span><strong>{{ p.averages.fieldTiltPercentage | number:'1.1-1' }}%</strong><small>share of final-third territory</small></article>
+            <article><span>FINAL-THIRD ENTRIES</span><strong>{{ p.totals.finalThirdEntries }}</strong><small>{{ p.averages.progressionToFinalThirdPercentage | number:'1.1-1' }}% of progression</small></article>
+            <article><span>PENALTY-AREA ENTRIES</span><strong>{{ p.totals.penaltyAreaEntries }}</strong><small>{{ p.averages.finalThirdToBoxPercentage | number:'1.1-1' }}% of final-third entries</small></article>
+          </section>
+
+          <section class="territory-panel">
+            <header><div><span>TERRITORIAL CONTROL</span><h3>Field tilt</h3></div><strong>{{ p.averages.fieldTiltPercentage | number:'1.1-1' }}%</strong></header>
+            <div class="territory-track" role="img" [attr.aria-label]="'Field tilt ' + p.averages.fieldTiltPercentage + ' percent'">
+              <i [style.width.%]="p.averages.fieldTiltPercentage"></i>
+            </div>
+            <div class="territory-labels"><span>{{ teamName }} attacking territory</span><span>Opponent territory</span></div>
+          </section>
+
+          <section class="progression-funnel">
+            <header><span>PROGRESSION FUNNEL</span><small>Saved match data → modeled spatial progression</small></header>
+            <div class="progression-funnel-flow">
+              <div><strong>{{ p.funnel.completedPasses }}</strong><span>Completed passes</span></div><b>›</b>
+              <div><strong>{{ p.funnel.progressivePasses }}</strong><span>Progressive passes</span></div><b>›</b>
+              <div><strong>{{ p.funnel.finalThirdEntries }}</strong><span>Final third</span></div><b>›</b>
+              <div><strong>{{ p.funnel.penaltyAreaEntries }}</strong><span>Penalty area</span></div><b>›</b>
+              <div class="funnel-shot"><strong>{{ p.funnel.shots }}</strong><span>Shots</span></div>
+            </div>
+          </section>
+
+          <section class="progression-detail-grid">
+            <article class="progression-panel">
+              <header><div><span>PENETRATION</span><h3>How possession advances</h3></div></header>
+              <div class="progression-metric"><span>Line-breaking passes</span><strong>{{ p.totals.lineBreakingPasses }}</strong></div>
+              <div class="progression-metric"><span>Passes into the box</span><strong>{{ p.totals.passesIntoBox }}</strong></div>
+              <div class="progression-metric"><span>Receptions between lines</span><strong>{{ p.totals.receptionsBetweenLines }}</strong></div>
+              <div class="progression-metric"><span>Switches of play</span><strong>{{ p.totals.switchesOfPlay }}</strong></div>
+            </article>
+
+            <article class="progression-panel">
+              <header><div><span>POSSESSION RHYTHM</span><h3>Tempo and continuity</h3></div></header>
+              <div class="rhythm-grid">
+                <div><strong>{{ p.averages.passesPerPossession | number:'1.2-2' }}</strong><span>passes / possession</span></div>
+                <div><strong>{{ p.averages.averagePossessionDurationSeconds | number:'1.1-1' }}s</strong><span>average duration</span></div>
+                <div><strong>{{ p.averages.directSpeedMetersPerSecond | number:'1.2-2' }} m/s</strong><span>direct speed</span></div>
+                <div><strong>{{ p.totals.tenPassSequences }}</strong><span>10+ pass sequences</span></div>
+              </div>
+            </article>
+
+            <article class="progression-panel attack-style-panel">
+              <header><div><span>ATTACK STYLE</span><h3>Constructed or direct</h3></div></header>
+              <div class="style-row"><span>Build-up attacks</span><strong>{{ p.totals.buildUpAttacks }}</strong><i><em [style.width.%]="metricShare(p.totals.buildUpAttacks, p.totals.buildUpAttacks + p.totals.directAttacks)"></em></i></div>
+              <div class="style-row direct"><span>Direct attacks</span><strong>{{ p.totals.directAttacks }}</strong><i><em [style.width.%]="metricShare(p.totals.directAttacks, p.totals.buildUpAttacks + p.totals.directAttacks)"></em></i></div>
+              <small>{{ p.averages.boxToShotPercentage | number:'1.1-1' }}% of box entries became shots</small>
+            </article>
+          </section>
+
+          <section class="player-progression">
+            <header>
+              <div><span>PLAYER CONTRIBUTION</span><h3>Who progresses the attack</h3></div>
+              <small>{{ analyticsLabel(p.dataQuality.playerContributions) }}</small>
+            </header>
+            <div class="player-progression-scroll" *ngIf="p.playerContributions.length > 0">
+              <table>
+                <thead><tr><th>Player</th><th>Min</th><th>Prog passes</th><th>Prog carries</th><th>Line breaks</th><th>Into box</th><th>Between lines</th><th>Switches</th><th>Share</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let player of p.playerContributions">
+                    <td><a [routerLink]="['/player', player.playerId]">{{ player.name }}</a><small>{{ player.position || '—' }} · {{ player.appearances }} apps</small></td>
+                    <td>{{ player.minutes }}</td>
+                    <td>{{ player.progressivePasses | number:'1.1-1' }}</td>
+                    <td>{{ player.progressiveCarries | number:'1.1-1' }}</td>
+                    <td>{{ player.lineBreakingPasses | number:'1.1-1' }}</td>
+                    <td>{{ player.passesIntoBox | number:'1.1-1' }}</td>
+                    <td>{{ player.receptionsBetweenLines | number:'1.1-1' }}</td>
+                    <td>{{ player.switchesOfPlay | number:'1.1-1' }}</td>
+                    <td><strong>{{ player.progressionSharePercentage | number:'1.1-1' }}%</strong></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <app-ui-state *ngIf="p.playerContributions.length === 0" kind="empty" title="No player contribution rows"
+              message="Individual allocations will appear after player season statistics are recorded." [showRetry]="false"></app-ui-state>
+          </section>
+
+          <footer class="progression-methodology">{{ p.methodology }}</footer>
+        </ng-container>
+      </ng-container>
+    </main>
+
+    <!-- PRESSING & DEFENCE -->
+    <main class="defence-page" *ngIf="activeTab === 'Pressing & Defence' && !loading && !errorMessage">
+      <app-ui-state *ngIf="!pressingDefence" kind="error" title="Defensive analytics unavailable"
+        message="Restart the backend to activate the pressing and defence endpoint." (retry)="loadData()"></app-ui-state>
+      <ng-container *ngIf="pressingDefence as d">
+        <section class="defence-hero">
+          <div><div class="defence-eyebrow">SEASON {{ d.seasonNumber }} · OUT OF POSSESSION</div>
+            <h2>Pressing &amp; defence</h2><p>How quickly, how high and how effectively the team wins the ball back.</p></div>
+          <div class="defence-sample"><strong>{{ d.matches }}</strong><span>matches analysed</span></div>
+        </section>
+
+        <app-ui-state *ngIf="d.matches === 0" kind="empty" title="No defensive evidence yet"
+          message="Pressing and defensive indicators will populate after the first match." [showRetry]="false"></app-ui-state>
+
+        <ng-container *ngIf="d.matches > 0">
+          <section class="ppda-guardrail">
+            <div><span>REAL PPDA</span><strong>Unavailable</strong><small>{{ analyticsLabel(d.averages.realPpdaStatus) }}</small></div>
+            <p>Real PPDA needs zoned opponent passes and defensive actions. The current whole-pitch value remains a clearly labelled proxy.</p>
+            <div class="proxy"><span>PPDA-LIKE PROXY</span><strong>{{ d.averages.ppdaProxy | number:'1.2-2' }}</strong><small>lower = more intense</small></div>
+          </section>
+
+          <section class="defence-kpis">
+            <article><span>PRESSURES</span><strong>{{ d.totals.pressures }}</strong><small>{{ d.averages.pressureSuccessPercentage | number:'1.1-1' }}% successful</small></article>
+            <article><span>COUNTERPRESSURES</span><strong>{{ d.totals.counterpressures }}</strong><small>{{ d.totals.regainsWithinFiveSeconds }} regains ≤5s</small></article>
+            <article><span>RECOVERY TIME</span><strong>{{ d.averages.ballRecoveryTimeSeconds | number:'1.1-1' }}s</strong><small>{{ d.totals.regainsWithinEightSeconds }} regains ≤8s</small></article>
+            <article><span>HIGH TURNOVERS</span><strong>{{ d.totals.highTurnovers }}</strong><small>{{ d.totals.highTurnoversToShot }} shots · {{ d.totals.highTurnoversToGoal }} goals</small></article>
+            <article><span>xGA / SHOT</span><strong>{{ d.averages.xgaPerShot | number:'1.2-2' }}</strong><small>{{ d.xga | number:'1.2-2' }} xGA · {{ d.shotsAllowed }} shots</small></article>
+          </section>
+
+          <section class="defence-grid">
+            <article class="defence-panel">
+              <header><div><span>PRESSING OUTPUT</span><h3>Pressure into possession wins</h3></div></header>
+              <div class="defence-stat"><span>Successful pressures</span><b>{{ d.totals.successfulPressures }}</b></div>
+              <div class="defence-stat"><span>Forced turnovers</span><b>{{ d.totals.forcedTurnovers }}</b></div>
+              <div class="defence-stat"><span>Actions in opposition half</span><b>{{ d.totals.defensiveActionsOppositionHalf }}</b></div>
+              <div class="defence-stat"><span>Defensive line height</span><b>{{ d.averages.defensiveLineHeightMeters | number:'1.1-1' }}m</b></div>
+              <div class="defence-stat"><span>High turnover → shot</span><b>{{ d.averages.highTurnoverToShotPercentage | number:'1.1-1' }}%</b></div>
+            </article>
+
+            <article class="defence-panel recovery-panel">
+              <header><div><span>RECOVERY MAP</span><h3>Where the ball is recovered</h3></div><small>modeled zones</small></header>
+              <div class="recovery-zones">
+                <div><i><em [style.height.%]="metricShare(d.recoveryZones.left, d.recoveryZones.left + d.recoveryZones.centre + d.recoveryZones.right)"></em></i><strong>{{ d.recoveryZones.left }}</strong><span>Left</span></div>
+                <div><i><em [style.height.%]="metricShare(d.recoveryZones.centre, d.recoveryZones.left + d.recoveryZones.centre + d.recoveryZones.right)"></em></i><strong>{{ d.recoveryZones.centre }}</strong><span>Centre</span></div>
+                <div><i><em [style.height.%]="metricShare(d.recoveryZones.right, d.recoveryZones.left + d.recoveryZones.centre + d.recoveryZones.right)"></em></i><strong>{{ d.recoveryZones.right }}</strong><span>Right</span></div>
+              </div>
+            </article>
+
+            <article class="defence-panel">
+              <header><div><span>RESISTANCE</span><h3>What the defence allows</h3></div></header>
+              <div class="defence-stat"><span>Box entries allowed</span><b>{{ d.totals.allowedBoxEntries }}</b></div>
+              <div class="defence-stat"><span>Transition shots allowed</span><b>{{ d.totals.transitionShotsAllowed }}</b></div>
+              <div class="defence-stat warning"><span>Errors leading to shot</span><b>{{ d.totals.errorsLeadingToShot }}</b></div>
+              <div class="defence-stat warning"><span>Errors leading to goal</span><b>{{ d.totals.errorsLeadingToGoal }}</b></div>
+              <div class="defence-stat"><span>Duel win rate</span><b>{{ d.averages.duelWinPercentage | number:'1.1-1' }}%</b></div>
+            </article>
+          </section>
+
+          <section class="defensive-actions">
+            <article><span>DUELS WON</span><strong>{{ d.totals.duelsWon }}</strong><small>of {{ d.totals.duels }}</small></article>
+            <article><span>CLEARANCES</span><strong>{{ d.totals.clearances }}</strong><small>observed</small></article>
+            <article><span>BLOCKS</span><strong>{{ d.totals.blocks }}</strong><small>observed</small></article>
+            <article><span>INTERCEPTIONS</span><strong>{{ d.totals.interceptions }}</strong><small>observed</small></article>
+          </section>
+
+          <section class="defence-players">
+            <header><div><span>PLAYER PRESSING CONTRIBUTION</span><h3>Who drives the defensive work</h3></div><small>season accumulators</small></header>
+            <div class="defence-table-wrap" *ngIf="d.playerContributions.length > 0"><table>
+              <thead><tr><th>Player</th><th>Min</th><th>Pressures</th><th>Counterpressures</th><th>Def actions</th><th>Pressure regains</th><th>Regain %</th></tr></thead>
+              <tbody><tr *ngFor="let player of d.playerContributions">
+                <td><a [routerLink]="['/player', player.playerId]">{{ player.name }}</a><small>{{ player.position || '—' }} · {{ player.appearances }} apps</small></td>
+                <td>{{ player.minutes }}</td><td>{{ player.pressures | number:'1.1-1' }}</td>
+                <td>{{ player.counterpressures | number:'1.1-1' }}</td><td>{{ player.defensiveActions | number:'1.1-1' }}</td>
+                <td>{{ player.pressureRegains | number:'1.1-1' }}</td><td><strong>{{ player.pressureRegainPercentage | number:'1.1-1' }}%</strong></td>
+              </tr></tbody>
+            </table></div>
+            <app-ui-state *ngIf="d.playerContributions.length === 0" kind="empty" title="No player pressing rows"
+              message="Contributions appear after player season statistics are recorded." [showRetry]="false"></app-ui-state>
+          </section>
+
+          <section class="quality-ledger"><div *ngFor="let item of d.dataQuality" [ngClass]="item.status.toLowerCase()">
+            <strong>{{ analyticsLabel(item.metric) }}</strong><span>{{ item.status }}</span><small>{{ item.reason }}</small></div></section>
+          <footer class="defence-methodology">{{ d.methodology }}</footer>
+        </ng-container>
+      </ng-container>
+    </main>
+
+    <!-- SET PIECES HUB -->
+    <main class="setpieces-page" *ngIf="activeTab === 'Set Pieces Hub' && !loading && !errorMessage">
+      <app-ui-state *ngIf="!setPieces" kind="error" title="Set-piece analytics unavailable"
+        message="Restart the backend to activate the Set Pieces Hub endpoint." (retry)="loadData()"></app-ui-state>
+      <ng-container *ngIf="setPieces as sp">
+        <section class="setpieces-hero"><div><div class="setpieces-eyebrow">SEASON {{ sp.seasonNumber }} · SET PIECES</div>
+          <h2>Set Pieces Hub</h2><p>Delivery, first contact, second balls and the details deciding dead-ball value.</p></div>
+          <div class="setpieces-benchmark"><span>BENCHMARK</span><strong>{{ sp.benchmarkCompetitionName }}</strong><small>{{ sp.benchmark.teams }} teams</small></div>
+        </section>
+
+        <app-ui-state *ngIf="sp.matches === 0" kind="empty" title="No set-piece evidence yet"
+          message="Set-piece profiles will populate after the first played match." [showRetry]="false"></app-ui-state>
+        <ng-container *ngIf="sp.matches > 0">
+          <section class="setpieces-kpis">
+            <article><span>CORNERS FOR</span><strong>{{ sp.summary.cornersFor }}</strong><small>{{ sp.summary.cornerShotsFor }} shots · {{ sp.summary.cornerGoalsFor }} goals</small></article>
+            <article><span>CORNERS AGAINST</span><strong>{{ sp.summary.cornersAgainst }}</strong><small>{{ sp.summary.cornerShotsAgainst }} shots · {{ sp.summary.cornerGoalsAgainst }} goals</small></article>
+            <article><span>xG / CORNER</span><strong>{{ sp.summary.cornerXgPerCornerFor | number:'1.2-2' }}</strong><small>{{ signed(sp.benchmark.xgPerCornerDifference) }} vs benchmark</small></article>
+            <article><span>CORNER xGA / CORNER</span><strong>{{ sp.summary.cornerXgPerCornerAgainst | number:'1.2-2' }}</strong><small>{{ sp.summary.cornerXgAgainst | number:'1.2-2' }} total</small></article>
+            <article><span>SET-PIECE xGA SHARE</span><strong>{{ sp.summary.setPieceShareOfTotalXgaPercentage | number:'1.1-1' }}%</strong><small>{{ sp.summary.setPieceXgAgainst | number:'1.2-2' }} set-piece xGA</small></article>
+          </section>
+
+          <section class="setpieces-insights"><article *ngFor="let insight of sp.insights" [ngClass]="insight.type.toLowerCase()">
+            <span>{{ insight.type }}</span><div><strong>{{ insight.title }}</strong><p>{{ insight.evidence }}</p><small>{{ insight.recommendation }}</small></div></article></section>
+
+          <section class="setpieces-grid">
+            <article class="setpieces-panel"><header><div><span>DELIVERY TYPE</span><h3>Short, inswinging or outswinging</h3></div></header>
+              <div class="sp-breakdown" *ngFor="let item of sp.cornerDeliveryStyles"><div><strong>{{ analyticsLabel(item.key) }}</strong><small>{{ item.shots }} shots · {{ item.goals }} goals</small></div><b>{{ item.events }}</b><i><em [style.width.%]="item.sharePercentage"></em></i></div>
+            </article>
+            <article class="setpieces-panel"><header><div><span>DELIVERY ZONE</span><h3>Attacking corners</h3></div></header>
+              <div class="sp-breakdown" *ngFor="let item of sp.cornerZonesFor"><div><strong>{{ analyticsLabel(item.key) }}</strong><small>{{ item.xg | number:'1.2-2' }} xG</small></div><b>{{ item.events }}</b><i><em [style.width.%]="item.sharePercentage"></em></i></div>
+            </article>
+            <article class="setpieces-panel danger-panel"><header><div><span>DEFENSIVE ZONES</span><h3>Where corners hurt us</h3></div></header>
+              <div class="sp-breakdown" *ngFor="let item of sp.cornerZonesAgainst"><div><strong>{{ analyticsLabel(item.key) }}</strong><small>{{ item.shots }} shots · {{ item.goals }} goals</small></div><b>{{ item.xg | number:'1.2-2' }} xGA</b><i><em [style.width.%]="item.sharePercentage"></em></i></div>
+            </article>
+          </section>
+
+          <section class="setpieces-grid secondary">
+            <article class="setpieces-panel"><header><div><span>FIRST CONTACT</span><h3>Who wins the initial duel</h3></div></header>
+              <div class="sp-breakdown" *ngFor="let item of sp.firstContact"><div><strong>{{ analyticsLabel(item.key) }}</strong><small>{{ item.xg | number:'1.2-2' }} xG</small></div><b>{{ item.sharePercentage | number:'1.0-1' }}%</b><i><em [style.width.%]="item.sharePercentage"></em></i></div>
+            </article>
+            <article class="setpieces-panel"><header><div><span>SECOND BALL</span><h3>Recovery after first contact</h3></div><small>{{ sp.summary.secondBallRecoveryPercentage | number:'1.0-1' }}% retained</small></header>
+              <div class="sp-breakdown" *ngFor="let item of sp.secondBallRecovery"><div><strong>{{ analyticsLabel(item.key) }}</strong><small>{{ item.events }} events</small></div><b>{{ item.sharePercentage | number:'1.0-1' }}%</b><i><em [style.width.%]="item.sharePercentage"></em></i></div>
+            </article>
+            <article class="setpieces-panel"><header><div><span>ALL SET PIECES</span><h3>For / against by type</h3></div></header>
+              <div class="setpiece-type-row" *ngFor="let item of sp.typesFor"><span>{{ analyticsLabel(item.type) }}</span><b>{{ item.events }}</b><small>{{ item.shots }} shots · {{ item.goals }} goals · {{ item.xg | number:'1.2-2' }} xG</small></div>
+            </article>
+          </section>
+
+          <section class="setpieces-bottom">
+            <article class="dangerous-players"><header><div><span>MOST DANGEROUS</span><h3>Delivery and aerial threats</h3></div></header>
+              <div class="danger-player" *ngFor="let player of sp.dangerousPlayers; let rank = index"><b>{{ rank + 1 }}</b><div><a [routerLink]="['/player', player.playerId]">{{ player.name }}</a><small>{{ player.position || '—' }} · {{ analyticsLabel(player.role) }}</small></div><strong>{{ player.dangerScore | number:'1.1-1' }}</strong><span>{{ player.estimatedXgContribution | number:'1.2-2' }} est. xG</span></div>
+            </article>
+            <article class="marking-vulnerabilities"><header><div><span>MARKING VULNERABILITIES</span><h3>Zonal and individual exposure</h3></div></header>
+              <div *ngFor="let item of sp.vulnerabilities"><div><strong>{{ analyticsLabel(item.markingScheme) }} · {{ analyticsLabel(item.zone) }}</strong><small>{{ item.incidents }} incidents</small></div><b>{{ item.xga | number:'1.2-2' }} xGA</b><span>{{ item.shareOfTotalXgaPercentage | number:'1.1-1' }}% total xGA</span></div>
+            </article>
+            <article class="league-benchmark"><header><div><span>COMPETITION COMPARISON</span><h3>{{ sp.benchmarkCompetitionName }}</h3></div></header>
+              <div><span>Our xG / corner</span><strong>{{ sp.summary.cornerXgPerCornerFor | number:'1.2-2' }}</strong></div>
+              <div><span>Competition average</span><strong>{{ sp.benchmark.leagueXgPerCorner | number:'1.2-2' }}</strong></div>
+              <div><span>Corner volume / match</span><strong>{{ sp.summary.cornersFor / sp.matches | number:'1.1-1' }}</strong></div>
+              <div><span>Competition volume</span><strong>{{ sp.benchmark.leagueCornersPerMatch | number:'1.1-1' }}</strong></div>
+            </article>
+          </section>
+          <footer class="setpieces-methodology"><strong>{{ analyticsLabel(sp.dataQuality.deliveryDetails) }}</strong><span>{{ sp.dataQuality.note }}</span></footer>
+        </ng-container>
+      </ng-container>
+    </main>
+
+    <!-- PERFECT 10.0 RATINGS -->
+    <main class="perfect-ratings-page" *ngIf="activeTab === 'Perfect 10s' && !loading && !errorMessage">
+      <section class="perfect-ten-hero">
+        <div>
+          <div class="perfect-ten-eyebrow">ALL-TIME PLAYER RECORDS</div>
+          <h2>The Perfect 10 Club</h2>
+          <p>Players ranked by the number of match performances that received a displayed rating of 10.0.</p>
+        </div>
+        <div class="perfect-ten-mark" aria-hidden="true"><strong>10</strong><span>PERFECT</span></div>
+      </section>
+
+      <section class="perfect-ten-controls" aria-label="Perfect rating filters">
+        <div class="perfect-ten-levels">
+          <span>Competition level</span>
+          <button type="button" [class.active]="perfectRatingCompetitionId === null && perfectRatingLevel === 'ALL'"
+            (click)="setPerfectRatingLevel('ALL')">General</button>
+          <button type="button" [class.active]="perfectRatingCompetitionId === null && perfectRatingLevel === 'CHAMPIONSHIP'"
+            (click)="setPerfectRatingLevel('CHAMPIONSHIP')">Championship</button>
+          <button type="button" [class.active]="perfectRatingCompetitionId === null && perfectRatingLevel === 'CUP'"
+            (click)="setPerfectRatingLevel('CUP')">Cup</button>
+        </div>
+        <label class="perfect-ten-competition">
+          <span>Specific competition</span>
+          <select [value]="perfectRatingCompetitionId || ''"
+            (change)="selectPerfectRatingCompetition($any($event.target).value)">
+            <option value="">All competitions</option>
+            <option *ngFor="let competition of perfectRatings?.competitions"
+              [value]="competition.competitionId">
+              {{ competition.competitionName }} · {{ competition.perfectRatings }} tens
+            </option>
+          </select>
+        </label>
+      </section>
+
+      <app-ui-state *ngIf="perfectRatingsLoading" kind="loading" title="Building the Perfect 10 ranking"></app-ui-state>
+      <app-ui-state *ngIf="!perfectRatingsLoading && perfectRatingsError" kind="error"
+        title="Perfect 10 ranking unavailable" [message]="perfectRatingsError"
+        (retry)="loadPerfectRatings()"></app-ui-state>
+
+      <ng-container *ngIf="!perfectRatingsLoading && !perfectRatingsError && perfectRatings as perfect">
+        <section class="perfect-ten-summary">
+          <article><span>SCOPE</span><strong>{{ perfectRatingScopeLabel(perfect) }}</strong><small>all saved seasons</small></article>
+          <article><span>PERFECT 10s</span><strong>{{ perfect.totalPerfectRatings }}</strong><small>qualifying performances</small></article>
+          <article><span>PLAYERS</span><strong>{{ perfect.totalPlayers }}</strong><small>players with at least one 10.0</small></article>
+        </section>
+
+        <app-ui-state *ngIf="perfect.leaders.length === 0" kind="empty" title="No perfect ratings yet"
+          message="This ranking will populate when a player receives a displayed match rating of 10.0."
+          [showRetry]="false"></app-ui-state>
+
+        <section class="perfect-ten-table" *ngIf="perfect.leaders.length > 0">
+          <header>
+            <div><span>LEADERBOARD</span><h3>{{ perfectRatingScopeLabel(perfect) }}</h3></div>
+            <small>Ordered by number of 10.0 ratings</small>
+          </header>
+          <div class="perfect-ten-table-scroll">
+            <table>
+              <thead><tr>
+                <th>#</th><th>Player</th><th>Latest club</th><th>Perfect 10s</th>
+                <th>Championship</th><th>Cup</th><th>Competitions</th><th>Seasons</th>
+              </tr></thead>
+              <tbody><tr *ngFor="let player of perfect.leaders" [class.podium]="player.rank <= 3">
+                <td><b>{{ player.rank }}</b></td>
+                <td><a [routerLink]="['/player', player.playerId]" [queryParams]="{ actingTeamId: actingTeamId }">
+                  {{ player.playerName }}</a></td>
+                <td><a *ngIf="player.teamId > 0; else noPerfectTeam" [routerLink]="['/team', player.teamId]">{{ player.teamName }}</a>
+                  <ng-template #noPerfectTeam><span>—</span></ng-template></td>
+                <td><strong>{{ player.perfectRatings }}</strong></td>
+                <td>{{ player.championshipPerfectRatings }}</td>
+                <td>{{ player.cupPerfectRatings }}</td>
+                <td>{{ player.competitionCount }}</td>
+                <td>{{ perfectRatingSeasonSpan(player) }}</td>
+              </tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <footer class="perfect-ten-methodology"><strong>Definition</strong><span>{{ perfect.methodology }}</span></footer>
+      </ng-container>
+    </main>
+
+    <div class="hub-grid" *ngIf="activeTab === 'Overview' && !loading && !errorMessage">
 
       <!-- COLUMN 1: MAIN ANALYSIS -->
       <div class="grid-col main-col">
@@ -137,16 +726,12 @@
     </div>
 
     <!-- MATCH STATS TAB -->
-    <div class="match-stats-tab" *ngIf="activeTab === 'Match Stats' && !loading">
+    <div class="match-stats-tab" *ngIf="activeTab === 'Match Stats' && !loading && !errorMessage">
 
-      <div class="loading-state" *ngIf="loadingSeasonStats">
-        <div class="loading-spinner"></div>
-        <p>Loading match statistics...</p>
-      </div>
+      <app-ui-state *ngIf="loadingSeasonStats" kind="loading" title="Loading match statistics"></app-ui-state>
 
-      <div *ngIf="!loadingSeasonStats && !seasonStats" class="empty-state-msg">
-        No match statistics available yet. Stats are generated after matches are played.
-      </div>
+      <app-ui-state *ngIf="!loadingSeasonStats && !seasonStats" kind="empty" title="No match statistics yet"
+        message="Statistics are generated after matches are played." [showRetry]="false"></app-ui-state>
 
       <div *ngIf="!loadingSeasonStats && seasonStats" class="season-stats-content">
 

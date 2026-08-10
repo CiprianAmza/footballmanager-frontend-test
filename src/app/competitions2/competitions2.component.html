@@ -1,0 +1,43 @@
+<main class="mission-shell">
+  <header class="mission-hero">
+    <div><p>COMPETITION MISSION CONTROL</p><h1>{{ teamName || 'Your season' }}</h1><span>One decision layer for every tournament the club is contesting.</span></div>
+    <nav><a routerLink="/competition-list">Classic</a><a [routerLink]="['/competitions2', teamId]" class="active">Mission control</a><a [routerLink]="['/competitions3', teamId]">Timeline</a><a routerLink="/competitions-world">World view</a></nav>
+  </header>
+  <div class="page-state" *ngIf="loading">Loading the competition plan…</div>
+  <div class="page-state error" *ngIf="!loading && error">{{ error }}</div>
+  <ng-container *ngIf="!loading && !error">
+    <section class="mission-kpis">
+      <article><span>ACTIVE CAMPAIGNS</span><strong>{{ activeCount }}</strong><small>of {{ competitions.length }}</small></article>
+      <article><span>NEXT FIXTURES</span><strong>{{ nextCount }}</strong><small>already scheduled</small></article>
+      <article><span>LEAGUE POSITION</span><strong>{{ averagePosition || '—' }}</strong><small>average across leagues</small></article>
+      <article><span>MATCHES PLAYED</span><strong>{{ totalMatches }}</strong><small>league campaign total</small></article>
+    </section>
+    <section class="mission-tools">
+      <label><b>⌕</b><input #missionSearch [(ngModel)]="search" placeholder="Find competition or stage…" /></label>
+      <div><button [class.active]="filter === 'ALL'" (click)="setFilter('ALL')">All</button><button [class.active]="filter === 'NEXT'" (click)="setFilter('NEXT')">Next up</button><button [class.active]="filter === 'ACTIVE'" (click)="setFilter('ACTIVE')">Active</button><button [class.active]="filter === 'ATTENTION'" (click)="setFilter('ATTENTION')">Attention</button></div>
+    </section>
+    <section class="mission-workspace">
+      <div class="campaign-list">
+        <button *ngFor="let comp of visible" (click)="select(comp)" [class.selected]="selected?.competitionId === comp.competitionId">
+          <span class="code">{{ comp.shortCode }}</span>
+          <span class="campaign-name"><strong>{{ comp.name }}</strong><small>{{ comp.currentStage || comp.statusLabel || 'Season pending' }}</small></span>
+          <span class="campaign-status" [ngClass]="statusClass(comp)">{{ comp.elimination ? 'OUT' : comp.nextMatch ? 'NEXT' : 'ACTIVE' }}</span>
+          <span class="campaign-metric" *ngIf="comp.kind === 'LEAGUE'"><strong>{{ comp.position || '—' }}/{{ comp.totalTeams || '—' }}</strong><small>POSITION</small></span>
+          <span class="campaign-metric" *ngIf="comp.kind !== 'LEAGUE'"><strong>{{ comp.stageReached || comp.currentStage || '—' }}</strong><small>STAGE</small></span>
+          <span class="arrow">›</span>
+        </button>
+        <p *ngIf="!visible.length">No competition matches this view.</p>
+      </div>
+      <aside class="mission-detail" *ngIf="selected as comp">
+        <div class="detail-title"><span class="code large">{{ comp.shortCode }}</span><div><small>{{ comp.scopeLabel }} · {{ comp.formatLabel }}</small><h2>{{ comp.name }}</h2></div></div>
+        <section class="objective"><span>MANAGER OBJECTIVE</span><strong>{{ objective(comp) }}</strong></section>
+        <div class="next-match" *ngIf="comp.nextMatch as match"><span>NEXT ASSIGNMENT</span><strong>{{ match.venue === 'HOME' ? 'vs' : 'at' }} {{ match.opponentTeamName }}</strong><p>{{ match.stage }}<ng-container *ngIf="match.date"> · {{ match.date }}</ng-container><ng-container *ngIf="match.legNumber"> · Leg {{ match.legNumber }}</ng-container></p></div>
+        <div class="next-match out" *ngIf="comp.elimination as exit"><span>CAMPAIGN ENDED</span><strong>{{ exit.stage }}</strong><p><ng-container *ngIf="exit.byTeamName">Eliminated by {{ exit.byTeamName }}</ng-container><ng-container *ngIf="exit.score"> · {{ exit.score }}</ng-container></p></div>
+        <dl><div><dt>Entry</dt><dd>{{ comp.entryStage || 'Opening stage' }}</dd></div><div><dt>Current</dt><dd>{{ comp.currentStage || comp.statusLabel || 'Pending' }}</dd></div><div><dt>Record</dt><dd>{{ comp.wins || 0 }}W {{ comp.draws || 0 }}D {{ comp.loses || 0 }}L</dd></div><div><dt>Goals</dt><dd>{{ comp.goalsFor || 0 }}–{{ comp.goalsAgainst || 0 }}</dd></div></dl>
+        <div class="form-line" *ngIf="form(comp).length"><span>RECENT FORM</span><b *ngFor="let result of form(comp)" [ngClass]="result.toLowerCase()">{{ result }}</b></div>
+        <div class="actions"><button (click)="open(comp)">Open competition</button><a [routerLink]="['/fixtures', teamId]">Club fixtures</a><a [routerLink]="['/competitions3', teamId]">Season timeline</a></div>
+      </aside>
+    </section>
+    <footer class="shortcuts"><span><kbd>/</kbd> Search</span><span><kbd>J</kbd><kbd>K</kbd> Navigate</span><span><kbd>Enter</kbd> Open</span><span><kbd>W</kbd> World view</span><span><kbd>C</kbd> Classic</span></footer>
+  </ng-container>
+</main>
