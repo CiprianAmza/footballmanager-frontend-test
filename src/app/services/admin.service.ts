@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, switchMap, tap } from 'rxjs';
 import { urlApp } from '../app.component';
+import { CsrfTokenService } from './csrf-token.service';
 
 export interface UpcomingMatch {
   competitionId: number;
@@ -225,7 +226,7 @@ const TOKEN_STORAGE_KEY = 'fm_admin_token';
 @Injectable({ providedIn: 'root' })
 export class AdminService {
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private csrfToken: CsrfTokenService) {}
 
   get token(): string | null {
     return localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -239,8 +240,21 @@ export class AdminService {
     return new HttpHeaders({ 'X-Admin-Token': this.token || '' });
   }
 
+  private refreshCsrf(): Observable<{ token: string }> {
+    return this.http.get<{ token: string }>(urlApp + '/api/auth/csrf').pipe(
+      tap(result => this.csrfToken.update(result.token))
+    );
+  }
+
+  checkSession(): Observable<{ authenticated: boolean }> {
+    return this.http.get<{ authenticated: boolean }>(urlApp + '/admin/session',
+      { headers: this.authHeaders() });
+  }
+
   login(username: string, password: string): Observable<{ success: boolean; token?: string; message?: string }> {
-    return this.http.post<any>(urlApp + '/admin/login', { username, password });
+    return this.refreshCsrf().pipe(
+      switchMap(() => this.http.post<any>(urlApp + '/admin/login', { username, password }))
+    );
   }
 
   storeToken(token: string): void {
@@ -389,10 +403,12 @@ export class AdminService {
     allTeams: boolean;
     teamId?: number;
   }): Observable<ContractExtensionResult> {
-    return this.http.post<ContractExtensionResult>(
-      urlApp + '/admin/contracts/extend',
-      payload,
-      { headers: this.authHeaders() }
+    return this.refreshCsrf().pipe(
+      switchMap(() => this.http.post<ContractExtensionResult>(
+        urlApp + '/admin/contracts/extend',
+        payload,
+        { headers: this.authHeaders() }
+      ))
     );
   }
 

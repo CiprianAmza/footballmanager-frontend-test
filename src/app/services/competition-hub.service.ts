@@ -86,6 +86,77 @@ export interface WorldCompetitionOverview {
   competitions: WorldCompetition[];
 }
 
+export interface CompetitionGoalsRankingRow {
+  rank: number;
+  competitionId: number;
+  competitionName: string;
+  typeId: number;
+  matches: number;
+  goals: number;
+  goalsPerMatch: number;
+}
+
+export interface CompetitionGoalsRanking {
+  season: number;
+  allTime: boolean;
+  rows: CompetitionGoalsRankingRow[];
+}
+
+export interface CompetitionEconomyRow {
+  competitionId: number;
+  competitionName: string;
+  typeId: number;
+  clubs: number;
+  homeMatches: number;
+  totalAttendance: number;
+  averageAttendance: number;
+  players: number;
+  totalPlayerWages: number;
+  averagePlayerWage: number;
+  highestPlayerWage: number;
+}
+
+export interface ClubEconomyRow {
+  teamId: number;
+  teamName: string;
+  primaryCompetitionId: number;
+  homeMatches: number;
+  totalAttendance: number;
+  averageAttendance: number;
+  players: number;
+  totalPlayerWages: number;
+  averagePlayerWage: number;
+  highestPlayerWage: number;
+}
+
+export interface PlayerWageRow {
+  rank: number;
+  playerId: number;
+  playerName: string;
+  teamId: number;
+  teamName: string;
+  primaryCompetitionId: number;
+  wage: number;
+  position: string;
+  age: number;
+}
+
+export interface CompetitionEconomyRanking {
+  season: number;
+  competitions: CompetitionEconomyRow[];
+  clubs: ClubEconomyRow[];
+  players: PlayerWageRow[];
+}
+
+export interface CompetitionEconomyDetail {
+  season: number;
+  competitionId: number;
+  competitionName: string;
+  typeId: number;
+  clubs: ClubEconomyRow[];
+  players: PlayerWageRow[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class CompetitionHubService {
   constructor(private http: HttpClient) {}
@@ -99,5 +170,17 @@ export class CompetitionHubService {
 
   worldOverview(): Observable<WorldCompetitionOverview> {
     return this.http.get<WorldCompetitionOverview>(`${urlApp}/competition/catalogOverview`);
+  }
+
+  goalsRanking(season: number): Observable<CompetitionGoalsRanking> {
+    return this.http.get<CompetitionGoalsRanking>(`${urlApp}/stats/competition-goals-ranking?season=${season}`);
+  }
+
+  economyRanking(): Observable<CompetitionEconomyRanking> {
+    return this.http.get<CompetitionEconomyRanking>(`${urlApp}/stats/competition-economy-ranking`);
+  }
+
+  economyRankingDetail(competitionId: number): Observable<CompetitionEconomyDetail> {
+    return this.http.get<CompetitionEconomyDetail>(`${urlApp}/stats/competition-economy-ranking/${competitionId}`);
   }
 }

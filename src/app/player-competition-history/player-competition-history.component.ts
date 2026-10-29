@@ -78,6 +78,7 @@ export class PlayerCompetitionHistoryComponent implements OnInit, OnChanges {
       case 2: return 'Knockout competition';
       case 4:
       case 5: return 'Continental competition';
+      case 6: return 'Super Cup';
       default: return '';
     }
   }
@@ -115,6 +116,9 @@ export class PlayerCompetitionHistoryComponent implements OnInit, OnChanges {
               };
             }
           });
+
+          if (leagueEntry.name === '-' && entry.seasonLeagueName) leagueEntry.name = entry.seasonLeagueName;
+          if (cupEntry.name === '-' && entry.seasonCupName) cupEntry.name = entry.seasonCupName;
 
           return {
             ...entry,

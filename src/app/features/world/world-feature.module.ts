@@ -14,6 +14,9 @@ import { CompetitionRatingImpactComponent } from '../../competition-rating-impac
 import { CompetitionRecordsComponent } from '../../competition-records/competition-records.component';
 import { CupOverviewComponent } from '../../competition/cup-overview/cup-overview.component';
 import { CompetitionComponent } from '../../competition/competition.component';
+import { CompetitionViewComponent } from '../../competition-view/competition-view.component';
+import { CompetitionRankingsComponent } from '../../competition-rankings/competition-rankings.component';
+import { CompetitionRankingDetailComponent } from '../../competition-rankings/competition-ranking-detail.component';
 import { CompetitionOveriewComponent } from '../../competitionoveriew/competitionoveriew.component';
 import { Competitions2Component } from '../../competitions2/competitions2.component';
 import { Competitions3Component } from '../../competitions3/competitions3.component';
@@ -32,6 +35,11 @@ import { Top3FinishersComponent } from '../../top3-finishers/top3-finishers.comp
 const routes: Routes = [
   { path: 'comp/:competitionId', redirectTo: 'competition/:competitionId', pathMatch: 'full' },
   { path: 'competition/:competitionId', component: CompetitionComponent, title: 'Competition' },
+  { path: 'competition-view/:competitionId', component: CompetitionViewComponent, title: 'Competition hub' },
+  { path: 'competition-view/:competitionId/:section', component: CompetitionViewComponent, title: 'Competition hub' },
+  { path: 'competition-rankings', component: CompetitionRankingsComponent, title: 'Competition rankings' },
+  { path: 'competition-rankings/competition/:competitionId', component: CompetitionRankingDetailComponent, title: 'Competition ranking detail' },
+  { path: 'competition-rankings/:section', component: CompetitionRankingsComponent, title: 'Competition rankings' },
   { path: 'rounds', component: DisplayComponent, title: 'Competition rounds' },
   { path: 'competitionoveriew/:competitionId', redirectTo: 'competition-overview/:competitionId', pathMatch: 'full' },
   { path: 'competition-overview/:competitionId', component: CompetitionOveriewComponent, title: 'Competition overview' },
@@ -65,6 +73,9 @@ const routes: Routes = [
 @NgModule({
   declarations: [
     CompetitionComponent,
+    CompetitionViewComponent,
+    CompetitionRankingsComponent,
+    CompetitionRankingDetailComponent,
     CupOverviewComponent,
     CompetitionInsightsComponent,
     CompetitionRatingImpactComponent,
