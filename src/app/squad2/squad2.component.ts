@@ -9,7 +9,7 @@ import { TeamService } from '../services/team.service';
 
 interface FormationSlot { positionIndex: number; playerId: number; [key: string]: any; }
 interface SavedFormation { teamId: number; tactic: string; formationDataList: FormationSlot[]; [key: string]: any; }
-interface TeamTacticView { managerTactic: SavedFormation; }
+interface TeamTacticView { managerTactic: SavedFormation; managerTacticSource: 'SAVED' | 'MANAGER_PREFERENCE'; }
 
 @Component({
   selector: 'app-squad2',
@@ -24,6 +24,7 @@ export class Squad2Component implements OnInit, OnDestroy {
   players: SquadInsightPlayer[] = [];
   selectedPlayer?: SquadInsightPlayer;
   formation?: SavedFormation;
+  lineupIsSaved = false;
   lineupLoading = false;
   lineupError = '';
   lineupFeedback = '';
@@ -133,9 +134,11 @@ export class Squad2Component implements OnInit, OnDestroy {
     this.lineupLoading = true;
     this.lineupError = '';
     this.formation = undefined;
+    this.lineupIsSaved = false;
     this.http.get<TeamTacticView>(`${urlApp}/tactic/teamView/${this.teamId}`).subscribe({
       next: view => {
         this.formation = view.managerTactic;
+        this.lineupIsSaved = view.managerTacticSource === 'SAVED';
         this.lineupLoading = false;
       },
       error: () => {
@@ -171,6 +174,7 @@ export class Squad2Component implements OnInit, OnDestroy {
         this.http.get<TeamTacticView>(`${urlApp}/tactic/teamView/${this.teamId}`).subscribe({
           next: view => {
             this.formation = view.managerTactic;
+            this.lineupIsSaved = view.managerTacticSource === 'SAVED';
             this.lineupFeedback = this.selectionStatus(player.id) === 'XI'
               ? `${player.name} is now in the saved starting XI.`
               : 'The team selection is restricted. Review the tactic permissions.';

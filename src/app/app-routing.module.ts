@@ -95,7 +95,12 @@ export const APP_ROUTES: Routes = [
   { path: 'boardroom/assets/:humanId', component: BoardroomAssetsComponent, canActivate: [LegacyBoardroomGuard] },
   { path: 'boardroom/ownership/:humanId', component: BoardroomOwnershipComponent, canActivate: [LegacyBoardroomGuard] },
   { path: 'boardroom/ownership', component: BoardroomOwnershipComponent, canActivate: [LegacyBoardroomGuard] },
-  { path: 'home', component: HomeComponent },
+  {
+    path: 'home',
+    loadComponent: () => import('./home-today/home-today.component').then(module => module.HomeTodayComponent),
+    title: 'Today · Manager briefing'
+  },
+  { path: 'home-classic', component: HomeComponent },
   { path: 'home2', component: Home2Component },
   { path: 'home3', component: Home3Component },
   {

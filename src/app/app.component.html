@@ -198,7 +198,7 @@
   <ng-container *ngTemplateOutlet="chairmanGameWorldControls"></ng-container>
   <ng-container *ngTemplateOutlet="chairmanSimulationStatus"></ng-container>
   <ng-container *ngTemplateOutlet="chairmanFastForwardDialog"></ng-container>
-  <div class="chairman-save-load"><button type="button" (click)="saveGame()">Save Game</button><button type="button" (click)="triggerLoadGame()">Load Game</button><input type="file" #fileInput style="display:none" accept=".json" (change)="loadGame($event)"></div>
+  <div class="chairman-save-load"><button type="button" (click)="saveGame()">Export JSON</button><button type="button" (click)="triggerLoadGame()">Import JSON</button><input type="file" #fileInput style="display:none" accept=".json" (change)="loadGame($event)"></div>
   <main class="chairman-content"><app-route-semantic-header></app-route-semantic-header><router-outlet></router-outlet></main>
 </div>
 
@@ -304,8 +304,8 @@
     <div class="border"></div>
 
     <div class="menu-group bottom-group">
-      <button type="button" class="menu-action save-link" (click)="saveGame()">Save Game</button>
-      <button type="button" class="menu-action load-link" (click)="triggerLoadGame()">Load Game</button>
+      <button type="button" class="menu-action save-link" (click)="saveGame()">Export JSON</button>
+      <button type="button" class="menu-action load-link" (click)="triggerLoadGame()">Import JSON</button>
       <button type="button" class="menu-action" (click)="restartTutorial()" *ngIf="teamService.teamId > 0">Quick Start Guide</button>
       <input type="file" #fileInput style="display:none" accept=".json" (change)="loadGame($event)">
     </div>

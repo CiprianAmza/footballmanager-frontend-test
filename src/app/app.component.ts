@@ -774,7 +774,7 @@ export class AppComponent implements OnDestroy {
         a.click();
         window.URL.revokeObjectURL(url);
         this.saving = false;
-        this.feedback.success('Game saved successfully.');
+        this.feedback.success('JSON save file downloaded.');
       },
       error: (err) => {
         console.error('Error saving game:', err);

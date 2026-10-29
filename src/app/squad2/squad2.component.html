@@ -3,7 +3,7 @@
     <div>
       <p class="eyebrow">SQUAD · SEASON {{ overview?.season || '—' }}</p>
       <h1>{{ overview?.teamName || 'Matchday Board' }}</h1>
-      <p class="subtitle">Your saved XI and bench for the next match. Choose a player below to change a starter.</p>
+      <p class="subtitle">Your XI and bench for the next match. Choose a player below to change a starter.</p>
     </div>
     <nav class="variant-nav" aria-label="Squad views">
       <a [routerLink]="['/squad2', teamId]" class="active">Match selection</a>
@@ -18,13 +18,13 @@
   <ng-container *ngIf="!loading && !error">
     <section class="kpi-grid">
       <article><span>AVAILABLE</span><strong>{{ availableCount }}/{{ players.length }}</strong><small>eligible today</small></article>
-      <article [class.warn]="startingCount !== 11"><span>STARTING XI</span><strong>{{ startingCount }}/11</strong><small>saved in your tactic</small></article>
+      <article [class.warn]="startingCount !== 11"><span>STARTING XI</span><strong>{{ startingCount }}/11</strong><small>{{ lineupIsSaved ? 'saved in your tactic' : 'assistant selection' }}</small></article>
       <article><span>AVG FITNESS</span><strong>{{ averageFitness }}%</strong><small>squad condition</small></article>
       <article [class.warn]="riskCount > 0"><span>PEOPLE RISKS</span><strong>{{ riskCount }}</strong><small>need attention</small></article>
     </section>
 
-    <section class="lineup-panel" aria-label="Saved match selection">
-      <header><div><span>READY FOR THE NEXT MATCH</span><h2>Saved team · {{ formation?.tactic || 'Loading' }}</h2></div><a [routerLink]="['/tactics', teamId]">Open full tactics editor →</a></header>
+    <section class="lineup-panel" aria-label="Match selection">
+      <header><div><span>READY FOR THE NEXT MATCH</span><h2>{{ lineupIsSaved ? 'Saved team' : 'Assistant selection' }} · {{ formation?.tactic || 'Loading' }}</h2></div><a [routerLink]="['/tactics', teamId]">Open full tactics editor →</a></header>
       <p *ngIf="lineupLoading" class="lineup-note">Loading the actual team selection…</p>
       <p *ngIf="lineupError" class="lineup-note error">{{ lineupError }}</p>
       <div class="lineup-groups" *ngIf="!lineupLoading && formation">

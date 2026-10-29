@@ -1,0 +1,53 @@
+<main class="today-page">
+  <header class="today-heading">
+    <div><span class="eyebrow">Manager briefing · Season {{ brief?.season || teamService.currentSeason }}</span>
+      <h1>{{ brief?.teamName || 'Your club' }}</h1>
+      <p>{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }} · {{ teamService.currentPhase }}</p></div>
+    <button class="refresh" type="button" (click)="load()">Refresh briefing</button>
+  </header>
+
+  <p class="load-state" *ngIf="loading">Preparing your day…</p>
+  <div class="load-state error" *ngIf="error">{{ error }} <button type="button" (click)="load()">Try again</button></div>
+
+  <ng-container *ngIf="brief as today">
+    <section class="save-card" [class.save-error]="today.checkpoint.state === 'FAILED'" aria-label="Save status">
+      <span class="save-symbol">{{ today.checkpoint.state === 'SAVING' ? '↻' : '✓' }}</span>
+      <div class="save-copy"><span class="eyebrow">PostgreSQL checkpoint</span><h2>{{ checkpointHeadline }}</h2>
+        <p *ngIf="today.checkpoint.capturedAt">Snapshot taken: {{ today.checkpoint.capturedAt | date:'medium' }}<span *ngIf="['SAVED', 'RESTORED'].includes(today.checkpoint.state)"> · Season {{ today.checkpoint.season }}, day {{ today.checkpoint.day }}</span></p>
+        <p *ngIf="today.checkpoint.persistedAt">Last PostgreSQL write completed: {{ today.checkpoint.persistedAt | date:'medium' }}</p>
+        <p *ngIf="!today.checkpoint.persistedAt">Your current progress is in memory until a checkpoint completes.</p>
+        <small *ngIf="today.checkpoint.enabled">Automatic interval: every {{ today.checkpoint.intervalMatchdays }} matchday{{ today.checkpoint.intervalMatchdays === 1 ? '' : 's' }} · {{ today.checkpoint.matchdaysSinceCheckpoint }} since last checkpoint. Changes made after a checkpoint are not included in it.</small>
+        <small *ngIf="saveMessage" class="save-message" role="status">{{ saveMessage }}</small>
+      </div>
+      <button class="save-now" type="button" (click)="saveCheckpoint()" [disabled]="!today.checkpoint.enabled || savePending || today.checkpoint.state === 'SAVING'">{{ savePending || today.checkpoint.state === 'SAVING' ? 'Saving…' : 'Save checkpoint now' }}</button>
+    </section>
+
+    <div class="today-grid">
+      <section class="match-card" aria-label="Next match">
+        <div class="card-heading"><div><span class="eyebrow">Next match</span><h2>Match day starts here</h2></div><a [routerLink]="['/fixtures', today.teamId]">Schedule →</a></div>
+        <ng-container *ngIf="today.nextMatch as match; else noMatch">
+          <div class="match-meta"><span>{{ match.competitionName }}</span><span>Round {{ match.round }}</span></div>
+          <div class="matchup"><strong>{{ match.homeTeamName }}</strong><span>VS</span><strong>{{ match.awayTeamName }}</strong></div>
+          <p class="match-note">{{ match.prediction || 'Prepare your squad and tactic before kick-off.' }}</p>
+          <div class="match-actions"><a class="primary" [routerLink]="['/squad2', today.teamId]">Choose XI →</a><a [routerLink]="['/tactics', today.teamId]">Set tactics</a><a [routerLink]="['/fixtures', today.teamId]">View fixture</a></div>
+        </ng-container>
+        <ng-template #noMatch><p class="empty">No upcoming match is scheduled. Review your club and continue the season.</p></ng-template>
+      </section>
+
+      <section class="attention-card" aria-label="Needs your attention">
+        <div class="card-heading"><div><span class="eyebrow">Your next decisions</span><h2>Needs attention <b>{{ today.attention.length }}</b></h2></div><a routerLink="/inbox">Inbox →</a></div>
+        <a class="attention-item" *ngFor="let item of today.attention" [routerLink]="attentionRoute(item.kind)" [attr.data-kind]="item.kind">
+          <span class="attention-dot"></span><span><strong>{{ item.title }}</strong><small>{{ item.detail }}</small></span><b>→</b>
+        </a>
+        <div class="empty" *ngIf="!today.attention.length">Nothing urgent. Your team is ready for the next step.</div>
+      </section>
+    </div>
+
+    <section class="prep-strip" aria-label="Match preparation">
+      <div><span class="eyebrow">{{ today.lineup.saved ? 'Saved match selection' : 'Assistant selection' }}</span><strong>{{ today.lineup.starters }}/11 starters · {{ today.lineup.bench }}/7 bench</strong><small>{{ today.lineup.formation || 'No formation available' }}{{ today.lineup.saved ? '' : ' · customize before kick-off' }}</small></div>
+      <a [routerLink]="['/squad2', today.teamId]">Review selection →</a>
+      <div><span class="eyebrow">Communications</span><strong>{{ today.unreadCount }} unread message{{ today.unreadCount === 1 ? '' : 's' }}</strong><small>Offers and club updates</small></div>
+      <a routerLink="/inbox">Open inbox →</a>
+    </section>
+  </ng-container>
+</main>

@@ -6,7 +6,8 @@
       <div class="date-line">{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }} · {{ teamService.currentPhase }}</div>
     </div>
     <div class="header-actions">
-      <a class="view-switch" routerLink="/home">Classic</a>
+      <a class="view-switch" routerLink="/home">Today</a>
+      <a class="view-switch" routerLink="/home-classic">Classic</a>
       <a class="view-switch active" routerLink="/home2">Desk</a>
       <a class="view-switch" routerLink="/home3">Cockpit</a>
       <button type="button" class="command-trigger" (click)="openCommandPalette()">
