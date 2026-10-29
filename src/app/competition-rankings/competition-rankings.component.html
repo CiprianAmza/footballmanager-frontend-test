@@ -1,0 +1,97 @@
+<main class="cr-shell">
+  <header class="cr-hero">
+    <div>
+      <a class="cr-back" routerLink="/competitions-world">← Competition world</a>
+      <span class="cr-eyebrow">THE GAME WORLD / SEASON {{ data?.season || '—' }}</span>
+      <h1>Competition rankings</h1>
+      <p>Compare crowds and wages across every competition, club and player.</p>
+    </div>
+    <button type="button" class="cr-refresh" (click)="load()">↻ Refresh</button>
+  </header>
+
+  <nav class="cr-nav" aria-label="Ranking pages">
+    <a routerLink="/competition-rankings/competitions" [class.active]="section === 'competitions'" [attr.aria-current]="section === 'competitions' ? 'page' : null">Competitions <small>crowds & wages</small></a>
+    <a routerLink="/competition-rankings/clubs" [class.active]="section === 'clubs'" [attr.aria-current]="section === 'clubs' ? 'page' : null">Clubs <small>supporters & payroll</small></a>
+    <a routerLink="/competition-rankings/players" [class.active]="section === 'players'" [attr.aria-current]="section === 'players' ? 'page' : null">Players <small>highest wages</small></a>
+  </nav>
+
+  <div class="cr-state" *ngIf="loading">Loading rankings…</div>
+  <div class="cr-state cr-error" *ngIf="!loading && error">{{ error }} <button type="button" (click)="load()">Retry</button></div>
+
+  <ng-container *ngIf="!loading && !error && data">
+    <section class="cr-intro">
+      <div><span class="cr-eyebrow">{{ section === 'competitions' ? '01 / TOURNAMENTS' : section === 'clubs' ? '02 / CLUBS' : '03 / PLAYERS' }}</span><h2>{{ section === 'competitions' ? 'Which competition leads?' : section === 'clubs' ? 'Where do the crowds go?' : 'Who earns the most?' }}</h2><p>{{ section === 'competitions' ? 'Attendance comes from played home matches; wage figures use the current squads of participating clubs.' : section === 'clubs' ? '“Supporters” here means recorded spectators at a club’s home games, not an estimated fanbase.' : 'Current contracts of active players at clubs across the game world.' }}</p></div>
+      <div class="cr-count"><strong>{{ section === 'competitions' ? competitionRows.length : section === 'clubs' ? clubRows.length : playerRows.length }}</strong><span>{{ section === 'competitions' ? 'competitions' : section === 'clubs' ? 'clubs' : 'players' }}</span></div>
+    </section>
+
+    <div class="cr-toolbar">
+      <label class="cr-search"><span>⌕</span><input [(ngModel)]="search" [placeholder]="section === 'players' ? 'Search player or club' : section === 'clubs' ? 'Search club' : 'Search competition'" aria-label="Search rankings"></label>
+      <label *ngIf="section === 'competitions'">Format <select [(ngModel)]="scope"><option value="ALL">All competitions</option><option value="LEAGUE">Leagues</option><option value="CUP">Cups & continental</option></select></label>
+      <label *ngIf="section === 'competitions' && (competitionSort === 'averageAttendance' || competitionSort === 'totalAttendance' || competitionSort === 'homeMatches') || section === 'clubs' && (clubSort === 'averageAttendance' || clubSort === 'totalAttendance' || clubSort === 'homeMatches')">Minimum home matches <select [(ngModel)]="minMatches"><option [ngValue]="1">1 match</option><option [ngValue]="5">5 matches</option><option [ngValue]="10">10 matches</option><option [ngValue]="0">Include unplayed</option></select></label>
+    </div>
+
+    <section *ngIf="section === 'competitions'" class="cr-content">
+      <div class="cr-metrics"><button type="button" *ngFor="let item of competitionMetrics" [class.active]="competitionSort === item.key" (click)="sortCompetitions(item.key, true)">{{ item.label }}</button></div>
+      <div class="cr-leader" *ngIf="featuredCompetition as leader"><div class="cr-medal">01</div><div><span>FIRST IN CURRENT SORT</span><a [routerLink]="['/competition-rankings/competition', leader.competitionId]">{{ leader.competitionName }}</a><small>{{ leader.clubs }} clubs · {{ leader.homeMatches }} recorded home matches</small></div><strong>{{ competitionLeadValue(leader) }}</strong></div>
+      <div class="cr-table-wrap"><table><thead><tr>
+        <th>#</th>
+        <th><button type="button" (click)="sortCompetitions('competitionName')">Competition {{ competitionArrow('competitionName') }}</button></th>
+        <th><button type="button" (click)="sortCompetitions('homeMatches')">Home matches {{ competitionArrow('homeMatches') }}</button></th>
+        <th><button type="button" (click)="sortCompetitions('averageAttendance')">Avg. spectators {{ competitionArrow('averageAttendance') }}</button></th>
+        <th><button type="button" (click)="sortCompetitions('totalAttendance')">Total spectators {{ competitionArrow('totalAttendance') }}</button></th>
+        <th><button type="button" (click)="sortCompetitions('averagePlayerWage')">Avg. player wage {{ competitionArrow('averagePlayerWage') }}</button></th>
+        <th><button type="button" (click)="sortCompetitions('highestPlayerWage')">Highest wage {{ competitionArrow('highestPlayerWage') }}</button></th>
+        <th><button type="button" (click)="sortCompetitions('totalPlayerWages')">Combined payroll {{ competitionArrow('totalPlayerWages') }}</button></th>
+      </tr></thead><tbody><tr *ngFor="let row of competitionRows; let i = index">
+        <td class="cr-rank">{{ i + 1 }}</td>
+        <td class="cr-name"><a [routerLink]="['/competition-rankings/competition', row.competitionId]">{{ row.competitionName }} →</a><small>{{ row.clubs }} clubs · {{ row.players }} players</small></td>
+        <td>{{ row.homeMatches }}</td>
+        <td [class.cr-highlight]="competitionSort === 'averageAttendance'">{{ row.homeMatches ? number(row.averageAttendance) : '—' }}</td>
+        <td [class.cr-highlight]="competitionSort === 'totalAttendance'">{{ row.homeMatches ? number(row.totalAttendance) : '—' }}</td>
+        <td [class.cr-highlight]="competitionSort === 'averagePlayerWage'">{{ row.players ? money(row.averagePlayerWage) : '—' }}</td>
+        <td [class.cr-highlight]="competitionSort === 'highestPlayerWage'">{{ row.players ? money(row.highestPlayerWage) : '—' }}</td>
+        <td [class.cr-highlight]="competitionSort === 'totalPlayerWages'">{{ row.players ? money(row.totalPlayerWages) : '—' }}</td>
+      </tr></tbody></table><p class="cr-empty" *ngIf="!competitionRows.length">No competition matches these filters yet.</p></div>
+      <p class="cr-note">Each club belongs to every competition it plays in. Its current player wages therefore count in each of those competitions. Attendance is counted only for actual home matchday records in the selected competition.</p>
+    </section>
+
+    <section *ngIf="section === 'clubs'" class="cr-content">
+      <div class="cr-metrics"><button type="button" *ngFor="let item of clubMetrics" [class.active]="clubSort === item.key" (click)="sortClubs(item.key, true)">{{ item.label }}</button></div>
+      <div class="cr-leader" *ngIf="featuredClub as leader"><div class="cr-medal">01</div><div><span>FIRST IN CURRENT SORT</span><a [routerLink]="['/team', leader.teamId]">{{ leader.teamName }}</a><small>{{ leader.homeMatches }} recorded home matches · {{ leader.players }} players</small></div><strong>{{ clubLeadValue(leader) }}</strong></div>
+      <div class="cr-table-wrap"><table><thead><tr>
+        <th>#</th>
+        <th><button type="button" (click)="sortClubs('teamName')">Club {{ clubArrow('teamName') }}</button></th>
+        <th><button type="button" (click)="sortClubs('homeMatches')">Home matches {{ clubArrow('homeMatches') }}</button></th>
+        <th><button type="button" (click)="sortClubs('totalAttendance')">Total spectators {{ clubArrow('totalAttendance') }}</button></th>
+        <th><button type="button" (click)="sortClubs('averageAttendance')">Avg. spectators {{ clubArrow('averageAttendance') }}</button></th>
+        <th><button type="button" (click)="sortClubs('totalPlayerWages')">Player payroll {{ clubArrow('totalPlayerWages') }}</button></th>
+        <th><button type="button" (click)="sortClubs('averagePlayerWage')">Avg. wage {{ clubArrow('averagePlayerWage') }}</button></th>
+        <th><button type="button" (click)="sortClubs('highestPlayerWage')">Highest wage {{ clubArrow('highestPlayerWage') }}</button></th>
+      </tr></thead><tbody><tr *ngFor="let row of clubRows; let i = index">
+        <td class="cr-rank">{{ i + 1 }}</td>
+        <td class="cr-name"><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a><small>{{ row.players }} players</small></td>
+        <td>{{ row.homeMatches }}</td>
+        <td [class.cr-highlight]="clubSort === 'totalAttendance'">{{ row.homeMatches ? number(row.totalAttendance) : '—' }}</td>
+        <td [class.cr-highlight]="clubSort === 'averageAttendance'">{{ row.homeMatches ? number(row.averageAttendance) : '—' }}</td>
+        <td [class.cr-highlight]="clubSort === 'totalPlayerWages'">{{ row.players ? money(row.totalPlayerWages) : '—' }}</td>
+        <td [class.cr-highlight]="clubSort === 'averagePlayerWage'">{{ row.players ? money(row.averagePlayerWage) : '—' }}</td>
+        <td [class.cr-highlight]="clubSort === 'highestPlayerWage'">{{ row.players ? money(row.highestPlayerWage) : '—' }}</td>
+      </tr></tbody></table><p class="cr-empty" *ngIf="!clubRows.length">No club matches these filters yet.</p></div>
+      <p class="cr-note">Total spectators count recorded home crowds in all competitions. This is match attendance, not a count of unique supporters.</p>
+    </section>
+
+    <section *ngIf="section === 'players'" class="cr-content">
+      <div class="cr-player-caption"><span>TOP 100 CONTRACTS</span><p>Active players at clubs, ranked by their current wage.</p></div>
+      <div class="cr-leader" *ngIf="featuredPlayer as leader"><div class="cr-medal">01</div><div><span>FIRST IN CURRENT SORT</span><a [routerLink]="['/player', leader.playerId]">{{ leader.playerName }}</a><small>{{ leader.teamName }} · {{ leader.position }}</small></div><strong>{{ playerLeadValue(leader) }}</strong></div>
+      <div class="cr-table-wrap"><table><thead><tr>
+        <th>#</th>
+        <th><button type="button" (click)="sortPlayers('playerName')">Player {{ playerArrow('playerName') }}</button></th>
+        <th><button type="button" (click)="sortPlayers('teamName')">Club {{ playerArrow('teamName') }}</button></th>
+        <th><button type="button" (click)="sortPlayers('position')">Position {{ playerArrow('position') }}</button></th>
+        <th><button type="button" (click)="sortPlayers('age')">Age {{ playerArrow('age') }}</button></th>
+        <th><button type="button" (click)="sortPlayers('wage')">Wage {{ playerArrow('wage') }}</button></th>
+      </tr></thead><tbody><tr *ngFor="let row of playerRows; let i = index"><td class="cr-rank">{{ i + 1 }}</td><td class="cr-name"><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a></td><td><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td><td>{{ row.position || '—' }}</td><td>{{ row.age }}</td><td class="cr-highlight">{{ money(row.wage) }}</td></tr></tbody></table><p class="cr-empty" *ngIf="!playerRows.length">No players match this search.</p></div>
+      <p class="cr-note">Wage values come from the current player contracts. Historical player wages are not stored as season snapshots.</p>
+    </section>
+  </ng-container>
+</main>

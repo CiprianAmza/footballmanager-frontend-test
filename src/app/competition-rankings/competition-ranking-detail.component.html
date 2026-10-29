@@ -1,0 +1,78 @@
+<main class="cr-shell">
+  <header class="cr-hero">
+    <div>
+      <a class="cr-back" routerLink="/competition-rankings/competitions">← All competition rankings</a>
+      <span class="cr-eyebrow">COMPETITION BREAKDOWN / SEASON {{ data?.season || '—' }}</span>
+      <h1>{{ data?.competitionName || 'Competition' }}</h1>
+      <p>The clubs behind this competition's crowd and wage numbers.</p>
+    </div>
+    <a class="cr-refresh" [routerLink]="['/competition-view', competitionId, 'overview']">Competition page ↗</a>
+  </header>
+
+  <div class="cr-state" *ngIf="loading">Loading competition breakdown…</div>
+  <div class="cr-state cr-error" *ngIf="!loading && error">{{ error }} <button type="button" (click)="load()">Retry</button></div>
+
+  <ng-container *ngIf="!loading && !error && data">
+    <section class="cr-detail-kpis">
+      <article><span>CLUBS</span><strong>{{ data.clubs.length }}</strong><small>participants this season</small></article>
+      <article><span>PLAYERS</span><strong>{{ data.players.length }}</strong><small>current active squads</small></article>
+      <article><span>HOME MATCHES</span><strong>{{ totalHomeMatches }}</strong><small>with recorded crowds</small></article>
+      <article><span>SPECTATORS / MATCH</span><strong>{{ totalHomeMatches ? number(averageAttendance) : '—' }}</strong><small>observed home attendance</small></article>
+    </section>
+
+    <nav class="cr-detail-tabs" aria-label="Competition breakdown">
+      <button type="button" [class.active]="view === 'clubs'" (click)="view = 'clubs'; search = ''">Clubs <span>{{ data.clubs.length }}</span></button>
+      <button type="button" [class.active]="view === 'players'" (click)="showAllPlayers()">Players <span>{{ data.players.length }}</span></button>
+    </nav>
+
+    <div class="cr-toolbar">
+      <label class="cr-search"><span>⌕</span><input [(ngModel)]="search" [placeholder]="view === 'clubs' ? 'Search club' : 'Search player or club'" aria-label="Search within competition"></label>
+      <button *ngIf="view === 'players' && selectedTeamId != null" type="button" class="cr-clear-filter" (click)="showAllPlayers()">{{ selectedClubName }} ×</button>
+    </div>
+
+    <section *ngIf="view === 'clubs'" class="cr-content">
+      <div class="cr-detail-heading"><div><span class="cr-eyebrow">CLUBS IN THIS COMPETITION</span><h2>Club statistics</h2></div><p>Click a column to sort. “Players” shows that club's squad in this competition.</p></div>
+      <div class="cr-table-wrap"><table><thead><tr>
+        <th>#</th>
+        <th><button type="button" (click)="sortClubs('teamName')">Club {{ clubArrow('teamName') }}</button></th>
+        <th><button type="button" (click)="sortClubs('homeMatches')">Home matches {{ clubArrow('homeMatches') }}</button></th>
+        <th><button type="button" (click)="sortClubs('averageAttendance')">Avg. spectators {{ clubArrow('averageAttendance') }}</button></th>
+        <th><button type="button" (click)="sortClubs('totalAttendance')">Total spectators {{ clubArrow('totalAttendance') }}</button></th>
+        <th><button type="button" (click)="sortClubs('players')">Squad size {{ clubArrow('players') }}</button></th>
+        <th><button type="button" (click)="sortClubs('averagePlayerWage')">Avg. wage {{ clubArrow('averagePlayerWage') }}</button></th>
+        <th><button type="button" (click)="sortClubs('highestPlayerWage')">Top wage {{ clubArrow('highestPlayerWage') }}</button></th>
+        <th><button type="button" (click)="sortClubs('totalPlayerWages')">Payroll {{ clubArrow('totalPlayerWages') }}</button></th>
+        <th>Squad</th>
+      </tr></thead><tbody><tr *ngFor="let row of clubs; let i = index">
+        <td class="cr-rank">{{ i + 1 }}</td>
+        <td class="cr-name"><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td>
+        <td>{{ row.homeMatches }}</td>
+        <td>{{ row.homeMatches ? number(row.averageAttendance) : '—' }}</td>
+        <td>{{ row.homeMatches ? number(row.totalAttendance) : '—' }}</td>
+        <td>{{ row.players }}</td>
+        <td>{{ row.players ? money(row.averagePlayerWage) : '—' }}</td>
+        <td>{{ row.players ? money(row.highestPlayerWage) : '—' }}</td>
+        <td>{{ row.players ? money(row.totalPlayerWages) : '—' }}</td>
+        <td><button type="button" class="cr-row-action" (click)="showClubPlayers(row.teamId)">Players →</button></td>
+      </tr></tbody></table><p class="cr-empty" *ngIf="!clubs.length">No clubs match this search.</p></div>
+    </section>
+
+    <section *ngIf="view === 'players'" class="cr-content">
+      <div class="cr-detail-heading"><div><span class="cr-eyebrow">CURRENT CONTRACTS</span><h2>{{ selectedTeamId == null ? 'All players' : selectedClubName + ' players' }}</h2></div><p>{{ players.length }} players shown. Club links open their full profile.</p></div>
+      <div class="cr-table-wrap"><table><thead><tr>
+        <th>#</th>
+        <th><button type="button" (click)="sortPlayers('playerName')">Player {{ playerArrow('playerName') }}</button></th>
+        <th><button type="button" (click)="sortPlayers('teamName')">Club {{ playerArrow('teamName') }}</button></th>
+        <th><button type="button" (click)="sortPlayers('position')">Position {{ playerArrow('position') }}</button></th>
+        <th><button type="button" (click)="sortPlayers('age')">Age {{ playerArrow('age') }}</button></th>
+        <th><button type="button" (click)="sortPlayers('wage')">Wage {{ playerArrow('wage') }}</button></th>
+      </tr></thead><tbody><tr *ngFor="let row of players; let i = index">
+        <td class="cr-rank">{{ i + 1 }}</td>
+        <td class="cr-name"><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a></td>
+        <td><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td>
+        <td>{{ row.position || '—' }}</td><td>{{ row.age }}</td><td class="cr-highlight">{{ money(row.wage) }}</td>
+      </tr></tbody></table><p class="cr-empty" *ngIf="!players.length">No players match this filter.</p></div>
+    </section>
+    <p class="cr-note">Crowds are recorded home attendances in this competition. Wages are current contracts, so they can change during the season.</p>
+  </ng-container>
+</main>

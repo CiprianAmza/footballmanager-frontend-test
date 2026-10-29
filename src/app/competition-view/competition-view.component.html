@@ -1,0 +1,81 @@
+<main class="cv-page">
+  <header class="cv-hero">
+    <div>
+      <a class="cv-back" routerLink="/competitions-world">← All competitions</a>
+      <div class="cv-kicker">COMPETITION CENTRE <span>·</span> {{ competitionType }}</div>
+      <h1>{{ competitionName }}</h1>
+      <p>One competition, one season. Choose what you want to follow.</p>
+    </div>
+    <label class="cv-season">Season
+      <select [(ngModel)]="selectedSeason" (change)="onSeasonChange()" aria-label="Select season">
+        <option *ngFor="let season of seasons" [value]="season">{{ season }}/{{ +season + 1 }}</option>
+      </select>
+    </label>
+  </header>
+
+  <nav class="cv-tabs" aria-label="Competition sections">
+    <a [routerLink]="['/competition-view', competitionId, 'overview']" [queryParams]="{season: selectedSeason}"
+       [class.active]="section === 'overview'" [attr.aria-current]="section === 'overview' ? 'page' : null">Overview</a>
+    <a [routerLink]="['/competition-view', competitionId, 'standings']" [queryParams]="{season: selectedSeason}"
+       [class.active]="section === 'standings'" [attr.aria-current]="section === 'standings' ? 'page' : null">{{ competitionType === 'League' ? 'League table' : 'Matches & bracket' }}</a>
+    <a [routerLink]="['/competition-view', competitionId, 'stats']" [queryParams]="{season: selectedSeason}"
+       [class.active]="section === 'stats'" [attr.aria-current]="section === 'stats' ? 'page' : null">Statistics</a>
+    <a [routerLink]="['/competition-view', competitionId, 'analysis']" [queryParams]="{season: selectedSeason}"
+       [class.active]="section === 'analysis'" [attr.aria-current]="section === 'analysis' ? 'page' : null">Analysis</a>
+  </nav>
+
+  <div class="cv-state" *ngIf="loading">Loading {{ section }}…</div>
+  <div class="cv-state cv-error" *ngIf="!loading && error">{{ error }} <button type="button" (click)="retry()">Retry</button></div>
+
+  <ng-container *ngIf="!loading && !error">
+    <section *ngIf="section === 'overview'" class="cv-overview">
+      <div class="cv-section-head"><div><span class="cv-eyebrow">AT A GLANCE</span><h2>{{ selectedSeason }}/{{ +selectedSeason + 1 }} season</h2></div></div>
+      <div class="cv-lead" *ngIf="competitionType === 'League' && teams.length">
+        <div class="cv-lead-icon">01</div>
+        <div><small>LEAGUE LEADER</small><a [routerLink]="['/team', teams[0].teamId]">{{ teams[0].name }}</a><span>{{ teams[0].points }} points · {{ teams[0].games }} played</span></div>
+        <a class="cv-text-link" [routerLink]="['/competition-view', competitionId, 'standings']" [queryParams]="{season: selectedSeason}">Full table →</a>
+      </div>
+      <div class="cv-card-grid">
+        <a class="cv-feature" [routerLink]="['/competition-view', competitionId, 'standings']" [queryParams]="{season: selectedSeason}"><span>01 / RESULTS</span><strong>{{ competitionType === 'League' ? 'League table' : 'Matches & bracket' }}</strong><p>{{ competitionType === 'League' ? 'Positions, form and European qualification.' : 'Rounds, scores and the path to the final.' }}</p><b>Explore →</b></a>
+        <a class="cv-feature" [routerLink]="['/competition-view', competitionId, 'stats']" [queryParams]="{season: selectedSeason}"><span>02 / NUMBERS</span><strong>Statistics</strong><p>Top scorers, assists, ratings, clean sheets and club leaders.</p><b>Explore →</b></a>
+        <a class="cv-feature" [routerLink]="['/competition-view', competitionId, 'analysis']" [queryParams]="{season: selectedSeason}"><span>03 / DEEP DIVE</span><strong>Analysis</strong><p>Club landscape, underlying performance and rating impact.</p><b>Explore →</b></a>
+      </div>
+      <div class="cv-quicklinks"><span>MORE ABOUT THIS COMPETITION</span>
+        <a *ngIf="competitionType === 'League'" [routerLink]="['/media-prediction', competitionId]">Media prediction ↗</a>
+        <a [routerLink]="['/awards/competition', competitionId]">Awards ↗</a>
+        <a [routerLink]="['/competition-records', competitionId]">Records ↗</a>
+        <a [routerLink]="['/competition', competitionId]">Classic view ↗</a>
+        <a routerLink="/competition-rankings">All-competition rankings ↗</a>
+      </div>
+    </section>
+
+    <section *ngIf="section === 'standings'">
+      <div class="cv-section-head"><div><span class="cv-eyebrow">RESULTS & PROGRESS</span><h2>{{ competitionType === 'League' ? 'League table' : 'Matches & bracket' }}</h2></div><span>{{ selectedSeason }}/{{ +selectedSeason + 1 }}</span></div>
+      <ng-container *ngIf="competitionType === 'League'">
+        <div class="cv-table-wrap"><table class="cv-table"><thead><tr><th>#</th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th><th>Last 5</th></tr></thead>
+          <tbody><tr *ngFor="let team of teams" [class.cv-relegated]="isRelegated(team)"><td><span class="cv-position" [class.cv-europe]="qualificationFor(team)">{{ team.position }}</span></td><td class="cv-club"><app-team-crest [teamId]="team.teamId" [teamName]="team.name" [size]="24"></app-team-crest><a [routerLink]="['/team', team.teamId]">{{ team.name }}</a><span class="cv-badge" *ngIf="qualificationFor(team)">{{ qualificationFor(team) === 'LOC' ? 'LoC' : 'SC' }}</span><span class="cv-badge red" *ngIf="isRelegated(team)">R</span></td><td>{{ team.games }}</td><td>{{ team.wins }}</td><td>{{ team.draws }}</td><td>{{ team.loses }}</td><td>{{ team.goalDifference }}</td><td class="cv-points">{{ team.points }}</td><td><span class="cv-form" *ngFor="let result of form(team)" [class.win]="result === 'W'" [class.draw]="result === 'D'">{{ result }}</span></td></tr></tbody>
+        </table><div class="cv-empty" *ngIf="!teams.length">No league table available for this season yet.</div></div>
+        <p class="cv-legend" *ngIf="qualification">LoC: League of Champions · SC: Stars Cup <span *ngIf="qualification.hasLowerTier">· R: relegation from position {{ qualification.relegationFrom }}</span></p>
+      </ng-container>
+      <app-cup-overview *ngIf="competitionType === 'Cup'" [competitionId]="competitionId" [season]="selectedSeason"></app-cup-overview>
+      <div *ngIf="competitionType === 'Europe'" class="cv-external"><p>Follow the group and knockout rounds in the dedicated European competition view.</p><a [routerLink]="['/european-rounds', competitionId, selectedSeason]">Open European rounds →</a></div>
+    </section>
+
+    <section *ngIf="section === 'stats'">
+      <div class="cv-section-head"><div><span class="cv-eyebrow">SEASON LEADERS</span><h2>Statistics</h2></div></div>
+      <article class="cv-panel"><h3>Players & goalkeepers</h3><div class="cv-pills"><button type="button" *ngFor="let tab of playerTabs" [class.active]="playerTab === tab.key" (click)="playerTab = tab.key">{{ tab.label }}</button></div>
+        <div class="cv-table-wrap"><table class="cv-table"><thead><tr><th>#</th><th>{{ playerTab === 'cleanSheets' ? 'Club' : 'Player' }}</th><th *ngIf="playerTab !== 'cleanSheets'">Club</th><th>{{ activePlayerTab?.value }}</th><th>{{ activePlayerTab?.secondary }}</th></tr></thead><tbody><tr *ngFor="let row of activePlayerRows; let i = index"><td>{{ i + 1 }}</td><td><a *ngIf="playerTab !== 'cleanSheets'" [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a><a *ngIf="playerTab === 'cleanSheets'" [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td><td *ngIf="playerTab !== 'cleanSheets'"><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td><td class="cv-points">{{ row[activePlayerTab.value] }}</td><td>{{ row[activePlayerTab.secondary] }}</td></tr></tbody></table><div class="cv-empty" *ngIf="!activePlayerRows.length">No statistics available yet.</div></div>
+      </article>
+      <article class="cv-panel" *ngIf="competitionType === 'League'"><div class="cv-panel-head"><h3>Club leaders</h3><span *ngIf="teamStats">{{ teamStats.matchesPlayed }} matches · {{ teamStats.teamsTracked }} clubs</span></div><div class="cv-category-grid"><ng-container *ngFor="let category of categories; let i = index"><h4 *ngIf="i === 0 || categories[i-1].group !== category.group">{{ category.group }}</h4><div class="cv-category"><button type="button" (click)="expandedCategory = expandedCategory === category.key ? null : category.key" [attr.aria-expanded]="expandedCategory === category.key">{{ category.label }} <span>{{ expandedCategory === category.key ? '−' : '+' }}</span></button><div *ngIf="expandedCategory === category.key"><div class="cv-category-row" *ngFor="let row of topCategory(category.key); let rank = index"><span>{{ rank + 1 }}</span><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a><strong>{{ formatValue(row.value, category.money) }} {{ category.money ? '' : row.unit }}</strong></div><div class="cv-empty" *ngIf="!topCategory(category.key).length">No data yet.</div></div></div></ng-container></div></article>
+      <app-competition-rating-impact *ngIf="playerStats" [season]="selectedSeason" [data]="playerStats.ratingImpact"></app-competition-rating-impact>
+    </section>
+
+    <section *ngIf="section === 'analysis'">
+      <div class="cv-section-head"><div><span class="cv-eyebrow">BEYOND THE SCORELINE</span><h2>Competition analysis</h2></div></div>
+      <article class="cv-panel"><h3>Club landscape</h3><p>Compare squads, payroll, reputation and progress through the competition.</p><app-competition-insights [competitionId]="competitionId" [season]="selectedSeason"></app-competition-insights></article>
+      <article class="cv-panel"><div class="cv-panel-head"><div><h3>Underlying performance</h3><p>xG, recent form, opponent strength and points against expectation.</p></div><span *ngIf="underlying">{{ underlying.matches }} matches analysed</span></div>
+        <div class="cv-table-wrap" *ngIf="underlying"><table class="cv-table"><thead><tr><th>#</th><th>Club</th><th>MP</th><th>xGD / 90</th><th>xG won</th><th>Last 5</th><th>Last 10</th><th>Last 20</th><th>Luck</th><th></th></tr></thead><tbody><ng-container *ngFor="let team of underlying.teamPerformance"><tr><td>{{ team.rank }}</td><td><a [routerLink]="['/team', team.teamId]">{{ team.teamName }}</a></td><td>{{ team.matches }}</td><td>{{ signed(team.xgDifferencePer90) }}</td><td>{{ team.higherXgMatchPercentage | number:'1.0-1' }}%</td><td>{{ signed(team.rolling5.xgDifferencePer90) }}</td><td>{{ signed(team.rolling10.xgDifferencePer90) }}</td><td>{{ signed(team.rolling20.xgDifferencePer90) }}</td><td>{{ signed(team.luckIndex) }}</td><td><button class="cv-expand" type="button" (click)="expandedTeamId = expandedTeamId === team.teamId ? null : team.teamId" [attr.aria-expanded]="expandedTeamId === team.teamId">{{ expandedTeamId === team.teamId ? '−' : '+' }}</button></td></tr><tr *ngIf="expandedTeamId === team.teamId"><td colspan="10"><div class="cv-detail"><div><small>Actual / expected points</small><strong>{{ team.actualPoints }} / {{ team.expectedPoints | number:'1.2-2' }}</strong></div><div><small>Balanced matches</small><strong>{{ team.balancedMatches.wins }}W {{ team.balancedMatches.draws }}D {{ team.balancedMatches.losses }}L</strong></div><div><small>Vs top 4</small><strong>{{ team.versusTop4.wins }}W {{ team.versusTop4.draws }}D {{ team.versusTop4.losses }}L</strong></div><div><small>Vs upper half</small><strong>{{ team.versusUpperHalf.wins }}W {{ team.versusUpperHalf.draws }}D {{ team.versusUpperHalf.losses }}L</strong></div><div><small>Vs lower half</small><strong>{{ team.versusLowerHalf.wins }}W {{ team.versusLowerHalf.draws }}D {{ team.versusLowerHalf.losses }}L</strong></div></div></td></tr></ng-container></tbody></table><div class="cv-empty" *ngIf="!underlying.teamPerformance?.length">Analysis appears once matches are played.</div></div><p class="cv-method" *ngIf="underlying">{{ underlying.methodology }}</p>
+      </article>
+    </section>
+  </ng-container>
+</main>
