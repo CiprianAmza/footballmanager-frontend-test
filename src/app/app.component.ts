@@ -11,7 +11,7 @@ import { LiveMatchClosed } from './models/live-match.model';
 import { UiFeedbackService } from './shared/ui-feedback.service';
 import { ThemeService } from './services/theme.service';
 
-export const urlApp: string = "http://localhost:8086";
+export const urlApp: string = window.location.port === '4201' ? 'http://localhost:8087' : 'http://localhost:8086';
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',

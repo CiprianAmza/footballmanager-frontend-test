@@ -1,9 +1,15 @@
 import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { urlApp } from '../app.component';
 import { GameEventsService } from '../services/game-events.service';
 import { SquadInsightOverview, SquadInsightPlayer, SquadInsightsService } from '../services/squad-insights.service';
 import { TeamService } from '../services/team.service';
+
+interface FormationSlot { positionIndex: number; playerId: number; [key: string]: any; }
+interface SavedFormation { teamId: number; tactic: string; formationDataList: FormationSlot[]; [key: string]: any; }
+interface TeamTacticView { managerTactic: SavedFormation; }
 
 @Component({
   selector: 'app-squad2',
@@ -17,7 +23,12 @@ export class Squad2Component implements OnInit, OnDestroy {
   overview?: SquadInsightOverview;
   players: SquadInsightPlayer[] = [];
   selectedPlayer?: SquadInsightPlayer;
-  matchdayIds = new Set<number>();
+  formation?: SavedFormation;
+  lineupLoading = false;
+  lineupError = '';
+  lineupFeedback = '';
+  replacing = false;
+  replaceSlotIndex: number | null = null;
   search = '';
   positionFilter = 'ALL';
   statusFilter = 'ALL';
@@ -31,18 +42,17 @@ export class Squad2Component implements OnInit, OnDestroy {
     private router: Router,
     private teamService: TeamService,
     private insights: SquadInsightsService,
+    private http: HttpClient,
     private gameEvents: GameEventsService) {}
 
   ngOnInit(): void {
     this.teamId = Number(this.route.snapshot.paramMap.get('teamId')) || this.teamService.teamId;
     if (this.teamId) {
-      this.restoreSelection();
       this.load();
     } else {
       this.sub.add(this.teamService.teamId$.subscribe(teamId => {
         if (teamId > 0 && teamId !== this.teamId) {
           this.teamId = teamId;
-          this.restoreSelection();
           this.load();
         }
       }));
@@ -55,6 +65,7 @@ export class Squad2Component implements OnInit, OnDestroy {
   load(showSpinner = true): void {
     if (!this.teamId) return;
     if (showSpinner) this.loading = true;
+    this.loadFormation();
     this.insights.load(this.teamId).subscribe({
       next: overview => {
         this.overview = overview;
@@ -100,7 +111,17 @@ export class Squad2Component implements OnInit, OnDestroy {
   }
 
   get availableCount(): number { return this.players.filter(player => !player.availability.length).length; }
-  get selectedCount(): number { return this.matchdayIds.size; }
+  get startingSlots(): FormationSlot[] { return (this.formation?.formationDataList || []).filter(slot => slot.positionIndex < 30 && slot.playerId > 0).sort((a, b) => a.positionIndex - b.positionIndex); }
+  get benchSlots(): FormationSlot[] { return (this.formation?.formationDataList || []).filter(slot => slot.positionIndex >= 30 && slot.positionIndex <= 36 && slot.playerId > 0).sort((a, b) => a.positionIndex - b.positionIndex); }
+  get startingCount(): number { return this.startingSlots.length; }
+  get benchCount(): number { return this.benchSlots.length; }
+  get canEditLineup(): boolean { return this.teamId === this.teamService.teamId; }
+  playerName(id: number): string { return this.players.find(player => player.id === id)?.name || `Player #${id}`; }
+  selectionStatus(id: number): 'XI' | 'BENCH' | 'OUT' {
+    if (this.startingSlots.some(slot => slot.playerId === id)) return 'XI';
+    if (this.benchSlots.some(slot => slot.playerId === id)) return 'BENCH';
+    return 'OUT';
+  }
   get averageFitness(): number {
     return this.players.length ? Math.round(this.players.reduce((sum, player) => sum + player.fitness, 0) / this.players.length) : 0;
   }
@@ -108,12 +129,60 @@ export class Squad2Component implements OnInit, OnDestroy {
 
   selectPlayer(player: SquadInsightPlayer): void { this.selectedPlayer = player; }
 
-  toggleMatchday(player: SquadInsightPlayer, event?: MouseEvent): void {
-    event?.stopPropagation();
-    if (player.availability.length) return;
-    this.matchdayIds.has(player.id) ? this.matchdayIds.delete(player.id) : this.matchdayIds.add(player.id);
-    this.matchdayIds = new Set(this.matchdayIds);
-    localStorage.setItem(this.selectionKey, JSON.stringify([...this.matchdayIds]));
+  private loadFormation(): void {
+    this.lineupLoading = true;
+    this.lineupError = '';
+    this.formation = undefined;
+    this.http.get<TeamTacticView>(`${urlApp}/tactic/teamView/${this.teamId}`).subscribe({
+      next: view => {
+        this.formation = view.managerTactic;
+        this.lineupLoading = false;
+      },
+      error: () => {
+        this.lineupLoading = false;
+        this.lineupError = 'The current match selection could not be loaded.';
+      }
+    });
+  }
+
+  replaceStarter(): void {
+    const player = this.selectedPlayer;
+    const targetIndex = this.replaceSlotIndex;
+    if (!this.canEditLineup || !player || !this.formation || targetIndex === null || this.replacing
+        || player.availability.length || this.selectionStatus(player.id) === 'XI') return;
+    const slots = this.formation.formationDataList.map(slot => ({ ...slot }));
+    const target = slots.find(slot => slot.positionIndex === targetIndex && targetIndex < 30);
+    if (!target) return;
+    const formerStarterId = target.playerId;
+    const oldBench = slots.find(slot => slot.positionIndex >= 30 && slot.playerId === player.id);
+    target.playerId = player.id;
+    if (oldBench) oldBench.playerId = formerStarterId;
+    else {
+      const openBenchIndex = Array.from({ length: 7 }, (_, index) => 30 + index)
+        .find(index => !slots.some(slot => slot.positionIndex === index));
+      if (openBenchIndex !== undefined) slots.push({ positionIndex: openBenchIndex, playerId: formerStarterId });
+    }
+    this.replacing = true;
+    this.lineupFeedback = '';
+    this.http.post(`${urlApp}/tactic/saveFormation`, { ...this.formation, formationDataList: slots }).subscribe({
+      next: () => {
+        this.replacing = false;
+        this.replaceSlotIndex = null;
+        this.http.get<TeamTacticView>(`${urlApp}/tactic/teamView/${this.teamId}`).subscribe({
+          next: view => {
+            this.formation = view.managerTactic;
+            this.lineupFeedback = this.selectionStatus(player.id) === 'XI'
+              ? `${player.name} is now in the saved starting XI.`
+              : 'The team selection is restricted. Review the tactic permissions.';
+          },
+          error: () => this.lineupError = 'Saved, but the updated selection could not be verified.'
+        });
+      },
+      error: error => {
+        this.replacing = false;
+        this.lineupError = error?.error?.error || 'The starting XI could not be saved.';
+      }
+    });
   }
 
   availabilityLabel(player: SquadInsightPlayer): string {
@@ -153,21 +222,9 @@ export class Squad2Component implements OnInit, OnDestroy {
       const next = event.key === 'j' ? Math.min(list.length - 1, current + 1) : Math.max(0, current - 1);
       this.selectedPlayer = list[next];
     }
-    if (event.code === 'Space' && this.selectedPlayer) {
-      event.preventDefault();
-      this.toggleMatchday(this.selectedPlayer);
-    }
     if (event.key.toLowerCase() === 'p') this.openPlayer();
     if (event.key.toLowerCase() === 't') this.router.navigate(['/tactics', this.teamId]);
     if (event.key.toLowerCase() === 'm') this.router.navigate(['/medical']);
   }
 
-  private get selectionKey(): string { return `matchday-selection-${this.teamId}`; }
-  private restoreSelection(): void {
-    try {
-      this.matchdayIds = new Set(JSON.parse(localStorage.getItem(this.selectionKey) || '[]'));
-    } catch {
-      this.matchdayIds = new Set();
-    }
-  }
 }

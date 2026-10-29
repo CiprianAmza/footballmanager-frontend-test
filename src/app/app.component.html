@@ -254,7 +254,7 @@
 
     <!-- Normal: show team pages -->
     <div class="menu-group" *ngIf="!teamService.managerFired">
-      <a [routerLink]="['/team', teamService.teamId]" [queryParams]="{tab: 'squad'}" routerLinkActive="active">Squad</a>
+      <a [routerLink]="['/squad2', teamService.teamId]" routerLinkActive="active">Squad</a>
       <a [routerLink]="['/gallery', teamService.teamId]" routerLinkActive="active">Card Gallery</a>
       <a routerLink="/squad-planner" routerLinkActive="active">Squad Planner</a>
       <a [routerLink]="['/tactics', teamService.teamId]" routerLinkActive="active">Tactics</a>

@@ -143,7 +143,8 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./ui-comparison/ui-comparison.component').then(module => module.UiComparisonComponent),
     title: 'UI comparison lab'
   },
-  { path: 'inbox', component: InboxComponent },
+  { path: 'inbox', component: Inbox2Component, title: 'Inbox' },
+  { path: 'inbox-classic', component: InboxComponent },
   { path: 'inbox2', component: Inbox2Component },
   { path: 'inbox3', component: Inbox3Component },
   { path: 'social-feed', component: SocialFeedComponent, title: 'Social Feed' },
