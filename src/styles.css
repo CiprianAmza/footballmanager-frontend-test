@@ -596,6 +596,11 @@ a.fm-link {
 a.fm-link:hover { color: #5dade2; }
 a.fm-link:active{ color: #3498db; }
 
+/* Keep profile references legible inside tables, cards, and dark headers. */
+a[href^="/player/"], a[href^="/team/"] { color: inherit; text-decoration: none; }
+a[href^="/player/"]:hover, a[href^="/team/"]:hover { color: var(--fm-accent, #5dade2); text-decoration: underline; }
+a[href^="/player/"]:focus-visible, a[href^="/team/"]:focus-visible { outline: 2px solid var(--fm-accent, #5dade2); outline-offset: 2px; }
+
 /* ============================================================
  *  UTILITY: panels v2 (reusable card style — opt-in for new components)
  *    <div class="fm-panel-v2">

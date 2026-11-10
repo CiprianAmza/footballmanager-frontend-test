@@ -102,9 +102,9 @@
               <div class="match-story-score">
                 <small>FULL TIME</small>
                 <div>
-                  <span>{{ matchReportSummary.homeTeamName }}</span>
+                  <span><a [routerLink]="['/team', matchReportSummary.homeTeamId]">{{ matchReportSummary.homeTeamName }}</a></span>
                   <strong>{{ matchReportSummary.score }}</strong>
-                  <span>{{ matchReportSummary.awayTeamName }}</span>
+                  <span><a [routerLink]="['/team', matchReportSummary.awayTeamId]">{{ matchReportSummary.awayTeamName }}</a></span>
                 </div>
               </div>
 
@@ -135,7 +135,7 @@
           <div *ngIf="isJobOfferMessage(selectedMessage)" class="offer-inline-panel">
             <ng-container *ngIf="getOfferForMessage(selectedMessage) as offer">
               <div class="offer-inline-summary">
-                <strong>{{ offer.teamName }}</strong>
+                <strong><a [routerLink]="['/team', offer.teamId]">{{ offer.teamName }}</a></strong>
                 <span class="offer-inline-rep">Reputation {{ offer.teamReputation }}</span>
               </div>
               <div class="offer-inline-terms">

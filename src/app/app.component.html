@@ -198,7 +198,7 @@
   <ng-container *ngTemplateOutlet="chairmanGameWorldControls"></ng-container>
   <ng-container *ngTemplateOutlet="chairmanSimulationStatus"></ng-container>
   <ng-container *ngTemplateOutlet="chairmanFastForwardDialog"></ng-container>
-  <div class="chairman-save-load"><button type="button" (click)="saveGame()">Save Game</button><button type="button" (click)="triggerLoadGame()">Load Game</button><input type="file" #fileInput style="display:none" accept=".json" (change)="loadGame($event)"></div>
+  <div class="chairman-save-load"><button type="button" (click)="saveGame()">Export JSON</button><button type="button" (click)="triggerLoadGame()">Import JSON</button><input type="file" #fileInput style="display:none" accept=".json" (change)="loadGame($event)"></div>
   <main class="chairman-content"><app-route-semantic-header></app-route-semantic-header><router-outlet></router-outlet></main>
 </div>
 
@@ -217,7 +217,7 @@
   <nav id="manager-sidebar" class="sidebar" [class.mobile-open]="mobileSidebarOpen"
        aria-label="Main navigation" (click)="onSidebarInteraction($event)">
     <div class="sidebar-header">
-      <span><span class="fm-logo">FM</span> 24</span>
+      <span><span class="fm-logo">Argus</span> Football World</span>
       <button type="button" class="sidebar-close" aria-label="Close navigation menu"
               (click)="closeMobileSidebar()">×</button>
     </div>
@@ -254,7 +254,7 @@
 
     <!-- Normal: show team pages -->
     <div class="menu-group" *ngIf="!teamService.managerFired">
-      <a [routerLink]="['/team', teamService.teamId]" [queryParams]="{tab: 'squad'}" routerLinkActive="active">Squad</a>
+      <a [routerLink]="['/squad2', teamService.teamId]" routerLinkActive="active">Squad</a>
       <a [routerLink]="['/gallery', teamService.teamId]" routerLinkActive="active">Card Gallery</a>
       <a routerLink="/squad-planner" routerLinkActive="active">Squad Planner</a>
       <a [routerLink]="['/tactics', teamService.teamId]" routerLinkActive="active">Tactics</a>
@@ -304,8 +304,8 @@
     <div class="border"></div>
 
     <div class="menu-group bottom-group">
-      <button type="button" class="menu-action save-link" (click)="saveGame()">Save Game</button>
-      <button type="button" class="menu-action load-link" (click)="triggerLoadGame()">Load Game</button>
+      <button type="button" class="menu-action save-link" (click)="saveGame()">Export JSON</button>
+      <button type="button" class="menu-action load-link" (click)="triggerLoadGame()">Import JSON</button>
       <button type="button" class="menu-action" (click)="restartTutorial()" *ngIf="teamService.teamId > 0">Quick Start Guide</button>
       <input type="file" #fileInput style="display:none" accept=".json" (change)="loadGame($event)">
     </div>
@@ -504,7 +504,7 @@
       <div class="offer-list">
         <div *ngFor="let offer of pendingOffers" class="offer-card">
           <div class="offer-team">
-            <span class="offer-team-name">{{ offer.teamName }}</span>
+            <a class="offer-team-name" [routerLink]="['/team', offer.teamId]" (click)="$event.stopPropagation()">{{ offer.teamName }}</a>
             <span class="offer-team-rep">Reputation {{ offer.teamReputation }}</span>
           </div>
           <p class="offer-pitch">"{{ offer.pitch }}"</p>

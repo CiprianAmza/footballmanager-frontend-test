@@ -22,6 +22,14 @@
       <button type="button" [class.active]="activeTab === 'contract'" (click)="selectPrimaryTab('contract')">Contract</button>
       <button type="button" [class.active]="activeTab === 'history'" (click)="selectPrimaryTab('history')">History</button>
     </nav>
+    <div class="profile-header-actions" *ngIf="canMakeTransferOffer() || canOfferFreeAgentContract()">
+      <button type="button" class="make-offer" *ngIf="canMakeTransferOffer()"
+              (click)="openTransferOffer()" [disabled]="!isTransferWindowOpen"
+              [title]="isTransferWindowOpen ? 'Make a transfer offer' : 'Offers open during the transfer window'">Make offer</button>
+      <button type="button" class="make-offer" *ngIf="canOfferFreeAgentContract()"
+              (click)="openFreeAgentContract()">Offer contract</button>
+      <span *ngIf="canMakeTransferOffer() && !isTransferWindowOpen">Transfer window closed</span>
+    </div>
     <button type="button" class="shortlist" (click)="toggleShortlistFromPlayer()">
       {{ isInShortlist ? '★ Shortlisted' : '☆ Shortlist' }}
     </button>
@@ -43,7 +51,7 @@
     <article class="bio-card">
       <div class="crest-line">
         <app-team-crest [teamId]="playerView.teamId || 0" [teamName]="teamLabel" [size]="42"></app-team-crest>
-        <div><strong>{{ playerView.name }}</strong><span>{{ teamLabel }}</span></div>
+        <div><strong>{{ playerView.name }}</strong><span><a *ngIf="playerView.teamId" [routerLink]="['/team', playerView.teamId]">{{ teamLabel }}</a><ng-container *ngIf="!playerView.teamId">{{ teamLabel }}</ng-container></span></div>
       </div>
       <dl>
         <div><dt>Age</dt><dd>{{ playerView.age ?? '—' }} years</dd></div>
@@ -127,7 +135,7 @@
       </article>
 
       <article class="fm-panel season-strip">
-        <header><span>SEASON STATS</span><small>{{ seasonStats?.teamName || teamLabel }} · Season {{ selectedSeason }}</small></header>
+        <header><span>SEASON STATS</span><small><a *ngIf="seasonStats?.teamId" [routerLink]="['/team', seasonStats.teamId]">{{ seasonStats.teamName }}</a><ng-container *ngIf="!seasonStats?.teamId">{{ seasonStats?.teamName || teamLabel }}</ng-container> · Season {{ selectedSeason }}</small></header>
         <div class="stat-head"><span>Competition</span><span>Apps</span><span>Goals</span><span>Assists</span><span>AvR</span></div>
         <div class="stat-row" *ngFor="let competition of seasonStats?.competitions">
           <span>{{ competition.name }}</span><span>{{ competition.games }} ({{ competition.subApps }})</span>
@@ -157,7 +165,7 @@
           <div><dt>Morale</dt><dd>{{ playerView.morale ?? '—' }}</dd></div>
         </dl>
         <div class="market-actions" *ngIf="canMakeTransferOffer() || canOfferFreeAgentContract()">
-          <button *ngIf="canMakeTransferOffer()" type="button" (click)="openTransferOffer()">Make offer</button>
+          <button *ngIf="canMakeTransferOffer()" type="button" (click)="openTransferOffer()" [disabled]="!isTransferWindowOpen">Make offer</button>
           <button *ngIf="canOfferFreeAgentContract()" type="button" (click)="openFreeAgentContract()">Offer contract</button>
         </div>
         <p class="market-message" *ngIf="marketActionMessage">{{ marketActionMessage }}</p>
@@ -273,7 +281,7 @@
 
   <section class="detail-workspace" *ngIf="activeTab === 'stats'">
     <article class="fm-panel detail-panel wide">
-      <header><span>SEASON STATISTICS</span><small>{{ seasonStats?.teamName || teamLabel }}</small></header>
+      <header><span>SEASON STATISTICS</span><small><a *ngIf="seasonStats?.teamId" [routerLink]="['/team', seasonStats.teamId]">{{ seasonStats.teamName }}</a><ng-container *ngIf="!seasonStats?.teamId">{{ seasonStats?.teamName || teamLabel }}</ng-container></small></header>
       <div class="season-picker"><button type="button" [disabled]="selectedSeason <= 1" (click)="prevSeason()">‹ Previous</button><strong>Season {{ selectedSeason }}</strong><button type="button" [disabled]="selectedSeason >= maxSeason" (click)="nextSeason()">Next ›</button></div>
       <div class="loading-line" *ngIf="seasonStatsLoading">Loading season statistics…</div>
       <div class="empty-line" *ngIf="!seasonStatsLoading && !seasonStats">No statistics recorded for this season.</div>
@@ -307,7 +315,7 @@
       <div class="form-actions">
         <button type="button" *ngIf="canRenewContract()" (click)="toggleRenewForm()">{{ showRenewForm ? 'Close offer' : 'Offer new contract' }}</button>
         <button type="button" *ngIf="isOwnPlayer()" (click)="toggleClausesForm()">{{ showClausesForm ? 'Close clauses' : 'Edit clauses' }}</button>
-        <button type="button" class="primary" *ngIf="canMakeTransferOffer()" (click)="openTransferOffer()">Make transfer offer</button>
+        <button type="button" class="primary" *ngIf="canMakeTransferOffer()" (click)="openTransferOffer()" [disabled]="!isTransferWindowOpen">Make transfer offer</button>
         <button type="button" class="primary" *ngIf="canOfferFreeAgentContract()" (click)="openFreeAgentContract()">Offer contract</button>
       </div>
     </article>
@@ -336,12 +344,12 @@
     <article class="fm-panel detail-panel wide">
       <header>CAREER HISTORY</header>
       <div class="table-scroll"><table class="classic-table"><thead><tr><th>Season</th><th>Club</th><th>Apps</th><th>Sub</th><th>Goals</th><th>Assists</th></tr></thead><tbody>
-        <ng-container *ngFor="let row of careerHistory"><tr *ngIf="careerSeasonTotals(row) as totals"><td>{{ row.seasonNumber }}</td><td>{{ row.teamName || 'Unknown club' }}</td><td>{{ totals.apps }}</td><td>{{ totals.subApps }}</td><td>{{ totals.goals }}</td><td>{{ totals.assists }}</td></tr></ng-container>
+        <ng-container *ngFor="let row of careerHistory"><tr *ngIf="careerSeasonTotals(row) as totals"><td>{{ row.seasonNumber }}</td><td><a *ngIf="row.teamId" [routerLink]="['/team', row.teamId]">{{ row.teamName || 'Unknown club' }}</a><span *ngIf="!row.teamId">{{ row.teamName || 'Unknown club' }}</span></td><td>{{ totals.apps }}</td><td>{{ totals.subApps }}</td><td>{{ totals.goals }}</td><td>{{ totals.assists }}</td></tr></ng-container>
       </tbody></table></div><div class="empty-line" *ngIf="!extendedDataLoading && !careerHistory.length">No career seasons recorded.</div>
     </article>
     <article class="fm-panel detail-panel wide">
       <header>TRANSFER HISTORY</header>
-      <div class="table-scroll" *ngIf="transferHistory.length"><table class="classic-table"><thead><tr><th>Season</th><th>From</th><th>To</th><th>Fee</th></tr></thead><tbody><tr *ngFor="let transfer of transferHistory"><td>{{ transfer.seasonNumber }}</td><td>{{ transfer.sellTeamName || 'Free agent' }}</td><td>{{ transfer.buyTeamName || 'Free agent' }}</td><td>{{ transfer.playerTransferValue > 0 ? money(transfer.playerTransferValue) : 'Free' }}</td></tr></tbody></table></div>
+      <div class="table-scroll" *ngIf="transferHistory.length"><table class="classic-table"><thead><tr><th>Season</th><th>From</th><th>To</th><th>Fee</th></tr></thead><tbody><tr *ngFor="let transfer of transferHistory"><td>{{ transfer.seasonNumber }}</td><td><a *ngIf="transfer.sellTeamId" [routerLink]="['/team', transfer.sellTeamId]">{{ transfer.sellTeamName }}</a><span *ngIf="!transfer.sellTeamId">{{ transfer.sellTeamName || 'Free agent' }}</span></td><td><a *ngIf="transfer.buyTeamId" [routerLink]="['/team', transfer.buyTeamId]">{{ transfer.buyTeamName }}</a><span *ngIf="!transfer.buyTeamId">{{ transfer.buyTeamName || 'Free agent' }}</span></td><td>{{ transfer.playerTransferValue > 0 ? money(transfer.playerTransferValue) : 'Free' }}</td></tr></tbody></table></div>
       <div class="empty-line" *ngIf="transferHistoryLoaded && !transferHistory.length">No transfers recorded for this player.</div>
     </article>
   </section>
@@ -355,7 +363,7 @@
       <header><span>MILESTONES & HONOURS</span><small>{{ majorAwardSummary?.awards?.length || 0 }} individual awards</small></header>
       <div class="honour-summary"><div><strong>{{ trophies.length }}</strong><span>Team trophies</span></div><div><strong>{{ majorAwardSummary.goldenBoots || 0 }}</strong><span>Golden Boots</span></div><div><strong>{{ majorAwardSummary.ballonDors || 0 }}</strong><span>Ballon d'Or</span></div></div>
       <div class="loading-line" *ngIf="loadingTrophies">Checking honours…</div>
-      <div class="honour-grid" *ngIf="!loadingTrophies"><article *ngFor="let trophy of trophies"><b>🏆</b><strong>{{ trophy.competitionName }}</strong><span>{{ trophy.teamName }} · Season {{ trophy.seasonNumber }}</span></article></div>
+      <div class="honour-grid" *ngIf="!loadingTrophies"><article *ngFor="let trophy of trophies"><b>🏆</b><strong>{{ trophy.competitionName }}</strong><span><a *ngIf="trophy.teamId" [routerLink]="['/team', trophy.teamId]">{{ trophy.teamName }}</a><ng-container *ngIf="!trophy.teamId">{{ trophy.teamName }}</ng-container> · Season {{ trophy.seasonNumber }}</span></article></div>
       <div class="empty-line" *ngIf="!loadingTrophies && !trophies.length">No team trophies recorded yet.</div>
     </article>
   </section>

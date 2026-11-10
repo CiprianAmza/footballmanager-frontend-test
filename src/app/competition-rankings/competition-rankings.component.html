@@ -10,6 +10,7 @@
   </header>
 
   <nav class="cr-nav" aria-label="Ranking pages">
+    <a routerLink="/value-rankings">Performance <small>manager & player value</small></a>
     <a routerLink="/competition-rankings/competitions" [class.active]="section === 'competitions'" [attr.aria-current]="section === 'competitions' ? 'page' : null">Competitions <small>crowds & wages</small></a>
     <a routerLink="/competition-rankings/clubs" [class.active]="section === 'clubs'" [attr.aria-current]="section === 'clubs' ? 'page' : null">Clubs <small>supporters & payroll</small></a>
     <a routerLink="/competition-rankings/players" [class.active]="section === 'players'" [attr.aria-current]="section === 'players' ? 'page' : null">Players <small>highest wages</small></a>
@@ -82,7 +83,7 @@
 
     <section *ngIf="section === 'players'" class="cr-content">
       <div class="cr-player-caption"><span>TOP 100 CONTRACTS</span><p>Active players at clubs, ranked by their current wage.</p></div>
-      <div class="cr-leader" *ngIf="featuredPlayer as leader"><div class="cr-medal">01</div><div><span>FIRST IN CURRENT SORT</span><a [routerLink]="['/player', leader.playerId]">{{ leader.playerName }}</a><small>{{ leader.teamName }} · {{ leader.position }}</small></div><strong>{{ playerLeadValue(leader) }}</strong></div>
+      <div class="cr-leader" *ngIf="featuredPlayer as leader"><div class="cr-medal">01</div><div><span>FIRST IN CURRENT SORT</span><a [routerLink]="['/player', leader.playerId]">{{ leader.playerName }}</a><small><a [routerLink]="['/team', leader.teamId]">{{ leader.teamName }}</a> · {{ leader.position }}</small></div><strong>{{ playerLeadValue(leader) }}</strong></div>
       <div class="cr-table-wrap"><table><thead><tr>
         <th>#</th>
         <th><button type="button" (click)="sortPlayers('playerName')">Player {{ playerArrow('playerName') }}</button></th>

@@ -24,7 +24,7 @@ type PlayerPrimaryTab = 'overview' | 'stats' | 'contract' | 'history' | 'analyti
   standalone: true,
   imports: [SharedModule],
   templateUrl: './player2.component.html',
-  styleUrls: ['./player2.component.css']
+  styleUrls: ['./player2.component.css', './player2-market.css']
 })
 export class Player2Component extends PlayerComponent implements OnInit, OnDestroy {
   private readonly classicSubscriptions = new Subscription();

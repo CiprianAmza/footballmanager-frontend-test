@@ -4,6 +4,7 @@
     <a routerLink="/awards/global" routerLinkActive="active">Global awards</a>
     <a routerLink="/awards/golden-boot">Golden Boot history</a>
     <a routerLink="/awards/ballon-dor">Ballon d'Or history</a>
+    <a routerLink="/value-rankings">Performance ranking</a>
   </div>
 
   <div class="award-state" *ngIf="loading">Loading the honours archive...</div>
@@ -38,17 +39,17 @@
           </div>
           <div class="award-pitch">
             <div class="half-line"></div><div class="centre-circle"></div>
-            <a *ngFor="let winner of award.winners" class="xi-player"
-               [ngStyle]="position(winner.selectionSlot)" [routerLink]="['/player', winner.playerId]">
+            <div *ngFor="let winner of award.winners" class="xi-player"
+               [ngStyle]="position(winner.selectionSlot)">
               <app-player-face [size]="48" [baseFaceId]="winner.baseFaceId" [skinTone]="winner.skinTone"
                                [hairStyle]="winner.hairStyle" [hairColor]="winner.hairColor"
                                [eyeColor]="winner.eyeColor" [faceShape]="winner.faceShape"
                                [noseShape]="winner.noseShape" [eyeShape]="winner.eyeShape"
                                [mouthShape]="winner.mouthShape" [browShape]="winner.browShape"
                                [species]="winner.species || 'human'"></app-player-face>
-              <strong>{{ winner.selectionSlot }} · {{ winner.playerName }}</strong>
-              <small>{{ winner.teamName }}</small>
-            </a>
+              <strong>{{ winner.selectionSlot }} · <a [routerLink]="['/player', winner.playerId]">{{ winner.playerName }}</a></strong>
+              <small><a [routerLink]="['/team', winner.teamId]">{{ winner.teamName }}</a></small>
+            </div>
           </div>
         </article>
 
@@ -70,7 +71,7 @@
                 <a *ngIf="isManager(award)" [routerLink]="['/manager-profile', winner.playerId]">{{ winner.playerName }}</a>
                 <span><app-team-crest [teamId]="winner.teamId" [teamName]="winner.teamName"
                                       [color1]="winner.teamColor1" [color2]="winner.teamColor2"
-                                      [size]="28"></app-team-crest>{{ winner.teamName }}</span>
+                                      [size]="28"></app-team-crest><a [routerLink]="['/team', winner.teamId]">{{ winner.teamName }}</a></span>
               </div>
             </div>
             <div class="winning-value">{{ winner.value }}</div>

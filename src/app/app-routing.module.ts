@@ -71,7 +71,7 @@ export function worldFeatureMatcher(segments: UrlSegment[]): UrlMatchResult | nu
   return prefixMatcher([
     'comp', 'competition', 'competition-view', 'rounds', 'competitionoveriew', 'competition-overview',
     'top3-history', 'mediaPrediction', 'media-prediction', 'hall-of-fame', 'stats',
-    'competition-list', 'competition-rankings', 'competitions2', 'competitions3', 'competitions-world',
+    'competition-list', 'competition-rankings', 'value-rankings', 'competitions2', 'competitions3', 'competitions-world',
     'coefficients', 'coefficients2', 'coefficients3', 'competition-money',
     'european-rounds', 'manager-profile', 'all-time-champions', 'overview', 'awards',
     'competition-records'
@@ -95,7 +95,12 @@ export const APP_ROUTES: Routes = [
   { path: 'boardroom/assets/:humanId', component: BoardroomAssetsComponent, canActivate: [LegacyBoardroomGuard] },
   { path: 'boardroom/ownership/:humanId', component: BoardroomOwnershipComponent, canActivate: [LegacyBoardroomGuard] },
   { path: 'boardroom/ownership', component: BoardroomOwnershipComponent, canActivate: [LegacyBoardroomGuard] },
-  { path: 'home', component: HomeComponent },
+  {
+    path: 'home',
+    loadComponent: () => import('./home-today/home-today.component').then(module => module.HomeTodayComponent),
+    title: 'Today · Manager briefing'
+  },
+  { path: 'home-classic', component: HomeComponent },
   { path: 'home2', component: Home2Component },
   { path: 'home3', component: Home3Component },
   {
@@ -143,7 +148,8 @@ export const APP_ROUTES: Routes = [
     loadComponent: () => import('./ui-comparison/ui-comparison.component').then(module => module.UiComparisonComponent),
     title: 'UI comparison lab'
   },
-  { path: 'inbox', component: InboxComponent },
+  { path: 'inbox', component: Inbox2Component, title: 'Inbox' },
+  { path: 'inbox-classic', component: InboxComponent },
   { path: 'inbox2', component: Inbox2Component },
   { path: 'inbox3', component: Inbox3Component },
   { path: 'social-feed', component: SocialFeedComponent, title: 'Social Feed' },

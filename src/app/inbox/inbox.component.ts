@@ -55,7 +55,7 @@ export class InboxComponent implements OnInit {
     'TRADER_ADVISER_HIRED', 'TRADER_ADVICE_AVAILABLE', 'CONTROLLED_CLUB_MATCH_RESULT'];
 
   constructor(
-    private http: HttpClient,
+    protected http: HttpClient,
     public teamService: TeamService,
     public careerService: CareerService,
     public authService: AuthService

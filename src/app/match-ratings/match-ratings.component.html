@@ -10,7 +10,7 @@
 
   <div class="mr-grid" *ngIf="data && !loading && hasLineups()">
     <section class="mr-team" *ngFor="let side of sides" [class.away-side]="side.side === 'away'">
-      <h3 class="mr-team-name">{{ side.name }}</h3>
+      <h3 class="mr-team-name"><a [routerLink]="['/team', side.teamId]">{{ side.name }}</a></h3>
 
       <div class="team-pitch">
         <div class="pitch-halfway"></div>

@@ -108,7 +108,7 @@
                             [style.color]="ratingTiers.tierColor(cell.player.rating)">{{ cell.player.rating | number:'1.0-0' }}</span>
                   </div>
                   <div class="player-tag">
-                      <div class="tag-name">{{ cell.player.name }}</div>
+                      <div class="tag-name"><a [routerLink]="['/player', cell.player.id]" (click)="$event.stopPropagation()">{{ cell.player.name }}</a></div>
                       <div class="tag-pos">{{ cell.player.position }}</div>
                   </div>
                </div>
@@ -133,7 +133,7 @@
                    
                    <div *ngIf="sub.player" class="pitch-player mini" draggable="true" (dragstart)="drag($event, sub.player)">
                       <div class="shirt-icon gray"></div>
-                      <div class="player-tag small">{{ sub.player.name }}</div>
+                      <div class="player-tag small"><a [routerLink]="['/player', sub.player.id]" (click)="$event.stopPropagation()">{{ sub.player.name }}</a></div>
                    </div>
                    <div *ngIf="!sub.player" class="empty-sub">S{{i+1}}</div>
               </div>
@@ -163,7 +163,7 @@
               <td class="status-col">
                   <span *ngIf="isPlayerSelected(player.id)" class="picked-dot">✔</span>
               </td>
-              <td class="name-cell" (click)="openPlayerCard(player.id)">{{ player.name }}</td>
+              <td class="name-cell" (click)="openPlayerCard(player.id)"><a [routerLink]="['/player', player.id]" (click)="$event.stopPropagation()">{{ player.name }}</a></td>
               <td class="pos-cell">{{ player.position }}</td>
 
               <!-- Rating colored by global percentile tier — see ratingColor pipe -->
@@ -218,7 +218,7 @@
         </div>
         <div class="card-team" *ngIf="selectedCard.teamName"
              [style.color]="selectedCard.teamColor1 || '#aaa'">
-          {{ selectedCard.teamName }}
+          <a *ngIf="selectedCard.teamId" [routerLink]="['/team', selectedCard.teamId]">{{ selectedCard.teamName }}</a><ng-container *ngIf="!selectedCard.teamId">{{ selectedCard.teamName }}</ng-container>
         </div>
       </div>
 

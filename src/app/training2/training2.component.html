@@ -201,7 +201,7 @@
 
       <div class="drawer-detail" *ngIf="selectedPlayer as player">
         <div class="dd-head">
-          <span class="dd-name">{{ player.name }}</span>
+          <span class="dd-name"><a [routerLink]="['/player', player.id]">{{ player.name }}</a></span>
           <span class="dd-gain">+{{ plan.projectedGain(player) }} / month</span>
         </div>
 

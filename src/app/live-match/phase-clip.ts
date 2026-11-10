@@ -160,6 +160,7 @@ export function phaseToClip(
       shooterTeamId: phase?.teamId, shooterAttacksRight: !!phase?.attackingRight
     };
   }
+  const authored = phase.strategy === 'AUTHORED';
 
   // Live position of every slot — seeded from where the player ACTUALLY was
   // on the last rendered frame (clip-to-clip continuity: no teleporting back
@@ -251,7 +252,7 @@ export function phaseToClip(
     // spot he'd have to sprint half a pitch for. The chain stays coherent
     // because the next action is forced to start from this new endpoint.
     const travels = Math.hypot(raw.endX - raw.x, raw.endY - raw.y) > 0.8;
-    if (travels && raw.targetPlayerId) {
+    if (!authored && travels && raw.targetPlayerId) {
       const receiver = positions.get(raw.targetPlayerId);
       if (receiver) {
         const dx = raw.endX - receiver.x;
@@ -269,7 +270,7 @@ export function phaseToClip(
         }
       }
     }
-    let action = reassignActor(raw, positions, slots, names);
+    let action = authored ? raw : reassignActor(raw, positions, slots, names);
     prevEnd = { x: action.endX, y: action.endY };
 
     // Broadcast grammar: an out-of-play restart is a scene CUT — the ball is
@@ -302,8 +303,9 @@ export function phaseToClip(
     // stays at his feet, so it moves at player sprint speed, not ball speed).
     const isCarry = action.type === 'DRIBBLE' || action.type === 'SPRINT_DRIBBLE'
       || SKILL_MOVES.has(action.type);
+    const carryMsPerUnit = action.type === 'DRIBBLE' ? 145 : 105;
     const minDurationMs = stationaryAction ? 0
-      : isCarry ? Math.round(travelDist * 105)
+      : isCarry ? Math.round(travelDist * carryMsPerUnit)
       : Math.round(300 + 18 * travelDist);
     let frameCount = Math.max(2,
       Math.round(Math.max(action.durationMs || 600, minDurationMs) / FRAME_MS));
@@ -510,7 +512,7 @@ export function phaseToClip(
     runHold(holdCap);
     // Second chance: if the designated man STILL isn't there, football's law
     // applies — whoever is closest plays it, and we wait the last stride.
-    if (!NO_ACTOR_SWAP.has(action.type)) {
+    if (!authored && !NO_ACTOR_SWAP.has(action.type)) {
       const pos = positions.get(action.playerId);
       const distNow = pos
         ? Math.hypot(pos.x - action.x, pos.y - action.y) : Infinity;

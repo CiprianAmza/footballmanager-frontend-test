@@ -31,7 +31,7 @@
             <a [routerLink]="['/player', player.playerId]" class="fm-link">{{ player.playerName }}</a>
           </td>
           <td class="center"><span class="pos-pill">{{ player.position }}</span></td>
-          <td>{{ player.teamName }}</td>
+          <td><a *ngIf="player.teamId" [routerLink]="['/team', player.teamId]" class="fm-link">{{ player.teamName }}</a><span *ngIf="!player.teamId">{{ player.teamName }}</span></td>
           <td class="center">{{ player.age }}</td>
           <td class="center rating-val"
               [style.color]="player.rating | ratingColor"

@@ -31,8 +31,8 @@ import { Training4Component } from '../../training4/training4.component';
 
 const routes: Routes = [
   { path: 'squad', component: SquadComponent, title: 'Squad' },
-  { path: 'squad2/:teamId', component: Squad2Component, title: 'Squad lab 2' },
-  { path: 'squad2', component: Squad2Component, title: 'Squad lab 2' },
+  { path: 'squad2/:teamId', component: Squad2Component, title: 'Squad' },
+  { path: 'squad2', component: Squad2Component, title: 'Squad' },
   { path: 'squad3/:teamId', component: Squad3Component, title: 'Squad lab 3' },
   { path: 'squad3', component: Squad3Component, title: 'Squad lab 3' },
   { path: 'player/:playerId', component: PlayerComponent, title: 'Player' },

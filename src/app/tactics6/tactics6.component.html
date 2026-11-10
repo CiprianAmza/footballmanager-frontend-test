@@ -36,7 +36,7 @@
       <div class="roster-head"><span>POS</span><span>PLAYER</span><span>ROLE / DUTY</span><span>ABILITY</span><span>CON</span><span>MOR</span><span>APPS</span><span>G+A</span><span>FORM</span></div>
       <div class="roster-scroll">
         <div class="roster-row" *ngFor="let player of visibleRoster" [class.selected]="isPlayerSelected(player.id)" [attr.draggable]="canEdit && !isManagerChairmanPlayerLocked(player.id) ? 'true' : null" (dragstart)="drag($event, player)">
-          <span><b [attr.data-position]="player.position">{{ player.position }}</b></span><span><strong>{{ player.name }}</strong><small>{{ player.age }} yrs · {{ player.currentStatus || (isPlayerSelected(player.id) ? 'Selected' : 'Drag to pitch') }}</small><em *ngIf="playerConcern(player)">{{ playerConcern(player).message }}</em></span>
+          <span><b [attr.data-position]="player.position">{{ player.position }}</b></span><span><strong><a [routerLink]="['/player', player.id]">{{ player.name }}</a></strong><small>{{ player.age }} yrs · {{ player.currentStatus || (isPlayerSelected(player.id) ? 'Selected' : 'Drag to pitch') }}</small><em *ngIf="playerConcern(player)">{{ playerConcern(player).message }}</em></span>
           <button class="role-cell" type="button" [disabled]="!isPlayerSelected(player.id) || !canEdit" (click)="editPlayerRole(player, $event)">{{ playerRole(player) }}</button>
           <span class="ability"><i><b [style.width.%]="bar(player.rating)"></b></i><small>{{ player.rating | number:'1.1-1' }}</small></span><span [class.low]="condition(player) < 70">{{ condition(player) | number:'1.0-0' }}%</span><span [class.low]="morale(player) < 55">{{ morale(player) | number:'1.0-0' }}%</span><span>{{ player.seasonAppearances || 0 }}</span><span>{{ player.seasonGoals || 0 }}+{{ player.seasonAssists || 0 }}</span><span class="rating">{{ player.lastFiveAverageRating ? (player.lastFiveAverageRating | number:'1.2-2') : '—' }}</span>
         </div>
@@ -50,7 +50,7 @@
         <div class="pitch-slots">
           <div class="pitch-slot" *ngFor="let cell of fieldPositions" [class.allowed]="allowedIndexes.includes(cell.positionIndex)" [style.transform]="'translate(' + cellWidthShift(cell.positionIndex) + '%, ' + cellDefLineShift(cell.positionIndex) + '%)'" (dragover)="allowDrop($event)" (drop)="drop($event, cell.positionIndex)" (contextmenu)="onRightClick(cell.positionIndex, $event)">
             <div class="player-token" *ngIf="cell.player" [class.locked]="isSlotLocked(cell.positionIndex, cell.player.position)" [attr.draggable]="canEdit && !isSlotLocked(cell.positionIndex, cell.player.position) ? 'true' : null" (dragstart)="drag($event, cell.player)" (click)="openPlayerPanel(cell, $event)">
-              <b>{{ cell.player.rating | number:'1.0-0' }}</b><span>{{ cell.player.name }}</span><small>{{ assignedRole(cell) }}</small><i *ngIf="cell.shadow">SHADOW</i>
+              <b>{{ cell.player.rating | number:'1.0-0' }}</b><span><a [routerLink]="['/player', cell.player.id]" (click)="$event.stopPropagation()">{{ cell.player.name }}</a></span><small>{{ assignedRole(cell) }}</small><i *ngIf="cell.shadow">SHADOW</i>
             </div>
             <span class="empty-slot" *ngIf="!cell.player && allowedIndexes.includes(cell.positionIndex)">+</span>
           </div>
@@ -61,7 +61,7 @@
     <aside class="bench-panel">
       <header><span>SUBSTITUTES</span><strong>{{ subsPicked }}/7</strong></header>
       <div class="bench-slot" *ngFor="let slot of substitutes; let index = index" (dragover)="allowDrop($event)" (drop)="dropSubstitute($event, index)">
-        <span class="shirt">{{ slot.player ? index + 12 : '+' }}</span><div *ngIf="slot.player"><strong>{{ slot.player.name }}</strong><small>{{ slot.player.position }} · {{ slot.player.rating | number:'1.2-2' }}</small></div><em *ngIf="!slot.player">Empty slot</em>
+        <span class="shirt">{{ slot.player ? index + 12 : '+' }}</span><div *ngIf="slot.player"><strong><a [routerLink]="['/player', slot.player.id]">{{ slot.player.name }}</a></strong><small>{{ slot.player.position }} · {{ slot.player.rating | number:'1.2-2' }}</small></div><em *ngIf="!slot.player">Empty slot</em>
       </div>
       <section class="match-plan"><span>MATCH PLAN</span><div><small>In possession</small><strong>{{ selectedOptions.possession }}</strong></div><div><small>Tempo</small><strong>{{ selectedOptions.tempo }}</strong></div><div><small>Defensive line</small><strong>{{ selectedOptions.defensiveLine }}</strong></div><div><small>Transition</small><strong>{{ selectedOptions.transition }}</strong></div></section>
     </aside>

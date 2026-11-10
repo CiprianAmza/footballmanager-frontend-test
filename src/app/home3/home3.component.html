@@ -2,13 +2,13 @@
   <header class="cockpit-header">
     <div class="club-block">
       <app-team-crest [teamId]="teamService.teamId" [teamName]="teamName" [size]="58"></app-team-crest>
-      <div><span>Season {{ teamService.currentSeason }} · Operations room</span><h1>{{ teamName || 'Club cockpit' }}</h1></div>
+      <div><span>Season {{ teamService.currentSeason }} · Operations room</span><h1><a [routerLink]="teamService.teamId ? ['/team', teamService.teamId] : null">{{ teamName || 'Club cockpit' }}</a></h1></div>
     </div>
     <div class="clock-block">
       <strong>{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }}</strong>
       <span>{{ teamService.currentPhase }}</span>
     </div>
-    <nav class="variant-nav"><a routerLink="/home">Classic</a><a routerLink="/home2">Desk</a><a class="active" routerLink="/home3">Cockpit</a></nav>
+    <nav class="variant-nav"><a routerLink="/home">Today</a><a routerLink="/home-classic">Classic</a><a routerLink="/home2">Desk</a><a class="active" routerLink="/home3">Cockpit</a></nav>
   </header>
 
   <section class="status-ribbon" *ngIf="managerFired">
@@ -40,9 +40,9 @@
       <ng-container *ngIf="matchPreview; else fallbackMatch">
         <div class="match-meta"><span>{{ matchPreview.competitionName }}</span><b>DAY {{ matchPreview.round }}</b></div>
         <div class="match-line">
-          <div class="side home"><app-team-crest [teamId]="matchPreview.homeTeamId" [teamName]="matchPreview.homeTeamName" [size]="54"></app-team-crest><strong>{{ matchPreview.homeTeamName }}</strong><small>#{{ matchPreview.homeLeaguePosition || '—' }}</small></div>
+          <div class="side home"><app-team-crest [teamId]="matchPreview.homeTeamId" [teamName]="matchPreview.homeTeamName" [size]="54"></app-team-crest><strong><a [routerLink]="['/team', matchPreview.homeTeamId]">{{ matchPreview.homeTeamName }}</a></strong><small>#{{ matchPreview.homeLeaguePosition || '—' }}</small></div>
           <div class="match-signal"><span>VS</span><b [attr.data-tone]="predictionTone">{{ matchPreview.prediction || 'EVEN' }}</b></div>
-          <div class="side away"><app-team-crest [teamId]="matchPreview.awayTeamId" [teamName]="matchPreview.awayTeamName" [size]="54"></app-team-crest><strong>{{ matchPreview.awayTeamName }}</strong><small>#{{ matchPreview.awayLeaguePosition || '—' }}</small></div>
+          <div class="side away"><app-team-crest [teamId]="matchPreview.awayTeamId" [teamName]="matchPreview.awayTeamName" [size]="54"></app-team-crest><strong><a [routerLink]="['/team', matchPreview.awayTeamId]">{{ matchPreview.awayTeamName }}</a></strong><small>#{{ matchPreview.awayLeaguePosition || '—' }}</small></div>
         </div>
         <div class="comparison-grid">
           <span>{{ matchPreview.homePowerRating }}</span><div><i [style.width.%]="matchPreview.homePowerRating / (matchPreview.homePowerRating + matchPreview.awayPowerRating) * 100"></i></div><span>{{ matchPreview.awayPowerRating }}</span>

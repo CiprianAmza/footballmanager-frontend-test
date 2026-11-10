@@ -27,19 +27,6 @@
 
     <div class="title-section">
       <h1>{{ club.name | uppercase }}</h1>
-      <div class="subtitle membership-summary" *ngIf="hasActiveMemberships; else noMembershipHeader">
-        <a *ngFor="let competition of domesticLeagues"
-          [routerLink]="competitionLink(competition)">{{ competition.name || 'Unnamed competition' }}</a>
-        <a *ngFor="let competition of domesticCups"
-          [routerLink]="competitionLink(competition)">{{ competition.name || 'Unnamed competition' }}</a>
-        <a *ngFor="let competition of europeanCompetitions"
-          [routerLink]="competitionLink(competition)">{{ competition.name || 'Unnamed competition' }}</a>
-        <a *ngFor="let competition of otherCompetitions"
-          [routerLink]="competitionLink(competition)">{{ competition.name || 'Unnamed competition' }}</a>
-      </div>
-      <ng-template #noMembershipHeader>
-        <div class="subtitle">No active competition membership</div>
-      </ng-template>
       <span class="id-tag">ID: {{ club.id }}</span>
     </div>
 

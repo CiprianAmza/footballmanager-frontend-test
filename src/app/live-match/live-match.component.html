@@ -47,14 +47,14 @@
     <!-- Scoreboard -->
     <div class="lm-scoreboard">
       <div class="lm-team lm-home">
-        <span class="lm-team-name">{{ liveMatchData.homeTeamName }}</span>
+        <span class="lm-team-name"><a [routerLink]="['/team', liveMatchData.homeTeamId]">{{ liveMatchData.homeTeamName }}</a></span>
       </div>
       <div class="lm-score-box">
         <span class="lm-score">{{ scoreboardHomeScore }} - {{ scoreboardAwayScore }}</span>
         <span class="lm-minute" [class.lm-minute-et]="syntheticPhase !== 'none'">{{ scoreboardMinuteLabel }}</span>
       </div>
       <div class="lm-team lm-away">
-        <span class="lm-team-name">{{ liveMatchData.awayTeamName }}</span>
+        <span class="lm-team-name"><a [routerLink]="['/team', liveMatchData.awayTeamId]">{{ liveMatchData.awayTeamName }}</a></span>
       </div>
     </div>
 
@@ -269,7 +269,7 @@
              [class.lm-key-event-miss]="e.eventType === 'shot_wide' || e.eventType === 'shot_saved'">
           <span class="lm-key-event-minute">{{ formatMatchMinute(e.minute, liveMatchData.firstHalfStoppage) }}</span>
           <span class="lm-key-event-icon">{{ keyEventIcon(e.eventType, e.commentary) }}</span>
-          <span class="lm-key-event-team">{{ e.teamName }}</span>
+          <span class="lm-key-event-team"><a *ngIf="e.teamId" [routerLink]="['/team', e.teamId]">{{ e.teamName }}</a><ng-container *ngIf="!e.teamId">{{ e.teamName }}</ng-container></span>
           <span class="lm-key-event-text">{{ e.commentary }}</span>
           <button class="lm-replay-btn" type="button"
                   *ngIf="pitchPresentation !== 'zoom' && hasReplay(e)"
@@ -345,9 +345,9 @@
     <div class="lineup-banner-top">
       <span class="lineup-title">STARTING LINE UP</span>
       <span class="lineup-vs">
-        <span class="lineup-vs-home">{{ lineupPreviewData.homeTeamName }}</span>
+        <span class="lineup-vs-home"><a [routerLink]="['/team', lineupPreviewData.homeTeamId]" (click)="$event.stopPropagation()">{{ lineupPreviewData.homeTeamName }}</a></span>
         <span class="lineup-vs-sep">vs</span>
-        <span class="lineup-vs-away">{{ lineupPreviewData.awayTeamName }}</span>
+        <span class="lineup-vs-away"><a [routerLink]="['/team', lineupPreviewData.awayTeamId]" (click)="$event.stopPropagation()">{{ lineupPreviewData.awayTeamName }}</a></span>
       </span>
     </div>
 
@@ -356,7 +356,7 @@
 
       <!-- Home label strip (top edge of the card, outside the pitch markings) -->
       <div class="lineup-team-strip lineup-team-strip-home">
-        <span class="lineup-team-strip-name">{{ lineupPreviewData.homeTeamName }}</span>
+        <span class="lineup-team-strip-name"><a [routerLink]="['/team', lineupPreviewData.homeTeamId]" (click)="$event.stopPropagation()">{{ lineupPreviewData.homeTeamName }}</a></span>
         <span class="lineup-team-strip-formation">{{ formationOf(lineupPreviewData.homeTeamId) }}</span>
       </div>
 
@@ -417,7 +417,7 @@
       <!-- Away label strip (bottom edge of the card) -->
       <div class="lineup-team-strip lineup-team-strip-away">
         <span class="lineup-team-strip-formation">{{ formationOf(lineupPreviewData.awayTeamId) }}</span>
-        <span class="lineup-team-strip-name">{{ lineupPreviewData.awayTeamName }}</span>
+        <span class="lineup-team-strip-name"><a [routerLink]="['/team', lineupPreviewData.awayTeamId]" (click)="$event.stopPropagation()">{{ lineupPreviewData.awayTeamName }}</a></span>
       </div>
     </div>
 

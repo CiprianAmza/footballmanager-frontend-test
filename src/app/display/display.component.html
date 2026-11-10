@@ -17,8 +17,8 @@
         </thead>
         <tbody>
             <tr *ngFor="let match of matchesCup">
-            <td>{{ match.teamName1 }}</td>
-            <td>{{ match.teamName2 }}</td>
+            <td><a [routerLink]="['/team', match.team1Id]">{{ match.teamName1 }}</a></td>
+            <td><a [routerLink]="['/team', match.team2Id]">{{ match.teamName2 }}</a></td>
             <td>{{ match.score }}</td>
             </tr>
         </tbody>

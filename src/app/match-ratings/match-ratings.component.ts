@@ -17,7 +17,7 @@ interface MatchLineupRating {
   homeFormation: string; awayFormation: string;
   homeLineup: PlayerLine[]; awayLineup: PlayerLine[];
 }
-interface TeamSide { name: string; formation: string; lineup: PlayerLine[]; side: 'home' | 'away'; }
+interface TeamSide { teamId: number; name: string; formation: string; lineup: PlayerLine[]; side: 'home' | 'away'; }
 
 @Component({
   selector: 'app-match-ratings',
@@ -66,8 +66,8 @@ export class MatchRatingsComponent implements OnInit, OnChanges {
       next: (d) => {
         this.data = d;
         this.sides = [
-          { name: d.homeTeamName, formation: d.homeFormation, lineup: d.homeLineup || [], side: 'home' },
-          { name: d.awayTeamName, formation: d.awayFormation, lineup: d.awayLineup || [], side: 'away' }
+          { teamId: d.homeTeamId, name: d.homeTeamName, formation: d.homeFormation, lineup: d.homeLineup || [], side: 'home' },
+          { teamId: d.awayTeamId, name: d.awayTeamName, formation: d.awayFormation, lineup: d.awayLineup || [], side: 'away' }
         ];
         this.loading = false;
       },

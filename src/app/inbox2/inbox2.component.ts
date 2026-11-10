@@ -5,8 +5,10 @@ import { InboxComponent, ManagerInbox } from '../inbox/inbox.component';
 import { TeamService } from '../services/team.service';
 import { CareerService } from '../services/career.service';
 import { AuthService } from '../services/auth.service';
+import { urlApp } from '../app.component';
 
-type InboxWorkspaceView = 'priority' | 'unread' | 'all' | 'media' | 'transfers' | 'club';
+type InboxWorkspaceView = 'priority' | 'unread' | 'all';
+type InboxTopic = 'all' | 'media' | 'transfers' | 'club';
 
 @Component({
   selector: 'app-inbox2',
@@ -17,6 +19,7 @@ export class Inbox2Component extends InboxComponent {
   @ViewChild('messageSearch') messageSearch?: ElementRef<HTMLInputElement>;
 
   workspaceView: InboxWorkspaceView = 'priority';
+  topicFilter: InboxTopic = 'all';
   searchText = '';
 
   private readonly decisionCategories = new Set([
@@ -35,19 +38,56 @@ export class Inbox2Component extends InboxComponent {
     super(http, teamService, careerService, authService);
   }
 
+  override loadMessages(): void {
+    this.loading = true;
+    this.error = '';
+    this.http.get<ManagerInbox[]>(`${urlApp}/inbox/me`).subscribe({
+      next: messages => {
+        const selectedId = this.selectedMessage?.id;
+        this.messages = messages;
+        this.selectedMessage = messages.find(message => message.id === selectedId) || null;
+        this.loading = false;
+      },
+      error: () => {
+        this.error = 'Messages could not be loaded.';
+        this.loading = false;
+      }
+    });
+  }
+
+  override selectMessage(message: ManagerInbox): void {
+    // Keep the message in the Unread folder until the manager explicitly marks it read.
+    this.selectedMessage = message;
+  }
+
   get visibleMessages(): ManagerInbox[] {
     const query = this.searchText.trim().toLowerCase();
     return this.messages.filter(message => {
       if (this.workspaceView === 'priority' && !this.isDecision(message)) return false;
       if (this.workspaceView === 'unread' && message.isRead) return false;
-      if (this.workspaceView === 'media' && !this.isMedia(message)) return false;
-      if (this.workspaceView === 'transfers' && !['transfer', 'TRANSFER_RUMOUR', 'JOB_OFFER', 'CAREER'].includes(message.category)) return false;
-      if (this.workspaceView === 'club' && !['board', 'discipline', 'morale', 'contract', 'facility', 'YOUTH_ACADEMY', 'AWARDS'].includes(message.category)) return false;
+      if (this.topicFilter === 'media' && !this.isMedia(message)) return false;
+      if (this.topicFilter === 'transfers' && !['transfer', 'TRANSFER_RUMOUR', 'JOB_OFFER', 'CAREER'].includes(message.category)) return false;
+      if (this.topicFilter === 'club' && !['board', 'discipline', 'morale', 'contract', 'facility', 'YOUTH_ACADEMY', 'AWARDS'].includes(message.category)) return false;
       return !query || message.title.toLowerCase().includes(query)
         || message.content.toLowerCase().includes(query)
         || this.getCategoryLabel(message.category).toLowerCase().includes(query);
-    }).sort((left, right) => this.priorityScore(right) - this.priorityScore(left)
-      || Number(right.createdAt) - Number(left.createdAt));
+    }).sort((left, right) => this.workspaceView === 'priority'
+      ? this.priorityScore(right) - this.priorityScore(left) || Number(right.createdAt) - Number(left.createdAt)
+      : Number(right.createdAt) - Number(left.createdAt));
+  }
+
+  get selectedVisibleMessage(): ManagerInbox | null {
+    return this.visibleMessages.find(message => message.id === this.selectedMessage?.id) || null;
+  }
+
+  get importantCount(): number { return this.messages.filter(message => this.isDecision(message)).length; }
+
+  messagePreview(message: ManagerInbox): string {
+    return this.messageBody(message).slice(0, 120);
+  }
+
+  messageBody(message: ManagerInbox): string {
+    return message.content.replace(/OFFER_ID:\d+/g, '').trim();
   }
 
   get decisionCount(): number {
@@ -64,10 +104,12 @@ export class Inbox2Component extends InboxComponent {
 
   setWorkspaceView(view: InboxWorkspaceView): void {
     this.workspaceView = view;
-    const visible = this.visibleMessages;
-    if (visible.length && !visible.some(message => message.id === this.selectedMessage?.id)) {
-      this.selectMessage(visible[0]);
-    }
+    if (!this.selectedVisibleMessage) this.selectedMessage = null;
+  }
+
+  setTopic(topic: InboxTopic): void {
+    this.topicFilter = topic;
+    if (!this.selectedVisibleMessage) this.selectedMessage = null;
   }
 
   isDecision(message: ManagerInbox): boolean {

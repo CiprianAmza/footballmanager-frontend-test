@@ -1,1 +1,1 @@
-Frontend part of the FootballManagerSimulator project. Currently not deployed.
+Frontend for Argus Football World. Currently not deployed.

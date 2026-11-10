@@ -19,7 +19,7 @@ const ROUTE_LABELS: Record<string, string> = {
   styles: [`.fm-visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}`]
 })
 export class RouteSemanticHeaderComponent implements AfterViewInit, OnDestroy {
-  pageTitle = 'Football Manager';
+  pageTitle = 'Argus Football World';
   announcement = '';
   showFallback = false;
   private readonly sub = new Subscription();
@@ -51,6 +51,6 @@ export class RouteSemanticHeaderComponent implements AfterViewInit, OnDestroy {
   private resolveTitle(): string {
     const segment = this.router.url.split('?')[0].split('/').filter(Boolean)[0] || 'home';
     if (ROUTE_LABELS[segment]) return ROUTE_LABELS[segment];
-    return segment.replace(/\d+$/, '').replace(/-/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()) || 'Football Manager';
+    return segment.replace(/\d+$/, '').replace(/-/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase()) || 'Argus Football World';
   }
 }

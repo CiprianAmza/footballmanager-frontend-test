@@ -35,7 +35,7 @@
         (contextmenu)="onRightClick(i, $event)"
         [ngClass]="{'hidden-position': !allowedIndexes.includes(i)}">
         <div *ngIf="position.player" class="player-slot" (click)="openRoleSelector(position)">
-          <span class="slot-name">{{ position.player.name }}</span>
+          <span class="slot-name"><a [routerLink]="['/player', position.player.id]" (click)="$event.stopPropagation()">{{ position.player.name }}</a></span>
           <span class="slot-info">{{ position.player.position }} |
             <span [style.color]="position.player.rating | ratingColor" [style.font-weight]="700">{{ position.player.rating }}&#11088;</span>
           </span>
@@ -50,7 +50,7 @@
         <!-- Instructions Popup -->
         <div class="instr-popup" *ngIf="activeInstructionsSlot === position && position.player" (click)="$event.stopPropagation()">
           <div class="role-popup-header">
-            <span>{{ position.player.name }} - Instructions</span>
+            <span><a [routerLink]="['/player', position.player.id]">{{ position.player.name }}</a> - Instructions</span>
             <button class="role-popup-close" (click)="closeInstructionsPanel()">&#x2715;</button>
           </div>
           <div *ngIf="loadingInstructions" class="role-loading">Loading...</div>
@@ -71,7 +71,7 @@
         <!-- Role Selector Popup -->
         <div class="role-popup" *ngIf="activeRoleSlot === position && position.player" (click)="$event.stopPropagation()">
           <div class="role-popup-header">
-            <span>{{ position.player.name }} - Roles</span>
+            <span><a [routerLink]="['/player', position.player.id]">{{ position.player.name }}</a> - Roles</span>
             <button class="role-popup-close" (click)="closeRoleSelector()">&#x2715;</button>
           </div>
           <div *ngIf="loadingRoles" class="role-loading">Loading roles...</div>
@@ -105,7 +105,7 @@
           (drop)="dropSubstitute($event, i)"
           (contextmenu)="onRightClickSub(i, $event)">
           <span [ngStyle]="{ 'color': position.player ? 'black' : 'red' }">
-            {{ position.player ? position.player.name + ' | ' + position.player.position + ' | ' + position.player.rating + '⭐ | ' + position.player.age + ' ani' : '' }}
+            <ng-container *ngIf="position.player"><a [routerLink]="['/player', position.player.id]">{{ position.player.name }}</a> | {{ position.player.position }} | {{ position.player.rating }}⭐ | {{ position.player.age }} ani</ng-container>
           </span>          
         </div>
       </div>
@@ -231,4 +231,3 @@
     </div>
   </div>
 </div>
-

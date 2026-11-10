@@ -121,7 +121,7 @@
                 <span *ngIf="player.transferredThisSeason && !player.loaned" class="scout-market-badge transferred">NEW</span>
                 <span class="scout-mini-card" role="tooltip">
                   <span class="scout-card-head"><strong>{{ player.name }}</strong><b>{{ player.rating | fmRating }}</b></span>
-                  <span class="scout-card-sub">{{ player.position }} · {{ player.teamName || 'Free Agent' }}</span>
+                  <span class="scout-card-sub">{{ player.position }} · <a *ngIf="player.teamId; else scoutClubName" [routerLink]="['/team', player.teamId]">{{ player.teamName }}</a><ng-template #scoutClubName>{{ player.teamName || 'Free Agent' }}</ng-template></span>
                   <span class="scout-card-grid">
                     <span><small>Age</small><strong>{{ player.age }}</strong></span>
                     <span><small>Condition</small><strong>{{ player.fitness | fmPercent }}</strong></span>
@@ -143,7 +143,7 @@
               </span>
             </td>
             <td class="center"><span class="pos-pill">{{ player.position }}</span></td>
-            <td class="club-cell">{{ player.teamName || 'Free Agent' }}</td>
+            <td class="club-cell"><a *ngIf="player.teamId" [routerLink]="['/team', player.teamId]" class="fm-link">{{ player.teamName }}</a><span *ngIf="!player.teamId">{{ player.teamName || 'Free Agent' }}</span></td>
             <td class="center">{{ player.age }}</td>
             <td class="center rating-val" [style.color]="player.rating | ratingColor" [style.font-weight]="700">{{ player.rating | fmRating }}</td>
             <td class="right money-val">{{ player.salary | fmMoney }}</td>
@@ -310,7 +310,7 @@
             <tbody><tr *ngFor="let result of focusResults">
               <td><span class="recommendation" [attr.data-level]="result.recommendation">{{ recommendationLabel(result.recommendation) }}</span><b class="fit-score">{{ result.fitScore | number:'1.0-0' }}</b></td>
               <td><a [routerLink]="['/player', result.playerId]" [queryParams]="{ actingTeamId: teamService.teamId }">{{ result.playerName }}</a><small>{{ result.position }}</small></td>
-              <td>{{ result.playerTeamName }}</td><td>{{ result.age }}</td>
+              <td><a *ngIf="result.playerTeamId; else focusClubName" [routerLink]="['/team', result.playerTeamId]">{{ result.playerTeamName }}</a><ng-template #focusClubName>{{ result.playerTeamName }}</ng-template></td><td>{{ result.age }}</td>
               <td><strong>{{ result.estimatedRating | fmRating }}</strong></td><td>{{ result.estimatedPotential | number:'1.0-0' }}</td>
               <td>{{ result.estimatedTransferValue | fmMoney }}</td>
               <td><span class="attribute-evidence" *ngFor="let attribute of resultAttributes(result.matchedAttributes)">{{ attribute }}</span><em *ngIf="!result.matchedAttributes">Profile fit</em></td>

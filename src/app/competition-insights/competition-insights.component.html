@@ -11,12 +11,12 @@
       <span class="trophy">🏆</span>
       <div>
         <span class="eyebrow">CHAMPION</span>
-        <strong>{{ champion.teamName }}</strong>
+        <strong><a [routerLink]="['/team', champion.teamId]">{{ champion.teamName }}</a></strong>
         <small *ngIf="data.finalResult as final">
-          {{ final.team1Name }} <b>{{ final.score }}</b> {{ final.team2Name }}
+          <a [routerLink]="['/team', final.team1Id]">{{ final.team1Name }}</a> <b>{{ final.score }}</b> <a [routerLink]="['/team', final.team2Id]">{{ final.team2Name }}</a>
           <em *ngIf="final.decidedBy && final.decidedBy !== 'NORMAL'">{{ decisionLabel(final.decidedBy) }}</em>
         </small>
-        <small *ngIf="!data.finalResult && data.runnerUp">Runner-up: {{ data.runnerUp.teamName }}</small>
+        <small *ngIf="!data.finalResult && data.runnerUp">Runner-up: <a [routerLink]="['/team', data.runnerUp.teamId]">{{ data.runnerUp.teamName }}</a></small>
       </div>
     </div>
 
@@ -29,12 +29,12 @@
       </div>
       <div class="fixtures" *ngIf="progress.currentFixtures?.length">
         <span *ngFor="let match of progress.currentFixtures">
-          {{ match.team1Name }} <b>{{ match.score || 'v' }}</b> {{ match.team2Name }}
+          <a [routerLink]="['/team', match.team1Id]">{{ match.team1Name }}</a> <b>{{ match.score || 'v' }}</b> <a [routerLink]="['/team', match.team2Id]">{{ match.team2Name }}</a>
         </span>
       </div>
       <table class="mini-table" *ngIf="progress.groupStandings?.length">
         <tr *ngFor="let row of progress.groupStandings" [class.qualified]="row.qualified">
-          <td>{{ row.position }}</td><td>{{ row.teamName }}</td><td>{{ row.played }}</td><td>{{ row.points }} pts</td>
+          <td>{{ row.position }}</td><td><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td><td>{{ row.played }}</td><td>{{ row.points }} pts</td>
           <td><span class="route" [class.out]="row.qualificationRoute === 'ELIMINATED'">
             {{ qualificationLabel(row.qualificationRoute) }}
           </span></td>

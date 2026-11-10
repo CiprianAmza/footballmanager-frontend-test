@@ -22,11 +22,11 @@
           <td colspan="3">
               <div id="photo-wrapper" class="logo" [ngStyle]="{backgroundColor: team.color1, borderRadius: team.border}">
               <div class="currentTeam">
-                <span class="name" [ngStyle]="{color: team.color2}" >{{team.name}}</span>
+                <span class="name" [ngStyle]="{color: team.color2}" ><a [routerLink]="['/team', team.teamId]" (click)="$event.stopPropagation()">{{team.name}}</a></span>
               </div>
             </div></td>
           <td colspan="4" class="teamName"
-              ><a id=i>{{ team.name }}</a></td>
+              ><a [routerLink]="['/team', team.teamId]" (click)="$event.stopPropagation()">{{ team.name }}</a></td>
           <td>{{ team.games }}</td>
           <td>{{ team.wins }}</td>
           <td>{{ team.draws }}</td>
@@ -63,8 +63,8 @@
                 </thead>
                 <tbody>
                     <tr *ngFor="let match of matchesCup">
-                    <td>{{ match.teamName1 }}</td>
-                    <td>{{ match.teamName2 }}</td>
+                    <td><a [routerLink]="['/team', match.team1Id]">{{ match.teamName1 }}</a></td>
+                    <td><a [routerLink]="['/team', match.team2Id]">{{ match.teamName2 }}</a></td>
                     <td>{{ match.score }}</td>
                     </tr>
                 </tbody>

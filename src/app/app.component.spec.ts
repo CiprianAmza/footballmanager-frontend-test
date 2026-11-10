@@ -56,10 +56,10 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have as title 'footballmanagersimulator-frontend'`, () => {
+  it(`should have the Argus Football World title`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('footballmanagersimulator-frontend');
+    expect(app.title).toEqual('Argus Football World');
   });
 
   it('should render title', () => {

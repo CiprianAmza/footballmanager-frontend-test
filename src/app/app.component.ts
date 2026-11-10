@@ -11,14 +11,14 @@ import { LiveMatchClosed } from './models/live-match.model';
 import { UiFeedbackService } from './shared/ui-feedback.service';
 import { ThemeService } from './services/theme.service';
 
-export const urlApp: string = "http://localhost:8086";
+export const urlApp: string = window.location.port === '4201' ? 'http://localhost:8087' : 'http://localhost:8086';
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnDestroy {
-  title = 'footballmanagersimulator-frontend';
+  title = 'Argus Football World';
   roomActive = false;
   setRoomActive(active: boolean): void { this.roomActive = active; }
   resumeMultiplayerLiveMatch(event: { key: string; interactive: boolean }): void {
@@ -774,7 +774,7 @@ export class AppComponent implements OnDestroy {
         a.click();
         window.URL.revokeObjectURL(url);
         this.saving = false;
-        this.feedback.success('Game saved successfully.');
+        this.feedback.success('JSON save file downloaded.');
       },
       error: (err) => {
         console.error('Error saving game:', err);

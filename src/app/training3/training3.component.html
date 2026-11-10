@@ -135,7 +135,7 @@
       </div>
 
       <div class="prog" *ngIf="selectedPlayer as player">
-        <div class="block-head">PROGRAMME — {{ player.name.toUpperCase() }}</div>
+        <div class="block-head">PROGRAMME — <a [routerLink]="['/player', player.id]">{{ player.name.toUpperCase() }}</a></div>
         <div class="prog-line">position {{ player.position }} · age {{ player.age }} · rating {{ player.rating }}</div>
         <div class="prog-line gain">projected +{{ plan.projectedGain(player) }} rating / month</div>
 

@@ -33,7 +33,7 @@
     <div class="comp-players-header">
       <div class="comp-player-card left">
         <a [routerLink]="['/player', player1.playerId]" class="comp-player-name fm-link">{{ player1.playerName }}</a>
-        <div class="comp-player-meta">{{ player1.position }} - {{ player1.teamName }}</div>
+        <div class="comp-player-meta">{{ player1.position }} - <a *ngIf="player1.teamId" [routerLink]="['/team', player1.teamId]">{{ player1.teamName }}</a><ng-container *ngIf="!player1.teamId">{{ player1.teamName }}</ng-container></div>
         <div class="comp-player-info">
           <span>Age {{ player1.age }}</span>
           <span>Rating {{ player1.rating }}</span>
@@ -42,7 +42,7 @@
       <div class="vs-badge">VS</div>
       <div class="comp-player-card right">
         <a [routerLink]="['/player', player2.playerId]" class="comp-player-name fm-link">{{ player2.playerName }}</a>
-        <div class="comp-player-meta">{{ player2.position }} - {{ player2.teamName }}</div>
+        <div class="comp-player-meta">{{ player2.position }} - <a *ngIf="player2.teamId" [routerLink]="['/team', player2.teamId]">{{ player2.teamName }}</a><ng-container *ngIf="!player2.teamId">{{ player2.teamName }}</ng-container></div>
         <div class="comp-player-info">
           <span>Age {{ player2.age }}</span>
           <span>Rating {{ player2.rating }}</span>

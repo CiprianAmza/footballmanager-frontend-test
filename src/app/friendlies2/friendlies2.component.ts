@@ -1,5 +1,6 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { FriendlyDay, FriendlyHubService, FriendlyMatchView, FriendlyOpponent } from '../services/friendly-hub.service';
 import { TeamService } from '../services/team.service';
 
@@ -8,7 +9,8 @@ import { TeamService } from '../services/team.service';
   templateUrl: './friendlies2.component.html',
   styleUrls: ['./friendlies2.component.css']
 })
-export class Friendlies2Component implements OnInit {
+export class Friendlies2Component implements OnInit, OnDestroy {
+  private refreshSub?: Subscription;
   teamId = 0;
   season = 1;
   loading = true;
@@ -48,7 +50,13 @@ export class Friendlies2Component implements OnInit {
     this.teamId = Number(this.route.snapshot.paramMap.get('teamId')) || this.teamService.teamId;
     this.season = this.teamService.currentSeason;
     this.load();
+    this.refreshSub = this.teamService.refresh$.subscribe(() => {
+      this.season = this.teamService.currentSeason;
+      this.load();
+    });
   }
+
+  ngOnDestroy(): void { this.refreshSub?.unsubscribe(); }
 
   load(): void {
     if (!this.teamId) return;

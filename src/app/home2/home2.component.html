@@ -2,11 +2,12 @@
   <header class="desk-header">
     <div class="club-heading">
       <span class="eyebrow">Manager workspace · Season {{ teamService.currentSeason }}</span>
-      <h1>{{ teamName || 'Your club' }}</h1>
+      <h1><a *ngIf="teamService.teamId; else home2ClubName" [routerLink]="['/team', teamService.teamId]">{{ teamName || 'Your club' }}</a><ng-template #home2ClubName>{{ teamName || 'Your club' }}</ng-template></h1>
       <div class="date-line">{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }} · {{ teamService.currentPhase }}</div>
     </div>
     <div class="header-actions">
-      <a class="view-switch" routerLink="/home">Classic</a>
+      <a class="view-switch" routerLink="/home">Today</a>
+      <a class="view-switch" routerLink="/home-classic">Classic</a>
       <a class="view-switch active" routerLink="/home2">Desk</a>
       <a class="view-switch" routerLink="/home3">Cockpit</a>
       <button type="button" class="command-trigger" (click)="openCommandPalette()">

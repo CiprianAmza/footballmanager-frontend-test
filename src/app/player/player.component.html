@@ -78,7 +78,8 @@
         </div>
         <div class="profile-market-actions" *ngIf="canMakeTransferOffer() || canOfferFreeAgentContract()">
           <button type="button" class="profile-market-btn transfer-action"
-                  *ngIf="canMakeTransferOffer()" (click)="openTransferOffer()">
+                  *ngIf="canMakeTransferOffer()" (click)="openTransferOffer()" [disabled]="!isTransferWindowOpen"
+                  [title]="isTransferWindowOpen ? 'Make a transfer offer' : 'Offers open during the transfer window'">
             Make Offer
           </button>
           <button type="button" class="profile-market-btn contract-action"
@@ -306,7 +307,7 @@
 
             <div *ngIf="!seasonStatsLoading && seasonStats" class="stats-content">
                 <div class="stats-team-info">
-                    Club: <span class="stats-team-name">{{ seasonStats.teamName }}</span>
+                    Club: <span class="stats-team-name"><a *ngIf="seasonStats.teamId" [routerLink]="['/team', seasonStats.teamId]">{{ seasonStats.teamName }}</a><ng-container *ngIf="!seasonStats.teamId">{{ seasonStats.teamName }}</ng-container></span>
                 </div>
 
                 <div class="table-responsive">
@@ -615,7 +616,7 @@
     <ng-container *ngIf="!transferOfferResult">
       <div class="profile-action-player-summary">
         <span>{{ playerView?.position }}</span>
-        <span>{{ playerView?.teamName }}</span>
+        <a *ngIf="playerView?.teamId; else offerClubName" [routerLink]="['/team', playerView?.teamId]">{{ playerView?.teamName }}</a><ng-template #offerClubName>{{ playerView?.teamName }}</ng-template>
         <strong>{{ playerView?.transferValue | currency:'EUR':'symbol':'1.0-0' }}</strong>
       </div>
       <label class="profile-action-field">

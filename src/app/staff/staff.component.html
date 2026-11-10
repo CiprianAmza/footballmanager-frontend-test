@@ -509,9 +509,9 @@
         </thead>
         <tbody>
           <tr *ngFor="let r of completedReports">
-            <td class="player-name">{{ r.playerName }}</td>
+            <td class="player-name"><a [routerLink]="['/player', r.playerId]">{{ r.playerName }}</a></td>
             <td>{{ r.playerPosition }}</td>
-            <td>{{ r.playerTeamName }}</td>
+            <td><a *ngIf="r.playerTeamId" [routerLink]="['/team', r.playerTeamId]">{{ r.playerTeamName }}</a><ng-container *ngIf="!r.playerTeamId">{{ r.playerTeamName }}</ng-container></td>
             <td><span class="rating-badge">{{ r.revealedRating }}</span></td>
             <td><span class="potential-badge">{{ r.revealedPotential }}</span></td>
             <td>{{ formatCurrency(r.revealedTransferValue) }}</td>
@@ -657,9 +657,9 @@
           </div>
           <div class="player-list">
             <div class="player-row" *ngFor="let p of filteredPlayers" (click)="assignToPlayer(p)">
-              <span class="p-name">{{ p.name }}</span>
+              <span class="p-name"><a [routerLink]="['/player', p.id]" (click)="$event.stopPropagation()">{{ p.name }}</a></span>
               <span class="p-pos">{{ p.position }}</span>
-              <span class="p-team">{{ p.teamName }}</span>
+              <span class="p-team"><a *ngIf="p.teamId" [routerLink]="['/team', p.teamId]" (click)="$event.stopPropagation()">{{ p.teamName }}</a><ng-container *ngIf="!p.teamId">{{ p.teamName }}</ng-container></span>
               <span class="p-rating">~{{ p.estimatedRating }}</span>
               <span class="p-value">{{ formatCurrency(p.transferValue) }}</span>
             </div>

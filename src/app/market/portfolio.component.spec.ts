@@ -16,7 +16,8 @@ describe('PortfolioComponent', () => {
       totalCostBasis: { amount: 0, currency: 'EUR', minorUnitScale: 0 },
       marketValue: { amount: 0, currency: 'EUR', minorUnitScale: 0 },
       unrealizedGain: { amount: 0, currency: 'EUR', minorUnitScale: 0 },
-      realizedGain: { amount: 0, currency: 'EUR', minorUnitScale: 0 }
+      realizedGain: { amount: 0, currency: 'EUR', minorUnitScale: 0 },
+      cashBalance: { amount: 1000, currency: 'EUR', minorUnitScale: 0 }
     }));
     market.trades.and.returnValue(of({ content: [], page: 0, size: 50, totalElements: 0, totalPages: 0 }));
     market.adviserDashboard.and.returnValue(of({ currentDate: { season: 1, day: 1 }, currentContract: null, hireOptions: [] }));
@@ -44,5 +45,23 @@ describe('PortfolioComponent', () => {
     fixture.detectChanges();
     expect(component.flagOff).toBeTrue();
     expect(component.error).toBe('Chairman mode off');
+  });
+
+  it('filters and sorts holdings while keeping cash separate from market value', () => {
+    const eur = (amount: number) => ({ amount, currency: 'EUR', minorUnitScale: 0 });
+    market.portfolio.and.returnValue(of({
+      positions: [
+        { instrumentId: 1, code: 'CLB', type: 'CLUB', teamId: 86, name: 'Sherlock FC', riskClass: 'CLUB_EQUITY', quantity: 10, costBasis: eur(100), marketValue: eur(120), unrealizedGain: eur(20) },
+        { instrumentId: 2, code: 'CO', type: 'COMPANY', name: 'Company', riskClass: 'SAFE_COMPANY', quantity: 20, costBasis: eur(200), marketValue: eur(180), unrealizedGain: eur(-20) }
+      ], totalCostBasis: eur(300), marketValue: eur(300), unrealizedGain: eur(0), realizedGain: eur(0), cashBalance: eur(1000)
+    }));
+    fixture.detectChanges();
+
+    expect(component.totalWealth).toBe(1300);
+    expect(component.visiblePositions.map(position => position.code)).toEqual(['CO', 'CLB']);
+    component.positionSort = 'RETURN';
+    expect(component.visiblePositions.map(position => position.code)).toEqual(['CLB', 'CO']);
+    component.positionFilter = 'CLUB';
+    expect(component.visiblePositions.map(position => position.code)).toEqual(['CLB']);
   });
 });

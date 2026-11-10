@@ -650,7 +650,7 @@
       <div class="player-info-card">
         <div class="info-row">
           <span class="info-label">Player</span>
-          <span class="info-value player-name">{{ scoutReport.playerName }}</span>
+          <span class="info-value player-name"><a [routerLink]="['/player', scoutReport.playerId]">{{ scoutReport.playerName }}</a></span>
         </div>
         <div class="info-row">
           <span class="info-label">Position</span>
@@ -708,7 +708,7 @@
         </div>
         <div class="info-row">
           <span class="info-label">Club</span>
-          <span class="info-value">{{ selectedPlayer.teamName }}</span>
+          <span class="info-value"><a *ngIf="selectedPlayer.teamId" [routerLink]="['/team', selectedPlayer.teamId]">{{ selectedPlayer.teamName }}</a><ng-container *ngIf="!selectedPlayer.teamId">{{ selectedPlayer.teamName }}</ng-container></span>
         </div>
         <div class="info-row">
           <span class="info-label">Asking Price</span>
@@ -787,7 +787,7 @@
         </div>
         <div class="info-row">
           <span class="info-label">Club</span>
-          <span class="info-value">{{ loanPlayer.teamName }}</span>
+          <span class="info-value"><a *ngIf="loanPlayer.teamId" [routerLink]="['/team', loanPlayer.teamId]">{{ loanPlayer.teamName }}</a><ng-container *ngIf="!loanPlayer.teamId">{{ loanPlayer.teamName }}</ng-container></span>
         </div>
         <div class="info-row">
           <span class="info-label">Transfer Value</span>
