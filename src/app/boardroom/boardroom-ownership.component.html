@@ -23,7 +23,7 @@
 
     <div class="card mb-3 shadow-sm" *ngFor="let c of data.ownedClubs">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-shield-fill me-1 text-success"></i>{{ c.teamName }}</span>
+          <span><i class="bi bi-shield-fill me-1 text-success"></i><a [routerLink]="['/team', c.teamId]">{{ c.teamName }}</a></span>
         <span class="badge bg-success owner-badge">OWNER</span>
       </div>
       <div class="card-body row g-2 align-items-end">

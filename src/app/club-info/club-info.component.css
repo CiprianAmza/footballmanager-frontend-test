@@ -78,15 +78,11 @@
 }
 
 .title-section h1 { margin: 0; font-size: 2.2em; font-weight: 900; letter-spacing: 1px; }
-.subtitle { color: #aaa; font-size: 1em; text-transform: uppercase; font-weight: bold; }
 .id-tag { font-size: 0.8em; color: #666; margin-left: 10px; font-weight: normal; }
-.membership-summary { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 5px; }
-.membership-summary a,
 .membership-group a,
 .panel-header-link,
 .comp-name-cell a,
 .competition-filter-option a { color: #67b9ef; text-decoration: none; }
-.membership-summary a:hover,
 .membership-group a:hover,
 .panel-header-link:hover,
 .comp-name-cell a:hover,

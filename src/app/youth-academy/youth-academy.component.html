@@ -1,77 +1,172 @@
-<div class="youth-container">
-
-  <!-- HEADER -->
-  <div class="page-header">
-    <div class="header-left">
-      <div class="icon-circle">&#x1F331;</div>
-      <div class="titles">
-        <h1>YOUTH ACADEMY</h1>
-        <span class="subtitle">{{ youthPlayers.length }} youth prospects</span>
-      </div>
+<main class="academy-shell">
+  <header class="academy-header">
+    <div>
+      <span class="eyebrow">Club development · Season {{ data?.season || team.currentSeason }}</span>
+      <h1>Youth Academy</h1>
+      <p>Follow your next intake, develop prospects and plan the academy's future.</p>
     </div>
-    <nav class="academy-view-links" aria-label="Academy page variants">
-      <a class="active" routerLink="/youth-academy">Classic</a>
-      <a routerLink="/academy2">Academy Director</a>
-      <a routerLink="/academy3">Development Lab</a>
-    </nav>
-  </div>
+    <div class="header-metrics" *ngIf="data as academy">
+      <div><span>Academy</span><strong>Level {{ academy.academyLevel }}</strong></div>
+      <div><span>Training</span><strong>Level {{ academy.trainingLevel }}</strong></div>
+    </div>
+  </header>
 
-  <!-- MESSAGE -->
-  <div class="message-bar" *ngIf="message"
-       [class.success]="messageType === 'success'"
-       [class.error]="messageType === 'error'"
-       [class.info]="messageType === 'info'">
-    {{ message }}
-  </div>
+  <nav class="academy-tabs" aria-label="Youth academy sections">
+    <button type="button" [class.active]="tab==='overview'" [attr.aria-current]="tab==='overview'?'page':null" (click)="setTab('overview')">Overview</button>
+    <button type="button" [class.active]="tab==='prospects'" [attr.aria-current]="tab==='prospects'?'page':null" (click)="setTab('prospects')">Prospects <span *ngIf="data">{{ data.pipeline.active }}</span></button>
+    <button type="button" [class.active]="tab==='facilities'" [attr.aria-current]="tab==='facilities'?'page':null" (click)="setTab('facilities')">Facilities &amp; ranking</button>
+  </nav>
 
-  <!-- LOADING -->
-  <div class="loading-state" *ngIf="loading">Loading youth players...</div>
+  <div class="state" *ngIf="loading">Loading academy…</div>
+  <div class="state error" *ngIf="error">{{ error }} <button type="button" (click)="load(tab==='facilities')">Try again</button></div>
+  <div class="notice" role="status" *ngIf="message">{{ message }}</div>
 
-  <!-- EMPTY STATE -->
-  <div class="empty-state" *ngIf="!loading && youthPlayers.length === 0">
-    <p>No youth players in the academy.</p>
-  </div>
-
-  <!-- YOUTH PLAYER CARDS -->
-  <div class="players-grid" *ngIf="!loading && youthPlayers.length > 0">
-
-    <div class="youth-card" *ngFor="let player of youthPlayers">
-
-      <div class="card-header">
-        <div class="player-position" [style.background-color]="getPositionColor(player.position)">
-          {{ player.position }}
+  <ng-container *ngIf="data as academy">
+    <section *ngIf="tab==='overview'" class="overview">
+      <div class="overview-hero">
+        <div class="intake-card">
+          <span class="eyebrow">Next youth report</span>
+          <strong>{{ nextReportLabel }}</strong>
+          <p>{{ nextReportHint }}</p>
+          <div class="intake-timeline" *ngIf="nextReportDay != null">
+            <span>Today · day {{ currentDay }}</span><i></i><span>Report · day {{ nextReportDay }}</span>
+          </div>
+          <small>Reports bring new prospects and update academy development as the game advances.</small>
         </div>
-        <div class="player-age">Age {{ player.age }}</div>
+        <div class="overview-stats">
+          <article><span>In academy</span><strong>{{ academy.pipeline.active }}</strong><small>Active prospects</small></article>
+          <article><span>Ready to review</span><strong>{{ academy.pipeline.ready }}</strong><small>Reached 80% of projected potential</small></article>
+          <article><span>High potential</span><strong>{{ academy.pipeline.elitePotential }}</strong><small>Potential ability 75+</small></article>
+          <article><span>Graduates</span><strong>{{ academy.pipeline.graduates }}</strong><small>Promoted to the first team</small></article>
+        </div>
       </div>
 
-      <div class="card-body">
-        <div class="player-name"><a [routerLink]="['/player', player.id]" class="fm-link">{{ player.name }}</a></div>
-
-        <div class="stat-row">
-          <span class="stat-label">Current Ability</span>
-          <span class="stat-value ability">{{ player.currentAbility }}</span>
+      <section class="section-card empty-intake" *ngIf="academy.pipeline.active===0">
+        <span class="empty-icon" aria-hidden="true">✦</span>
+        <div>
+          <span class="eyebrow">Your next generation</span>
+          <h2>No prospects in the academy yet</h2>
+          <p *ngIf="nextReportDay != null">The next youth report is on day {{ nextReportDay }}. Until then, you can review academy and training facilities.</p>
+          <p *ngIf="nextReportDay == null">There are no more youth reports scheduled this season. Review the academy before the next season begins.</p>
+          <button type="button" class="primary" (click)="setTab('facilities')">Review facilities</button>
         </div>
+      </section>
 
-        <div class="stat-row">
-          <span class="stat-label">Potential</span>
-          <div class="stars-container">
-            <span *ngFor="let star of getStarsArray(player.potentialStars)"
-                  class="star"
-                  [class.filled]="star === 1"
-                  [class.empty]="star === 0">
-              &#x2605;
-            </span>
+      <section class="section-card" *ngIf="academy.pipeline.active>0">
+        <div class="section-heading"><div><span class="eyebrow">Manager decisions</span><h2>Prospects to review</h2></div><button type="button" class="text-action" (click)="setTab('prospects')">View all prospects →</button></div>
+        <div *ngIf="!priorityProspects.length" class="quiet">No urgent decisions. Your prospects are continuing their development.</div>
+        <div class="focus-list">
+          <div class="focus-player" role="button" tabindex="0" *ngFor="let player of priorityProspects" (click)="select(player);setTab('prospects')" (keydown.enter)="select(player);setTab('prospects')">
+            <span class="position">{{ player.position }}</span><strong><a [routerLink]="['/player', player.id]" (click)="$event.stopPropagation()">{{ player.name }}</a></strong><small>Age {{ player.age }} · {{ player.currentAbility }} → {{ player.potentialAbility }}</small>
+            <span class="badge" [attr.data-status]="player.recommendation">{{ player.recommendation }}</span>
           </div>
         </div>
+      </section>
+
+      <div class="overview-bottom">
+        <section class="section-card">
+          <div class="section-heading"><div><span class="eyebrow">Your pathway</span><h2>From intake to first team</h2></div></div>
+          <div class="pathway">
+          <div><b>01</b><strong>Recruit</strong><small>Academy Lv {{ academy.academyLevel }} · +{{ intakePotentialBonus }} potential</small></div>
+            <div><b>02</b><strong>Develop</strong><small>Training Lv {{ academy.trainingLevel }}</small></div>
+            <div><b>03</b><strong>Prepare</strong><small>{{ academy.pipeline.ready }} ready to review</small></div>
+            <div><b>04</b><strong>Graduate</strong><small>{{ academy.pipeline.graduates }} promoted</small></div>
+          </div>
+        </section>
+        <section class="section-card next-action">
+          <span class="eyebrow">Club investment</span>
+          <h2>Build the pipeline</h2>
+          <p>Each academy level adds 2 potential points to newly generated prospects. Training facilities help your current prospects develop.</p>
+          <div class="investment-snapshot"><span>Available funds</span><strong>{{ money(academy.clubFinances) }}</strong></div>
+          <button type="button" class="text-action" (click)="setTab('facilities')">Explore upgrades →</button>
+        </section>
       </div>
+    </section>
 
-      <div class="card-actions">
-        <button class="promote-btn" (click)="promotePlayer(player.id)">Promote to First Team</button>
-        <button class="release-btn" (click)="releasePlayer(player.id)">Release</button>
+    <section *ngIf="tab==='prospects'" class="prospects-section">
+      <div class="section-heading"><div><span class="eyebrow">Individual development</span><h2>Prospect board</h2><p>Compare potential, readiness and the next decision for each player.</p></div></div>
+      <div class="prospect-empty section-card" *ngIf="academy.pipeline.active===0">
+        <h3>No prospects to review</h3><p>{{ nextReportLabel }} · {{ nextReportHint }}</p>
+        <button type="button" class="primary" (click)="setTab('overview')">Back to overview</button>
       </div>
+      <ng-container *ngIf="academy.pipeline.active>0">
+        <div class="prospect-toolbar">
+          <label><span class="sr-only">Search prospects</span><input [(ngModel)]="query" placeholder="Search name or position"></label>
+          <label><span class="sr-only">Filter recommendations</span><select [(ngModel)]="filter"><option value="ALL">All prospects</option><option value="READY">Ready</option><option value="PRIORITY">Priority</option><option value="REVIEW">Review</option><option value="DEVELOP">Develop</option></select></label>
+          <label><span class="sr-only">Sort prospects</span><select [(ngModel)]="sort"><option value="POTENTIAL">Highest potential</option><option value="ABILITY">Highest ability</option><option value="READINESS">Most ready</option><option value="AGE">Youngest first</option></select></label>
+          <span>{{ prospects.length }} shown</span>
+        </div>
+        <div class="prospect-layout">
+          <div class="prospect-list section-card">
+            <div class="prospect-row" role="button" tabindex="0" *ngFor="let player of prospects" [class.selected]="selected?.id===player.id" (click)="select(player)" (keydown.enter)="select(player)">
+              <span class="position">{{ player.position }}</span>
+              <span class="prospect-identity"><strong><a [routerLink]="['/player', player.id]" (click)="$event.stopPropagation()">{{ player.name }}</a></strong><small>Age {{ player.age }} · {{ player.potentialBand }}</small></span>
+              <span class="ability">{{ player.currentAbility }} <i>→</i> <b>{{ player.potentialAbility }}</b></span>
+              <span class="badge" [attr.data-status]="player.recommendation">{{ player.recommendation }}</span>
+              <span class="readiness"><i><b [style.width.%]="width(player.readinessPercent)"></b></i><small>{{ player.readinessPercent | number:'1.0-0' }}% developed</small></span>
+            </div>
+            <p class="quiet" *ngIf="!prospects.length">No prospects match these filters.</p>
+          </div>
+          <aside class="prospect-detail section-card" *ngIf="selected as player">
+            <span class="eyebrow">{{ player.position }} · {{ player.recommendation }}</span>
+            <h2><a [routerLink]="['/player', player.id]">{{ player.name }}</a></h2>
+            <p>Age {{ player.age }} · Joined season {{ player.seasonJoined }} · {{ player.daysInAcademy }} days in academy</p>
+            <div class="ability-summary"><div><span>Current ability</span><strong>{{ player.currentAbility }}</strong></div><div><span>Potential</span><strong>{{ player.potentialAbility }}</strong></div><div><span>Development</span><strong>{{ player.readinessPercent | number:'1.0-0' }}%</strong></div></div>
+            <div class="detail-track"><i [style.width.%]="width(player.readinessPercent)"></i></div>
+            <div class="detail-grid"><div><span>Potential left</span><strong>{{ player.developmentGap }}</strong></div><div><span>Estimated value</span><strong>{{ money(player.estimatedValue) }}</strong></div><div><span>Projected wage</span><strong>{{ money(player.projectedWage) }}/w</strong></div></div>
+            <div class="recommendation-note">
+              <strong *ngIf="player.recommendation==='READY'">Consider first-team football</strong>
+              <strong *ngIf="player.recommendation==='PRIORITY'">Prioritise development</strong>
+              <strong *ngIf="player.recommendation==='REVIEW'">Review the player's pathway</strong>
+              <strong *ngIf="player.recommendation==='DEVELOP'">Continue academy development</strong>
+              <p>Readiness compares current ability with projected potential. Promotion remains your decision.</p>
+            </div>
+            <button type="button" class="primary promote" (click)="promote()" [disabled]="acting">Promote to first team</button>
+            <button type="button" class="release" (click)="release()" [disabled]="acting">Release prospect</button>
+          </aside>
+        </div>
+      </ng-container>
+    </section>
 
-    </div>
-
-  </div>
-
-</div>
+    <section *ngIf="tab==='facilities'" class="facilities-section">
+      <div class="section-heading"><div><span class="eyebrow">Long-term planning</span><h2>Facilities &amp; ranking</h2><p>Choose where to invest and compare your academy with other clubs.</p></div><div class="funds"><span>Club funds</span><strong>{{ money(academy.clubFinances) }}</strong></div></div>
+      <div class="facility-grid">
+        <article class="section-card facility-card" *ngFor="let facility of academy.facilities">
+          <span class="eyebrow">{{ facility.type==='YOUTH_ACADEMY'?'New intakes':'Player development' }}</span>
+          <h3>{{ facility.name }}</h3><p>{{ facility.description }}</p>
+          <p class="facility-impact" *ngIf="facility.type==='YOUTH_ACADEMY'">Current intake bonus: +{{ intakePotentialBonus }} potential. The next level adds another 2; level 7 also brings one extra prospect per report.</p>
+          <div class="level-line"><span>Current level</span><strong>{{ facility.currentLevel }} / {{ facility.maxLevel }}</strong></div>
+          <div class="level-track"><i [style.width.%]="width(facility.currentLevel / facility.maxLevel * 100)"></i></div>
+          <div class="upgrade-progress" *ngIf="facility.upgrading">Level {{ facility.targetLevel }} under construction · {{ daysRemaining(facility) }} days remaining</div>
+          <div class="upgrade-offer" *ngIf="!facility.upgrading && facility.canUpgrade"><div><span>Next level · {{ facility.upgradeDuration }} days</span><strong>{{ money(facility.upgradeCost) }}</strong></div><button type="button" class="primary" (click)="upgrade(facility)" [disabled]="upgrading!=='' || academy.clubFinances<facility.upgradeCost">Invest</button></div>
+          <small class="insufficient" *ngIf="!facility.upgrading && facility.canUpgrade && academy.clubFinances<facility.upgradeCost">Insufficient club funds</small>
+          <div class="max-level" *ngIf="!facility.upgrading && !facility.canUpgrade">Maximum level reached</div>
+        </article>
+      </div>
+      <section class="section-card benchmark">
+        <div class="section-heading"><div><span class="eyebrow">Academy benchmark</span><h2>Compare clubs</h2></div><div class="segmented"><button type="button" [class.active]="rankingScope==='league'" (click)="rankingScope='league'">League</button><button type="button" [class.active]="rankingScope==='world'" (click)="rankingScope='world'">All clubs</button></div></div>
+        <div class="rank-scroll"><table>
+          <thead><tr>
+            <th [attr.aria-sort]="rankingAriaSort('rank')"><button type="button" (click)="sortRanking('rank')">Rank <span aria-hidden="true">{{ rankingSortIndicator('rank') }}</span></button></th>
+            <th [attr.aria-sort]="rankingAriaSort('club')"><button type="button" (click)="sortRanking('club')">Club <span aria-hidden="true">{{ rankingSortIndicator('club') }}</span></button></th>
+            <th [attr.aria-sort]="rankingAriaSort('score')"><button type="button" (click)="sortRanking('score')">Score <span aria-hidden="true">{{ rankingSortIndicator('score') }}</span></button></th>
+            <th [attr.aria-sort]="rankingAriaSort('academy')"><button type="button" (click)="sortRanking('academy')">Academy <span aria-hidden="true">{{ rankingSortIndicator('academy') }}</span></button></th>
+            <th [attr.aria-sort]="rankingAriaSort('training')"><button type="button" (click)="sortRanking('training')">Training <span aria-hidden="true">{{ rankingSortIndicator('training') }}</span></button></th>
+            <th [attr.aria-sort]="rankingAriaSort('prospects')"><button type="button" (click)="sortRanking('prospects')">Prospects <span aria-hidden="true">{{ rankingSortIndicator('prospects') }}</span></button></th>
+            <th [attr.aria-sort]="rankingAriaSort('graduates')"><button type="button" (click)="sortRanking('graduates')">Graduates <span aria-hidden="true">{{ rankingSortIndicator('graduates') }}</span></button></th>
+          </tr></thead>
+          <tbody><tr *ngFor="let row of ranking" [class.own]="row.teamId===team.teamId">
+            <td>#{{ rankingScope==='league'?row.leagueRank:row.worldRank }}</td>
+            <td><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td>
+            <td>{{ row.score | number:'1.0-1' }}</td>
+            <td>{{ row.academyLevel }}</td>
+            <td>{{ row.trainingLevel }}</td>
+            <td>{{ row.activeProspects }}</td>
+            <td>{{ row.graduates }}</td>
+          </tr></tbody>
+        </table></div>
+        <p class="quiet" *ngIf="!ranking.length">Loading club comparison…</p>
+      </section>
+    </section>
+  </ng-container>
+</main>

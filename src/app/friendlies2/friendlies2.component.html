@@ -43,24 +43,24 @@
   <main class="workspace" *ngIf="!loading">
     <section class="match-timeline">
       <div class="timeline-head"><span>DATE</span><span>FIXTURE</span><span>PLAN</span><span>STATE</span></div>
-      <button class="match-row" *ngFor="let match of filteredMatches; let i = index; trackBy: trackMatch"
-              [class.selected]="selectedMatch?.matchId === match.matchId" (click)="selectMatch(match, i)">
+      <div class="match-row" role="button" tabindex="0" *ngFor="let match of filteredMatches; let i = index; trackBy: trackMatch"
+              [class.selected]="selectedMatch?.matchId === match.matchId" (click)="selectMatch(match, i)" (keydown.enter)="selectMatch(match, i)" (keydown.space)="$event.preventDefault(); selectMatch(match, i)">
         <span class="day"><b>Season {{ season }} · {{ match.dateDisplay }}</b><small>{{ match.day <= 30 ? 'PRE-SEASON' : 'WINTER' }}</small></span>
         <span class="fixture">
           <i class="crest">{{ opponentName(match).slice(0, 2).toUpperCase() }}</i>
-          <span><b>{{ opponentName(match) }}</b><small>{{ venue(match) }} · {{ pretty(match.eventStage) }}</small></span>
+          <span><b><a [routerLink]="['/team', match.homeTeamId === teamId ? match.awayTeamId : match.homeTeamId]" (click)="$event.stopPropagation()">{{ opponentName(match) }}</a></b><small>{{ venue(match) }} · {{ pretty(match.eventStage) }}</small></span>
           <strong class="score" *ngIf="match.status === 'COMPLETED'">{{ match.homeGoals }}–{{ match.awayGoals }}</strong>
         </span>
         <span class="plan"><b>{{ pretty(match.purpose) }}</b><small>{{ pretty(match.ruleset) }}</small></span>
         <span class="state" [attr.data-state]="resultLabel(match)">{{ resultLabel(match) }}</span>
-      </button>
+      </div>
       <div class="empty" *ngIf="!filteredMatches.length"><b>No matches in this view.</b><span>Use “New friendly” to build the preparation programme.</span></div>
     </section>
 
     <aside class="inspector" *ngIf="selectedMatch; else guide">
       <button class="close" (click)="selectedMatch = null">×</button>
       <p>Season {{ season }} · {{ selectedMatch.dateDisplay }}</p>
-      <h2>{{ opponentName(selectedMatch) }}</h2>
+      <h2><a [routerLink]="['/team', selectedMatch.homeTeamId === teamId ? selectedMatch.awayTeamId : selectedMatch.homeTeamId]">{{ opponentName(selectedMatch) }}</a></h2>
       <span class="event-pill" *ngIf="selectedMatch.friendlyEventId">{{ pretty(selectedMatch.matchType) }}</span>
       <div class="detail-grid">
         <div><small>OBJECTIVE</small><b>{{ pretty(selectedMatch.purpose) }}</b></div>

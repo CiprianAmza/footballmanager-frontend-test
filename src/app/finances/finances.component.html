@@ -207,7 +207,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let player of boughtPlayers" class="main-row">
-                <td class="text-left name-col">{{ player.playerName || player.name || 'Unknown' }}</td>
+                <td class="text-left name-col"><a *ngIf="player.playerId" [routerLink]="['/player', player.playerId]">{{ player.playerName || player.name || 'Unknown' }}</a><span *ngIf="!player.playerId">{{ player.playerName || player.name || 'Unknown' }}</span></td>
                 <td class="right">{{ (player.playerTransferValue || 0) | fmMoney }}</td>
               </tr>
             </tbody>
@@ -227,7 +227,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let player of soldPlayers" class="main-row">
-                <td class="text-left name-col">{{ player.playerName || player.name || 'Unknown' }}</td>
+                <td class="text-left name-col"><a *ngIf="player.playerId" [routerLink]="['/player', player.playerId]">{{ player.playerName || player.name || 'Unknown' }}</a><span *ngIf="!player.playerId">{{ player.playerName || player.name || 'Unknown' }}</span></td>
                 <td class="right">{{ (player.playerTransferValue || 0) | fmMoney }}</td>
               </tr>
             </tbody>

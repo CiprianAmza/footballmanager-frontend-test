@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 import { urlApp } from '../app.component';
 import { TeamService } from '../services/team.service';
 
@@ -8,7 +9,8 @@ import { TeamService } from '../services/team.service';
   templateUrl: './friendly.component.html',
   styleUrls: ['./friendly.component.css']
 })
-export class FriendlyComponent implements OnInit {
+export class FriendlyComponent implements OnInit, OnDestroy {
+  private refreshSub?: Subscription;
 
   teamId!: number;
   season!: number;
@@ -41,7 +43,14 @@ export class FriendlyComponent implements OnInit {
     this.teamId = this.teamService.teamId;
     this.season = this.teamService.currentSeason;
     this.loadMatches();
+    this.refreshSub = this.teamService.refresh$.subscribe(() => {
+      this.season = this.teamService.currentSeason;
+      this.loadMatches();
+      if (this.showScheduleForm) this.loadAvailableDays();
+    });
   }
+
+  ngOnDestroy(): void { this.refreshSub?.unsubscribe(); }
 
   loadMatches(): void {
     this.loadingMatches = true;

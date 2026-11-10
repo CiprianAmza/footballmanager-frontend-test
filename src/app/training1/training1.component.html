@@ -174,7 +174,7 @@
     <section class="ind-detail" *ngIf="selectedPlayer as player" (click)="$event.stopPropagation()">
       <header class="ind-detail-head">
         <div>
-          <div class="ind-detail-name">{{ player.name }}</div>
+          <div class="ind-detail-name"><a [routerLink]="['/player', player.id]">{{ player.name }}</a></div>
           <div class="ind-detail-sub mono">{{ player.position }} · AGE {{ player.age }} · RATING {{ player.rating }}</div>
         </div>
         <div class="ind-gain mono">

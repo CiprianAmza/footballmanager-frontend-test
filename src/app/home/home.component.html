@@ -8,7 +8,7 @@
 
     <div class="top-bar">
       <div class="manager-info">
-        <span class="manager-name">{{ teamName }}</span>
+        <a class="manager-name" [routerLink]="['/team', teamService.teamId]">{{ teamName }}</a>
       </div>
     </div>
 

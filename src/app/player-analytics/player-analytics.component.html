@@ -115,7 +115,7 @@
         <div class="badge-tier">{{ badgeTier() }}</div>
       </div>
       <div class="header-meta">
-        <div class="meta-name">{{ analytics.playerName }}</div>
+        <div class="meta-name"><a [routerLink]="['/player', analytics.playerId]">{{ analytics.playerName }}</a></div>
         <div class="meta-sub">
           {{ analytics.position }} · group {{ analytics.positionGroup }}
         </div>

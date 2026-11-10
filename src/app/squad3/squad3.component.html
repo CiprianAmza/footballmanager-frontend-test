@@ -2,7 +2,7 @@
   <header class="people-hero">
     <div>
       <p class="eyebrow">PEOPLE & CULTURE · SEASON {{ overview?.season || '—' }}</p>
-      <h1>{{ overview?.teamName || 'Squad dynamics' }}</h1>
+      <h1><a [routerLink]="['/team', teamId]">{{ overview?.teamName || 'Squad dynamics' }}</a></h1>
       <p class="subtitle">Understand the person behind the player — and act before a concern becomes a crisis.</p>
     </div>
     <nav class="variant-nav" aria-label="Squad views">
@@ -37,8 +37,8 @@
 
     <section class="people-workspace">
       <div class="people-list">
-        <button *ngFor="let player of people; trackBy: trackByPlayer" class="person-card"
-                [class.selected]="selectedPlayer?.id === player.id" (click)="select(player)">
+        <div *ngFor="let player of people; trackBy: trackByPlayer" class="person-card" role="button" tabindex="0"
+                [class.selected]="selectedPlayer?.id === player.id" (click)="select(player)" (keydown.enter)="select(player)">
           <app-player-face [size]="48" [baseFaceId]="player.face.baseFaceId || 0"
             [skinTone]="player.face.skinTone || 0" [hairStyle]="player.face.hairStyle || 0"
             [hairColor]="player.face.hairColor || 0" [eyeColor]="player.face.eyeColor || 0"
@@ -46,19 +46,19 @@
             [eyeShape]="player.face.eyeShape || 0" [mouthShape]="player.face.mouthShape || 0"
             [browShape]="player.face.browShape || 0" [nationId]="player.face.nationId || 0"
             [species]="player.face.species || 'human'"></app-player-face>
-          <span class="person-main"><strong>{{ player.name }}</strong><small>{{ player.position }} · {{ player.age }} · {{ player.profile.personalityLabel }}</small></span>
+          <span class="person-main"><strong><a [routerLink]="['/player', player.id]" (click)="$event.stopPropagation()">{{ player.name }}</a></strong><small>{{ player.position }} · {{ player.age }} · {{ player.profile.personalityLabel }}</small></span>
           <span class="trait"><small>PRO</small><strong>{{ player.profile.professionalism }}</strong></span>
           <span class="trait"><small>AMB</small><strong>{{ player.profile.ambition }}</strong></span>
           <span class="trait"><small>LDR</small><strong>{{ player.profile.leadership }}</strong></span>
           <span class="risk" [ngClass]="player.transferRisk.toLowerCase()">{{ player.transferRisk }}</span>
           <span class="chevron">›</span>
-        </button>
+        </div>
         <p class="empty" *ngIf="!people.length">No player matches this people filter.</p>
       </div>
 
       <article class="profile" *ngIf="selectedPlayer as player">
         <header class="profile-head">
-          <div><span class="position">{{ player.position }}</span><h2>{{ player.name }}</h2><p>{{ player.profile.personalityLabel }} · {{ player.profile.mediaStyle }} with media</p></div>
+          <div><span class="position">{{ player.position }}</span><h2><a [routerLink]="['/player', player.id]">{{ player.name }}</a></h2><p>{{ player.profile.personalityLabel }} · {{ player.profile.mediaStyle }} with media</p></div>
           <span class="risk large" [ngClass]="player.transferRisk.toLowerCase()">{{ player.transferRisk }} RISK</span>
         </header>
 

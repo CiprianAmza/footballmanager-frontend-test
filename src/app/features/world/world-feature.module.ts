@@ -31,6 +31,7 @@ import { PlayerLeaderboardComponent } from '../../player-leaderboard/player-lead
 import { ScorerLeaderboardComponent } from '../../scorer-leaderboard/scorer-leaderboard.component';
 import { SharedModule } from '../../shared/shared.module';
 import { Top3FinishersComponent } from '../../top3-finishers/top3-finishers.component';
+import { ValueRankingsComponent } from '../../value-rankings/value-rankings.component';
 
 const routes: Routes = [
   { path: 'comp/:competitionId', redirectTo: 'competition/:competitionId', pathMatch: 'full' },
@@ -38,6 +39,7 @@ const routes: Routes = [
   { path: 'competition-view/:competitionId', component: CompetitionViewComponent, title: 'Competition hub' },
   { path: 'competition-view/:competitionId/:section', component: CompetitionViewComponent, title: 'Competition hub' },
   { path: 'competition-rankings', component: CompetitionRankingsComponent, title: 'Competition rankings' },
+  { path: 'value-rankings', component: ValueRankingsComponent, title: 'Manager and player value' },
   { path: 'competition-rankings/competition/:competitionId', component: CompetitionRankingDetailComponent, title: 'Competition ranking detail' },
   { path: 'competition-rankings/:section', component: CompetitionRankingsComponent, title: 'Competition rankings' },
   { path: 'rounds', component: DisplayComponent, title: 'Competition rounds' },
@@ -100,7 +102,8 @@ const routes: Routes = [
     LeaguesOverviewComponent,
     AwardHistoryComponent,
     AwardCentreComponent,
-    CompetitionRecordsComponent
+    CompetitionRecordsComponent,
+    ValueRankingsComponent
   ],
   imports: [SharedModule, RouterModule.forChild(routes)]
 })

@@ -1,6 +1,6 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, Subscription } from 'rxjs';
 import { FriendlyCompetitionDetail, FriendlyCompetitionSeries, FriendlyEventView, FriendlyHubService, FriendlyOpponent, FriendlyPlannerOptions } from '../services/friendly-hub.service';
 import { TeamService } from '../services/team.service';
 
@@ -9,7 +9,8 @@ import { TeamService } from '../services/team.service';
   templateUrl: './friendlies3.component.html',
   styleUrls: ['./friendlies3.component.css']
 })
-export class Friendlies3Component implements OnInit {
+export class Friendlies3Component implements OnInit, OnDestroy {
+  private refreshSub?: Subscription;
   teamId = 0;
   season = 1;
   loading = true;
@@ -50,7 +51,10 @@ export class Friendlies3Component implements OnInit {
     this.teamId = Number(this.route.snapshot.paramMap.get('teamId')) || this.teamService.teamId;
     this.season = this.teamService.currentSeason;
     this.load();
+    this.refreshSub = this.teamService.refresh$.subscribe(() => this.load());
   }
+
+  ngOnDestroy(): void { this.refreshSub?.unsubscribe(); }
 
   load(): void {
     if (!this.teamId) return;

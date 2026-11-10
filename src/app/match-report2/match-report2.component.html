@@ -12,18 +12,18 @@
     </div>
     <section>
       <div class="score-team home">
-        <span><strong>{{ summary.homeTeamName }}</strong><small>Home</small></span>
+        <span><strong><a [routerLink]="['/team', summary.homeTeamId]">{{ summary.homeTeamName }}</a></strong><small>Home</small></span>
         <app-team-crest [teamId]="summary.homeTeamId" [teamName]="summary.homeTeamName" [size]="54"></app-team-crest>
       </div>
       <div class="score"><b>{{ scoreParts[0] }}</b><i>–</i><b>{{ scoreParts[1] }}</b></div>
       <div class="score-team away">
         <app-team-crest [teamId]="summary.awayTeamId" [teamName]="summary.awayTeamName" [size]="54"></app-team-crest>
-        <span><strong>{{ summary.awayTeamName }}</strong><small>Away</small></span>
+        <span><strong><a [routerLink]="['/team', summary.awayTeamId]">{{ summary.awayTeamName }}</a></strong><small>Away</small></span>
       </div>
     </section>
     <footer>
       <span>{{ matchDateLabel }}</span><span>Round {{ round }}</span>
-      <span *ngIf="summary.manOfTheMatchName">★ {{ summary.manOfTheMatchName }} <b>{{ summary.manOfTheMatchRating | number:'1.1-1' }}</b></span>
+      <span *ngIf="summary.manOfTheMatchName">★ <a [routerLink]="['/player', summary.manOfTheMatchPlayerId]">{{ summary.manOfTheMatchName }}</a> <b>{{ summary.manOfTheMatchRating | number:'1.1-1' }}</b></span>
     </footer>
   </header>
 
@@ -50,7 +50,7 @@
       <header><span>MATCH EVENTS</span><small>{{ abbreviation(summary.homeTeamName) }} {{ scoreParts[0] }}–{{ scoreParts[1] }} {{ abbreviation(summary.awayTeamName) }}</small></header>
       <div class="events-scroll">
         <div class="event" *ngFor="let event of events" [ngClass]="eventClass(event)">
-          <b>{{ eventIcon(event.eventType) }}</b><span><strong>{{ event.minute }}' {{ event.playerName }}</strong><small>{{ event.details || (event.eventType | titlecase) }}</small></span>
+          <b>{{ eventIcon(event.eventType) }}</b><span><strong>{{ event.minute }}' <a *ngIf="event.playerId" [routerLink]="['/player', event.playerId]">{{ event.playerName }}</a><ng-container *ngIf="!event.playerId">{{ event.playerName }}</ng-container></strong><small>{{ event.details || (event.eventType | titlecase) }}</small></span>
         </div>
         <p *ngIf="!events.length">No detailed events were stored.</p>
       </div>
@@ -76,7 +76,7 @@
           <g *ngFor="let shot of shots"><circle [class.home]="shot.teamId === teamId1" [class.goal]="shot.outcome === 'GOAL'" [attr.cx]="shot.minute / 90 * 480" [attr.cy]="166 - (shot.teamId === teamId1 ? shot.homeCumulative : shot.awayCumulative) / xgMax * 142" r="3"></circle></g>
           <text x="0" y="184">0'</text><text x="235" y="184">45'</text><text x="457" y="184">90'</text>
         </svg>
-        <div class="chart-legend"><span><i></i>{{ summary.homeTeamName }}</span><span><i></i>{{ summary.awayTeamName }}</span></div>
+        <div class="chart-legend"><span><i></i><a [routerLink]="['/team', summary.homeTeamId]">{{ summary.homeTeamName }}</a></span><span><i></i><a [routerLink]="['/team', summary.awayTeamId]">{{ summary.awayTeamName }}</a></span></div>
         <p *ngIf="!shots.length">No shot timeline available.</p>
       </article>
 

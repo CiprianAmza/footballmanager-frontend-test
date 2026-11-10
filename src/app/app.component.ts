@@ -18,7 +18,7 @@ export const urlApp: string = window.location.port === '4201' ? 'http://localhos
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnDestroy {
-  title = 'footballmanagersimulator-frontend';
+  title = 'Argus Football World';
   roomActive = false;
   setRoomActive(active: boolean): void { this.roomActive = active; }
   resumeMultiplayerLiveMatch(event: { key: string; interactive: boolean }): void {

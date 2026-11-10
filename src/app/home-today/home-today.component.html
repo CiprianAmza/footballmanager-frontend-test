@@ -1,7 +1,7 @@
 <main class="today-page">
   <header class="today-heading">
     <div><span class="eyebrow">Manager briefing · Season {{ brief?.season || teamService.currentSeason }}</span>
-      <h1>{{ brief?.teamName || 'Your club' }}</h1>
+      <h1><a *ngIf="brief?.teamId; else clubFallback" [routerLink]="['/team', brief?.teamId]">{{ brief?.teamName }}</a><ng-template #clubFallback>{{ brief?.teamName || 'Your club' }}</ng-template></h1>
       <p>{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }} · {{ teamService.currentPhase }}</p></div>
     <button class="refresh" type="button" (click)="load()">Refresh briefing</button>
   </header>
@@ -27,7 +27,7 @@
         <div class="card-heading"><div><span class="eyebrow">Next match</span><h2>Match day starts here</h2></div><a [routerLink]="['/fixtures', today.teamId]">Schedule →</a></div>
         <ng-container *ngIf="today.nextMatch as match; else noMatch">
           <div class="match-meta"><span>{{ match.competitionName }}</span><span>Round {{ match.round }}</span></div>
-          <div class="matchup"><strong>{{ match.homeTeamName }}</strong><span>VS</span><strong>{{ match.awayTeamName }}</strong></div>
+          <div class="matchup"><strong><a [routerLink]="['/team', match.homeTeamId]">{{ match.homeTeamName }}</a></strong><span>VS</span><strong><a [routerLink]="['/team', match.awayTeamId]">{{ match.awayTeamName }}</a></strong></div>
           <p class="match-note">{{ match.prediction || 'Prepare your squad and tactic before kick-off.' }}</p>
           <div class="match-actions"><a class="primary" [routerLink]="['/squad2', today.teamId]">Choose XI →</a><a [routerLink]="['/tactics', today.teamId]">Set tactics</a><a [routerLink]="['/fixtures', today.teamId]">View fixture</a></div>
         </ng-container>

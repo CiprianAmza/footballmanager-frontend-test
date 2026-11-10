@@ -217,7 +217,7 @@
   <nav id="manager-sidebar" class="sidebar" [class.mobile-open]="mobileSidebarOpen"
        aria-label="Main navigation" (click)="onSidebarInteraction($event)">
     <div class="sidebar-header">
-      <span><span class="fm-logo">FM</span> 24</span>
+      <span><span class="fm-logo">Argus</span> Football World</span>
       <button type="button" class="sidebar-close" aria-label="Close navigation menu"
               (click)="closeMobileSidebar()">×</button>
     </div>
@@ -504,7 +504,7 @@
       <div class="offer-list">
         <div *ngFor="let offer of pendingOffers" class="offer-card">
           <div class="offer-team">
-            <span class="offer-team-name">{{ offer.teamName }}</span>
+            <a class="offer-team-name" [routerLink]="['/team', offer.teamId]" (click)="$event.stopPropagation()">{{ offer.teamName }}</a>
             <span class="offer-team-rep">Reputation {{ offer.teamReputation }}</span>
           </div>
           <p class="offer-pitch">"{{ offer.pitch }}"</p>

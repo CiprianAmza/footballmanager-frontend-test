@@ -100,7 +100,7 @@
       <tbody>
         <tr *ngFor="let entry of playerStats">
           <!-- Club & Season -->
-          <td class="club-cell">{{ entry.teamName }}</td>
+          <td class="club-cell"><a *ngIf="entry.teamId; else historyClubName" [routerLink]="['/team', entry.teamId]">{{ entry.teamName }}</a><ng-template #historyClubName>{{ entry.teamName }}</ng-template></td>
           <td class="center year-cell">{{ entry.seasonNumber }}</td>
           
           <!-- League Stats -->

@@ -669,6 +669,7 @@ export class PlayerComponent implements OnInit, OnDestroy {
                         }
 
                         this.seasonStats = {
+                            teamId: entry.teamId,
                             teamName: entry.teamName,
                             seasonNumber: entry.seasonNumber,
                             competitions,

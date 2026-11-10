@@ -1,65 +1,113 @@
-<section class="market-page">
-  <header class="market-header">
-    <div>
-      <span class="eyebrow">PERSONAL HOLDINGS</span>
-      <h1>Portfolio</h1>
-      <p>Market value, realized gains and adviser contract status all reflect server-owned state.</p>
+<section class="portfolio-page">
+  <header class="portfolio-header">
+    <div class="header-copy">
+      <span class="eyebrow">REGENT EXCHANGE <span class="eyebrow-divider">/</span> PERSONAL ACCOUNT</span>
+      <h1>Your portfolio</h1>
+      <p>See what you own, how it is performing and where your money is available.</p>
     </div>
-    <a routerLink="/market">Trade market</a>
+    <div class="header-actions">
+      <button type="button" class="refresh-button" (click)="load()" [disabled]="loading" aria-label="Refresh portfolio">↻ <span>Refresh</span></button>
+      <a class="trade-button" routerLink="/market">Explore market <span aria-hidden="true">↗</span></a>
+    </div>
   </header>
 
-  <p class="notice error" *ngIf="error">{{ error }}</p>
-  <p *ngIf="loading && !flagOff">Loading portfolio…</p>
+  <div class="portfolio-notice error" role="alert" *ngIf="error && !flagOff">{{ error }} <button type="button" (click)="load()">Try again</button></div>
 
-  <section class="state-card" *ngIf="flagOff">
-    <h2>Feature flag off</h2>
-    <p>The Regent market is still disabled here, so portfolio and adviser views stay read-only and unavailable.</p>
-    <button type="button" (click)="load()">Retry</button>
+  <section class="loading-card" *ngIf="loading && !flagOff" aria-live="polite">
+    <span class="loading-spinner"></span>
+    <h2>Loading your account</h2>
+    <p>Checking your holdings, recent trades and adviser contract.</p>
+  </section>
+
+  <section class="loading-card unavailable" *ngIf="flagOff">
+    <span class="state-symbol">◇</span>
+    <h2>Portfolio unavailable</h2>
+    <p>The Regent market is not enabled in this game.</p>
+    <button type="button" (click)="load()">Try again</button>
   </section>
 
   <ng-container *ngIf="portfolio && !loading && !flagOff">
-    <div class="portfolio-summary">
-      <article><span>Cost basis</span><b>{{ money(portfolio.totalCostBasis.amount) }}</b></article>
-      <article><span>Market value</span><b>{{ money(portfolio.marketValue.amount) }}</b></article>
-      <article><span>Unrealized gain</span><b [class.negative]="portfolio.unrealizedGain.amount < 0">{{ money(portfolio.unrealizedGain.amount) }}</b></article>
-      <article><span>Realized gain</span><b [class.negative]="portfolio.realizedGain.amount < 0">{{ money(portfolio.realizedGain.amount) }}</b></article>
-    </div>
-
-    <section class="detail-card" *ngIf="adviser?.currentContract as contract">
-      <div class="detail-head">
-        <div>
-          <span class="eyebrow">CURRENT ADVISER CONTRACT</span>
-          <h2>{{ contract.adviserName }}</h2>
+    <section class="wealth-card" aria-label="Portfolio overview">
+      <div class="wealth-main">
+        <span class="section-label">TOTAL ACCOUNT VALUE</span>
+        <div class="wealth-value">{{ money(totalWealth) }}</div>
+        <p>Cash available plus the current value of your holdings.</p>
+        <div class="wealth-return" [class.negative]="portfolio.unrealizedGain.amount < 0" [class.neutral]="portfolio.unrealizedGain.amount === 0">
+          <span>{{ portfolio.unrealizedGain.amount > 0 ? '↗' : portfolio.unrealizedGain.amount < 0 ? '↘' : '→' }}</span>
+          <strong>{{ signedMoney(portfolio.unrealizedGain.amount) }}</strong>
+          <span>unrealized · {{ unrealizedReturnPercent > 0 ? '+' : '' }}{{ unrealizedReturnPercent | number:'1.1-1' }}%</span>
         </div>
-        <span class="status-tag">{{ contract.status }}</span>
       </div>
-      <p>{{ money(contract.salaryPerDay.amount) }} per day · skill {{ contract.skill }} · reputation {{ contract.reputation }}</p>
-      <p>Contract window: S{{ contract.startDate.season }} D{{ contract.startDate.day }} to S{{ contract.endDate.season }} D{{ contract.endDate.day }}</p>
-      <p *ngIf="contract.terminationReason">Status reason: {{ contract.terminationReason }}</p>
+      <div class="wealth-breakdown">
+        <div class="breakdown-title"><span>How your account is split</span><strong>{{ portfolio.positions.length }} {{ portfolio.positions.length === 1 ? 'holding' : 'holdings' }}</strong></div>
+        <div class="allocation-bar" role="img" [attr.aria-label]="'Cash ' + (cashShare | number:'1.0-0') + ' percent, invested ' + (investedShare | number:'1.0-0') + ' percent'">
+          <span class="allocation-invested" [style.width.%]="investedShare"></span>
+          <span class="allocation-cash" [style.width.%]="cashShare"></span>
+        </div>
+        <div class="allocation-legend"><span><i class="invested-dot"></i>Invested <b>{{ money(portfolio.marketValue.amount) }}</b></span><span><i class="cash-dot"></i>Available cash <b>{{ money(portfolio.cashBalance.amount) }}</b></span></div>
+      </div>
     </section>
 
-    <h2>Positions</h2>
-    <div class="market-table">
-      <div class="market-row" *ngFor="let position of portfolio.positions">
-        <span>
-          <b>{{ position.code }}</b>
-          <small>{{ position.name }} · {{ riskLabel(position.riskClass) }}</small>
-        </span>
-        <span>{{ position.quantity | number }} shares</span>
-        <span>{{ money(position.costBasis.amount) }} basis</span>
-        <b [class.negative]="position.unrealizedGain.amount < 0">{{ money(position.marketValue.amount) }} · {{ money(position.unrealizedGain.amount) }}</b>
-      </div>
-      <p *ngIf="!portfolio.positions.length">No market positions yet.</p>
+    <section class="metric-grid" aria-label="Key figures">
+      <article class="metric-card"><span>Invested cost</span><strong>{{ money(portfolio.totalCostBasis.amount) }}</strong><small>What you paid for current holdings</small></article>
+      <article class="metric-card"><span>Current holdings</span><strong>{{ money(portfolio.marketValue.amount) }}</strong><small>Value at the latest market price</small></article>
+      <article class="metric-card"><span>Open gain / loss</span><strong [class.negative]="portfolio.unrealizedGain.amount < 0" [class.positive]="portfolio.unrealizedGain.amount > 0">{{ signedMoney(portfolio.unrealizedGain.amount) }}</strong><small>Changes until you sell</small></article>
+      <article class="metric-card"><span>Realized gain / loss</span><strong [class.negative]="portfolio.realizedGain.amount < 0" [class.positive]="portfolio.realizedGain.amount > 0">{{ signedMoney(portfolio.realizedGain.amount) }}</strong><small>From completed sales</small></article>
+    </section>
+
+    <div class="portfolio-workspace">
+      <section class="holdings-panel">
+        <div class="panel-head">
+          <div><span class="section-label">YOUR INVESTMENTS</span><h2>Holdings <em>{{ portfolio.positions.length }}</em></h2><p>Value and performance of your open positions.</p></div>
+          <a routerLink="/market">Buy or sell <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="holdings-toolbar" *ngIf="portfolio.positions.length">
+          <div class="filter-buttons" role="group" aria-label="Filter holdings">
+            <button type="button" [class.active]="positionFilter === 'ALL'" (click)="positionFilter = 'ALL'">All</button>
+            <button type="button" [class.active]="positionFilter === 'CLUB'" (click)="positionFilter = 'CLUB'">Clubs</button>
+            <button type="button" [class.active]="positionFilter === 'COMPANY'" (click)="positionFilter = 'COMPANY'">Companies</button>
+          </div>
+          <label class="sort-control">Sort by <select [(ngModel)]="positionSort" aria-label="Sort holdings"><option value="VALUE">Market value</option><option value="RETURN">Return</option><option value="NAME">Name</option></select></label>
+        </div>
+        <div class="holdings-table" *ngIf="visiblePositions.length">
+          <div class="holding-labels"><span>Asset</span><span>Shares</span><span>Invested</span><span>Value</span><span>Return</span></div>
+          <div class="holding-row" *ngFor="let position of visiblePositions">
+            <div class="holding-identity"><i [class.club]="position.type === 'CLUB'">{{ position.code | slice:0:2 }}</i><div><strong>{{ position.name }}</strong><small>{{ position.code }} · {{ riskLabel(position.riskClass) }}</small></div></div>
+            <span class="holding-number" data-label="Shares">{{ position.quantity | number }}</span>
+            <span class="holding-number" data-label="Invested">{{ money(position.costBasis.amount) }}</span>
+            <span class="holding-number value" data-label="Value">{{ money(position.marketValue.amount) }}<small>{{ positionWeightPercent(position) | number:'1.0-0' }}% of holdings</small></span>
+            <span class="holding-return" data-label="Return" [class.negative]="position.unrealizedGain.amount < 0" [class.positive]="position.unrealizedGain.amount > 0"><strong>{{ signedMoney(position.unrealizedGain.amount) }}</strong><small>{{ positionReturnPercent(position) > 0 ? '+' : '' }}{{ positionReturnPercent(position) | number:'1.1-1' }}%</small></span>
+          </div>
+        </div>
+        <div class="empty-holdings" *ngIf="!portfolio.positions.length"><span>◇</span><h3>Your portfolio is ready</h3><p>No positions yet. Browse the market and make your first investment when you are ready.</p><a routerLink="/market">Explore the market ↗</a></div>
+        <div class="empty-filter" *ngIf="portfolio.positions.length && !visiblePositions.length">No holdings in this category. <button type="button" (click)="positionFilter = 'ALL'">Show all</button></div>
+      </section>
+
+      <aside class="sidebar-panels">
+        <section class="adviser-panel">
+          <div class="side-head"><span class="section-label">YOUR ADVISER</span><span class="adviser-mark">✦</span></div>
+          <ng-container *ngIf="adviser?.currentContract as contract; else noAdviser">
+            <h2>{{ contract.adviserName }}</h2><span class="contract-status">{{ contract.status }}</span>
+            <div class="adviser-facts"><div><span>Skill</span><strong>{{ contract.skill }}</strong></div><div><span>Reputation</span><strong>{{ contract.reputation }}</strong></div><div><span>Daily cost</span><strong>{{ money(contract.salaryPerDay.amount) }}</strong></div></div>
+            <p class="contract-term">S{{ contract.startDate.season }} · D{{ contract.startDate.day }} — S{{ contract.endDate.season }} · D{{ contract.endDate.day }}</p>
+            <p class="contract-reason" *ngIf="contract.terminationReason">{{ contract.terminationReason }}</p>
+          </ng-container>
+          <ng-template #noAdviser><h2>No adviser hired</h2><p class="adviser-empty">An adviser can help you assess market opportunities.</p></ng-template>
+          <a routerLink="/market">Open market adviser <span aria-hidden="true">↗</span></a>
+        </section>
+        <section class="account-note"><span>ℹ</span><div><strong>About your returns</strong><p>Open gain or loss changes with the market. Realized gain or loss only updates after a sale.</p></div></section>
+      </aside>
     </div>
 
-    <h2>Trade history</h2>
-    <div class="history">
-      <div *ngFor="let trade of trades">
-        <span>S{{ trade.season }} · D{{ trade.day }} · {{ trade.side }}</span>
-        <b>{{ trade.quantity }} {{ trade.code }} at {{ money(trade.unitPrice.amount) }}</b>
-        <em [class.negative]="trade.realizedGain.amount < 0">{{ money(trade.realizedGain.amount) }}</em>
+    <section class="activity-panel">
+      <div class="panel-head"><div><span class="section-label">ACCOUNT ACTIVITY</span><h2>Trade history</h2><p>Your most recent orders, newest first.</p></div><span class="activity-count">{{ totalTrades | number }} trades</span></div>
+      <div class="activity-list" *ngIf="trades.length">
+        <div class="activity-row" *ngFor="let trade of displayedTrades"><span class="trade-side" [class.sell]="trade.side === 'SELL'">{{ trade.side === 'BUY' ? '↓' : '↑' }}</span><div class="activity-identity"><strong>{{ trade.side === 'BUY' ? 'Bought' : 'Sold' }} {{ trade.code }}</strong><small>Season {{ trade.season }} · Day {{ trade.day }} · {{ trade.quantity | number }} shares at {{ money(trade.unitPrice.amount) }}</small></div><div class="activity-amount"><strong [class.negative]="trade.side === 'BUY'">{{ trade.side === 'BUY' ? '−' : '+' }}{{ money(trade.grossAmount.amount) }}</strong><small *ngIf="trade.side === 'SELL'" [class.negative]="trade.realizedGain.amount < 0">{{ signedMoney(trade.realizedGain.amount) }} realized</small></div></div>
       </div>
-      <p *ngIf="!trades.length">No trades yet.</p>
-    </div>
+      <div class="empty-activity" *ngIf="!trades.length">Your trades will appear here after your first order.</div>
+      <p class="trade-error" *ngIf="tradeError">{{ tradeError }}</p>
+      <button class="load-more" type="button" *ngIf="trades.length > 8" (click)="showAllTrades = !showAllTrades">{{ showAllTrades ? 'Show recent trades' : 'Show all ' + trades.length + ' loaded trades' }}</button>
+      <button class="load-more" type="button" *ngIf="showAllTrades && trades.length < totalTrades" (click)="loadMoreTrades()" [disabled]="loadingMoreTrades">{{ loadingMoreTrades ? 'Loading…' : 'Load older trades' }}</button>
+    </section>
   </ng-container>
 </section>

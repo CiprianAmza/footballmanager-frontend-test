@@ -38,7 +38,7 @@
           <td class="text-end">{{ h.managerReputation }}</td>
           <td>
             <span *ngIf="!h.ownedClubs?.length" class="text-muted small">—</span>
-            <span *ngFor="let c of h.ownedClubs" class="badge bg-success owner-badge me-1">{{ c.teamName }}</span>
+          <span *ngFor="let c of h.ownedClubs" class="badge bg-success owner-badge me-1"><a [routerLink]="['/team', c.teamId]">{{ c.teamName }}</a></span>
           </td>
         </tr>
       </tbody>

@@ -194,7 +194,7 @@
             <!-- Match Header -->
             <div class="match-card">
                 <div class="team-display home">
-                    <span class="big-name">{{ selectedMatch.homeOrAway === 'H' ? teamName : (selectedMatch.opponentTeam || 'TBD') }}</span>
+                    <span class="big-name"><a [routerLink]="['/team', selectedMatch.homeOrAway === 'H' ? teamId : opponentTeamId(selectedMatch)]">{{ selectedMatch.homeOrAway === 'H' ? teamName : (selectedMatch.opponentTeam || 'TBD') }}</a></span>
                 </div>
 
                 <div class="score-display">
@@ -204,7 +204,7 @@
                 </div>
 
                 <div class="team-display away">
-                    <span class="big-name">{{ selectedMatch.homeOrAway === 'H' ? (selectedMatch.opponentTeam || 'TBD') : teamName }}</span>
+                    <span class="big-name"><a [routerLink]="['/team', selectedMatch.homeOrAway === 'H' ? opponentTeamId(selectedMatch) : teamId]">{{ selectedMatch.homeOrAway === 'H' ? (selectedMatch.opponentTeam || 'TBD') : teamName }}</a></span>
                 </div>
             </div>
 
@@ -264,18 +264,18 @@
                     <div class="ratings-header">TOP PERFORMERS</div>
                     <div class="ratings-columns">
                         <div class="ratings-col">
-                            <div class="ratings-team-name">{{ matchSummary.homeTeamName }}</div>
+                            <div class="ratings-team-name"><a [routerLink]="['/team', matchSummary.homeTeamId]">{{ matchSummary.homeTeamName }}</a></div>
                             <div class="rating-item" *ngFor="let pr of $any(matchSummary.homePlayerRatings)?.slice(0,3)">
-                                <span class="rating-player-name">{{ $any(pr).playerName }}</span>
+                                <span class="rating-player-name"><a [routerLink]="['/player', $any(pr).playerId]">{{ $any(pr).playerName }}</a></span>
                                 <span class="rating-value" [ngClass]="{'rating-high': $any(pr).rating >= 8, 'rating-mid': $any(pr).rating >= 6.5 && $any(pr).rating < 8, 'rating-low': $any(pr).rating < 6.5}">
                                     {{ $any(pr).rating | number:'1.1-1' }}
                                 </span>
                             </div>
                         </div>
                         <div class="ratings-col">
-                            <div class="ratings-team-name">{{ matchSummary.awayTeamName }}</div>
+                            <div class="ratings-team-name"><a [routerLink]="['/team', matchSummary.awayTeamId]">{{ matchSummary.awayTeamName }}</a></div>
                             <div class="rating-item" *ngFor="let pr of $any(matchSummary.awayPlayerRatings)?.slice(0,3)">
-                                <span class="rating-player-name">{{ $any(pr).playerName }}</span>
+                                <span class="rating-player-name"><a [routerLink]="['/player', $any(pr).playerId]">{{ $any(pr).playerName }}</a></span>
                                 <span class="rating-value" [ngClass]="{'rating-high': $any(pr).rating >= 8, 'rating-mid': $any(pr).rating >= 6.5 && $any(pr).rating < 8, 'rating-low': $any(pr).rating < 6.5}">
                                     {{ $any(pr).rating | number:'1.1-1' }}
                                 </span>
@@ -323,8 +323,8 @@
 
                 <div *ngIf="!loadingStats && matchStats" class="stats-panel">
                     <div class="stats-team-header">
-                        <span class="stats-team-name home">{{ matchStats.homeTeamName }}</span>
-                        <span class="stats-team-name away">{{ matchStats.awayTeamName }}</span>
+                        <span class="stats-team-name home"><a [routerLink]="['/team', matchSummary?.homeTeamId]">{{ matchStats.homeTeamName }}</a></span>
+                        <span class="stats-team-name away"><a [routerLink]="['/team', matchSummary?.awayTeamId]">{{ matchStats.awayTeamName }}</a></span>
                     </div>
 
                     <div class="stat-item" *ngFor="let stat of matchStats.stats">
@@ -458,9 +458,9 @@
                       <strong>Season {{ meeting.seasonNumber }} · {{ meeting.competitionName }}</strong>
                       <span>Round {{ meeting.roundNumber }}</span>
                     </div>
-                    <span class="meeting-team home">{{ meeting.homeTeamName }}</span>
+                    <span class="meeting-team home"><a [routerLink]="['/team', meeting.homeTeamId]">{{ meeting.homeTeamName }}</a></span>
                     <span class="meeting-score">{{ meeting.score }}</span>
-                    <span class="meeting-team away">{{ meeting.awayTeamName }}</span>
+                    <span class="meeting-team away"><a [routerLink]="['/team', meeting.awayTeamId]">{{ meeting.awayTeamName }}</a></span>
                     <small *ngIf="h2hDecisionLabel(meeting) as decision">{{ decision }}</small>
                   </div>
                 </section>

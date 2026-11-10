@@ -39,6 +39,16 @@ export interface PhaseCatalog {
   totalRatings: number;
 }
 
+export interface PhasePoint { x: number; y: number; }
+export type PhaseMove = 'PASS' | 'DRIBBLE' | 'SPRINT_DRIBBLE';
+export interface PhaseTemplateDraft {
+  name: string;
+  slots: number[];
+  points: PhasePoint[];
+  moves: PhaseMove[];
+}
+export interface PhaseTemplate extends PhaseTemplateDraft { id: string; yAxis?: string; }
+
 /** Phase Lab backend: scenario catalog, deterministic generation, the taste
  *  agent's next proposal, and rating submission. */
 @Injectable({ providedIn: 'root' })
@@ -69,6 +79,30 @@ export class PhaseLabService {
       outcome: preview.outcome,
       seed: preview.seed,
       rating
+    });
+  }
+
+  templates(): Observable<PhaseTemplate[]> {
+    return this.http.get<PhaseTemplate[]>(`${this.base}/templates`);
+  }
+
+  saveTemplate(draft: PhaseTemplateDraft): Observable<PhaseTemplate> {
+    return this.http.post<PhaseTemplate>(`${this.base}/templates`, draft);
+  }
+
+  deleteTemplate(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/templates/${encodeURIComponent(id)}`);
+  }
+
+  previewTemplate(id: string, outcome: string, seed: number): Observable<PhasePreview> {
+    return this.http.get<PhasePreview>(`${this.base}/templates/${encodeURIComponent(id)}/preview`, {
+      params: { outcome, seed }
+    });
+  }
+
+  previewDraft(draft: PhaseTemplateDraft, outcome: string, seed: number): Observable<PhasePreview> {
+    return this.http.post<PhasePreview>(`${this.base}/templates/preview`, draft, {
+      params: { outcome, seed }
     });
   }
 }

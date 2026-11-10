@@ -8,7 +8,7 @@
   <ng-container *ngIf="data && !loading">
     <section class="kpi-strip">
       <article><span>Country leader</span><strong>{{ data.countries.length ? data.countries[0].leagueName : '—' }}</strong><small>{{ data.countries.length ? (data.countries[0].coefficient | number:'1.1-2') : '—' }} pts</small></article>
-      <article><span>Club leader</span><strong>{{ data.clubs.length ? data.clubs[0].teamName : '—' }}</strong><small>{{ data.clubs.length ? (data.clubs[0].coefficient | number:'1.1-2') : '—' }} pts</small></article>
+      <article><span>Club leader</span><strong><a *ngIf="data.clubs.length" [routerLink]="['/team', data.clubs[0].teamId]">{{ data.clubs[0].teamName }}</a><ng-container *ngIf="!data.clubs.length">—</ng-container></strong><small>{{ data.clubs.length ? (data.clubs[0].coefficient | number:'1.1-2') : '—' }} pts</small></article>
       <article><span>LoC field</span><strong>{{ data.summary?.loc?.totalTeams || '—' }} clubs</strong><small>{{ data.summary?.loc?.directToGroups || 0 }} direct</small></article>
       <article class="money-kpi" routerLink="/competition-money"><span>Money in play</span><strong>Open economy</strong><small>Shortcut M</small></article>
     </section>
@@ -24,7 +24,7 @@
       </div>
 
       <aside class="inspector" *ngIf="active as row">
-        <span class="eyebrow">Rank #{{ row.rank }} · selected</span><h2>{{ row.teamName || row.leagueName }}</h2><p *ngIf="row.teamName">{{ row.leagueName }}</p>
+        <span class="eyebrow">Rank #{{ row.rank }} · selected</span><h2><a *ngIf="row.teamId" [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a><ng-container *ngIf="!row.teamId">{{ row.leagueName }}</ng-container></h2><p *ngIf="row.teamName">{{ row.leagueName }}</p>
         <div class="score-ring"><strong>{{ row.coefficient | number:'1.1-2' }}</strong><span>5-season coefficient</span></div>
         <div class="access-box" *ngIf="mode === 'countries'"><span>European access</span><strong>{{ row.locSpots }} League of Champions</strong><small>{{ row.locEntry }}</small><strong>{{ row.starsCupSpots }} Stars Cup</strong></div>
         <h3>Season contribution</h3><div class="trend-row" *ngFor="let season of seasonKeys(row)"><span>S{{ season }}</span><i><b [style.width.%]="trendWidth(row, season)"></b></i><strong>{{ row.perSeason[season] | number:'1.1-1' }}</strong></div>

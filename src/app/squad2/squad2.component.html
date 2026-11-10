@@ -2,7 +2,7 @@
   <header class="s2-hero">
     <div>
       <p class="eyebrow">SQUAD · SEASON {{ overview?.season || '—' }}</p>
-      <h1>{{ overview?.teamName || 'Matchday Board' }}</h1>
+      <h1><a [routerLink]="['/team', teamId]">{{ overview?.teamName || 'Matchday Board' }}</a></h1>
       <p class="subtitle">Your XI and bench for the next match. Choose a player below to change a starter.</p>
     </div>
     <nav class="variant-nav" aria-label="Squad views">
@@ -28,8 +28,8 @@
       <p *ngIf="lineupLoading" class="lineup-note">Loading the actual team selection…</p>
       <p *ngIf="lineupError" class="lineup-note error">{{ lineupError }}</p>
       <div class="lineup-groups" *ngIf="!lineupLoading && formation">
-        <div><strong>Starting XI <small>{{ startingCount }}/11</small></strong><div class="lineup-chips"><button type="button" *ngFor="let slot of startingSlots" (click)="replaceSlotIndex = slot.positionIndex" [class.target]="replaceSlotIndex === slot.positionIndex" [title]="'Replace ' + playerName(slot.playerId)">{{ playerName(slot.playerId) }}</button></div></div>
-        <div><strong>Bench <small>{{ benchCount }}/7</small></strong><div class="lineup-chips bench"><span *ngFor="let slot of benchSlots">{{ playerName(slot.playerId) }}</span><span *ngIf="!benchCount">No substitutes saved</span></div></div>
+        <div><strong>Starting XI <small>{{ startingCount }}/11</small></strong><div class="lineup-chips"><span class="starter-chip" role="button" tabindex="0" *ngFor="let slot of startingSlots" (click)="replaceSlotIndex = slot.positionIndex" (keydown.enter)="replaceSlotIndex = slot.positionIndex" [class.target]="replaceSlotIndex === slot.positionIndex" [title]="'Replace ' + playerName(slot.playerId)"><a [routerLink]="['/player', slot.playerId]" (click)="$event.stopPropagation()">{{ playerName(slot.playerId) }}</a></span></div></div>
+        <div><strong>Bench <small>{{ benchCount }}/7</small></strong><div class="lineup-chips bench"><span *ngFor="let slot of benchSlots"><a [routerLink]="['/player', slot.playerId]">{{ playerName(slot.playerId) }}</a></span><span *ngIf="!benchCount">No substitutes saved</span></div></div>
       </div>
     </section>
 
@@ -59,10 +59,10 @@
     <section class="workspace">
       <div class="roster-panel">
         <div class="panel-title"><strong>{{ filteredPlayers.length }} players</strong><span>Choose a player, then replace a starter</span></div>
-        <button class="player-row" *ngFor="let player of filteredPlayers"
+        <div class="player-row" role="button" tabindex="0" *ngFor="let player of filteredPlayers"
                 [class.selected]="selectedPlayer?.id === player.id"
                 [class.unavailable]="player.availability.length"
-                (click)="selectPlayer(player)">
+                (click)="selectPlayer(player)" (keydown.enter)="selectPlayer(player)">
           <span class="pick" [class.checked]="selectionStatus(player.id) === 'XI'">{{ selectionStatus(player.id) }}</span>
           <app-player-face [size]="42" [baseFaceId]="player.face.baseFaceId || 0"
             [skinTone]="player.face.skinTone || 0" [hairStyle]="player.face.hairStyle || 0"
@@ -72,13 +72,13 @@
             [browShape]="player.face.browShape || 0" [nationId]="player.face.nationId || 0"
             [species]="player.face.species || 'human'"></app-player-face>
           <span class="position">{{ player.position }}</span>
-          <span class="identity"><strong>{{ player.name }}</strong><small>{{ availabilityLabel(player) }} · {{ player.age }} yrs</small></span>
+          <span class="identity"><strong><a [routerLink]="['/player', player.id]" (click)="$event.stopPropagation()">{{ player.name }}</a></strong><small>{{ availabilityLabel(player) }} · {{ player.age }} yrs</small></span>
           <span class="season-line"><strong>{{ player.appearances }}</strong><small>APP</small></span>
           <span class="season-line"><strong>{{ player.goals }}</strong><small>G</small></span>
           <span class="season-line"><strong>{{ player.assists }}</strong><small>A</small></span>
           <span class="meter-cell"><small>FIT {{ player.fitness | number:'1.0-0' }}%</small><i><b [style.width.%]="player.fitness"></b></i></span>
           <span class="readiness" [ngClass]="readinessTone(player.readiness)">{{ player.readiness }}</span>
-        </button>
+        </div>
         <p class="empty" *ngIf="!filteredPlayers.length">No player matches these filters.</p>
       </div>
 
@@ -91,7 +91,7 @@
             [eyeShape]="player.face.eyeShape || 0" [mouthShape]="player.face.mouthShape || 0"
             [browShape]="player.face.browShape || 0" [nationId]="player.face.nationId || 0"
             [species]="player.face.species || 'human'"></app-player-face>
-          <div><span class="position">{{ player.position }}</span><h2>{{ player.name }}</h2><p>{{ player.age }} years · {{ player.agreedPlayingTime || 'Squad player' }}</p></div>
+          <div><span class="position">{{ player.position }}</span><h2><a [routerLink]="['/player', player.id]">{{ player.name }}</a></h2><p>{{ player.age }} years · {{ player.agreedPlayingTime || 'Squad player' }}</p></div>
         </div>
         <div class="readiness-hero" [ngClass]="readinessTone(player.readiness)"><span>MATCH READINESS</span><strong>{{ player.readiness }}</strong></div>
         <dl class="detail-grid">

@@ -18,7 +18,7 @@
   <div class="jobs-grid" *ngIf="!loading && availableJobs.length > 0">
     <div class="job-card" *ngFor="let job of availableJobs">
       <div class="job-card-header">
-        <span class="team-name">{{ job.teamName }}</span>
+        <span class="team-name"><a [routerLink]="['/team', job.teamId]">{{ job.teamName }}</a></span>
         <span class="job-badge" [ngClass]="{'badge-vacant': job.status === 'Vacant', 'badge-replaceable': job.status === 'Replaceable'}">
           {{ job.status }}
         </span>

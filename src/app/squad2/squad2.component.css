@@ -78,7 +78,7 @@ kbd { display: inline-block; min-width: 20px; margin-right: 3px; padding: 3px 5p
 .lineup-groups small { color:#8ba1af; }
 .lineup-chips { display:flex; flex-wrap:wrap; gap:6px; }
 .lineup-chips button,.lineup-chips span { border:1px solid #3d5967; border-radius:6px; padding:7px 9px; background:#1a3640; color:#dcf4ef; font-size:11px; }
-.lineup-chips button:hover,.lineup-chips button.target { border-color:#8ce4d6; background:#28535b; }
+.lineup-chips .starter-chip:hover,.lineup-chips .starter-chip.target { border-color:#8ce4d6; background:#28535b; cursor:pointer; }
 .lineup-chips.bench span { background:#212d3a; color:#b8c9d5; }
 .lineup-note { margin:0; color:#9fafbb; font-size:12px; }.lineup-note.error { color:#ffaca8; }
 .swap-card { margin-top:12px; padding:14px; border:1px solid #375b5d; border-radius:8px; background:#142c32; }

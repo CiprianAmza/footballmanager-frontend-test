@@ -26,8 +26,8 @@ const REMOTE_PREFERENCE_KEY = 'appearance.theme';
 export class ThemeService {
   readonly themes: readonly ThemeDefinition[] = [
     {
-      id: 'classic', name: 'Classic', era: 'Modern touchline', glyph: 'FM',
-      description: 'The familiar dark Football Manager workspace: restrained, clear and data-first.',
+      id: 'classic', name: 'Classic', era: 'Modern touchline', glyph: 'AFW',
+      description: 'A restrained, data-first touchline workspace for this football world.',
       colors: ['#1a1d2e', '#232639', '#f1c40f', '#3498db']
     },
     {

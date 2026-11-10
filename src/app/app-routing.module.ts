@@ -71,7 +71,7 @@ export function worldFeatureMatcher(segments: UrlSegment[]): UrlMatchResult | nu
   return prefixMatcher([
     'comp', 'competition', 'competition-view', 'rounds', 'competitionoveriew', 'competition-overview',
     'top3-history', 'mediaPrediction', 'media-prediction', 'hall-of-fame', 'stats',
-    'competition-list', 'competition-rankings', 'competitions2', 'competitions3', 'competitions-world',
+    'competition-list', 'competition-rankings', 'value-rankings', 'competitions2', 'competitions3', 'competitions-world',
     'coefficients', 'coefficients2', 'coefficients3', 'competition-money',
     'european-rounds', 'manager-profile', 'all-time-champions', 'overview', 'awards',
     'competition-records'

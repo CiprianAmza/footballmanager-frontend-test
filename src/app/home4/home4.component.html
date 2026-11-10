@@ -2,7 +2,7 @@
   <header class="desk-header">
     <div class="club-id">
       <app-team-crest [teamId]="teamService.teamId" [teamName]="teamName" [size]="42"></app-team-crest>
-      <div><span>MANAGER DESK · SEASON {{ teamService.currentSeason }}</span><h1>{{ teamName || 'Club overview' }}</h1></div>
+      <div><span>MANAGER DESK · SEASON {{ teamService.currentSeason }}</span><h1><a [routerLink]="teamService.teamId ? ['/team', teamService.teamId] : null">{{ teamName || 'Club overview' }}</a></h1></div>
     </div>
     <div class="date-block"><strong>{{ teamService.dayOfWeek }}, {{ teamService.dateDisplay }}</strong><span>{{ teamService.currentPhase }}</span></div>
     <nav class="view-nav"><a routerLink="/home">Current</a><a routerLink="/home2">Desk</a><a routerLink="/home3">Cockpit</a><a class="active" routerLink="/home4">Director</a></nav>
@@ -30,13 +30,13 @@
           <span>{{ matchPreview.venue || (ownTeamIsHome ? 'Home' : 'Away') }}</span>
         </div>
         <div class="fixture-versus">
-          <div><app-team-crest [teamId]="matchPreview.homeTeamId" [teamName]="matchPreview.homeTeamName" [size]="54"></app-team-crest><strong>{{ matchPreview.homeTeamName }}</strong></div>
+          <div><app-team-crest [teamId]="matchPreview.homeTeamId" [teamName]="matchPreview.homeTeamName" [size]="54"></app-team-crest><strong><a [routerLink]="['/team', matchPreview.homeTeamId]">{{ matchPreview.homeTeamName }}</a></strong></div>
           <span><b>VS</b><small>{{ matchPreview.prediction || 'Even contest' }}</small></span>
-          <div><app-team-crest [teamId]="matchPreview.awayTeamId" [teamName]="matchPreview.awayTeamName" [size]="54"></app-team-crest><strong>{{ matchPreview.awayTeamName }}</strong></div>
+          <div><app-team-crest [teamId]="matchPreview.awayTeamId" [teamName]="matchPreview.awayTeamName" [size]="54"></app-team-crest><strong><a [routerLink]="['/team', matchPreview.awayTeamId]">{{ matchPreview.awayTeamName }}</a></strong></div>
         </div>
         <div class="team-news-grid">
-          <section class="team-news"><b>{{ teamName }} news</b><span *ngFor="let item of ownTeamNews">{{ item.playerName || item.name }} · {{ item.explanation || item.type }}</span><small *ngIf="!ownTeamNews.length">No selection concerns</small></section>
-          <section class="team-news"><b>{{ opponentName }} news</b><span *ngFor="let item of opponentTeamNews">{{ item.playerName || item.name }} · {{ item.explanation || item.type }}</span><small *ngIf="!opponentTeamNews.length">No reported absences</small></section>
+          <section class="team-news"><b><a [routerLink]="['/team', teamService.teamId]">{{ teamName }}</a> news</b><span *ngFor="let item of ownTeamNews"><a *ngIf="item.playerId" [routerLink]="['/player', item.playerId]">{{ item.playerName || item.name }}</a><ng-container *ngIf="!item.playerId">{{ item.playerName || item.name }}</ng-container> · {{ item.explanation || item.type }}</span><small *ngIf="!ownTeamNews.length">No selection concerns</small></section>
+          <section class="team-news"><b><a [routerLink]="['/team', ownTeamIsHome ? matchPreview.awayTeamId : matchPreview.homeTeamId]">{{ opponentName }}</a> news</b><span *ngFor="let item of opponentTeamNews"><a *ngIf="item.playerId" [routerLink]="['/player', item.playerId]">{{ item.playerName || item.name }}</a><ng-container *ngIf="!item.playerId">{{ item.playerName || item.name }}</ng-container> · {{ item.explanation || item.type }}</span><small *ngIf="!opponentTeamNews.length">No reported absences</small></section>
         </div>
         <div class="match-actions"><a [routerLink]="['/squad4', teamService.teamId]">Select XI</a><a routerLink="/medical">Availability</a><a routerLink="/assistant">Staff brief</a></div>
       </ng-container>
@@ -86,7 +86,7 @@
       <ng-container *ngIf="managerProfile; else noManagerProfile">
         <div class="manager-profile">
           <div class="manager-face"><app-player-face [size]="92" [baseFaceId]="managerProfile.baseFaceId || 0" [skinTone]="managerProfile.skinTone || 0" [hairStyle]="managerProfile.hairStyle || 0" [hairColor]="managerProfile.hairColor || 0" [eyeColor]="managerProfile.eyeColor || 0" [faceShape]="managerProfile.faceShape || 0" [noseShape]="managerProfile.noseShape || 0" [eyeShape]="managerProfile.eyeShape || 0" [mouthShape]="managerProfile.mouthShape || 0" [browShape]="managerProfile.browShape || 0" [species]="managerProfile.species || 'human'"></app-player-face></div>
-          <div class="manager-meta"><strong>{{ managerProfile.managerName }}</strong><span>{{ managerProfile.age || '—' }} years old · {{ managerReputationLabel }}</span><span>{{ managerProfile.tacticStyle || 'Flexible tactical identity' }}</span><span>{{ money(managerProfile.monthlySalary) }} / month</span></div>
+          <div class="manager-meta"><strong><a [routerLink]="['/manager-profile', managerProfile.managerId]">{{ managerProfile.managerName }}</a></strong><span>{{ managerProfile.age || '—' }} years old · {{ managerReputationLabel }}</span><span>{{ managerProfile.tacticStyle || 'Flexible tactical identity' }}</span><span>{{ money(managerProfile.monthlySalary) }} / month</span></div>
         </div>
         <div class="career-strip"><span><b>{{ managerProfile.totalGames || 0 }}</b> games</span><span><b>{{ managerProfile.winPercentage || 0 }}%</b> wins</span><span><b>{{ managerProfile.totalTrophies || 0 }}</b> trophies</span></div>
         <div class="manager-attributes"><div *ngFor="let attribute of managerAttributes"><span>{{ attribute.label }}</span><i><b [style.width.%]="attribute.value * 5"></b></i><strong>{{ attribute.value }}</strong></div></div>

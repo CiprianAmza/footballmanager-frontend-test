@@ -1,0 +1,141 @@
+<main class="value-page">
+  <header class="value-hero">
+    <div>
+      <a routerLink="/competition-rankings">← Competition rankings</a>
+      <p>PERFORMANCE / {{ scope === 'all-time' ? 'ALL TIME' : 'SEASON ' + season }}</p>
+      <h1>Manager & player value</h1>
+      <span>Performance against pre-season expectations, weighted by competition strength.</span>
+    </div>
+    <div class="value-formula">(RESULT <b>+</b> 40% VS PREDICTION <b>+</b> TITLE BONUS) <b>×</b> REPUTATION / 10,000</div>
+  </header>
+
+  <section class="value-filters" aria-label="Value ranking filters">
+    <div class="value-toggle" role="group" aria-label="People">
+      <button type="button" [class.active]="subject === 'players'" (click)="subject = 'players'; load()">Players</button>
+      <button type="button" [class.active]="subject === 'managers'" (click)="subject = 'managers'; load()">Managers</button>
+    </div>
+    <div class="value-toggle" role="group" aria-label="Time period">
+      <button type="button" [class.active]="scope === 'season'" (click)="scope = 'season'; load()">Season</button>
+      <button type="button" [class.active]="scope === 'all-time'" (click)="scope = 'all-time'; load()">All time</button>
+    </div>
+    <label *ngIf="scope === 'season'">Season
+      <select [(ngModel)]="season" (ngModelChange)="load()"><option *ngFor="let item of seasons" [ngValue]="item">Season {{ item }}</option></select>
+    </label>
+    <label>Competition
+      <select [(ngModel)]="competitionId" (ngModelChange)="load()">
+        <option [ngValue]="null">All competitions</option>
+        <option *ngFor="let competition of competitions" [ngValue]="competition.competitionId">{{ competition.name }}</option>
+      </select>
+    </label>
+    <button type="button" class="value-refresh" (click)="load()">↻ Refresh</button>
+  </section>
+
+  <div class="value-context" *ngIf="data">
+    <span>{{ subject === 'players' ? 'Player' : 'Manager' }} ranking · {{ competitionName }}</span>
+    <strong *ngIf="isLive">LIVE / PROVISIONAL</strong>
+    <small>Scoring model {{ data.scoringVersion }}</small>
+  </div>
+  <p class="value-warning" *ngIf="needsContextNote">Some older seasons have no verified opening prediction. Their result and contribution count, but the expectation bonus is omitted.</p>
+  <p class="value-state" *ngIf="loading">Calculating the ranking…</p>
+  <p class="value-state error" *ngIf="!loading && error">{{ error }} <button type="button" (click)="load()">Retry</button></p>
+  <p class="value-state" *ngIf="!loading && !error && !data?.rows?.length">No recorded performances for this selection yet.</p>
+
+  <div class="value-table-wrap" *ngIf="!loading && !error && data?.rows?.length">
+    <table>
+      <thead><tr>
+        <th [attr.aria-sort]="sortState('rank')"><button type="button" class="value-sort" (click)="sortBy('rank')">#{{ sortArrow('rank') }}</button></th>
+        <th [attr.aria-sort]="sortState('name')"><button type="button" class="value-sort" (click)="sortBy('name')">{{ subject === 'players' ? 'Player' : 'Manager' }}{{ sortArrow('name') }}</button></th>
+        <th [attr.aria-sort]="sortState('club')"><button type="button" class="value-sort" (click)="sortBy('club')">Current club{{ sortArrow('club') }}</button></th>
+        <th [attr.aria-sort]="sortState('score')"><button type="button" class="value-sort" (click)="sortBy('score')">Value{{ sortArrow('score') }}</button></th>
+        <th [attr.aria-sort]="sortState('matches')"><button type="button" class="value-sort" (click)="sortBy('matches')">{{ subject === 'players' ? 'Apps' : 'Matches managed' }}{{ sortArrow('matches') }}</button></th>
+        <th *ngIf="subject === 'players'" [attr.aria-sort]="sortState('goals')"><button type="button" class="value-sort" (click)="sortBy('goals')">Goals{{ sortArrow('goals') }}</button></th>
+        <th *ngIf="subject === 'players'" [attr.aria-sort]="sortState('assists')"><button type="button" class="value-sort" (click)="sortBy('assists')">Assists{{ sortArrow('assists') }}</button></th>
+        <th [attr.aria-sort]="sortState('competitions')"><button type="button" class="value-sort" (click)="sortBy('competitions')">Competitions{{ sortArrow('competitions') }}</button></th>
+        <th *ngIf="scope === 'all-time'" [attr.aria-sort]="sortState('seasons')"><button type="button" class="value-sort" (click)="sortBy('seasons')">Seasons{{ sortArrow('seasons') }}</button></th>
+        <th [attr.aria-sort]="sortState('trophies')"><button type="button" class="value-sort" (click)="sortBy('trophies')">Trophies{{ sortArrow('trophies') }}</button></th>
+        <th *ngIf="subject === 'managers'" [attr.aria-sort]="sortState('results')"><button type="button" class="value-sort" (click)="sortBy('results')">Season results{{ sortArrow('results') }}</button></th>
+        <th *ngIf="competitionId" [attr.aria-sort]="sortState('prediction')"><button type="button" class="value-sort" (click)="sortBy('prediction')">Prediction{{ sortArrow('prediction') }}</button></th>
+        <th *ngIf="competitionId" [attr.aria-sort]="sortState('position')"><button type="button" class="value-sort" (click)="sortBy('position')">Position{{ sortArrow('position') }}</button></th>
+        <th *ngIf="competitionId" [attr.aria-sort]="sortState('delta')"><button type="button" class="value-sort" (click)="sortBy('delta')">Vs prediction{{ sortArrow('delta') }}</button></th>
+        <th *ngIf="competitionId" [attr.aria-sort]="sortState('outcome')"><button type="button" class="value-sort" (click)="sortBy('outcome')">Result points{{ sortArrow('outcome') }}</button></th>
+        <th *ngIf="competitionId" [attr.aria-sort]="sortState('prestige')"><button type="button" class="value-sort" (click)="sortBy('prestige')">Reputation{{ sortArrow('prestige') }}</button></th>
+      </tr></thead>
+      <tbody><ng-container *ngFor="let row of sortedRows"><tr>
+        <td class="rank">{{ row.rank }}</td>
+        <td><a [routerLink]="subject === 'players' ? ['/player', row.personId] : ['/manager-profile', row.personId]">{{ row.personName }}</a>
+          <small *ngIf="row.teamId && row.teamName">Season club: <a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></small>
+        </td>
+        <td>
+          <a *ngIf="row.currentTeamId && row.currentTeamName; else noCurrentClub" [routerLink]="['/team', row.currentTeamId]">{{ row.currentTeamName }}</a>
+          <ng-template #noCurrentClub><span class="value-muted">No club</span></ng-template>
+        </td>
+        <td class="score">{{ row.score | number:'1.2-2' }}</td>
+        <td>{{ row.appearances }}</td>
+        <td *ngIf="subject === 'players'">{{ row.goals }}</td><td *ngIf="subject === 'players'">{{ row.assists }}</td>
+        <td>{{ row.competitions }}</td><td *ngIf="scope === 'all-time'">{{ row.seasons }}</td>
+        <td class="value-trophies">
+          <ng-container *ngIf="row.trophies?.length; else noTrophies">
+            <strong>{{ row.trophies.length }}</strong>
+            <small *ngFor="let trophy of row.trophies">S{{ trophy.season }} · {{ trophy.competitionName }}</small>
+          </ng-container>
+          <ng-template #noTrophies><span class="value-muted">—</span></ng-template>
+        </td>
+        <td *ngIf="subject === 'managers'">
+          <button type="button" class="value-details-button" (click)="toggleManager(row)"
+                  [attr.aria-expanded]="expandedManagerKey === managerRowKey(row)"
+                  [attr.aria-controls]="'manager-performance-' + managerRowKey(row)">
+            {{ expandedManagerKey === managerRowKey(row) ? 'Hide' : 'View' }} {{ row.performances.length }} results
+          </button>
+        </td>
+        <td *ngIf="competitionId">{{ row.predictedPosition ? '#' + row.predictedPosition : '—' }}<small *ngIf="!row.exactOpeningPrediction">Unverified</small></td>
+        <td *ngIf="competitionId">{{ row.actualPosition ? '#' + row.actualPosition + (row.resultLabel ? ' · ' + row.resultLabel : '') : (row.resultLabel || 'In progress') }}</td>
+        <td *ngIf="competitionId">{{ row.positionDelta === null ? '—' : (row.positionDelta > 0 ? '+' : '') + row.positionDelta }}</td>
+        <td *ngIf="competitionId">{{ row.outcomePoints | number:'1.1-1' }}</td>
+        <td *ngIf="competitionId">{{ row.competitionPrestige * 10000 | number:'1.0-0' }}</td>
+      </tr>
+      <tr *ngIf="subject === 'managers' && expandedManagerKey === managerRowKey(row)" class="value-expanded">
+        <td [attr.colspan]="managerColspan" [id]="'manager-performance-' + managerRowKey(row)">
+          <div class="value-breakdown">
+            <h3>Performance by season and competition</h3>
+            <table>
+              <thead><tr>
+                <th [attr.aria-sort]="detailSortState('season')"><button type="button" class="value-sort" (click)="sortDetailBy('season')">Season{{ detailSortArrow('season') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('club')"><button type="button" class="value-sort" (click)="sortDetailBy('club')">Club that season{{ detailSortArrow('club') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('competition')"><button type="button" class="value-sort" (click)="sortDetailBy('competition')">Competition{{ detailSortArrow('competition') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('prediction')"><button type="button" class="value-sort" (click)="sortDetailBy('prediction')">Prediction{{ detailSortArrow('prediction') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('finish')"><button type="button" class="value-sort" (click)="sortDetailBy('finish')">Finish{{ detailSortArrow('finish') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('delta')"><button type="button" class="value-sort" (click)="sortDetailBy('delta')">Vs prediction{{ detailSortArrow('delta') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('outcome')"><button type="button" class="value-sort" (click)="sortDetailBy('outcome')">Result pts{{ detailSortArrow('outcome') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('expected')"><button type="button" class="value-sort" (click)="sortDetailBy('expected')">Expected pts{{ detailSortArrow('expected') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('prestige')"><button type="button" class="value-sort" (click)="sortDetailBy('prestige')">Reputation{{ detailSortArrow('prestige') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('scoreWeight')"><button type="button" class="value-sort" (click)="sortDetailBy('scoreWeight')">Score weight{{ detailSortArrow('scoreWeight') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('titleBonus')"><button type="button" class="value-sort" (click)="sortDetailBy('titleBonus')">Title bonus{{ detailSortArrow('titleBonus') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('matches')"><button type="button" class="value-sort" (click)="sortDetailBy('matches')">Matches{{ detailSortArrow('matches') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('value')"><button type="button" class="value-sort" (click)="sortDetailBy('value')">Value{{ detailSortArrow('value') }}</button></th>
+                <th [attr.aria-sort]="detailSortState('trophy')"><button type="button" class="value-sort" (click)="sortDetailBy('trophy')">Trophy{{ detailSortArrow('trophy') }}</button></th>
+              </tr></thead>
+              <tbody><tr *ngFor="let performance of sortedPerformances">
+                <td>{{ performance.season }}</td>
+                <td><a [routerLink]="['/team', performance.teamId]">{{ performance.teamName }}</a></td>
+                <td><a [routerLink]="['/competition-view', performance.competitionId]" [queryParams]="{season: performance.season}">{{ performance.competitionName }}</a></td>
+                <td>{{ performance.predictedPosition ? '#' + performance.predictedPosition : '—' }}<small *ngIf="!performance.exactOpeningPrediction">Unverified</small></td>
+                <td>{{ performance.actualPosition ? '#' + performance.actualPosition + (performance.resultLabel ? ' · ' + performance.resultLabel : '') : (performance.resultLabel || 'In progress') }}</td>
+                <td>{{ performance.positionDelta === null ? '—' : (performance.positionDelta > 0 ? '+' : '') + performance.positionDelta }}</td>
+                <td>{{ performance.outcomePoints | number:'1.1-1' }}</td>
+                <td>{{ performance.exactOpeningPrediction ? (performance.expectedPoints | number:'1.1-1') : '—' }}</td>
+                <td>{{ performance.competitionPrestige * 10000 | number:'1.0-0' }}</td>
+                <td>{{ performance.scoreWeight * 100 | number:'1.0-0' }}%</td>
+                <td>{{ performance.titleBonus | number:'1.1-1' }}</td>
+                <td>{{ performance.matchesManaged }}</td>
+                <td class="score">{{ performance.value | number:'1.2-2' }}</td>
+                <td>{{ performance.trophyWon ? '🏆 Won' : '—' }}</td>
+              </tr></tbody>
+            </table>
+          </div>
+        </td>
+      </tr></ng-container></tbody>
+    </table>
+  </div>
+  <p class="value-method" *ngIf="subject === 'managers'">Manager value sums each season and competition: (finish points + 40% of the difference from expected finish points + 80 points for a completed title) × competition reputation / 10,000 × score weight × the manager's share of club matches. A settled finish below the opening prediction instead loses 40% of the expected-result point gap, so that competition contributes negative value. Score weight is 70% for domestic cups, 30% for super cups and 100% for other competitions. The detailed title bonus already includes reputation, score weight and match share. Historic seasons without an opening prediction omit the expectation adjustment.</p>
+  <p class="value-method" *ngIf="subject === 'players'">Player value sums goals and assists weighted by competition reputation / 10,000 and score weight, plus a share of the club result according to appearances. A settled finish below prediction gives the club result a negative value; individual goals and assists still earn points. Completed titles add 80 result points before these weights. Score weight is 70% for domestic cups, 30% for super cups and 100% for other competitions. Historic seasons without an opening snapshot omit the expectation adjustment.</p>
+</main>

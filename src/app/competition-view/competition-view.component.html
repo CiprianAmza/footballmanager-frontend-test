@@ -46,6 +46,7 @@
         <a [routerLink]="['/competition-records', competitionId]">Records ↗</a>
         <a [routerLink]="['/competition', competitionId]">Classic view ↗</a>
         <a routerLink="/competition-rankings">All-competition rankings ↗</a>
+        <a routerLink="/value-rankings" [queryParams]="{competitionId: competitionId, season: selectedSeason}">Manager & player value ↗</a>
       </div>
     </section>
 
