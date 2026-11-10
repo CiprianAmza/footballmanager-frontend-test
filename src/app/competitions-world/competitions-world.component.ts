@@ -1,7 +1,7 @@
 import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { CompetitionHubService, WorldCompetition, WorldCompetitionOverview } from '../services/competition-hub.service';
+import { CompetitionGoalsRanking, CompetitionGoalsRankingRow, CompetitionHubService, WorldCompetition, WorldCompetitionOverview } from '../services/competition-hub.service';
 import { TeamService } from '../services/team.service';
 
 @Component({ selector: 'app-competitions-world', templateUrl: './competitions-world.component.html', styleUrls: ['./competitions-world.component.css'] })
@@ -9,11 +9,27 @@ export class CompetitionsWorldComponent implements OnInit, OnDestroy {
   @ViewChild('worldSearch') worldSearch?: ElementRef<HTMLInputElement>;
   overview?: WorldCompetitionOverview; competitions: WorldCompetition[] = []; selected?: WorldCompetition;
   search = ''; scope = 'ALL'; kind = 'ALL'; status = 'ALL'; sort = 'participants'; loading = true; error = '';
+  goalsRanking?: CompetitionGoalsRanking;
+  rankingSeason: number | null = null;
+  rankingMinMatches = 1;
+  rankingLoading = false;
+  rankingError = '';
   private refreshSub?: Subscription;
   constructor(private hub: CompetitionHubService, private router: Router, public teamService: TeamService) {}
   ngOnInit(): void { this.load(); this.refreshSub = this.teamService.refresh$.subscribe(() => this.load(false)); }
   ngOnDestroy(): void { this.refreshSub?.unsubscribe(); }
-  load(spinner = true): void { if (spinner) this.loading = true; this.hub.worldOverview().subscribe({ next: data => { this.overview = data; this.competitions = data.competitions || []; this.selected = this.competitions.find(c => c.competitionId === this.selected?.competitionId) || this.visible[0]; this.loading = false; this.error = ''; }, error: () => { this.loading = false; this.error = 'The world competition catalog could not be loaded.'; } }); }
+  load(spinner = true): void { if (spinner) this.loading = true; this.hub.worldOverview().subscribe({ next: data => { this.overview = data; this.competitions = data.competitions || []; this.selected = this.competitions.find(c => c.competitionId === this.selected?.competitionId) || this.visible[0]; this.loading = false; this.error = ''; if (this.rankingSeason === null) this.rankingSeason = data.season; this.loadGoalsRanking(); }, error: () => { this.loading = false; this.error = 'The world competition catalog could not be loaded.'; } }); }
+  get rankingSeasons(): number[] { return Array.from({length: this.overview?.season || 0}, (_, index) => (this.overview?.season || 0) - index); }
+  get rankingRows(): CompetitionGoalsRankingRow[] { return (this.goalsRanking?.rows || []).filter(row => row.matches >= this.rankingMinMatches); }
+  loadGoalsRanking(): void {
+    if (this.rankingSeason === null) return;
+    this.rankingLoading = true;
+    this.rankingError = '';
+    this.hub.goalsRanking(this.rankingSeason).subscribe({
+      next: ranking => { this.goalsRanking = ranking; this.rankingLoading = false; },
+      error: () => { this.goalsRanking = undefined; this.rankingLoading = false; this.rankingError = 'Could not load the goals ranking.'; }
+    });
+  }
   get visible(): WorldCompetition[] {
     const q = this.search.trim().toLowerCase();
     return [...this.competitions].filter(c => !q || c.name.toLowerCase().includes(q) || (c.nationName || '').toLowerCase().includes(q) || (c.currentStage || '').toLowerCase().includes(q))

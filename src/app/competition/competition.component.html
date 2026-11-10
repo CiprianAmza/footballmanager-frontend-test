@@ -13,6 +13,7 @@
     </div>
     
     <div class="header-right">
+      <a class="fm-action-link" [routerLink]="['/competition-view', parameterCompetitionId]">✨ New view</a>
       <a class="fm-action-link"
          *ngIf="competitionType === 'League'"
          [routerLink]="['/media-prediction', parameterCompetitionId]"

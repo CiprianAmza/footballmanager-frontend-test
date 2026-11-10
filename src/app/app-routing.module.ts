@@ -69,9 +69,9 @@ export function clubFeatureMatcher(segments: UrlSegment[]): UrlMatchResult | nul
 
 export function worldFeatureMatcher(segments: UrlSegment[]): UrlMatchResult | null {
   return prefixMatcher([
-    'comp', 'competition', 'rounds', 'competitionoveriew', 'competition-overview',
+    'comp', 'competition', 'competition-view', 'rounds', 'competitionoveriew', 'competition-overview',
     'top3-history', 'mediaPrediction', 'media-prediction', 'hall-of-fame', 'stats',
-    'competition-list', 'competitions2', 'competitions3', 'competitions-world',
+    'competition-list', 'competition-rankings', 'competitions2', 'competitions3', 'competitions-world',
     'coefficients', 'coefficients2', 'coefficients3', 'competition-money',
     'european-rounds', 'manager-profile', 'all-time-champions', 'overview', 'awards',
     'competition-records'

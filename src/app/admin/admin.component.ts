@@ -18,6 +18,7 @@ export class AdminComponent implements OnInit {
   password = '';
   loginError = '';
   loginLoading = false;
+  checkingSession = false;
 
   teams: AdminTeamOption[] = [];
   contractScope: 'TEAM' | 'ALL' = 'TEAM';
@@ -42,7 +43,19 @@ export class AdminComponent implements OnInit {
               private feedback: UiFeedbackService = new UiFeedbackService()) {}
 
   ngOnInit(): void {
-    if (this.adminService.isAuthenticated) this.loadAdminData();
+    if (!this.adminService.isAuthenticated) return;
+    this.checkingSession = true;
+    this.adminService.checkSession().subscribe({
+      next: () => {
+        this.checkingSession = false;
+        this.loadAdminData();
+      },
+      error: () => {
+        this.checkingSession = false;
+        this.adminService.logout();
+        this.loginError = 'Admin session expired. Please log in again.';
+      }
+    });
   }
 
   login(): void {
@@ -249,6 +262,12 @@ export class AdminComponent implements OnInit {
       error: err => {
         this.contractLoading = false;
         this.contractSuccess = false;
+        if (err?.status === 401 || err?.status === 403) {
+          this.adminService.logout();
+          this.loginError = 'Admin session expired. Please log in again.';
+          this.contractMessage = '';
+          return;
+        }
         this.contractMessage = err?.error?.error || 'Contract extension failed.';
       }
     });
