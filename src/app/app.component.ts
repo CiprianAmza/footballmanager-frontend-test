@@ -110,7 +110,10 @@ export class AppComponent implements OnDestroy {
               private liveMatchService: LiveMatchService, private feedback: UiFeedbackService,
               public themeService: ThemeService) {
     this.teamService.lastEvents$.subscribe(events => this.lastEvents = events);
-    this.teamService.refresh$.subscribe(() => this.loadCompactCommandData());
+    this.teamService.refresh$.subscribe(() => {
+      this.loadCompactCommandData();
+      this.checkPendingPressConference();
+    });
     this.teamService.teamId$.subscribe(teamId => {
       if (teamId > 0) this.loadCompactCommandData();
     });
@@ -144,6 +147,7 @@ export class AppComponent implements OnDestroy {
       this.maybeResumeLiveMatch();
       this.maybeStartTutorial();
       this.resumeFastForward();
+      this.checkPendingPressConference();
     });
     this.routerNavigationSubscription = this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) this.closeMobileSidebar();
@@ -550,7 +554,7 @@ export class AppComponent implements OnDestroy {
     if (this.advancing || this.fastForwardRunning) return;
     if (this.roomActive) {
       this.advancing = true;
-      this.multiplayerRoomService.continue().subscribe({ next: state => { this.advancing = false; this.teamService.loadGameState(); }, error: () => this.advancing = false });
+      this.multiplayerRoomService.continue().subscribe({ next: state => { this.advancing = false; this.teamService.loadGameState(); this.checkPendingPressConference(); }, error: () => this.advancing = false });
       return;
     }
     this.clearAutoAdvanceTimer();
@@ -637,11 +641,10 @@ export class AppComponent implements OnDestroy {
 
           // Check for press conference
           const pcEvent = result.eventsProcessed.find((e: any) => e.type === 'PRESS_CONFERENCE' && e.pressConferenceId);
-          if (pcEvent) {
-            this.pressConferenceId = pcEvent.pressConferenceId;
-            this.pressConferenceTitle = pcEvent.title || 'Pre-match Press Conference';
-            this.pressConferenceQuestion = pcEvent.pressConferenceQuestion || '';
-            this.showPressConference = true;
+          // Every human team that plays gets its own conference: show only mine.
+          const myConference = pcEvent ? this.ownPressConference(pcEvent) : null;
+          if (myConference) {
+            this.openPressConference(myConference.pressConferenceId, pcEvent.title, myConference.question);
             return;
           }
         }
@@ -732,6 +735,12 @@ export class AppComponent implements OnDestroy {
 
     const eventType = result.blockingEvent
       || result.eventsProcessed?.find((event: any) => event.awaitingInput)?.type;
+    if (eventType === 'PRESS_CONFERENCE') {
+      const pcEvent = result.eventsProcessed?.find((event: any) => event.type === 'PRESS_CONFERENCE' && event.pressConferenceId);
+      if (pcEvent && !this.ownPressConference(pcEvent)) {
+        return 'Simulation stopped while another manager answers a press conference. Press Continue when you are ready.';
+      }
+    }
     const eventLabels: Record<string, string> = {
       TRANSFER_WINDOW_OPEN: 'the transfer window opened',
       SEASON_END: 'the season ended',
@@ -793,7 +802,48 @@ export class AppComponent implements OnDestroy {
       error: (err) => {
         console.error('Error responding to press conference:', err);
         this.pressConferenceResponding = false;
+        if ([403, 404, 409].includes(err?.status)) {
+          this.showPressConference = false;
+          this.simulationStopMessage = err.status !== 409
+            ? 'That press conference is not yours to answer.'
+            : err.error?.error === 'EXPIRED'
+              ? 'That press conference has passed.'
+              : 'That press conference was already answered.';
+        }
       }
+    });
+  }
+
+  /** My conference among those of this event, or null when only other managers have one. */
+  private ownPressConference(pcEvent: any): { pressConferenceId: number; question: string } | null {
+    if (Array.isArray(pcEvent.pressConferences)) {
+      const myTeamId = this.teamService.teamId;
+      return pcEvent.pressConferences.find((conference: any) => conference.teamId === myTeamId) ?? null;
+    }
+    // Older backend: a single conference, for the first human team found.
+    return { pressConferenceId: pcEvent.pressConferenceId, question: pcEvent.pressConferenceQuestion };
+  }
+
+  private openPressConference(id: number, title: string | undefined, question: string | undefined): void {
+    this.pressConferenceId = id;
+    this.pressConferenceTitle = title || 'Pre-match Press Conference';
+    this.pressConferenceQuestion = question || '';
+    this.showPressConference = true;
+  }
+
+  /**
+   * Opens my pre-match conference if it is still to answer: another manager may have pressed Continue, and in a
+   * multiplayer room Continue never stops for it.
+   */
+  private checkPendingPressConference(): void {
+    if (!this.authService.isLoggedIn || this.showPressConference || this.pressConferenceResponding
+        || this.showLiveMatch || this.showMatchResult) return;
+    this.teamService.getPendingPressConference().subscribe({
+      next: pending => {
+        if (!pending || this.showPressConference || this.showLiveMatch || this.showMatchResult) return;
+        this.openPressConference(pending.pressConferenceId, pending.title, pending.question);
+      },
+      error: () => { /* no conference to show */ }
     });
   }
 

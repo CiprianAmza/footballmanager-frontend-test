@@ -26,7 +26,8 @@ export class Inbox2Component extends InboxComponent {
     'JOB_OFFER', 'PRESS_CONFERENCE', 'board', 'discipline', 'transfer',
     'TACTICAL_MANDATE_UPDATED', 'COACH_COMPLAINT', 'TRADER_ADVICE_AVAILABLE'
   ]);
-  private readonly mediaCategories = new Set(['MEDIA_REACTION', 'MEDIA_PREVIEW', 'TRANSFER_RUMOUR', 'league_news', 'match_result', 'press']);
+  private readonly mediaCategories = new Set(['MEDIA_REACTION', 'MEDIA_PREVIEW', 'MEDIA_FORMER_PLAYER', 'MEDIA_FORMER_MANAGER',
+    'MEDIA_FINANCIAL_TROUBLE', 'TRANSFER_RUMOUR', 'league_news', 'match_result', 'press']);
 
   /** The message last opened: it stays open even when reading it takes it out of the folder shown (Unread). */
   private openedMessageId: number | null = null;

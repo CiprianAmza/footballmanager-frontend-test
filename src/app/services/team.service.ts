@@ -292,4 +292,9 @@ export class TeamService {
   respondToPressConference(id: number, responseType: string): Observable<any> {
     return this.http.post<any>(urlApp + `/game/pressConference/${id}/respond`, { responseType });
   }
+
+  /** My own pre-match press conference still to answer (null when there is none). */
+  getPendingPressConference(): Observable<{ pressConferenceId: number; teamId: number; title: string; question: string } | null> {
+    return this.http.get<any>(urlApp + '/game/pressConference/pending');
+  }
 }
