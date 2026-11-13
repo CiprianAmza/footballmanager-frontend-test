@@ -81,7 +81,10 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
   months: MonthGroup[] = [];
   calendarMonths: CalendarMonth[] = [];
   competitions: CompetitionOption[] = [];
+  /** Totals for the visible (filtered) matches, shown in the summary strip. */
   summary: ScheduleSummary = summarise([]);
+  /** Totals for the whole season, shown in the page heading. */
+  seasonTotals: ScheduleSummary = summarise([]);
   filters: ScheduleFilters = { ...DEFAULT_FILTERS };
   loading = false;
   loadError = false;
@@ -251,6 +254,7 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
     this.calendarMonths = this.months.map(month => ({ ...month, days: this.monthDays(month) }));
     this.competitions = competitionOptions(this.rows);
     this.summary = summarise(this.filtered);
+    this.seasonTotals = summarise(this.rows);
     if (reselect && this.selected && !this.filtered.includes(this.selected)) {
       const row = defaultSelection(this.filtered);
       if (row) this.select(row);

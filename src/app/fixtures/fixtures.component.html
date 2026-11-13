@@ -4,7 +4,7 @@
     <div class="head-title">
       <span class="eyebrow">Club schedule</span>
       <h1><a [routerLink]="['/team', teamId]">{{ teamName }}</a></h1>
-      <p>Season {{ season }} · {{ rows.length }} matches · {{ summary.played }} played · {{ summary.upcoming }} to play</p>
+      <p>Season {{ season }} · {{ rows.length }} matches · {{ seasonTotals.played }} played · {{ seasonTotals.upcoming }} to play</p>
     </div>
     <div class="head-controls">
       <label class="season-select">
@@ -240,6 +240,9 @@
               </li>
             </ul>
           </div>
+          <p class="hint" *ngIf="!goalsFor(row.homeTeamId).length && !goalsFor(row.awayTeamId).length && ((row.homeGoals || 0) + (row.awayGoals || 0)) > 0">
+            Goalscorers were not recorded for this match.
+          </p>
           <div class="red-cards" *ngIf="cards().length">
             <span *ngFor="let c of cards()">🟥 {{ c.playerName }} <small>{{ c.minute }}'</small></span>
           </div>

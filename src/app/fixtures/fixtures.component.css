@@ -285,6 +285,14 @@ select:disabled { opacity: .45; }
   .filter-bar { align-items: stretch; flex-direction: column; }
   .filter-meta { margin-left: 0; }
   .col-stage, .col-report { display: none; }
+  .schedule-table { font-size: 12px; }
+  .schedule-table thead th, .match-row td { padding: 8px 5px; }
+  .schedule-table thead th { font-size: 9px; letter-spacing: 0; }
+  .comp-chip { margin-right: 0; }
+  .col-date, .col-result, .col-venue { width: auto; }
+  .col-date { white-space: normal; }
+  .col-opp { min-width: 0; }
+  .result { min-width: 0; }
   .col-comp a, .col-comp > span:not(.comp-chip) { display: none; }
   .col-comp { min-width: 0; }
   .calendar { grid-template-columns: 1fr; }
