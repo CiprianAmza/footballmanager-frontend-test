@@ -1,5 +1,5 @@
 <div class="awards-page">
-  <div class="awards-nav">
+  <div class="awards-nav" *ngIf="!embedded">
     <a routerLink="/overview" [queryParams]="{view: 'statistics'}">← Overview</a>
     <a routerLink="/awards/global" routerLinkActive="active">Global awards</a>
     <a routerLink="/awards/golden-boot">Golden Boot history</a>
@@ -18,7 +18,7 @@
         <h1>{{ centre.scopeType === 'GLOBAL' ? 'Global Awards' : centre.scopeName + ' Awards' }}</h1>
         <p>Official end-of-season winners, permanently recorded when the awards ceremony is played.</p>
       </div>
-      <label class="season-picker" *ngIf="centre.seasons.length">
+      <label class="season-picker" *ngIf="!embedded && centre.seasons.length">
         <span>Season</span>
         <select [(ngModel)]="selectedSeason">
           <option *ngFor="let season of centre.seasons" [ngValue]="season.season">Season {{ season.season }}</option>
@@ -26,12 +26,19 @@
       </label>
     </header>
 
-    <div class="award-state empty" *ngIf="!centre.seasons.length">
-      No ceremony has been completed yet. Awards will appear here at the end of the season.
+    <div class="award-state empty" *ngIf="!visibleSeason">
+      There are no recorded awards for this season.
     </div>
 
-    <section class="award-grid" *ngIf="visibleSeason as season">
-      <ng-container *ngFor="let award of season.awards">
+    <label class="season-picker" *ngIf="embedded && visibleSeason as season">
+      <span>Award</span>
+      <select [(ngModel)]="awardType">
+        <option value="">All awards</option>
+        <option *ngFor="let award of season.awards" [value]="award.awardType">{{ award.title }}</option>
+      </select>
+    </label>
+    <section class="award-grid" *ngIf="visibleSeason">
+      <ng-container *ngFor="let award of visibleAwards">
         <article class="toty-card" *ngIf="isTeamOfYear(award); else singleAward">
           <div class="card-heading">
             <span class="award-icon">{{ icon(award.awardType) }}</span>

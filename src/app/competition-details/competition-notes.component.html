@@ -1,0 +1,31 @@
+<section class="detail-panel">
+  <h2>Competition notes</h2>
+  <p *ngIf="storageError" role="alert">Browser storage is unavailable. Changes could not be saved.</p>
+  <form *ngIf="editing !== null; else noteList" class="note-form" (ngSubmit)="save()">
+    <label>Title <input [(ngModel)]="draft.title" name="title" maxlength="100" required></label>
+    <label>Note <textarea [(ngModel)]="draft.body" name="body" maxlength="4000" rows="6" required></textarea></label>
+    <div class="note-actions">
+      <button type="submit">Save note</button>
+      <button type="button" (click)="editing = null">Cancel</button>
+    </div>
+  </form>
+  <ng-template #noteList>
+    <p *ngIf="!notes.length">No notes yet.</p>
+    <div class="note-form">
+      <label *ngIf="notes.length">Saved notes
+        <select [ngModel]="selected" (ngModelChange)="selected = $event">
+          <option *ngFor="let note of notes; let i = index" [ngValue]="i">{{ note.title }}</option>
+        </select>
+      </label>
+      <p class="note-body" *ngIf="notes[selected] as note">{{ note.body }}</p>
+      <div class="note-actions">
+        <button type="button" (click)="edit()">Create note</button>
+        <ng-container *ngIf="notes[selected] as note">
+          <button type="button" (click)="edit(selected)">Edit note</button>
+          <button type="button" (click)="edit(-1, note)">Create a copy</button>
+          <button type="button" (click)="remove(selected)">Delete note</button>
+        </ng-container>
+      </div>
+    </div>
+  </ng-template>
+</section>

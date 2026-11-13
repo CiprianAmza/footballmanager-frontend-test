@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { urlApp } from '../app.component';
 
 export interface LegendRow {
@@ -79,11 +80,22 @@ type RecordMetric = 'goals' | 'assists' | 'appearances' | 'trophies';
   templateUrl: './competition-records.component.html',
   styleUrls: ['./competition-records.component.css']
 })
-export class CompetitionRecordsComponent implements OnInit {
+export class CompetitionRecordsComponent implements OnInit, OnChanges, OnDestroy {
+  @Input() embedded = false;
+  @Input() season?: number;
+  private routeSubscription?: Subscription;
+  private request?: Subscription;
   competitionId = 0;
   world = false;
   data?: LegacyRecordsData;
   metric: RecordMetric = 'goals';
+  readonly columns: { key: keyof LegendRow; label: string; numeric?: boolean }[] = [
+    { key: 'rank', label: '#', numeric: true }, { key: 'playerName', label: 'Player' },
+    { key: 'teamName', label: 'Club' }, { key: 'position', label: 'Position' },
+    { key: 'appearances', label: 'Apps', numeric: true }, { key: 'goals', label: 'G', numeric: true },
+    { key: 'assists', label: 'A', numeric: true }, { key: 'recordValue', label: 'Record', numeric: true }
+  ];
+  private readonly sorting = new Map<boolean, { key: keyof LegendRow; direction: 'ascending' | 'descending' }>();
   limit = 20;
   readonly limitOptions = [10, 20, 50, 100];
   loading = false;
@@ -92,26 +104,66 @@ export class CompetitionRecordsComponent implements OnInit {
   constructor(private route: ActivatedRoute, private http: HttpClient) {}
 
   ngOnInit(): void {
-    this.route.paramMap.subscribe(params => {
+    this.routeSubscription = this.route.paramMap.subscribe(params => {
       this.competitionId = Number(params.get('competitionId')) || 0;
       this.world = !this.competitionId;
-      this.load();
+      this.data = undefined;
+      this.load(this.season);
     });
   }
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['season'] && !changes['season'].firstChange && this.embedded && this.competitionId) this.load(this.season);
+  }
+
+  ngOnDestroy(): void {
+    this.routeSubscription?.unsubscribe();
+    this.request?.unsubscribe();
+  }
+
   load(season?: number): void {
+    this.request?.unsubscribe();
     this.loading = true;
     this.failed = false;
     const scope = this.world ? '/stats/records/world' : `/stats/records/competition/${this.competitionId}`;
     const selected = season ?? this.data?.selectedSeason;
     const seasonQuery = selected ? `&season=${selected}` : '';
-    this.http.get<LegacyRecordsData>(urlApp + `${scope}?limit=${this.limit}${seasonQuery}`).subscribe({
+    this.request = this.http.get<LegacyRecordsData>(urlApp + `${scope}?limit=${this.limit}${seasonQuery}`).subscribe({
       next: data => { this.data = data; this.loading = false; },
       error: () => { this.data = undefined; this.failed = true; this.loading = false; }
     });
   }
 
-  setMetric(metric: RecordMetric): void { this.metric = metric; }
+  setMetric(metric: RecordMetric): void {
+    this.metric = metric;
+    this.sorting.clear();
+  }
+
+  sortRows(season: boolean, key: keyof LegendRow, numeric = false): void {
+    const current = this.sorting.get(season);
+    const direction = current?.key === key ? (current.direction === 'ascending' ? 'descending' : 'ascending')
+      : numeric && key !== 'rank' ? 'descending' : 'ascending';
+    this.sorting.set(season, { key, direction });
+  }
+
+  sortDirection(season: boolean, key: keyof LegendRow): 'ascending' | 'descending' | null {
+    const sort = this.sorting.get(season);
+    return sort?.key === key ? sort.direction : null;
+  }
+
+  sortedRows(rows: LegendRow[], season: boolean): LegendRow[] {
+    const sort = this.sorting.get(season);
+    if (!sort) return rows;
+    const factor = sort.direction === 'ascending' ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const left = a[sort.key];
+      const right = b[sort.key];
+      if (left == null) return right == null ? 0 : 1;
+      if (right == null) return -1;
+      return factor * (typeof left === 'number' && typeof right === 'number' ? left - right
+        : String(left).localeCompare(String(right), undefined, { sensitivity: 'base', numeric: true }));
+    });
+  }
 
   seasonRows(): LegendRow[] {
     if (!this.data) return [];

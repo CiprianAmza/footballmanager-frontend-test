@@ -112,3 +112,10 @@
   color: #aaa;
   font-weight: normal;
 }
+.cup-container { min-height: 0; padding: 15px; background: var(--fm-bg-elevated); color: var(--fm-text); box-shadow: none; }
+.cup-container.compact .matches-grid { grid-template-columns: 1fr; }
+.round-header { margin-bottom: 12px; }
+.round-title-box { min-width: 130px; padding: 5px 12px; background: var(--fm-bg-input); color: var(--fm-text); border-radius: 5px; }
+.round-title-box select { font: inherit; color: inherit; background: var(--fm-bg-input); border: 0; }
+.cup-container a { color: inherit; text-decoration: none; }
+.cup-container a:hover { color: var(--fm-accent); text-decoration: underline; }

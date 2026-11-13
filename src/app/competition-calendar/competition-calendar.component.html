@@ -1,0 +1,22 @@
+<div class="calendar-controls">
+  <button type="button" aria-label="Previous month" [disabled]="month === 0" (click)="selectMonth(month - 1)">‹</button>
+  <label>Month <select [ngModel]="month" (ngModelChange)="selectMonth($event)">
+    <option *ngFor="let name of months; let index = index" [ngValue]="index">{{ name }}</option>
+  </select></label>
+  <button type="button" aria-label="Next month" [disabled]="month === months.length - 1" (click)="selectMonth(month + 1)">›</button>
+</div>
+<div class="calendar-scroll">
+  <div class="calendar-grid" [attr.aria-label]="months[month] + ' competition calendar'">
+    <strong *ngFor="let day of weekdays" class="weekday">{{ day }}</strong>
+    <div *ngFor="let cell of cells" class="day" [class.blank]="!cell.date">
+      <small *ngIf="cell.date">{{ cell.date }}</small>
+      <ng-container *ngFor="let event of cell.events">
+        <a *ngIf="event.round != null || event.query; else eventLabel" [routerLink]="competitionRoute"
+           [queryParams]="eventQuery(event)">
+          {{ event.title }}
+        </a>
+        <ng-template #eventLabel><span>{{ event.title }}</span></ng-template>
+      </ng-container>
+    </div>
+  </div>
+</div>

@@ -1,15 +1,14 @@
 /* Layout General */
 .comps-container {
-    background-color: #1b1b1b;
+    background: var(--fm-page-bg);
+    color: var(--fm-text);
     min-height: 100vh;
-    color: #ecf0f1;
-    font-family: 'Segoe UI', 'Roboto Condensed', sans-serif;
     display: flex;
     flex-direction: column;
 }
 
 .page-header {
-    background-color: #252525;
+    background: var(--fm-bg-elevated);
     padding: 15px 30px;
     border-bottom: 1px solid #3a3a3a;
     display: flex;
@@ -48,46 +47,48 @@
 /* Grid de Carduri */
 .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); /* Responsiv */
-    gap: 20px;
-    padding: 30px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 430px), 1fr)); /* Responsiv */
+    gap: 16px;
+    padding: clamp(10px, 2vw, 28px);
 }
 
 /* --- CARD DESIGN --- */
 .comp-card {
-    background-color: #252525;
-    border: 1px solid #3a3a3a;
-    border-radius: 4px;
+    background: var(--fm-bg-elevated);
+    border: 1px solid var(--fm-border);
+    border-radius: 8px;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    transition: transform 0.2s;
+    min-width: 0;
 }
 
-.comp-card:hover { transform: translateY(-2px); border-color: #555; }
 
 /* Card Header */
 .card-header {
-    background: linear-gradient(to right, #2e2e2e, #252525);
+    background: var(--fm-bg-input);
+    background: linear-gradient(100deg, color-mix(in srgb, var(--competition-color) 35%, var(--fm-bg-elevated)), var(--fm-bg-elevated));
     padding: 15px;
     display: flex;
     align-items: center;
     gap: 15px;
-    border-bottom: 1px solid #444;
-    border-left: 5px solid #ccc; /* Culoare dinamica */
+    border-bottom: 1px solid var(--fm-border);
+    border-left: 4px solid var(--competition-color);
 }
 
 .logo-box {
-    width: 40px; height: 40px;
+    width: 36px; height: 36px;
+    flex: 0 0 36px;
+    background: var(--competition-color);
     border-radius: 4px;
     display: flex; justify-content: center; align-items: center;
-    font-weight: 900; font-size: 1.5em; color: rgba(255,255,255,0.3);
+    font-weight: 900; font-size: 1.5em; color: #fff;
 }
 
 .comp-title {
     font-weight: 900; font-size: 1.1em; text-transform: uppercase; letter-spacing: 0.5px;
-    color: white;
+    color: var(--fm-heading);
+    margin: 0;
 }
 .comp-title a,
 .entity-link { color: inherit; text-decoration: none; }
@@ -97,7 +98,7 @@
 /* Sections */
 .card-section {
     padding: 15px;
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--fm-divider);
 }
 
 .section-label {
@@ -133,7 +134,7 @@
 .dot.l { background-color: #e74c3c; }
 
 .position-box { font-family: monospace; font-weight: bold; }
-.pos-val { font-size: 1.5em; color: white; }
+.pos-val { font-size: 1.35em; color: var(--fm-heading); }
 .pos-total { color: #666; }
 
 .lifecycle-status { font-size: 1.25em; line-height: 1.25; }
@@ -211,4 +212,40 @@
 }
 .fm-btn:hover { border-color: #777; color: white; background-color: #333; }
 .page-state { color: #aeb7c0; padding: 42px 24px; text-align: center; }
+.objective { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.objective strong { display: block; }
+.recent-form { margin-top: 8px; }
+.campaign-link { color: #b7dbf3; }
+.comp-card a:focus-visible { outline: 2px solid var(--fm-accent); outline-offset: 2px; }
+@media (max-width: 480px) {
+    .page-header, .club-context { padding-inline: 12px; }
+    .card-section, .card-header { padding: 10px; }
+    .campaign-table th, .campaign-table td { padding-inline: 4px; }
+}
+.objective-status { border: 1px solid #666; border-radius: 4px; padding: 4px 7px; font-size: .8rem; }
+.objective-status.on-track { color: #9ce4b6; border-color: #496f56; }
+.objective-status.below-target { color: #ffb59f; border-color: #7d5144; }
+.campaign-table h3, .club-leaders h3 { margin: 0 0 8px; font-size: .94rem; }
+.campaign-table table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.campaign-table th, .campaign-table td { text-align: right; padding: 5px 6px; border-bottom: 1px solid var(--fm-divider); }
+.campaign-table td:not(:nth-child(2)) { font-variant-numeric: tabular-nums; }
+.campaign-table th:nth-child(2), .campaign-table td:nth-child(2) { text-align: left; width: 100%; }
+.campaign-table th { color: #bbb; }
+.campaign-table a, .club-leaders a { color: #b7dbf3; }
+.campaign-table > a { display: inline-block; margin-top: 8px; font-size: .84rem; }
+.current-club { background: #2e4d5d; font-weight: 700; }
+.standings-scroll { max-height: 19rem; overflow: auto; }
+.standings-scroll thead { position: sticky; top: 0; background: var(--fm-bg-elevated); }
+.position-chart { margin: 0 0 10px; font-size: .84rem; }
+.position-chart svg { display: block; width: 100%; height: 68px; }
+.position-chart path { stroke: #595959; stroke-width: .5; vector-effect: non-scaling-stroke; }
+.position-chart polyline { fill: none; stroke: #89cdf7; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.position-chart circle { fill: #89cdf7; }
+.club-leaders dl { margin: 0; }
+.club-leaders dl > div { display: grid; grid-template-columns: minmax(7rem, .7fr) 1fr; gap: 8px; padding: 4px 0; }
+.club-leaders dd, .club-leaders p { margin: 0; }
+.club-leaders dd strong { margin-left: 6px; }
+.card-shortcuts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding: 10px 15px; }
+.card-shortcuts a { flex: 1; min-width: fit-content; padding: 5px 8px; text-align: center; color: #b7dbf3; border: 1px solid #557080; border-radius: 4px; }
+.card-shortcuts a:hover { background: #2e4d5d; }
 .error-state button { background: #1f6ea5; border: 1px solid #3189c7; border-radius: 4px; color: white; cursor: pointer; font: inherit; padding: 8px 14px; }

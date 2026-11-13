@@ -18,6 +18,7 @@
 
 .season-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
 }
@@ -34,6 +35,16 @@
 .season-nav button:disabled {
   opacity: 0.3;
   cursor: not-allowed;
+}
+
+.stage-list { list-style: none; margin: 12px 0 0; padding: 0; }
+.stage-row { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(8rem, 1fr) minmax(12rem, 1fr); gap: 12px; align-items: center; }
+.stage-row h3 { margin: 3px 0 0; font-size: 15px; }
+.stage-row small { display: block; color: var(--fm-text-dim); }
+.stage-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.stage-links a { color: var(--fm-accent); }
+@media (max-width: 760px) {
+  .stage-row { grid-template-columns: 1fr; gap: 5px; }
 }
 
 .season-nav span {
@@ -623,3 +634,31 @@ h2 {
 .awards-link:hover { color: #201b04; background: #f1c40f; }
 .records-link { padding: 8px 12px; border: 1px solid #336b8c; border-radius: 5px; color: #85cff7; background: #162535; font-size: .75rem; font-weight: 800; text-decoration: none; }
 .records-link:hover { color: #10202a; background: #85cff7; }
+.europe-tabs { display: flex; flex-wrap: wrap; gap: 3px; padding: 0 10px; margin-bottom: 14px; border: 1px solid var(--fm-border); border-radius: 6px; background: var(--fm-bg-elevated); }
+.europe-tabs a { min-height: 40px; display: inline-flex; align-items: center; padding: 6px 13px; color: var(--fm-text-dim); border-bottom: 2px solid transparent; text-decoration: none; }
+.europe-tabs a[aria-current] { border-bottom-color: var(--fm-accent); color: var(--fm-accent); font-weight: 650; }
+.europe-tabs a:focus-visible, .europe-summary a:focus-visible { outline: 2px solid var(--fm-accent); outline-offset: 2px; }
+.europe-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.europe-summary a { display: grid; gap: 4px; padding: 13px; border: 1px solid var(--fm-border); border-radius: 6px; background: var(--fm-bg-elevated); text-decoration: none; color: var(--fm-text); }
+.europe-summary a:hover, a.score:hover { color: var(--fm-accent); }
+.europe-summary small { color: var(--fm-text-dim); }
+.europe-statistics { padding: 14px; border: 1px solid var(--fm-border); border-radius: 7px; background: var(--fm-bg-elevated); }
+.europe-statistics h2 { margin: 0 0 12px; font-size: 17px; }
+.europe-stats-wrap { overflow: auto; margin-bottom: 14px; }
+.europe-stats-wrap table { width: 100%; border-collapse: collapse; }
+.europe-stats-wrap :is(th, td) { text-align: left; padding: 7px 11px; border-bottom: 1px solid var(--fm-divider); }
+.europe-stats-wrap th { background: var(--fm-bg-input); color: var(--fm-text-dim); }
+.europe-stats-wrap a { color: var(--fm-text); }
+.europe-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; margin-bottom: 14px; }
+.europe-summary-card { min-width: 0; padding: 12px; background: var(--fm-bg-elevated); border: 1px solid var(--fm-border); border-radius: 7px; }
+.europe-summary-card h2 { font-size: 15px; margin: 0 0 9px; }
+.europe-summary-card a { color: inherit; text-decoration: none; }
+.europe-summary-card a:hover { color: var(--fm-accent); text-decoration: underline; }
+.europe-summary-match, .europe-summary-metric { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--fm-divider); font-size: 12px; }
+.europe-summary-match > :first-child { text-align: right; }
+.europe-summary-metric { grid-template-columns: 1fr 1fr auto; }
+.europe-summary-group { margin: 7px 0; }
+.europe-summary-group > a { color: var(--fm-accent); font-weight: 650; }
+.europe-summary-group > div, .groups-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-block: 2px; }
+.europe-summary-group > div { font-size: 12px; border-bottom: 1px solid var(--fm-divider); }
+.groups-toolbar select { padding: 6px 9px; background: var(--fm-bg-input); color: var(--fm-text); border: 1px solid var(--fm-border); border-radius: 4px; }

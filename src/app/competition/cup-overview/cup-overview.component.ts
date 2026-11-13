@@ -1,4 +1,5 @@
-import { Component, Input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, OnInit, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { urlApp } from '../../app.component';
 
@@ -29,6 +30,9 @@ interface CupBracket {
 }
 
 interface DisplayMatch {
+  round: number;
+  team1Id: number;
+  team2Id: number;
   homeTeam: string;
   awayTeam: string;
   score: string;          // actual score, or '-' if not played
@@ -43,10 +47,13 @@ interface DisplayMatch {
   templateUrl: './cup-overview.component.html',
   styleUrls: ['./cup-overview.component.css']
 })
-export class CupOverviewComponent implements OnInit, OnChanges {
+export class CupOverviewComponent implements OnInit, OnChanges, OnDestroy {
 
   @Input() competitionId!: string;
   @Input() season!: string;
+  @Input() showRoundNavigation = true;
+  private request?: Subscription;
+  failed = false;
 
   bracket: CupBracket | null = null;
   matches: DisplayMatch[] = [];
@@ -75,23 +82,40 @@ export class CupOverviewComponent implements OnInit, OnChanges {
    * the user sees the entire path even before the prelim draw is decided.
    */
   loadBracket(): void {
+    this.request?.unsubscribe();
     this.loading = true;
+    this.failed = false;
     const url = `${urlApp}/competition/cupBracket/${this.competitionId}/${this.season}`;
-    this.http.get<CupBracket>(url).subscribe({
+    this.request = this.http.get<CupBracket>(url).subscribe({
       next: (data) => {
         this.bracket = data;
         this.roundNames = (data.rounds || []).map(round => round.roundLabel || `Round ${round.round}`);
-        this.currentRoundIndex = Math.min(this.currentRoundIndex, Math.max(0, data.rounds.length - 1));
+        this.currentRoundIndex = this.showRoundNavigation
+          ? Math.min(this.currentRoundIndex, Math.max(0, data.rounds.length - 1))
+          : this.summaryRoundIndex(data.rounds);
         this.renderCurrentRound();
         this.loading = false;
       },
       error: () => {
+        this.failed = true;
         this.bracket = null;
         this.matches = [];
         this.roundNames = [];
         this.loading = false;
       }
     });
+  }
+
+  private summaryRoundIndex(rounds: BracketRound[]): number {
+    const upcoming = rounds.findIndex(round => round.matches.some(match =>
+      match.team1Id > 0 && match.team2Id > 0 && (!match.score || match.score === '-')));
+    if (upcoming >= 0) return upcoming;
+    const played = rounds.map(round => round.matches.some(match => !!match.score && match.score !== '-'));
+    return Math.max(0, played.lastIndexOf(true));
+  }
+
+  ngOnDestroy(): void {
+    this.request?.unsubscribe();
   }
 
   /**
@@ -129,6 +153,9 @@ export class CupOverviewComponent implements OnInit, OnChanges {
       const backendWinner = qualifiedTeamId === m.team1Id ? 'home'
         : qualifiedTeamId === m.team2Id ? 'away' : null;
       return {
+        round: round.round,
+        team1Id: m.team1Id,
+        team2Id: m.team2Id,
         homeTeam: home.label,
         awayTeam: away.label,
         score,
@@ -154,6 +181,11 @@ export class CupOverviewComponent implements OnInit, OnChanges {
       return { label: `Winner of M${prevMatchIndex}`, isPlaceholder: true };
     }
     return { label: 'TBD', isPlaceholder: true };
+  }
+
+  selectRound(index: number): void {
+    this.currentRoundIndex = index;
+    this.renderCurrentRound();
   }
 
   prevRound(): void {

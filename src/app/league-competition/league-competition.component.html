@@ -1,0 +1,705 @@
+<main class="league" *ngIf="info.state === 'ready'">
+  <header class="league-header">
+    <div class="league-identity">
+      <span class="league-symbol"><app-fm-icon name="trophy" [size]="28"></app-fm-icon></span>
+      <div>
+        <div class="league-meta">{{ info.value.nationName || info.value.scopeLabel }}<span *ngIf="info.value.tierLabel"> · {{ info.value.tierLabel }}</span></div>
+        <h1>{{ info.value.name }}</h1>
+      </div>
+    </div>
+    <div class="header-controls">
+    <app-competition-follow [id]="id"></app-competition-follow>
+    <label class="control">Season
+      <select [ngModel]="season" (ngModelChange)="selectSeason($event)">
+        <option *ngFor="let year of seasons" [ngValue]="year">{{ year }}/{{ year + 1 }}{{ year === currentSeason ? ' · Current' : '' }}</option>
+      </select>
+    </label>
+    </div>
+  </header>
+
+  <nav class="primary-nav" aria-label="Competition sections">
+    <a *ngFor="let tab of primaryNav" [routerLink]="['/competition', id, tab.section]" [queryParams]="seasonQuery"
+       [class.active]="tab.section === 'overview' ? overviewActive : tab.section === section"
+       [attr.aria-current]="tab.section === section ? 'page' : null">{{ tab.label }}</a>
+  </nav>
+  <nav class="secondary-nav" *ngIf="overviewActive || section === 'analysis'" aria-label="Overview pages">
+    <a *ngFor="let tab of overviewNav" [routerLink]="['/competition', id, tab.section]" [queryParams]="seasonQuery"
+       [attr.aria-current]="tab.section === section ? 'page' : null">{{ tab.label }}</a>
+    <a [routerLink]="['/competition', id, 'analysis']" [queryParams]="seasonQuery"
+       [attr.aria-current]="section === 'analysis' ? 'page' : null">Club landscape</a>
+  </nav>
+  <nav class="secondary-nav" *ngIf="section === 'matches'" aria-label="Match pages">
+    <a *ngFor="let tab of matchTabs" [routerLink]="[]" [queryParams]="subpage(tab.key)"
+       [attr.aria-current]="matchMode === tab.key ? 'page' : null">{{ tab.label }}</a>
+  </nav>
+  <nav class="secondary-nav" *ngIf="section === 'stats'" aria-label="Statistics pages">
+    <a *ngFor="let tab of statTabs" [routerLink]="[]" [queryParams]="subpage(tab.key)"
+       [attr.aria-current]="statScope === tab.key ? 'page' : null">{{ tab.label }}</a>
+  </nav>
+  <nav class="secondary-nav" *ngIf="section === 'transfers'" aria-label="Transfer pages">
+    <a *ngFor="let type of transferTypes" [routerLink]="[]" [queryParams]="subpage(type)"
+       [attr.aria-current]="!transferWindowView && !transferManagersView && transferType === type ? 'page' : null">{{ type === 'All' ? 'All moves' : type + 's' }}</a>
+    <a [routerLink]="[]" [queryParams]="subpage('window')" [attr.aria-current]="transferWindowView ? 'page' : null">Transfer window</a>
+    <a [routerLink]="[]" [queryParams]="subpage('managers')" [attr.aria-current]="transferManagersView ? 'page' : null">Manager movements</a>
+  </nav>
+  <nav class="secondary-nav" *ngIf="section === 'history'" aria-label="History pages">
+    <a [routerLink]="[]" [queryParams]="subpage('podium')" [attr.aria-current]="historyMode === 'podium' ? 'page' : null">Past winners</a>
+    <a [routerLink]="[]" [queryParams]="subpage('records')" [attr.aria-current]="historyMode === 'records' ? 'page' : null">Records</a>
+    <a [routerLink]="[]" [queryParams]="subpage('positions')" [attr.aria-current]="historyMode === 'positions' ? 'page' : null">Past positions</a>
+    <a [routerLink]="[]" [queryParams]="subpage('notes')" [attr.aria-current]="historyMode === 'notes' ? 'page' : null">Notes</a>
+    <a [routerLink]="[]" [queryParams]="subpage('create-note')" [attr.aria-current]="historyMode === 'create-note' ? 'page' : null">Create note</a>
+  </nav>
+
+  <nav class="secondary-nav" *ngIf="section === 'news'" aria-label="News pages">
+    <a [routerLink]="[]" [queryParams]="subpage('headlines')" [attr.aria-current]="newsMode === 'headlines' ? 'page' : null">Headlines</a>
+    <a [routerLink]="[]" [queryParams]="subpage('rumours')" [attr.aria-current]="newsMode === 'rumours' ? 'page' : null">Transfer rumours</a>
+  </nav>
+  <nav class="secondary-nav" *ngIf="section === 'awards'" aria-label="Awards pages">
+    <a [routerLink]="[]" [queryParams]="seasonQuery" aria-current="page">Award winners</a>
+  </nav>
+
+  <div class="league-content" [ngSwitch]="section">
+    <div class="overview-grid" *ngSwitchCase="'overview'">
+      <article class="panel standings-panel">
+        <header class="panel-header">
+          <h2>League table</h2>
+          <a class="action" [routerLink]="['/competition', id, 'standings']" [queryParams]="seasonQuery">Full table <span aria-hidden="true">→</span></a>
+        </header>
+        <ng-container *ngTemplateOutlet="standingsTable; context: { compact: true }"></ng-container>
+      </article>
+      <div class="overview-side">
+        <article class="panel">
+          <header class="panel-header">
+            <h2>Fixtures &amp; results</h2>
+            <a class="action" [routerLink]="['/competition', id, 'matches']" [queryParams]="seasonQuery">All matches <span aria-hidden="true">→</span></a>
+          </header>
+          <div class="overview-matches">
+            <div>
+              <ng-container *ngIf="results | async as panel">
+                <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'results' }"></ng-container>
+                <ng-container *ngIf="panel.state === 'ready'">
+                  <div class="panel-subhead"><h3>Latest results</h3><span *ngIf="panel.value.length">Matchday {{ panel.value[panel.value.length - 1].round }}</span></div>
+                  <ng-container *ngTemplateOutlet="matchRows; context: { rows: latestMatches(panel.value) | slice:0:5, empty: 'No results yet' }"></ng-container>
+                </ng-container>
+              </ng-container>
+            </div>
+            <div *ngIf="season === currentSeason">
+              <ng-container *ngIf="upcoming | async as panel">
+                <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'upcoming fixtures' }"></ng-container>
+                <ng-container *ngIf="panel.state === 'ready'">
+                  <div class="panel-subhead"><h3>Next fixtures</h3><span *ngIf="panel.value[0] as match">{{ match.date || 'Matchday ' + match.round }}</span></div>
+                  <ng-container *ngTemplateOutlet="matchRows; context: { rows: panel.value | slice:0:5, empty: 'No upcoming fixtures' }"></ng-container>
+                </ng-container>
+              </ng-container>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <header class="panel-header">
+            <h2>Stat leaders</h2>
+            <a class="action" [routerLink]="['/competition', id, 'stats']" [queryParams]="seasonQuery">All stats <span aria-hidden="true">→</span></a>
+          </header>
+          <ng-container *ngIf="playerStats | async as panel">
+            <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'leaders' }"></ng-container>
+            <div class="leaders-grid" *ngIf="panel.state === 'ready'">
+              <section *ngFor="let category of overviewLeaders">
+                <h3>{{ category.label }}</h3>
+                <div class="leader-row" *ngFor="let row of (panel.value[category.key] || []) | slice:0:3">
+                  <app-team-crest [teamId]="row.teamId" [teamName]="row.teamName" [size]="21"></app-team-crest>
+                  <div><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a><small>{{ row.teamName }}</small></div>
+                  <strong>{{ row[category.metric] | number: (category.key === 'topRated' ? '1.2-2' : '1.0-0') }}</strong>
+                </div>
+                <p class="empty compact" *ngIf="!panel.value[category.key]?.length">No data yet</p>
+              </section>
+            </div>
+          </ng-container>
+        </article>
+      </div>
+    </div>
+
+    <article class="panel" *ngSwitchCase="'standings'">
+      <header class="panel-header"><h2>League table</h2></header>
+      <ng-container *ngTemplateOutlet="standingsTable; context: { compact: false }"></ng-container>
+    </article>
+
+    <ng-container *ngSwitchCase="'media-prediction'">
+      <ng-container *ngIf="overview | async as panel">
+        <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'media prediction' }"></ng-container>
+        <div class="prediction-grid" *ngIf="panel.state === 'ready'">
+          <article class="panel">
+            <header class="panel-header"><div><h2>Media Prediction</h2><p *ngIf="panel.value.teams?.length">{{ predictionSource(panel.value) }}</p><p *ngIf="panel.value.teams?.[0]?.titleOdds != null">Estimated decimal odds from Best XI strength</p></div></header>
+            <div class="table-wrap" *ngIf="panel.value.teams?.length; else noPrediction">
+              <table aria-label="Predicted finishing order">
+                <thead><tr><th scope="col" [attr.aria-sort]="sortDirection('prediction', 'mediaPrediction')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'mediaPrediction', label: 'Pos', desc: false }"></ng-container></th><th scope="col" [attr.aria-sort]="sortDirection('prediction', 'teamName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'teamName', label: 'Club', desc: false }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('prediction', 'topElevenRating')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'topElevenRating', label: 'Best XI', desc: true }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('prediction', 'reputation')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'reputation', label: 'Rep', desc: true }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('prediction', 'squadValue')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'squadValue', label: 'Squad value', desc: true }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('prediction', 'titleOdds')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'titleOdds', label: 'Title odds', desc: false }"></ng-container></th><th scope="col">Lineup</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let team of sorted('prediction', panel.value.teams)" [class.highlight]="team.teamId === lineupClubId"
+                      [class.selectable]="season === currentSeason" (click)="selectPredictionRow($event, team.teamId)">
+                    <td class="rank">{{ team.mediaPrediction }}</td>
+                    <td>
+                      <a class="club" *ngIf="season === currentSeason; else predictedClubLink" [routerLink]="[]"
+                         [queryParams]="{ club: team.teamId }" queryParamsHandling="merge"
+                         [attr.aria-current]="team.teamId === lineupClubId ? 'true' : null">
+                        <app-team-crest [teamId]="team.teamId" [teamName]="team.teamName" [color1]="team.color1" [color2]="team.color2" [size]="21"></app-team-crest>
+                        <span>{{ team.teamName }}</span>
+                      </a>
+                      <ng-template #predictedClubLink><ng-container *ngTemplateOutlet="clubLink; context: { club: team }"></ng-container></ng-template>
+                    </td>
+                    <td class="num emphasis">{{ team.topElevenRating | fmRating:1 }}</td><td class="num">{{ team.reputation | number }}</td>
+                    <td class="num">{{ team.squadValue | fmMoney:true }}</td>
+                    <td class="num">{{ (team.titleOdds | number:'1.2-2') ?? '—' }}</td>
+                    <td><a *ngIf="season === currentSeason; else archivedLineup" [routerLink]="[]" queryParamsHandling="merge"
+                           [queryParams]="{ club: team.teamId }" [attr.aria-label]="'Best XI for ' + team.teamName">Best XI</a>
+                        <a class="club-profile-link" [routerLink]="['/team', team.teamId]" [attr.aria-label]="'Club page for ' + team.teamName" title="Club page">↗</a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <ng-template #archivedLineup>—</ng-template>
+            <ng-template #noPrediction><p class="empty">No prediction is available for this season.</p></ng-template>
+          </article>
+
+          <article class="panel lineup-panel">
+            <header class="panel-header"><h2>{{ lineupClubId ? 'Club lineup' : 'League Best XI' }}</h2>
+              <a *ngIf="lineupClubId" class="action" [routerLink]="[]" [queryParams]="{ club: null }" queryParamsHandling="merge">League Best XI <span aria-hidden="true">→</span></a>
+            </header>
+            <ng-container *ngIf="lineupClubId; else leagueBest">
+              <ng-container *ngIf="clubLineups | async as tactics">
+                <ng-container *ngTemplateOutlet="panelStatus; context: { panel: tactics, title: 'club lineups' }"></ng-container>
+                <ng-container *ngIf="tactics.state === 'ready'">
+                  <div class="toolbar">
+                    <strong>{{ tactics.value.name }}</strong>
+                    <div class="segmented">
+                      <button type="button" [attr.aria-pressed]="lineupMode === 'best'" (click)="setLineupMode('best')">Best XI</button>
+                      <button type="button" [attr.aria-pressed]="lineupMode === 'manager'" (click)="setLineupMode('manager')">Manager tactic</button>
+                    </div>
+                  </div>
+                  <ng-container *ngTemplateOutlet="pitch; context: { players: tactics.value[lineupMode].players, formation: tactics.value[lineupMode].formation }"></ng-container>
+                </ng-container>
+              </ng-container>
+            </ng-container>
+            <ng-template #leagueBest>
+              <ng-container *ngIf="season === currentSeason; else archivedXi">
+                <ng-container *ngIf="liveXi | async as lineup">
+                  <ng-container *ngTemplateOutlet="panelStatus; context: { panel: lineup, title: 'league lineup' }"></ng-container>
+                  <ng-container *ngIf="lineup.state === 'ready'">
+                    <ng-container *ngTemplateOutlet="pitch; context: { players: lineup.value.players, formation: lineup.value.formation + ' · Position-weighted rating' }"></ng-container>
+                  </ng-container>
+                </ng-container>
+              </ng-container>
+              <ng-template #archivedXi>
+              <ng-container *ngIf="records | async as archive">
+                <ng-container *ngTemplateOutlet="panelStatus; context: { panel: archive, title: 'league lineup' }"></ng-container>
+                <ng-container *ngIf="archive.state === 'ready'">
+                  <ng-container *ngTemplateOutlet="pitch; context: { players: leagueLineup(archive.value), formation: '4-3-3 · Season performances' }"></ng-container>
+                </ng-container>
+              </ng-container>
+              </ng-template>
+            </ng-template>
+          </article>
+        </div>
+      </ng-container>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'matches'">
+      <article class="panel" *ngIf="matchMode === 'matchday'">
+        <header class="panel-header"><h2>Fixtures &amp; results</h2></header>
+        <ng-container *ngIf="fixtures | async as panel">
+          <div class="toolbar match-toolbar" *ngIf="matchRounds.length">
+            <div class="segmented">
+              <button type="button" (click)="stepRound(-1)" [disabled]="activeRound === matchRounds[0]" aria-label="Previous matchday">‹</button>
+              <select aria-label="Matchday" [ngModel]="activeRound" (ngModelChange)="selectRound($event)">
+                <option *ngFor="let round of matchRounds" [ngValue]="round">Matchday {{ round }}</option>
+              </select>
+              <button type="button" (click)="stepRound(1)" [disabled]="activeRound === matchRounds[matchRounds.length - 1]" aria-label="Next matchday">›</button>
+            </div>
+            <div class="segmented">
+              <button type="button" [disabled]="!latestRound" (click)="selectRound(latestRound)">Latest results</button>
+              <button type="button" [disabled]="!nextRound" (click)="selectRound(nextRound)">Next fixtures</button>
+            </div>
+          </div>
+          <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'fixtures and results' }"></ng-container>
+          <ng-container *ngIf="panel.state === 'ready'">
+            <ng-container *ngTemplateOutlet="matchRows; context: { rows: panel.value, empty: 'No matches on this matchday.', full: true }"></ng-container>
+          </ng-container>
+        </ng-container>
+      </article>
+      <article class="panel" *ngIf="matchMode === 'schedule'">
+        <header class="panel-header"><h2>Season schedule</h2></header>
+        <nav class="secondary-nav" aria-label="Schedule layout">
+          <a [routerLink]="[]" [queryParams]="subpage('schedule')" [attr.aria-current]="!scheduleCalendar ? 'page' : null">List</a>
+          <a [routerLink]="[]" [queryParams]="{ season: seasonQuery.season, view: 'schedule', list: 'calendar' }"
+             [attr.aria-current]="scheduleCalendar ? 'page' : null">Calendar</a>
+        </nav>
+        <ng-container *ngIf="schedule | async as panel">
+          <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'season schedule' }"></ng-container>
+          <ng-container *ngIf="panel.state === 'ready'">
+            <app-competition-calendar *ngIf="scheduleCalendar; else scheduleList" [matches]="panel.value"
+              [competitionRoute]="['/competition', id, 'matches']" [matchQuery]="seasonQuery"></app-competition-calendar>
+            <ng-template #scheduleList>
+            <details *ngFor="let round of resultRounds(panel.value).reverse()" class="review-round">
+              <summary>Matchday {{ round }}</summary>
+              <ng-container *ngTemplateOutlet="matchRows; context: { rows: roundResults(panel.value, round), full: true }"></ng-container>
+            </details>
+            <p class="empty" *ngIf="!panel.value.length">No schedule is available for this season.</p>
+            </ng-template>
+          </ng-container>
+        </ng-container>
+      </article>
+      <article class="panel" *ngIf="matchMode === 'review'">
+        <header class="panel-header"><h2>Competition review</h2></header>
+        <ng-container *ngIf="overview | async as preview">
+          <div class="news-item" *ngIf="preview.state === 'ready' && preview.value.champion as champion">
+            <h3>Champion</h3><ng-container *ngTemplateOutlet="clubLink; context: { club: champion }"></ng-container>
+          </div>
+        </ng-container>
+        <ng-container *ngIf="results | async as panel">
+          <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'results' }"></ng-container>
+          <ng-container *ngIf="panel.state === 'ready'">
+            <app-competition-recap [id]="id" [season]="season" [matches]="latestMatches(panel.value) | slice:0:5"></app-competition-recap>
+            <details *ngFor="let round of resultRounds(panel.value)" class="review-round">
+              <summary>Matchday {{ round }}</summary>
+              <ng-container *ngTemplateOutlet="matchRows; context: { rows: roundResults(panel.value, round), full: true }"></ng-container>
+            </details>
+            <p class="empty" *ngIf="!panel.value.length">No results are available for this season.</p>
+          </ng-container>
+        </ng-container>
+      </article>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'stats'">
+      <app-competition-details *ngIf="statsRankingView as statsView" [id]="id" [season]="season"
+        [view]="statsView" [metric]="statsMetric" [metricQuery]="{ view: statScope }"></app-competition-details>
+      <article class="panel" *ngIf="statScope === 'referees'">
+        <header class="panel-header"><h2>Referees</h2></header>
+        <p class="empty">The simulator does not record referee assignments or referee statistics.</p>
+      </article>
+      <article class="panel" *ngIf="statScope === 'injuries' || statScope === 'suspensions'">
+        <header class="panel-header"><h2>{{ statScope === 'injuries' ? 'Injury table' : 'Suspensions' }}</h2></header>
+        <p class="empty" *ngIf="season !== currentSeason">This view shows current player availability.</p>
+        <ng-container *ngIf="season === currentSeason && (availability | async) as panel">
+          <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'player availability' }"></ng-container>
+          <div class="table-wrap" *ngIf="panel.state === 'ready'">
+            <table aria-label="League player availability">
+              <thead><tr><th scope="col" [attr.aria-sort]="sortDirection('availability', 'club.teamName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'availability', column: 'club.teamName', label: 'Club', desc: false }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('availability', '$availability')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'availability', column: '$availability', label: 'Players affected', desc: true }"></ng-container></th><th scope="col">Details</th></tr></thead>
+              <tbody><tr *ngFor="let team of sorted('availability', panel.value)">
+                <td><ng-container *ngTemplateOutlet="clubLink; context: { club: team.club }"></ng-container></td>
+                <td class="num">{{ activeAvailability(team.rows).length }}</td>
+                <td>
+                  <details *ngIf="activeAvailability(team.rows) as rows">
+                    <summary *ngIf="rows.length">View players</summary>
+                    <div *ngFor="let row of rows"><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a> · {{ row.label }} · {{ row.remaining }} {{ row.remainingUnit }}</div>
+                  </details>
+                </td>
+              </tr></tbody>
+            </table>
+          </div>
+        </ng-container>
+      </article>
+    </ng-container>
+
+    <article class="panel" *ngSwitchCase="'transfers'">
+      <header class="panel-header"><h2>{{ transferWindowView ? 'Transfer window' : transferManagersView ? 'Manager movements' : 'Transfer activity' }}</h2></header>
+      <ng-container *ngIf="transferWindowView">
+        <p class="empty" *ngIf="season !== currentSeason">Historical transfer-window dates are unavailable.</p>
+        <ng-container *ngIf="season === currentSeason && (transferWindow | async) as window">
+          <ng-container *ngTemplateOutlet="panelStatus; context: { panel: window, title: 'transfer window' }"></ng-container>
+          <p class="empty" *ngIf="window.state === 'ready'">The transfer window is {{ window.value ? 'open' : 'closed' }}.</p>
+        </ng-container>
+      </ng-container>
+      <ng-container *ngIf="transferManagersView && (managerHistory | async) as history">
+        <div class="toolbar">
+          <span>Recorded managers by club</span>
+          <a class="action" [routerLink]="['/competition', id, 'managers']" [queryParams]="seasonQuery">Current managers →</a>
+        </div>
+        <ng-container *ngTemplateOutlet="panelStatus; context: { panel: history, title: 'manager history' }"></ng-container>
+        <div class="table-wrap" *ngIf="history.state === 'ready'">
+          <table aria-label="Recorded managers by club"><thead><tr><th scope="col" [attr.aria-sort]="sortDirection('managerHistory', 'club.teamName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'managerHistory', column: 'club.teamName', label: 'Club', desc: false }"></ng-container></th><th scope="col">Managers</th></tr></thead>
+            <tbody><tr *ngFor="let entry of sorted('managerHistory', history.value)">
+              <td><ng-container *ngTemplateOutlet="clubLink; context: { club: entry.club }"></ng-container></td>
+              <td>
+                <div *ngFor="let manager of entry.managers"><a [routerLink]="['/manager-profile', manager.managerId]">{{ manager.managerName }}</a> · {{ manager.gamesPlayed }} matches</div>
+                <span *ngIf="!entry.managers.length">No season records</span>
+              </td>
+            </tr></tbody>
+          </table>
+        </div>
+      </ng-container>
+      <ng-container *ngIf="!transferWindowView && !transferManagersView && (transfers | async) as panel">
+        <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'transfer history' }"></ng-container>
+        <ng-container *ngIf="panel.state === 'ready'">
+          <div class="toolbar">
+            <label class="control">Club<select [(ngModel)]="transferClub" (ngModelChange)="transferPage = 0">
+              <option [ngValue]="0">All clubs</option><option *ngFor="let club of panel.value.clubs" [ngValue]="club.teamId">{{ club.teamName }}</option>
+            </select></label>
+            <span>{{ getTransfers(panel.value.rows).length }} moves</span>
+          </div>
+          <ng-container *ngIf="getTransfers(panel.value.rows) as rows">
+            <ng-container *ngTemplateOutlet="transferRows; context: { rows: sorted('transfers', rows) | slice:transferPage * transferPageSize:(transferPage + 1) * transferPageSize }"></ng-container>
+            <div class="toolbar pagination" *ngIf="rows.length > transferPageSize">
+              <button type="button" [disabled]="transferPage === 0" (click)="transferPage = transferPage - 1">Previous</button>
+              <span>{{ transferPage * transferPageSize + 1 }}–{{ min((transferPage + 1) * transferPageSize, rows.length) }} of {{ rows.length }}</span>
+              <button type="button" [disabled]="(transferPage + 1) * transferPageSize >= rows.length" (click)="transferPage = transferPage + 1">Next</button>
+            </div>
+          </ng-container>
+        </ng-container>
+      </ng-container>
+    </article>
+
+    <article class="panel" *ngSwitchCase="'news'">
+      <header class="panel-header"><h2>{{ newsMode === 'headlines' ? 'League news' : 'Transfer rumours' }}</h2></header>
+      <ng-container *ngIf="newsMode === 'rumours'">
+        <p class="empty" *ngIf="season !== currentSeason">Transfer interest is only available for the current season.</p>
+        <ng-container *ngIf="season === currentSeason && (rumours | async) as panel">
+          <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'transfer rumours' }"></ng-container>
+          <ng-container *ngIf="panel.state === 'ready'">
+            <article class="news-item" *ngFor="let row of panel.value">
+              <h3><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a></h3>
+              <ng-container *ngIf="row.club"><ng-container *ngTemplateOutlet="clubLink; context: { club: row.club }"></ng-container></ng-container>
+              <div class="news-move" *ngIf="row.contenders.length">
+                <span>Interested clubs</span>
+                <ng-container *ngFor="let club of row.contenders"><ng-container *ngTemplateOutlet="clubLink; context: { club: club }"></ng-container></ng-container>
+              </div>
+            </article>
+            <p class="empty" *ngIf="!panel.value.length">No reported transfer interest for this league.</p>
+          </ng-container>
+        </ng-container>
+      </ng-container>
+      <ng-container *ngIf="newsMode === 'headlines' && (news | async) as panel">
+        <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'league news' }"></ng-container>
+        <ng-container *ngIf="panel.state === 'ready'">
+          <article class="news-item" *ngIf="panel.value.champion as champion">
+            <h3>{{ champion.teamName }} win the title</h3>
+            <ng-container *ngTemplateOutlet="clubLink; context: { club: champion }"></ng-container>
+            <a class="action" [routerLink]="['/competition', id, 'standings']" [queryParams]="seasonQuery">Final table →</a>
+          </article>
+          <article class="news-item" *ngFor="let row of panel.value.transfers | slice:0:5">
+            <h3><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a> {{ row.kind === 'Loan' ? 'joins on loan' : 'completes a transfer' }}</h3>
+            <div class="news-move"><ng-container *ngTemplateOutlet="clubLink; context: { club: { teamId: row.fromId, teamName: row.fromName || 'Free agent' } }"></ng-container>
+              <span aria-hidden="true">→</span><ng-container *ngTemplateOutlet="clubLink; context: { club: { teamId: row.toId, teamName: row.toName } }"></ng-container>
+              <strong>{{ row.fee ? (row.fee | fmMoney:true) : 'Free' }}</strong>
+            </div>
+          </article>
+          <app-competition-recap [id]="id" [season]="season" [matches]="panel.value.results"></app-competition-recap>
+          <p class="empty" *ngIf="!panel.value.champion && !panel.value.transfers.length && !panel.value.results.length">No league news is available for this season.</p>
+        </ng-container>
+      </ng-container>
+    </article>
+
+    <app-award-centre *ngSwitchCase="'awards'" [embedded]="true" [season]="season"></app-award-centre>
+
+    <ng-container *ngSwitchCase="'history'">
+      <ng-container *ngIf="historyMode === 'records'">
+        <nav class="secondary-nav record-nav" aria-label="Record categories">
+          <a *ngFor="let tab of recordTabs" [routerLink]="[]" [queryParams]="{ season: seasonQuery.season, view: 'records', metric: tab.key }"
+             [attr.aria-current]="recordMode === tab.key ? 'page' : null">{{ tab.label }}</a>
+        </nav>
+        <app-competition-records *ngIf="recordMode === 'overview' || recordMode === 'players'" [embedded]="true" [season]="season"></app-competition-records>
+        <article class="panel" *ngIf="recordMode === 'attendance'">
+          <header class="panel-header"><h2>Average attendance</h2></header>
+          <p class="empty" *ngIf="season !== currentSeason">Historical club attendance totals are unavailable here.</p>
+          <ng-container *ngIf="season === currentSeason && (attendance | async) as panel">
+            <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'attendance' }"></ng-container>
+            <div class="table-wrap" *ngIf="panel.state === 'ready'">
+              <table aria-label="Club attendance"><thead><tr><th scope="col" [attr.aria-sort]="sortDirection('attendance', 'teamName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'attendance', column: 'teamName', label: 'Club', desc: false }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('attendance', 'homeMatches')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'attendance', column: 'homeMatches', label: 'Home matches', desc: true }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('attendance', 'averageAttendance')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'attendance', column: 'averageAttendance', label: 'Average', desc: true }"></ng-container></th></tr></thead>
+                <tbody><tr *ngFor="let club of sorted('attendance', panel.value)">
+                  <td><ng-container *ngTemplateOutlet="clubLink; context: { club: club }"></ng-container></td>
+                  <td class="num">{{ club.homeMatches }}</td><td class="num">{{ club.averageAttendance | number }}</td>
+                </tr></tbody>
+              </table>
+            </div>
+          </ng-container>
+        </article>
+        <article class="panel" *ngIf="recordMode === 'clubs'">
+          <header class="panel-header"><h2>Club records this season</h2></header>
+          <ng-container *ngIf="standings | async as panel">
+            <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'club records' }"></ng-container>
+            <dl class="rules" *ngIf="panel.state === 'ready'">
+              <div *ngFor="let row of seasonRecords(panel.value)"><dt>{{ row.label }}</dt>
+                <dd *ngIf="row.club as club"><ng-container *ngTemplateOutlet="clubLink; context: { club: club }"></ng-container> · {{ club[row.metric] }}</dd>
+              </div>
+            </dl>
+          </ng-container>
+        </article>
+        <article class="panel" *ngIf="recordMode === 'results' || recordMode === 'sequences'">
+          <header class="panel-header"><h2>{{ recordMode === 'results' ? 'Result records this season' : 'Longest unbeaten runs this season' }}</h2></header>
+          <ng-container *ngIf="results | async as panel">
+            <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'match records' }"></ng-container>
+            <ng-container *ngIf="panel.state === 'ready'">
+              <p class="empty" *ngIf="!panel.value.length">No matches have been played in this season.</p>
+              <ng-container *ngIf="recordMode === 'results' && panel.value.length">
+                <section *ngFor="let row of resultRecords(panel.value)">
+                  <div class="panel-subhead"><h3>{{ row.label }}</h3></div>
+                  <ng-container *ngIf="row.match"><ng-container *ngTemplateOutlet="matchRows; context: { rows: [row.match], full: true }"></ng-container></ng-container>
+                </section>
+              </ng-container>
+              <div class="table-wrap" *ngIf="recordMode === 'sequences' && panel.value.length">
+                <table aria-label="Unbeaten runs"><thead><tr><th scope="col" [attr.aria-sort]="sortDirection('runs', 'club.teamName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'runs', column: 'club.teamName', label: 'Club', desc: false }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('runs', 'best')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'runs', column: 'best', label: 'Matches unbeaten', desc: true }"></ng-container></th></tr></thead>
+                  <tbody><tr *ngFor="let row of sorted('runs', sequences(panel.value))">
+                    <td><ng-container *ngTemplateOutlet="clubLink; context: { club: row.club }"></ng-container></td><td class="num">{{ row.best }}</td>
+                  </tr></tbody>
+                </table>
+              </div>
+            </ng-container>
+          </ng-container>
+        </article>
+      </ng-container>
+      <article class="panel" *ngIf="historyMode === 'positions'">
+        <header class="panel-header"><h2>Past positions</h2></header>
+        <ng-container *ngIf="standings | async as clubs">
+          <ng-container *ngTemplateOutlet="panelStatus; context: { panel: clubs, title: 'participating clubs' }"></ng-container>
+          <ng-container *ngIf="results | async as played">
+            <ng-container *ngTemplateOutlet="panelStatus; context: { panel: played, title: 'past positions' }"></ng-container>
+            <ng-container *ngIf="clubs.state === 'ready' && played.state === 'ready' && positionTimeline(played.value, clubs.value) as timeline">
+              <p class="empty" *ngIf="!timeline.rounds.length">Positions are available after the first matchday.</p>
+              <div class="table-wrap" *ngIf="timeline.rounds.length">
+                <table aria-label="League positions by matchday"><thead><tr><th scope="col">Club</th>
+                  <th scope="col" class="num" *ngFor="let round of timeline.rounds">MD {{ round }}</th></tr></thead>
+                  <tbody><tr *ngFor="let row of timeline.clubs">
+                    <td><ng-container *ngTemplateOutlet="clubLink; context: { club: row.club }"></ng-container></td>
+                    <td class="num" *ngFor="let rank of row.ranks">{{ rank }}</td>
+                  </tr></tbody>
+                </table>
+              </div>
+            </ng-container>
+          </ng-container>
+        </ng-container>
+      </article>
+      <app-competition-notes *ngIf="historyMode === 'notes' || historyMode === 'create-note'" [id]="id"
+        [create]="historyMode === 'create-note'"></app-competition-notes>
+      <ng-container *ngIf="historyMode === 'podium'">
+        <article class="panel">
+          <header class="panel-header"><h2>Past winners</h2></header>
+          <ng-container *ngIf="history | async as panel">
+            <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'past winners' }"></ng-container>
+            <ng-container *ngIf="panel.state === 'ready'">
+              <div class="table-wrap" *ngIf="panel.value.length; else noHistory">
+                <table aria-label="Past winners"><thead><tr><th scope="col" [attr.aria-sort]="sortDirection('winners', 'seasonNumber')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'winners', column: 'seasonNumber', label: 'Season', desc: true }"></ng-container></th><th scope="col" [attr.aria-sort]="sortDirection('winners', 'teamPlace1')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'winners', column: 'teamPlace1', label: 'Champion', desc: false }"></ng-container></th><th scope="col" [attr.aria-sort]="sortDirection('winners', 'teamPlace2')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'winners', column: 'teamPlace2', label: 'Runner-up', desc: false }"></ng-container></th><th scope="col" [attr.aria-sort]="sortDirection('winners', 'teamPlace3')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'winners', column: 'teamPlace3', label: 'Third', desc: false }"></ng-container></th></tr></thead>
+                  <tbody><tr *ngFor="let row of sorted('winners', panel.value)"><td><a [routerLink]="['/competition', id, 'standings']" [queryParams]="{ season: row.seasonNumber }">{{ row.seasonNumber }}/{{ row.seasonNumber + 1 }}</a></td>
+                    <td class="emphasis">{{ row.teamPlace1 }}</td><td>{{ row.teamPlace2 }}</td><td>{{ row.teamPlace3 }}</td>
+                  </tr></tbody></table>
+              </div>
+              <ng-template #noHistory><p class="empty">No completed seasons are in the archive yet.</p></ng-template>
+            </ng-container>
+          </ng-container>
+        </article>
+      </ng-container>
+    </ng-container>
+
+    <article class="panel" *ngSwitchCase="'rules'">
+      <header class="panel-header"><h2>Competition rules</h2></header>
+      <dl class="rules">
+        <div><dt>Format</dt><dd>{{ info.value.formatLabel || 'Round-robin table' }}</dd></div>
+        <div><dt>Table order</dt><dd>Points, goal difference, then goals scored</dd></div>
+        <ng-container *ngIf="qualification | async as zones">
+          <ng-container *ngIf="zones.state === 'ready'">
+            <div *ngIf="zones.value.locSpots"><dt>League of Champions places</dt><dd>{{ zones.value.locSpots }}</dd></div>
+            <div *ngIf="zones.value.starsCupSpots"><dt>Stars Cup places</dt><dd>{{ zones.value.starsCupSpots }}</dd></div>
+            <div *ngIf="zones.value.hasLowerTier && zones.value.relegationFrom != null"><dt>Relegation</dt><dd>From position {{ zones.value.relegationFrom }}</dd></div>
+          </ng-container>
+        </ng-container>
+      </dl>
+    </article>
+
+    <article class="panel" *ngSwitchCase="'structure'">
+      <header class="panel-header"><h2>League structure</h2></header>
+      <dl class="rules">
+        <div><dt>Format</dt><dd>{{ info.value.formatLabel || 'Round-robin table' }}</dd></div>
+        <div><dt>Division</dt><dd>{{ info.value.tierLabel || info.value.tier }}</dd></div>
+        <div *ngIf="standings | async as panel"><dt>Participating clubs</dt><dd>{{ panel.state === 'ready' ? panel.value.length : '—' }}</dd></div>
+        <div *ngIf="schedule | async as panel"><dt>Scheduled matchdays</dt><dd>{{ panel.state === 'ready' ? resultRounds(panel.value).length : '—' }}</dd></div>
+      </dl>
+      <div class="toolbar"><a class="action" [routerLink]="['/competition', id, 'matches']" [queryParams]="subpage('schedule')">Season schedule →</a></div>
+    </article>
+
+    <article class="panel" *ngSwitchCase="'tickets'">
+      <header class="panel-header"><h2>Season tickets</h2></header>
+      <p class="empty">Season-ticket sales and prices are unavailable.
+        <a class="action" [routerLink]="['/competition', id, 'stadiums']" [queryParams]="seasonQuery">Stadium capacity →</a>
+      </p>
+    </article>
+
+    <article class="panel" *ngSwitchCase="'sponsorships'">
+      <header class="panel-header"><h2>Sponsorship income</h2></header>
+      <ng-container *ngIf="sponsorships | async as panel">
+        <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'sponsorship income' }"></ng-container>
+        <div class="table-wrap" *ngIf="panel.state === 'ready'">
+          <table aria-label="Sponsorship income by club"><thead><tr><th scope="col" [attr.aria-sort]="sortDirection('sponsors', 'club.teamName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'sponsors', column: 'club.teamName', label: 'Club', desc: false }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('sponsors', 'revenue')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'sponsors', column: 'revenue', label: 'Income', desc: true }"></ng-container></th></tr></thead>
+            <tbody><tr *ngFor="let row of sorted('sponsors', panel.value)">
+              <td><ng-container *ngTemplateOutlet="clubLink; context: { club: row.club }"></ng-container></td>
+              <td class="num">{{ row.revenue | fmMoney:true }}</td>
+            </tr></tbody>
+          </table>
+        </div>
+      </ng-container>
+    </article>
+
+    <article class="panel" *ngSwitchCase="'managers'">
+      <header class="panel-header"><h2>Managers</h2></header>
+      <p class="empty" *ngIf="season !== currentSeason">This view shows the clubs’ current managers.</p>
+      <ng-container *ngIf="managers | async as panel">
+        <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'managers' }"></ng-container>
+        <div class="table-wrap" *ngIf="panel.state === 'ready'">
+          <table aria-label="League managers"><thead><tr><th scope="col" [attr.aria-sort]="sortDirection('managers', 'club.teamName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'managers', column: 'club.teamName', label: 'Club', desc: false }"></ng-container></th><th scope="col" [attr.aria-sort]="sortDirection('managers', 'manager.managerName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'managers', column: 'manager.managerName', label: 'Manager', desc: false }"></ng-container></th></tr></thead>
+            <tbody><tr *ngFor="let entry of sorted('managers', panel.value)">
+              <td><ng-container *ngTemplateOutlet="clubLink; context: { club: entry.club }"></ng-container></td>
+              <td><a *ngIf="entry.manager.found; else vacant" [routerLink]="['/manager-profile', entry.manager.managerId]">{{ entry.manager.managerName }}</a>
+                <ng-template #vacant>Vacant</ng-template></td>
+            </tr></tbody>
+          </table>
+        </div>
+      </ng-container>
+    </article>
+
+    <article class="panel" *ngSwitchCase="'stadiums'">
+      <header class="panel-header"><h2>Stadiums</h2></header>
+      <p class="empty" *ngIf="season !== currentSeason">Venue information reflects the clubs’ current stadiums.</p>
+      <ng-container *ngIf="venues | async as panel">
+        <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'stadiums' }"></ng-container>
+        <div class="table-wrap" *ngIf="panel.state === 'ready'">
+          <table aria-label="League stadiums"><thead><tr><th scope="col" [attr.aria-sort]="sortDirection('stadiums', 'teamName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'stadiums', column: 'teamName', label: 'Club', desc: false }"></ng-container></th><th scope="col" [attr.aria-sort]="sortDirection('stadiums', 'stadium')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'stadiums', column: 'stadium', label: 'Stadium', desc: false }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('stadiums', 'capacity')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'stadiums', column: 'capacity', label: 'Capacity', desc: true }"></ng-container></th></tr></thead>
+            <tbody><tr *ngFor="let club of sorted('stadiums', panel.value)">
+              <td><ng-container *ngTemplateOutlet="clubLink; context: { club: club }"></ng-container></td><td>{{ club.stadium || '—' }}</td><td class="num">{{ (club.capacity | number) || '—' }}</td>
+            </tr></tbody>
+          </table>
+        </div>
+      </ng-container>
+    </article>
+
+    <app-competition-insights *ngSwitchCase="'analysis'" [competitionId]="id" [season]="season"></app-competition-insights>
+  </div>
+</main>
+
+<app-ui-state *ngIf="info.state === 'loading'" kind="loading" title="Loading competition"></app-ui-state>
+<app-ui-state *ngIf="info.state === 'error'" kind="error" title="Competition unavailable" (retry)="retry()"></app-ui-state>
+
+<ng-template #standingsTable let-compact="compact">
+  <ng-container *ngIf="standings | async as panel">
+    <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'league table' }"></ng-container>
+    <ng-container *ngIf="panel.state === 'ready'">
+      <ng-container *ngIf="qualification | async as zones">
+        <div class="table-wrap" *ngIf="panel.value.length; else noStandings">
+          <table aria-label="League standings">
+            <thead><tr><th scope="col" [attr.aria-sort]="sortDirection('standings', 'position')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'standings', column: 'position', label: 'Pos', desc: false }"></ng-container></th><th scope="col" [attr.aria-sort]="sortDirection('standings', 'teamName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'standings', column: 'teamName', label: 'Club', desc: false }"></ng-container></th>
+              <th scope="col" class="num" title="Played" [attr.aria-sort]="sortDirection('standings', 'games')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'standings', column: 'games', label: 'P', desc: true }"></ng-container></th><th scope="col" class="num" title="Won" [attr.aria-sort]="sortDirection('standings', 'wins')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'standings', column: 'wins', label: 'W', desc: true }"></ng-container></th>
+              <th scope="col" class="num" title="Drawn" [attr.aria-sort]="sortDirection('standings', 'draws')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'standings', column: 'draws', label: 'D', desc: true }"></ng-container></th><th scope="col" class="num" title="Lost" [attr.aria-sort]="sortDirection('standings', 'loses')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'standings', column: 'loses', label: 'L', desc: true }"></ng-container></th>
+              <ng-container *ngIf="!compact"><th scope="col" class="num" [attr.aria-sort]="sortDirection('standings', 'goalsFor')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'standings', column: 'goalsFor', label: 'GF', desc: true }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('standings', 'goalsAgainst')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'standings', column: 'goalsAgainst', label: 'GA', desc: true }"></ng-container></th></ng-container>
+              <th scope="col" class="num" title="Goal difference" [attr.aria-sort]="sortDirection('standings', 'goalDifference')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'standings', column: 'goalDifference', label: 'GD', desc: true }"></ng-container></th><th scope="col" class="num points" [attr.aria-sort]="sortDirection('standings', 'points')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'standings', column: 'points', label: 'Pts', desc: true }"></ng-container></th>
+              <th scope="col" *ngIf="!compact" [attr.aria-sort]="sortDirection('standings', 'form')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'standings', column: 'form', label: 'Form', desc: false }"></ng-container></th>
+            </tr></thead>
+            <tbody><tr *ngFor="let club of sorted('standings', panel.value)" [class.highlight]="club.humanTeam" [attr.data-zone]="mark(club, zones.state === 'ready' ? zones.value : undefined)">
+              <td class="rank">{{ club.position }}</td><td><ng-container *ngTemplateOutlet="clubLink; context: { club: club }"></ng-container></td>
+              <td class="num">{{ club.games }}</td><td class="num">{{ club.wins }}</td><td class="num">{{ club.draws }}</td><td class="num">{{ club.loses }}</td>
+              <ng-container *ngIf="!compact"><td class="num">{{ club.goalsFor }}</td><td class="num">{{ club.goalsAgainst }}</td></ng-container>
+              <td class="num">{{ +club.goalDifference > 0 ? '+' : '' }}{{ club.goalDifference }}</td><td class="num points">{{ club.points }}</td>
+              <td *ngIf="!compact"><div class="form"><span *ngFor="let result of club.recentForm" [attr.data-result]="result">{{ result }}</span><span *ngIf="!club.recentForm.length">—</span></div></td>
+            </tr></tbody>
+          </table>
+        </div>
+        <ng-template #noStandings><p class="empty">No standings are available for this season.</p></ng-template>
+        <div class="legend" *ngIf="zones.state === 'ready' && (zones.value.qualifications?.length || zones.value.hasLowerTier)">
+          <span *ngIf="hasQualification(zones.value, 'LOC')"><i data-zone="LOC"></i>League of Champions</span>
+          <span *ngIf="hasQualification(zones.value, 'STARS_CUP')"><i data-zone="STARS_CUP"></i>Stars Cup</span>
+          <span *ngIf="zones.value.hasLowerTier && zones.value.relegationFrom != null"><i data-zone="relegated"></i>Relegation</span>
+        </div>
+      </ng-container>
+    </ng-container>
+  </ng-container>
+</ng-template>
+
+<ng-template #matchRows let-rows="rows" let-empty="empty" let-full="full">
+  <div class="match-list" [class.full]="full" *ngIf="rows.length; else noMatches">
+    <div class="match-row" *ngFor="let match of rows">
+      <small *ngIf="full" class="match-date">{{ match.date || (match.day ? 'Day ' + match.day : '—') }}</small>
+      <div class="home"><ng-container *ngTemplateOutlet="clubLink; context: { club: { teamId: match.team1Id, teamName: match.team1Name } }"></ng-container></div>
+      <a class="score" *ngIf="match.score && match.team1Id && match.team2Id; else scheduled"
+         [routerLink]="['/match-report2', id, season, match.round, match.team1Id, match.team2Id]"
+         [attr.aria-label]="'Match report for ' + match.team1Name + ' ' + match.score + ' ' + match.team2Name">{{ match.score }}</a>
+      <ng-template #scheduled><span class="score">{{ match.score || 'vs' }}</span></ng-template>
+      <div><ng-container *ngTemplateOutlet="clubLink; context: { club: { teamId: match.team2Id, teamName: match.team2Name } }"></ng-container></div>
+    </div>
+  </div>
+  <ng-template #noMatches><p class="empty compact">{{ empty || 'No matches' }}</p></ng-template>
+</ng-template>
+
+<ng-template #transferRows let-rows="rows">
+  <div class="table-wrap" *ngIf="rows.length; else noTransfers">
+    <table aria-label="League transfers"><thead><tr><th scope="col" [attr.aria-sort]="sortDirection('transfers', 'playerName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'transfers', column: 'playerName', label: 'Player', desc: false }"></ng-container></th><th scope="col" [attr.aria-sort]="sortDirection('transfers', 'fromName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'transfers', column: 'fromName', label: 'From', desc: false }"></ng-container></th><th scope="col" [attr.aria-sort]="sortDirection('transfers', 'toName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'transfers', column: 'toName', label: 'To', desc: false }"></ng-container></th><th scope="col" [attr.aria-sort]="sortDirection('transfers', 'kind')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'transfers', column: 'kind', label: 'Type', desc: false }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('transfers', 'fee')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'transfers', column: 'fee', label: 'Fee', desc: true }"></ng-container></th></tr></thead>
+      <tbody><tr *ngFor="let row of rows">
+        <td><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a></td>
+        <td><ng-container *ngTemplateOutlet="clubLink; context: { club: { teamId: row.fromId, teamName: row.fromName || 'Free agent' } }"></ng-container></td>
+        <td><ng-container *ngTemplateOutlet="clubLink; context: { club: { teamId: row.toId, teamName: row.toName || 'Unattached' } }"></ng-container></td>
+        <td><small>{{ row.kind }}</small></td><td class="num emphasis">{{ row.fee ? (row.fee | fmMoney:true) : 'Free' }}</td>
+      </tr></tbody></table>
+  </div>
+  <ng-template #noTransfers><p class="empty">No transfers match this selection.</p></ng-template>
+</ng-template>
+
+<ng-template #clubLink let-club="club">
+  <a class="club" *ngIf="club.teamId; else clubText" [routerLink]="['/team', club.teamId]">
+    <app-team-crest [teamId]="club.teamId" [teamName]="club.teamName" [color1]="club.color1" [color2]="club.color2" [size]="21"></app-team-crest>
+    <span>{{ club.teamName || 'Unknown club' }}</span>
+  </a>
+  <ng-template #clubText><span>{{ club.teamName || '—' }}</span></ng-template>
+</ng-template>
+
+<ng-template #pitch let-players="players" let-formation="formation">
+  <div class="pitch-wrap" *ngIf="players.length; else noLineup">
+    <div class="pitch-board">
+      <aside class="pitch-profile" aria-live="polite">
+        <h3>Player profile</h3>
+        <ng-container *ngIf="selectedPitchPlayer as selected; else choosePlayer">
+          <a class="pitch-profile-name" [routerLink]="['/player', selected.playerId]">{{ selected.name }}</a>
+          <ng-container *ngIf="pitchProfile | async as state">
+            <ng-container *ngIf="state.state === 'ready' && state.value as profile; else profileStatus">
+              <app-player-face [size]="76" [baseFaceId]="profile.baseFaceId" [skinTone]="profile.skinTone"
+                [hairStyle]="profile.hairStyle" [hairColor]="profile.hairColor" [eyeColor]="profile.eyeColor"
+                [faceShape]="profile.faceShape" [noseShape]="profile.noseShape" [eyeShape]="profile.eyeShape"
+                [mouthShape]="profile.mouthShape" [browShape]="profile.browShape" [species]="profile.species || 'human'"
+                [nationId]="profile.nationId || 0"></app-player-face>
+              <p>{{ profile.position }}<ng-container *ngIf="profile.age"> · {{ profile.age }} years</ng-container></p>
+              <ng-container *ngTemplateOutlet="clubLink; context: { club: { teamId: profile.teamId, teamName: profile.teamName, color1: selected.color1, color2: selected.color2 } }"></ng-container>
+              <p *ngIf="profile.nationName">{{ profile.nationName }}</p>
+              <div class="pitch-market"><small>Market value</small><strong>{{ profile.transferValue | fmMoney:true }}</strong></div>
+            </ng-container>
+            <ng-template #profileStatus>
+              <p>{{ state.state === 'error' ? 'Player details unavailable' : 'Loading player…' }}</p>
+              <p>{{ selected.label }} · {{ selected.club }}</p>
+            </ng-template>
+          </ng-container>
+        </ng-container>
+        <ng-template #choosePlayer><p>Select a player on the pitch.</p></ng-template>
+      </aside>
+      <div class="pitch-layout">
+        <p class="formation">{{ formation }}</p>
+        <div class="pitch" [attr.aria-label]="formation + ' lineup'">
+          <div class="pitch-markings" aria-hidden="true"><i></i><i></i><i></i></div>
+          <button type="button" *ngFor="let player of players" class="pitch-player"
+             [style.grid-column]="player.cell % 5 + 1" [style.grid-row]="rowFor(player.cell)"
+             [attr.aria-pressed]="selectedPitchPlayer?.playerId === player.playerId"
+             [attr.aria-label]="player.name + ', ' + player.label + (player.club ? ', ' + player.club : '')"
+             (click)="selectPitchPlayer(player)">
+            <app-team-crest [teamId]="player.teamId || 0" [teamName]="player.club || player.name"
+              [color1]="player.color1" [color2]="player.color2" [size]="29"></app-team-crest>
+            <span>{{ player.name }}</span><small>{{ player.rating | fmRating:1 }}</small>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <ng-template #noLineup><p class="empty">No lineup is available for this selection.</p></ng-template>
+</ng-template>
+
+<ng-template #sortHeading let-table="table" let-column="column" let-label="label" let-desc="desc">
+  <button type="button" class="sort-heading" (click)="sortTable(table, column, desc)">
+    {{ label }}<span aria-hidden="true">{{ sortDirection(table, column) === 'ascending' ? '↑' : sortDirection(table, column) === 'descending' ? '↓' : '↕' }}</span>
+  </button>
+</ng-template>
+
+<ng-template #panelStatus let-panel="panel" let-title="title">
+  <p *ngIf="panel.state === 'loading'" class="empty" role="status">Loading {{ title }}…</p>
+  <div *ngIf="panel.state === 'error'" class="empty error" role="alert">
+    Could not load {{ title }}. <button type="button" (click)="retry()">Try again</button>
+  </div>
+</ng-template>

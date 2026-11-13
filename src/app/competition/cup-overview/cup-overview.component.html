@@ -1,17 +1,19 @@
-<div class="cup-container">
+<div class="cup-container" [class.compact]="!showRoundNavigation">
   
     <!-- ROUND NAVIGATOR -->
-    <div class="round-header">
-      <button class="nav-btn" (click)="prevRound()" [disabled]="currentRoundIndex === 0">❮</button>
+    <div class="round-header" *ngIf="showRoundNavigation && roundNames.length > 1">
+      <button type="button" aria-label="Previous round" class="nav-btn" (click)="prevRound()" [disabled]="currentRoundIndex === 0">❮</button>
       
       <div class="round-title-box">
-          <span class="round-name">{{ currentRoundName }}</span>
+          <select aria-label="Cup round" class="round-name" [ngModel]="currentRoundIndex" (ngModelChange)="selectRound($event)">
+            <option *ngFor="let name of roundNames; let index = index" [ngValue]="index">{{ name }}</option>
+          </select>
           <!-- Afișăm numărul de meciuri doar dacă nu se încarcă -->
           <span class="match-count" *ngIf="!loading">{{ matches.length }} Fixtures</span>
           <span class="match-count" *ngIf="loading">Loading...</span>
       </div>
       
-      <button class="nav-btn" (click)="nextRound()" [disabled]="currentRoundIndex === roundNames.length - 1">❯</button>
+      <button type="button" aria-label="Next round" class="nav-btn" (click)="nextRound()" [disabled]="currentRoundIndex === roundNames.length - 1">❯</button>
     </div>
   
     <!-- LOADING SPINNER -->
@@ -29,12 +31,15 @@
                [class.winner]="match.winner === 'home'"
                [class.loser]="match.winner === 'away'"
                [class.placeholder]="match.isPlaceholderHome">
-              <span class="t-name">{{ match.homeTeam }}</span>
+              <a class="t-name" *ngIf="!match.isPlaceholderHome; else homePlaceholder" [routerLink]="['/team', match.team1Id]">{{ match.homeTeam }}</a>
+              <ng-template #homePlaceholder><span class="t-name">{{ match.homeTeam }}</span></ng-template>
           </div>
 
           <!-- Score / VS -->
           <div class="score-badge">
-              <span *ngIf="match.score !== '-'" class="score">{{ match.score }}</span>
+              <a *ngIf="match.score !== '-' && match.team1Id && match.team2Id" class="score"
+                 [routerLink]="['/match-report2', competitionId, season, match.round, match.team1Id, match.team2Id]"
+                 [attr.aria-label]="'Match report: ' + match.homeTeam + ' ' + match.score + ' ' + match.awayTeam">{{ match.score }}</a>
               <span *ngIf="match.score === '-'" class="vs">V</span>
               <small *ngIf="match.decision" class="decision">{{ match.decision }}</small>
           </div>
@@ -44,14 +49,16 @@
                [class.winner]="match.winner === 'away'"
                [class.loser]="match.winner === 'home'"
                [class.placeholder]="match.isPlaceholderAway">
-              <span class="t-name">{{ match.awayTeam }}</span>
+              <a class="t-name" *ngIf="!match.isPlaceholderAway; else awayPlaceholder" [routerLink]="['/team', match.team2Id]">{{ match.awayTeam }}</a>
+              <ng-template #awayPlaceholder><span class="t-name">{{ match.awayTeam }}</span></ng-template>
           </div>
 
       </div>
   
       <!-- Empty State -->
       <div *ngIf="matches.length === 0 && !loading" class="no-matches">
-          No fixtures scheduled for {{ currentRoundName }}.
+          <ng-container *ngIf="failed; else noFixtures">The bracket is unavailable. <button type="button" (click)="loadBracket()">Try again</button></ng-container>
+          <ng-template #noFixtures>No fixtures scheduled{{ currentRoundName ? ' for ' + currentRoundName : '' }}.</ng-template>
       </div>
   
     </div>
