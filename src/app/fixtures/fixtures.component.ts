@@ -1,19 +1,21 @@
 import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
 import { ActivatedRoute, ParamMap, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { Subscription, forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable, Subscription, forkJoin, from, of } from 'rxjs';
+import { catchError, map, mergeMap, toArray } from 'rxjs/operators';
 import { urlApp } from '../app.component';
 import { TeamService } from '../services/team.service';
 import {
-  CalendarEntry, CompetitionOption, DEFAULT_FILTERS, MonthGroup, Outcome, ScheduleFilters,
-  ScheduleRow, ScheduleSummary, ScheduleView, buildRows, competitionOptions, defaultSelection,
-  filterRows, formBefore, groupByMonth, hasActiveFilters, summarise
+  CalendarEntry, CalendarMonthGrid, CompetitionOption, DEFAULT_FILTERS, MonthGroup, Outcome, ScheduleFilters,
+  ScheduleRow, ScheduleSummary, ScheduleView, SortKey, UNDATED_MONTH, Venue, WEEKDAYS, buildCalendarMonth,
+  buildRows, competitionOptions, defaultSelection, filterRows, firstWeekdays, formBefore, groupByMonth,
+  hasActiveFilters, hasPanelFilters, ordinalPosition, relativeDay, sortRows, summarise
 } from './schedule-model';
 
 const VIEWS = ['fixtures', 'calendar'] as const;
 type ScheduleViewMode = typeof VIEWS[number];
-type DetailTab = 'overview' | 'stats' | 'lineups' | 'h2h';
+type ListMode = 'fixtures' | 'goalscorers';
+type PanelView = 'match' | 'meetings';
 
 export interface MatchEvent {
   id: number;
@@ -28,6 +30,16 @@ export interface MatchEvent {
   playerName: string;
   teamId: number;
   details: string;
+}
+
+interface Goal {
+  playerId?: number | null;
+  playerName: string;
+  minute: number | null;
+  teamId?: number | null;
+  details?: string | null;
+  penalty?: boolean | null;
+  ownGoal?: boolean | null;
 }
 
 interface PreviewSide {
@@ -45,19 +57,29 @@ interface MatchPreview {
   powerAway: number | null;
 }
 
-interface CalendarDay {
-  day: number;
-  rows: ScheduleRow[];
+interface OwnPlayer {
+  playerId: number;
+  playerName: string;
+  position: string;
+  /** null = unused substitute ("-" in FM). */
+  rating: number | null;
+  substitute: boolean;
+  goals: number;
+  yellow: boolean;
+  red: boolean;
+  motm: boolean;
 }
 
-interface CalendarMonth extends MonthGroup {
-  days: CalendarDay[];
+/** One row of /teams/availability/{teamId}: an injury or a suspension. */
+interface AvailabilityRow {
+  playerId: number;
+  playerName: string;
+  type: string;
+  label: string;
+  remaining: number;
+  remainingUnit: string;
+  competitionId: number | null;
 }
-
-const MONTH_DAYS: Record<string, number> = {
-  January: 31, February: 29, March: 31, April: 30, May: 31, June: 30, July: 31,
-  August: 31, September: 30, October: 31, November: 30, December: 31
-};
 
 @Component({
   selector: 'app-fixtures',
@@ -69,42 +91,60 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
   /** Set when the schedule is embedded (Club info → Matches); query params are then prefixed. */
   @Input() teamIdInput?: number;
 
+  readonly weekdays = WEEKDAYS;
+  readonly undatedLabel = UNDATED_MONTH;
+
   teamId = 0;
   teamName = 'Club';
   view: ScheduleViewMode = 'fixtures';
+  listMode: ListMode = 'fixtures';
   season = 0;
   currentSeason = 1;
   seasons: number[] = [1];
 
   rows: ScheduleRow[] = [];
   filtered: ScheduleRow[] = [];
-  months: MonthGroup[] = [];
-  calendarMonths: CalendarMonth[] = [];
+  /** Fixtures list groups: by month for the date sort, a single flat group otherwise. */
+  listGroups: MonthGroup[] = [];
+  calendarGrids: CalendarMonthGrid[] = [];
+  calendarIndex = 0;
   competitions: CompetitionOption[] = [];
-  /** Totals for the visible (filtered) matches, shown in the summary strip. */
   summary: ScheduleSummary = summarise([]);
-  /** Totals for the whole season, shown in the page heading. */
   seasonTotals: ScheduleSummary = summarise([]);
-  filters: ScheduleFilters = { ...DEFAULT_FILTERS };
+  filters: ScheduleFilters = { ...DEFAULT_FILTERS, competitions: [], venues: [] };
+  filterPanelOpen = false;
+  sortKey: SortKey = 'date';
+  sortDesc = false;
   loading = false;
   loadError = false;
 
+  /** Own league standing for the heading, from the next-match preview (current season only). */
+  standing: { position: number; league: string } | null = null;
+
   selected: ScheduleRow | null = null;
-  detailTab: DetailTab = 'overview';
+  panelView: PanelView = 'match';
   matchSummary: any = null;
   matchEvents: MatchEvent[] = [];
-  matchStats: any = null;
+  matchLineup: any = null;
   h2h: any = null;
   preview: MatchPreview | null = null;
+  opponentPosition: number | null = null;
+  teamNews: { home: string[] | null; away: string[] | null } = { home: null, away: null };
   loadingSummary = false;
-  loadingStats = false;
   loadingH2h = false;
   loadingPreview = false;
   loadingForm = false;
 
+  /** Goalscorers view: scorers per fixture key; `incomplete` when the save lacks some goals. */
+  scorersByMatch = new Map<string, { goals: Goal[]; incomplete: boolean }>();
+  loadingScorers = false;
+
+  private rawSchedule: ScheduleView[] = [];
+  private rawCalendar: CalendarEntry[] = [];
   private opponentRows = new Map<string, ScheduleRow[]>();
   private requestedMatchKey: string | null = null;
   private loadSub?: Subscription;
+  private scorersSub?: Subscription;
   private detailSubs: Subscription[] = [];
   private subs: Subscription[] = [];
   private initialised = false;
@@ -149,6 +189,10 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
         this.load();
       }
     }));
+    // The game date anchors weekdays and "N days" labels; rebuild when it moves.
+    this.subs.push(this.teamService.currentDay$.subscribe(() => {
+      if (this.rawSchedule.length) this.rebuildRows();
+    }));
     this.subs.push(this.teamService.refresh$.subscribe(() => this.load(true)));
   }
 
@@ -162,6 +206,7 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
   ngOnDestroy(): void {
     this.subs.forEach(sub => sub.unsubscribe());
     this.loadSub?.unsubscribe();
+    this.scorersSub?.unsubscribe();
     this.clearDetailRequests();
   }
 
@@ -192,6 +237,7 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   changeSeason(season: number): void {
+    if (!season || season < 1 || season > this.currentSeason) return;
     this.updateUrl({ [this.seasonParam]: season === this.currentSeason ? null : season, [this.matchParam]: null });
   }
 
@@ -199,11 +245,15 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
 
   private resetTeamState(): void {
     this.rows = [];
+    this.rawSchedule = [];
+    this.rawCalendar = [];
     this.filtered = [];
-    this.months = [];
-    this.calendarMonths = [];
+    this.listGroups = [];
+    this.calendarGrids = [];
     this.selected = null;
+    this.standing = null;
     this.opponentRows.clear();
+    this.scorersByMatch.clear();
     this.fetchTeamName();
   }
 
@@ -221,23 +271,34 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
     this.loading = !keepSelection;
     this.loadError = false;
     this.loadSub?.unsubscribe();
+    this.scorersSub?.unsubscribe();
+    this.loadingScorers = false;
     this.loadSub = forkJoin({
       schedule: this.http.get<ScheduleView[]>(`${urlApp}/match/getScheduleForSeasonNumber/${season}/${teamId}`),
-      calendar: this.http.get<CalendarEntry[]>(`${urlApp}/match/calendar/${teamId}/${season}`).pipe(catchError(() => of([])))
+      calendar: this.http.get<CalendarEntry[]>(`${urlApp}/match/calendar/${teamId}/${season}`).pipe(catchError(() => of([]))),
+      standing: season === this.currentSeason
+        ? this.http.get<any>(`${urlApp}/match/preview/${teamId}`).pipe(catchError(() => of(null)))
+        : of(null)
     }).subscribe({
-      next: ({ schedule, calendar }) => {
+      next: ({ schedule, calendar, standing }) => {
         this.loading = false;
         this.opponentRows.clear();
-        this.rows = buildRows(schedule || [], teamId, calendar || []);
-        this.applyFilters(false);
+        this.scorersByMatch.clear();
+        this.rawSchedule = schedule || [];
+        this.rawCalendar = calendar || [];
+        this.standing = this.standingFrom(standing, teamId);
+        this.rebuildRows();
         const wanted = this.requestedMatchKey || previousKey;
         const row = (wanted && this.rows.find(r => r.key === wanted)) || defaultSelection(this.filtered);
         if (row) this.select(row, false, keepSelection && row.key === previousKey);
         else this.selected = null;
+        this.focusCalendarOn(this.selected);
+        if (this.listMode === 'goalscorers') this.loadScorers();
       },
       error: () => {
         this.loading = false;
         this.loadError = true;
+        this.rawSchedule = [];
         this.rows = [];
         this.applyFilters(false);
         this.selected = null;
@@ -245,16 +306,36 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
     });
   }
 
-  // ---------------------------------------------------------------- filters
+  private standingFrom(preview: any, teamId: number): { position: number; league: string } | null {
+    if (!preview) return null;
+    const home = Number(preview.homeTeamId) === teamId;
+    const position = Number(home ? preview.homeLeaguePosition : preview.awayLeaguePosition);
+    return position > 0 && preview.competitionName ? { position, league: preview.competitionName } : null;
+  }
+
+  private rebuildRows(): void {
+    const anchor = this.teamService.currentDay > 0 && this.teamService.dayOfWeek
+      ? { season: this.currentSeason, day: this.teamService.currentDay, dayOfWeek: this.teamService.dayOfWeek }
+      : null;
+    const selectedKey = this.selected?.key;
+    this.rows = buildRows(this.rawSchedule, this.teamId, this.rawCalendar, anchor);
+    this.applyFilters(false);
+    if (selectedKey) {
+      const row = this.rows.find(r => r.key === selectedKey);
+      if (row) this.selected = row;
+    }
+  }
+
+  // ---------------------------------------------------------------- filters, sorting, calendar
 
   applyFilters(reselect = true): void {
     if (this.filters.show === 'fixtures') this.filters.result = 'all';
     this.filtered = filterRows(this.rows, this.filters);
-    this.months = groupByMonth(this.filtered);
-    this.calendarMonths = this.months.map(month => ({ ...month, days: this.monthDays(month) }));
     this.competitions = competitionOptions(this.rows);
     this.summary = summarise(this.filtered);
     this.seasonTotals = summarise(this.rows);
+    this.buildListGroups();
+    this.buildCalendar();
     if (reselect && this.selected && !this.filtered.includes(this.selected)) {
       const row = defaultSelection(this.filtered);
       if (row) this.select(row);
@@ -262,8 +343,85 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
+  private buildListGroups(): void {
+    this.listGroups = this.sortKey === 'date'
+      ? groupByMonth(this.sortDesc ? [...this.filtered].reverse() : this.filtered, !this.sortDesc)
+      : [{ label: '', rows: sortRows(this.filtered, this.sortKey, this.sortDesc) }];
+  }
+
+  private buildCalendar(): void {
+    const months = groupByMonth(this.filtered.filter(row => row.dateKnown), true);
+    const firsts = firstWeekdays(months);
+    const previousLabel = this.calendarGrids[this.calendarIndex]?.label;
+    this.calendarGrids = months.map((month, i) => buildCalendarMonth(month, firsts[i]));
+    const keep = this.calendarGrids.findIndex(grid => grid.label === previousLabel);
+    this.calendarIndex = keep >= 0 ? keep : Math.min(this.calendarIndex, Math.max(0, this.calendarGrids.length - 1));
+  }
+
+  get undatedRows(): ScheduleRow[] {
+    return this.filtered.filter(row => !row.dateKnown);
+  }
+
+  private focusCalendarOn(row: ScheduleRow | null): void {
+    if (!row?.dateKnown) return;
+    const index = this.calendarGrids.findIndex(grid => grid.label === row.monthLabel);
+    if (index >= 0) this.calendarIndex = index;
+  }
+
+  shiftMonth(step: number): void {
+    this.calendarIndex = Math.max(0, Math.min(this.calendarGrids.length - 1, this.calendarIndex + step));
+  }
+
+  sortBy(key: SortKey): void {
+    if (this.sortKey === key) this.sortDesc = !this.sortDesc;
+    else {
+      this.sortKey = key;
+      this.sortDesc = false;
+    }
+    this.buildListGroups();
+  }
+
+  sortIndicator(key: SortKey): string {
+    return this.sortKey === key ? (this.sortDesc ? '▼' : '▲') : '';
+  }
+
+  toggleCompetition(key: string): void {
+    // Unchecking from the "all" state keeps every other competition.
+    const current = this.filters.competitions.length ? this.filters.competitions : this.competitions.map(c => c.key);
+    const set = new Set(current);
+    set.has(key) ? set.delete(key) : set.add(key);
+    this.filters.competitions = set.size === this.competitions.length ? [] : Array.from(set);
+    this.applyFilters();
+  }
+
+  toggleAllCompetitions(): void {
+    this.filters.competitions = [];
+    this.applyFilters();
+  }
+
+  toggleVenue(venue: Venue): void {
+    const current = this.filters.venues.length ? this.filters.venues : ['H', 'A'] as Venue[];
+    const set = new Set(current);
+    set.has(venue) ? set.delete(venue) : set.add(venue);
+    this.filters.venues = set.size === 2 ? [] : Array.from(set);
+    this.applyFilters();
+  }
+
+  isCompetitionChecked(key: string): boolean {
+    return !this.filters.competitions.length || this.filters.competitions.includes(key);
+  }
+
+  isVenueChecked(venue: Venue): boolean {
+    return !this.filters.venues.length || this.filters.venues.includes(venue);
+  }
+
+  resetPanelFilters(): void {
+    this.filters = { ...this.filters, competitions: [], venues: [], result: 'all' };
+    this.applyFilters();
+  }
+
   clearFilters(): void {
-    this.filters = { ...DEFAULT_FILTERS };
+    this.filters = { ...DEFAULT_FILTERS, competitions: [], venues: [] };
     this.applyFilters();
   }
 
@@ -271,8 +429,59 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
     return hasActiveFilters(this.filters);
   }
 
+  get panelFiltered(): boolean {
+    return hasPanelFilters(this.filters);
+  }
+
   get nextMatch(): ScheduleRow | null {
     return this.season === this.currentSeason ? this.rows.find(row => !row.played) ?? null : null;
+  }
+
+  // ---------------------------------------------------------------- goalscorers view
+
+  setListMode(mode: ListMode): void {
+    this.listMode = mode;
+    if (mode === 'goalscorers') this.loadScorers();
+  }
+
+  private loadScorers(): void {
+    if (this.scorersByMatch.size || this.loadingScorers) return;
+    const teamId = this.teamId;
+    const season = this.season;
+    const played = this.rows.filter(row => row.played && row.reportLink);
+    this.loadingScorers = true;
+    // Fallback for backends without the season endpoint: one summary per played match.
+    type Entry = [string, { goals: Goal[]; incomplete: boolean }];
+    const perMatch = (): Observable<Entry[]> => from(played).pipe(
+      mergeMap(row => this.http.get<any>(`${urlApp}/match/summary/${this.matchPath(row)}`).pipe(
+        map(summary => [row.key, { goals: (summary?.goals || []) as Goal[], incomplete: !summary }] as Entry),
+        catchError(() => of([row.key, { goals: [], incomplete: true }] as Entry))
+      ), 4),
+      toArray()
+    );
+    this.scorersSub = this.http.get<any[]>(`${urlApp}/match/goalscorers/${season}/${teamId}`).pipe(
+      map(list => (list || []).map(item => [
+        `${item.competitionId}-${item.roundNumber}-${item.teamId1}-${item.teamId2}`,
+        { goals: (item.goals || []) as Goal[], incomplete: (item.unknownFields || []).includes('goals') }
+      ] as Entry)),
+      catchError(() => perMatch())
+    ).subscribe(entries => {
+      this.loadingScorers = false;
+      if (teamId !== this.teamId || season !== this.season) return;
+      entries.forEach(([key, value]) => this.scorersByMatch.set(key, value));
+    });
+  }
+
+  /** Own goalscorers for the Goalscorers view (friendlies store none). */
+  ownScorers(row: ScheduleRow): string {
+    if (!row.played) return '';
+    if (row.competitionKind === 'friendly') return '—';
+    const entry = this.scorersByMatch.get(row.key);
+    if (!entry) return this.loadingScorers ? '…' : '—';
+    const mine = entry.goals.filter(goal => this.isGoalFor(goal, this.teamId));
+    const text = mine.map(goal => this.goalText(goal)).join(', ');
+    if (entry.incomplete) return text ? `${text} (incomplete)` : 'Not recorded';
+    return text || 'None';
   }
 
   // ---------------------------------------------------------------- selection
@@ -284,28 +493,34 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
     // A background refresh keeps the open panel unless that match has just been played.
     if (keepDetail && previous?.key === row.key && previous.played === row.played) return;
     this.clearDetailRequests();
-    this.detailTab = 'overview';
+    this.panelView = 'match';
     this.matchSummary = null;
     this.matchEvents = [];
-    this.matchStats = null;
+    this.matchLineup = null;
     this.h2h = null;
     this.preview = null;
+    this.opponentPosition = row.opponentPosition;
+    this.teamNews = { home: null, away: null };
     this.loadHeadToHead(row);
     if (row.played) this.loadPlayedDetail(row);
-    else this.loadPreview(row);
+    else {
+      this.loadPreview(row);
+      this.loadTeamNews(row);
+    }
   }
 
-  setDetailTab(tab: DetailTab): void {
-    this.detailTab = tab;
-    if (tab === 'stats' && this.selected?.played && !this.matchStats && !this.loadingStats) {
-      this.loadStats(this.selected);
-    }
+  openMeetings(): void {
+    this.panelView = 'meetings';
+  }
+
+  closeMeetings(): void {
+    this.panelView = 'match';
   }
 
   private clearDetailRequests(): void {
     this.detailSubs.forEach(sub => sub.unsubscribe());
     this.detailSubs = [];
-    this.loadingSummary = this.loadingStats = this.loadingH2h = this.loadingPreview = this.loadingForm = false;
+    this.loadingSummary = this.loadingH2h = this.loadingPreview = this.loadingForm = false;
   }
 
   private matchPath(row: ScheduleRow): string {
@@ -317,22 +532,14 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
     this.loadingSummary = true;
     this.detailSubs.push(forkJoin({
       summary: this.http.get<any>(`${urlApp}/match/summary/${this.matchPath(row)}`).pipe(catchError(() => of(null))),
-      events: this.http.get<MatchEvent[]>(`${urlApp}/match/matchEvents/${this.matchPath(row)}`).pipe(catchError(() => of([])))
-    }).subscribe(({ summary, events }) => {
+      events: this.http.get<MatchEvent[]>(`${urlApp}/match/matchEvents/${this.matchPath(row)}`).pipe(catchError(() => of([]))),
+      lineup: this.http.get<any>(`${urlApp}/match/playerRatings/${this.matchPath(row)}`).pipe(catchError(() => of(null)))
+    }).subscribe(({ summary, events, lineup }) => {
       this.matchSummary = summary;
-      this.matchEvents = (events || []).filter(event => event.eventType !== 'assist');
+      this.matchEvents = events || [];
+      this.matchLineup = lineup;
       this.loadingSummary = false;
     }));
-  }
-
-  private loadStats(row: ScheduleRow): void {
-    this.loadingStats = true;
-    this.detailSubs.push(this.http.get<any>(`${urlApp}/match/stats/${this.matchPath(row)}`)
-      .pipe(catchError(() => of(null)))
-      .subscribe(data => {
-        this.matchStats = data?.available ? data : null;
-        this.loadingStats = false;
-      }));
   }
 
   private loadHeadToHead(row: ScheduleRow): void {
@@ -344,6 +551,28 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
         this.h2h = data;
         this.loadingH2h = false;
       }));
+  }
+
+  /**
+   * FM "team news": injuries still running on match day and suspensions that
+   * apply to this competition, from the squad availability feed.
+   */
+  private loadTeamNews(row: ScheduleRow): void {
+    const daysUntil = row.day !== null && this.teamService.currentDay > 0 && row.source.seasonNumber === this.currentSeason
+      ? row.day - this.teamService.currentDay : 0;
+    const news = (teamId: number): Observable<string[] | null> => teamId > 0
+      ? this.http.get<AvailabilityRow[]>(`${urlApp}/teams/availability/${teamId}`).pipe(
+        map(items => (items || [])
+          .filter(item => item.type === 'INJURY'
+            ? Number(item.remaining) > daysUntil
+            : item.competitionId == null || Number(item.competitionId) === row.competitionId)
+          .map(item => item.type === 'INJURY'
+            ? `${item.playerName} out (${(item.label || 'injury').toLowerCase()})`
+            : `${item.playerName} suspended (${item.remaining} ${item.remainingUnit})`)),
+        catchError(() => of(null)))
+      : of(null);
+    this.detailSubs.push(forkJoin({ home: news(row.homeTeamId), away: news(row.awayTeamId) })
+      .subscribe(result => this.teamNews = result));
   }
 
   private loadPreview(row: ScheduleRow): void {
@@ -370,6 +599,7 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
         preview.prediction = data.prediction || null;
         preview.powerHome = Number(data.homePowerRating) || null;
         preview.powerAway = Number(data.awayPowerRating) || null;
+        if (!this.opponentPosition) this.opponentPosition = opponent.position;
         if (!opponent.form) opponent.form = this.parseForm(row.venue === 'H' ? data.awayForm : data.homeForm);
       }));
     }
@@ -402,7 +632,33 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
 
   trackByRow = (_: number, row: ScheduleRow) => row.key;
   trackByMonth = (_: number, month: MonthGroup) => month.label;
-  trackByDay = (_: number, day: CalendarDay) => day.day;
+  trackByPlayer = (_: number, player: OwnPlayer) => player.playerId;
+
+  /** FM subtitle: "4th in Literature League - Next Match: Kuntuna (H) (6 days)". */
+  get headingLine(): string {
+    if (this.season !== this.currentSeason) {
+      const t = this.seasonTotals;
+      return `Season ${this.season} · ${t.played} played · ${t.wins}W ${t.draws}D ${t.losses}L`;
+    }
+    const parts: string[] = [];
+    if (this.standing) parts.push(`${ordinalPosition(this.standing.position)} in ${this.standing.league}`);
+    const next = this.nextMatch;
+    if (next) {
+      const when = relativeDay(next.day, this.teamService.currentDay);
+      parts.push(`Next Match: ${next.opponentName} (${next.venue})${when ? ` (${when})` : ''}`);
+    } else if (this.rows.length) {
+      parts.push('No matches left this season');
+    }
+    return parts.join(' - ') || `Season ${this.season}`;
+  }
+
+  /** Panel header, FM style: "OPPONENT (H) (80 DAYS AGO)". */
+  panelHeading(row: ScheduleRow): string {
+    const when = row.source.seasonNumber === this.currentSeason
+      ? relativeDay(row.day, this.teamService.currentDay)
+      : `season ${row.source.seasonNumber}`;
+    return `${row.opponentName} (${row.venue})${when ? ` (${when})` : ''}`;
+  }
 
   get selectedHomeName(): string {
     if (!this.selected) return '';
@@ -421,41 +677,83 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
     return meetings[0] || null;
   }
 
+  ordinal(position: number | null): string {
+    return ordinalPosition(position);
+  }
+
   outcomeLabel(outcome: Outcome | null): string {
     return outcome === 'W' ? 'Win' : outcome === 'D' ? 'Draw' : outcome === 'L' ? 'Loss' : '';
   }
 
-  private monthDays(month: MonthGroup): CalendarDay[] {
-    const length = MONTH_DAYS[month.label];
-    if (!length) return [];
-    const byDay = new Map<number, ScheduleRow[]>();
-    month.rows.forEach(row => {
-      if (row.dayOfMonth) byDay.set(row.dayOfMonth, [...(byDay.get(row.dayOfMonth) || []), row]);
-    });
-    return Array.from({ length }, (_, i) => ({ day: i + 1, rows: byDay.get(i + 1) || [] }));
-  }
-
-  goalsFor(teamId: number): { playerId?: number; playerName: string; minute: number }[] {
+  private allGoals(): Goal[] {
     const goals = this.matchSummary?.goals;
-    if (Array.isArray(goals) && goals.length) return goals.filter((goal: any) => Number(goal.teamId) === teamId);
-    return this.matchEvents.filter(event => event.eventType === 'goal' && event.teamId === teamId);
+    if (Array.isArray(goals) && goals.length) return goals;
+    return this.matchEvents.filter(event => event.eventType === 'goal');
   }
 
-  cards(): MatchEvent[] {
-    return this.matchEvents.filter(event => event.eventType === 'red_card');
+  private isOwnGoal(goal: Goal): boolean {
+    return !!goal.ownGoal || /own goal/i.test(goal.details || '');
   }
 
-  statWidth(home: any, away: any): number {
-    const h = parseFloat(home) || 0;
-    const a = parseFloat(away) || 0;
-    return h + a === 0 ? 50 : Math.round(h / (h + a) * 100);
+  private isGoalFor(goal: Goal, teamId: number): boolean {
+    // An own goal counts for the other side; the backend reports the scoring player's team.
+    return this.isOwnGoal(goal) ? Number(goal.teamId) !== teamId : Number(goal.teamId) === teamId;
   }
 
-  isHigher(first: any, second: any): boolean {
-    return (parseFloat(first) || 0) > (parseFloat(second) || 0);
+  goalText(goal: Goal): string {
+    const minute = goal.minute != null ? `${goal.minute}'` : '';
+    if (this.isOwnGoal(goal)) return `${goal.playerName} o.g.${minute ? ` (${minute})` : ''}`;
+    if (goal.penalty || /penalt/i.test(goal.details || '')) return `${goal.playerName} (pen${minute ? ` ${minute}` : ''})`;
+    return minute ? `${goal.playerName} ${minute}` : goal.playerName;
   }
 
-  ratingClass(rating: number): string {
+  goalsFor(teamId: number): Goal[] {
+    return this.allGoals().filter(goal => this.isGoalFor(goal, teamId));
+  }
+
+  /**
+   * FM player list for the own club: the full match squad from /match/playerRatings
+   * (starters, used and unused substitutes) when stored, otherwise the players
+   * who appeared, from the summary ratings.
+   */
+  get ownPlayers(): OwnPlayer[] {
+    if (!this.selected || !this.matchSummary) return [];
+    const ownHome = this.selected.venue === 'H';
+    const appeared: any[] = (ownHome ? this.matchSummary.homePlayerRatings : this.matchSummary.awayPlayerRatings) || [];
+    const lineup: any[] = (ownHome ? this.matchLineup?.homeLineup : this.matchLineup?.awayLineup) || [];
+    const byId = new Map(appeared.map(p => [Number(p.playerId), p]));
+    const ids = (type: string) => new Set(this.matchEvents.filter(e => e.eventType === type).map(e => Number(e.playerId)));
+    const yellow = ids('yellow_card');
+    const red = ids('red_card');
+    const motmId = Number(this.matchSummary.manOfTheMatchPlayerId);
+    const source = lineup.length
+      ? [...lineup].sort((a, b) => Number(!!a.substitute) - Number(!!b.substitute) || (a.positionIndex ?? 0) - (b.positionIndex ?? 0))
+      : appeared;
+    return source.map(p => {
+      const id = Number(p.playerId);
+      const played = byId.get(id);
+      const rating = played && typeof played.rating === 'number' ? played.rating
+        : !lineup.length && typeof p.rating === 'number' ? p.rating : null;
+      return {
+        playerId: id,
+        playerName: p.playerName,
+        position: p.position || played?.position || '',
+        rating: rating && rating > 0 ? rating : null,
+        substitute: !!p.substitute,
+        goals: Number(played?.goals ?? p.goals) || 0,
+        yellow: yellow.has(id),
+        red: red.has(id),
+        motm: motmId === id
+      };
+    });
+  }
+
+  goalIcons(count: number): number[] {
+    return Array.from({ length: Math.min(count, 5) });
+  }
+
+  ratingClass(rating: number | null): string {
+    if (rating === null) return 'none';
     return rating >= 8 ? 'high' : rating >= 6.5 ? 'mid' : 'low';
   }
 
