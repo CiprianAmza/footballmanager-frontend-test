@@ -61,7 +61,7 @@ export class HomeTodayComponent implements OnInit, OnDestroy {
   bonusPending = false;
   bonusMessage = '';
   /** The first day at a new club, step by step (design §6). */
-  firstDay: { pending: boolean; steps: { key: string; label: string; done: boolean; route: string }[] } | null = null;
+  firstDay: { pending: boolean; steps: { key: string; label: string; done: boolean; route: string; messageId?: number }[] } | null = null;
   private subscriptions = new Subscription();
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
 

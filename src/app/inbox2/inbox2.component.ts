@@ -1,6 +1,6 @@
 import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { InboxComponent, ManagerInbox } from '../inbox/inbox.component';
 import { TeamService } from '../services/team.service';
 import { CareerService } from '../services/career.service';
@@ -28,14 +28,25 @@ export class Inbox2Component extends InboxComponent {
   ]);
   private readonly mediaCategories = new Set(['MEDIA_REACTION', 'MEDIA_PREVIEW', 'TRANSFER_RUMOUR', 'league_news', 'match_result', 'press']);
 
+  /** The message last opened: it stays open even when reading it takes it out of the folder shown (Unread). */
+  private openedMessageId: number | null = null;
+  /** ?message=<id> (the Today page's first-day links): open that message once the inbox has loaded. */
+  private requestedMessageId: number | null = null;
+
   constructor(
     http: HttpClient,
     teamService: TeamService,
     careerService: CareerService,
     authService: AuthService,
-    private router: Router
+    private router: Router,
+    route: ActivatedRoute
   ) {
     super(http, teamService, careerService, authService);
+    route.queryParamMap.subscribe(params => {
+      const id = Number(params.get('message'));
+      this.requestedMessageId = id > 0 ? id : null;
+      this.openRequestedMessage();
+    });
   }
 
   override loadMessages(): void {
@@ -47,6 +58,7 @@ export class Inbox2Component extends InboxComponent {
         this.messages = messages;
         this.selectedMessage = messages.find(message => message.id === selectedId) || null;
         this.loading = false;
+        this.openRequestedMessage();
       },
       error: () => {
         this.error = 'Messages could not be loaded.';
@@ -58,7 +70,22 @@ export class Inbox2Component extends InboxComponent {
   override selectMessage(message: ManagerInbox): void {
     // Opening a message reads it (it stays open even if the Unread folder no longer lists it).
     this.selectedMessage = message;
+    this.openedMessageId = message.id;
     if (!message.isRead) this.markAsRead(message);
+  }
+
+  /** Opens the message a link asked for, showing every message if the current folder does not list it. */
+  private openRequestedMessage(): void {
+    if (this.requestedMessageId === null || this.messages.length === 0) return;
+    const message = this.messages.find(m => m.id === this.requestedMessageId);
+    this.requestedMessageId = null;
+    if (!message) return;
+    if (!this.visibleMessages.some(m => m.id === message.id)) {
+      this.workspaceView = 'all';
+      this.topicFilter = 'all';
+      this.searchText = '';
+    }
+    this.selectMessage(message);
   }
 
   get visibleMessages(): ManagerInbox[] {
@@ -78,7 +105,10 @@ export class Inbox2Component extends InboxComponent {
   }
 
   get selectedVisibleMessage(): ManagerInbox | null {
-    return this.visibleMessages.find(message => message.id === this.selectedMessage?.id) || null;
+    const visible = this.visibleMessages.find(message => message.id === this.selectedMessage?.id);
+    if (visible) return visible;
+    // Read just now: the folder may no longer list it, but the reader keeps it open.
+    return this.selectedMessage && this.selectedMessage.id === this.openedMessageId ? this.selectedMessage : null;
   }
 
   get importantCount(): number { return this.messages.filter(message => this.isDecision(message)).length; }
@@ -105,11 +135,13 @@ export class Inbox2Component extends InboxComponent {
 
   setWorkspaceView(view: InboxWorkspaceView): void {
     this.workspaceView = view;
+    this.openedMessageId = null;
     if (!this.selectedVisibleMessage) this.selectedMessage = null;
   }
 
   setTopic(topic: InboxTopic): void {
     this.topicFilter = topic;
+    this.openedMessageId = null;
     if (!this.selectedVisibleMessage) this.selectedMessage = null;
   }
 

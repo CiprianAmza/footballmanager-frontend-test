@@ -24,7 +24,8 @@
 
     <section class="first-day-card" *ngIf="firstDay?.pending" aria-label="First day">
       <div class="card-heading"><div><span class="eyebrow">Your first day</span><h2>Before the season moves on</h2></div></div>
-      <a class="first-day-step" *ngFor="let s of firstDay!.steps" [routerLink]="s.route" [class.done]="s.done">
+      <a class="first-day-step" *ngFor="let s of firstDay!.steps" [routerLink]="s.route"
+         [queryParams]="s.messageId ? { message: s.messageId } : null" [class.done]="s.done">
         <span>{{ s.done ? '✓' : '•' }}</span><span>{{ s.label }}</span>
       </a>
     </section>

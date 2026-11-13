@@ -586,7 +586,8 @@ export class AppComponent implements OnDestroy {
         // The first day at a new club is not over: show what is left on the Today page.
         if (result.paused && result.reason === 'FIRST_DAY_PENDING') {
           this.simulationStopMessage = this.describeSimulationPause(result);
-          this.router.navigate(['/home']);
+          // Another manager's first day pauses the game too, but there is nothing for me to do on my Today page.
+          if (!this.isOtherManagersFirstDay(result)) this.router.navigate(['/home']);
           return;
         }
 
@@ -706,6 +707,12 @@ export class AppComponent implements OnDestroy {
       : 'Simulation stopped because the server could not complete the advance. Press Continue to try again.';
   }
 
+  /** FIRST_DAY_PENDING for a club that is not mine (the backend says whose first day it is). */
+  private isOtherManagersFirstDay(result: any): boolean {
+    const teamId = Number(result?.firstDayTeamId);
+    return teamId > 0 && !!this.teamService.teamId && teamId !== Number(this.teamService.teamId);
+  }
+
   private describeSimulationPause(result: any): string {
     if (result.reason === 'MANAGER_FIRED') {
       return 'Simulation stopped because the manager is no longer employed.';
@@ -717,6 +724,9 @@ export class AppComponent implements OnDestroy {
       return 'Simulation stopped because a live match must be completed.';
     }
     if (result.reason === 'FIRST_DAY_PENDING') {
+      if (this.isOtherManagersFirstDay(result)) {
+        return 'Simulation stopped: another manager has not finished their first day at a new club.';
+      }
       return 'Your first day at the club is not over: ' + (result.firstDayNext || 'see the Today page') + '.';
     }
 
