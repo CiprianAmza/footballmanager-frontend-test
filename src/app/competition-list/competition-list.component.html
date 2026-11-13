@@ -1,13 +1,13 @@
-<div class="comps-container">
+<main class="comps-container">
 
   <div class="page-header">
     <div><h1>COMPETITIONS</h1>
       <span class="subtitle">{{ chairmanView && selectedTeamName ? selectedTeamName + "'s Competitions" : "Your Team's Competitions" }}</span>
     </div>
     <nav class="competition-view-nav" aria-label="Competition views">
-      <a routerLink="/competition-list" class="active">Classic</a>
-      <a [routerLink]="['/competitions2', viewTeamId]">Mission control</a>
-      <a [routerLink]="['/competitions3', viewTeamId]">Season timeline</a>
+      <a routerLink="/competition-list" class="active" aria-current="page">Club competitions</a>
+      <a *ngIf="viewTeamId" [routerLink]="['/competitions2', viewTeamId]">Mission control</a>
+      <a *ngIf="viewTeamId" [routerLink]="['/competitions3', viewTeamId]">Season timeline</a>
       <a routerLink="/competitions-world">World view</a>
     </nav>
   </div>
@@ -35,13 +35,17 @@
     <article class="comp-card" *ngFor="let comp of competitions; trackBy: trackByCompId">
 
       <!-- HEADER -->
-      <div class="card-header" [style.border-left-color]="getCompetitionColor(comp)">
-        <div class="logo-box" [style.background-color]="getCompetitionColor(comp)">
+      <div class="card-header" [style.--competition-color]="getCompetitionColor(comp)">
+        <div class="logo-box" aria-hidden="true">
           <span>{{ comp.name | slice:0:1 }}</span>
         </div>
-        <div class="comp-title">
-          <a [routerLink]="competitionLink(comp)">{{ comp.name }}</a>
-        </div>
+        <h2 class="comp-title"><a [routerLink]="competitionLink(comp)">{{ comp.name }}</a></h2>
+      </div>
+
+      <div class="card-section objective" *ngIf="objectives.get(comp.competitionId) as objective">
+        <div><span class="label">BOARD EXPECTATION</span><strong>{{ objective.description }}</strong></div>
+        <span class="objective-status" [class.on-track]="['Achieved', 'On track', 'Target reached'].includes(objectiveStatus(objective, comp))"
+          [class.below-target]="['Missed', 'Below target'].includes(objectiveStatus(objective, comp))">{{ objectiveStatus(objective, comp) }}</span>
       </div>
 
       <!-- LEAGUE INFO (typeId 1 or 3) -->
@@ -50,19 +54,19 @@
           <div class="info-block">
             <span class="label">POSITION</span>
             <div class="position-box">
-              <span class="pos-val">{{ comp.position }}</span>
-              <span class="pos-total">/{{ comp.totalTeams }}</span>
+              <span class="pos-val">{{ comp.position ?? '—' }}</span>
+              <span class="pos-total" *ngIf="comp.totalTeams">/{{ comp.totalTeams }}</span>
             </div>
           </div>
           <div class="info-block right">
             <span class="label">POINTS</span>
             <div class="position-box">
-              <span class="pos-val">{{ comp.points }}</span>
+              <span class="pos-val">{{ comp.points ?? '—' }}</span>
             </div>
           </div>
         </div>
 
-        <div class="league-info" style="margin-top: 8px;">
+        <div class="league-info recent-form" *ngIf="getFormArray(comp.form).length">
           <div class="info-block">
             <span class="label">RECENT FORM</span>
             <div class="form-dots">
@@ -77,8 +81,8 @@
       </div>
 
       <!-- Cup / European lifecycle is fully described by the backend. -->
-      <div class="card-section lifecycle" *ngIf="isCup(comp) || isEuropean(comp)">
-        <div class="info-block">
+      <div class="card-section lifecycle" *ngIf="comp.nextMatch || comp.elimination || isCup(comp) || isEuropean(comp)">
+        <div class="info-block" *ngIf="!isLeague(comp)">
           <span class="label">STATUS</span>
           <div class="position-box">
             <span class="pos-val lifecycle-status">{{ comp.statusLabel || comp.currentStage }}</span>
@@ -86,29 +90,31 @@
         </div>
 
         <div class="journey-grid">
-          <div class="journey-row">
+          <div class="journey-row" *ngIf="!isLeague(comp) && (comp.entryStage || comp.start?.stage)">
             <span>ENTRY</span>
             <strong>{{ comp.entryStage || comp.start?.stage }}</strong>
           </div>
 
           <div class="journey-row next" *ngIf="comp.nextMatch as match">
             <span>NEXT MATCH</span>
-            <strong>vs <a class="entity-link" [routerLink]="['/team', match.opponentTeamId]">{{ match.opponentTeamName }}</a></strong>
+            <strong>{{ match.venue === 'HOME' ? 'vs' : 'at' }} <a class="entity-link" [routerLink]="['/team', match.opponentTeamId]">{{ match.opponentTeamName }}</a></strong>
             <small>
               {{ match.stage }} · {{ match.venue === 'HOME' ? 'Home' : 'Away' }}
               <ng-container *ngIf="match.date"> · {{ match.date }}</ng-container>
               <ng-container *ngIf="match.legNumber"> · Leg {{ match.legNumber }}</ng-container>
+              · <a class="campaign-link" [routerLink]="matchPageLink(comp)" [queryParams]="matchPage(comp, match.round)">Fixtures →</a>
             </small>
           </div>
 
           <div class="journey-row eliminated" *ngIf="comp.elimination as elimination">
-            <span>ELIMINATED</span>
+            <span>{{ comp.status === 'RUNNER_UP' ? 'FINAL' : 'ELIMINATED' }}</span>
             <strong *ngIf="elimination.byTeamName">by <a class="entity-link" [routerLink]="['/team', elimination.byTeamId]">{{ elimination.byTeamName }}</a></strong>
             <strong *ngIf="!elimination.byTeamName">via group table</strong>
             <small>
               {{ elimination.stage }}
               <ng-container *ngIf="elimination.score"> · {{ elimination.score }}</ng-container>
               <ng-container *ngIf="elimination.date"> · {{ elimination.date }}</ng-container>
+              <ng-container *ngIf="elimination.score"> · <a class="campaign-link" [routerLink]="matchPageLink(comp)" [queryParams]="matchPage(comp, elimination.round, false)">Results →</a></ng-container>
             </small>
           </div>
 
@@ -119,6 +125,48 @@
           </div>
         </div>
       </div>
+
+      <ng-container *ngIf="cardDetails.get(comp.competitionId) as detail">
+        <div class="card-section" *ngIf="detail.unavailable">Standings could not be loaded.</div>
+        <section class="card-section campaign-table" *ngIf="detail.standings as clubs">
+          <ng-container *ngIf="detail.positions as positions">
+            <figure *ngIf="positions.length" class="position-chart">
+              <figcaption>League position by matchday · {{ positions[positions.length - 1].rank }} of {{ clubs.length }}</figcaption>
+              <svg viewBox="0 0 100 36" preserveAspectRatio="none" role="img"
+                   [attr.aria-label]="'League positions: ' + positionSummary(positions)">
+                <path d="M 0 4 H 100 M 0 18 H 100 M 0 32 H 100" />
+                <polyline [attr.points]="positionPoints(positions, clubs.length)" />
+                <circle *ngIf="positions.length === 1" cx="50" [attr.cy]="4 + (positions[0].rank - 1) * 28 / (clubs.length > 1 ? clubs.length - 1 : 1)" r="1" />
+              </svg>
+            </figure>
+          </ng-container>
+          <div class="standings-scroll" *ngIf="clubs.length">
+            <table [attr.aria-label]="comp.name + ' standings'">
+              <thead><tr><th scope="col">Pos</th><th scope="col">Club</th><th scope="col">P</th><th scope="col">W</th><th scope="col">D</th><th scope="col">L</th><th scope="col">GD</th><th scope="col">Pts</th></tr></thead>
+              <tbody><tr *ngFor="let club of clubs" [class.current-club]="club.teamId === viewTeamId">
+                <td>{{ club.position }}</td><td><a [routerLink]="['/team', club.teamId]">{{ club.teamName }}</a></td>
+                <td>{{ club.games }}</td><td>{{ club.wins }}</td><td>{{ club.draws }}</td><td>{{ club.loses }}</td><td>{{ club.goalDifference }}</td><td>{{ club.points }}</td>
+              </tr></tbody>
+            </table>
+          </div>
+          <a [routerLink]="['/competition', comp.competitionId, 'standings']">Full standings →</a>
+        </section>
+      </ng-container>
+      <section class="card-section campaign-table" *ngIf="comp.groupStandings?.length">
+        <h3>Group {{ comp.groupNumber }}</h3>
+        <div class="standings-scroll">
+          <table [attr.aria-label]="comp.name + ' group standings'">
+            <thead><tr><th scope="col">Pos</th><th scope="col">Club</th><th scope="col">P</th><th scope="col">W</th><th scope="col">D</th><th scope="col">L</th><th scope="col">GD</th><th scope="col">Pts</th>
+              <th scope="col" *ngIf="comp.groupStandings?.[0]?.qualificationFinal">Outcome</th></tr></thead>
+            <tbody><tr *ngFor="let club of comp.groupStandings" [class.current-club]="club.teamId === viewTeamId">
+              <td>{{ club.position }}</td><td><a [routerLink]="['/team', club.teamId]">{{ club.teamName }}</a></td>
+              <td>{{ club.played }}</td><td>{{ club.wins }}</td><td>{{ club.draws }}</td><td>{{ club.losses }}</td><td>{{ club.goalDifference }}</td><td>{{ club.points }}</td>
+              <td *ngIf="club.qualificationFinal">{{ groupOutcome(club.qualificationRoute) }}</td>
+            </tr></tbody>
+          </table>
+        </div>
+        <a [routerLink]="competitionLink(comp)" [queryParams]="{ view: 'groups', group: comp.groupNumber }">Group standings →</a>
+      </section>
 
       <!-- STATS FOOTER (for leagues) -->
       <div class="card-footer" *ngIf="isLeague(comp)">
@@ -132,7 +180,27 @@
         </div>
       </div>
 
+      <section class="card-section club-leaders">
+        <h3>Club leaders</h3>
+        <ng-container *ngIf="leaders.get(comp.competitionId) as rows; else noClubLeaders">
+          <dl>
+            <div *ngFor="let metric of leaderMetrics">
+              <dt>{{ metric.label }}</dt>
+              <dd *ngIf="rows[metric.key].length; else noMetric">
+                <span *ngFor="let player of rows[metric.key]; let last = last"><a [routerLink]="['/player', player.playerId]">{{ player.playerName }}</a><span *ngIf="!last">, </span></span>
+                <strong>{{ rows[metric.key][0].value | number:(metric.key === 'rating' ? '1.2-2' : '1.0-0') }}</strong>
+              </dd>
+              <ng-template #noMetric><dd>—</dd></ng-template>
+            </div>
+          </dl>
+        </ng-container>
+        <ng-template #noClubLeaders><p>{{ loadingLeaders ? 'Loading player statistics…' : leadersUnavailable ? 'Player statistics are unavailable.' : 'No club player statistics yet.' }}</p></ng-template>
+      </section>
+      <nav class="card-shortcuts" [attr.aria-label]="comp.name + ' shortcuts'">
+        <a *ngFor="let shortcut of shortcuts" [routerLink]="shortcutLink(comp, shortcut.view)"
+           [queryParams]="shortcutParams(comp, shortcut.view)">{{ shortcut.label }} <span aria-hidden="true">→</span></a>
+      </nav>
     </article>
 
   </div>
-</div>
+</main>

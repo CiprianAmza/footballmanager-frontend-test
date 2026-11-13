@@ -2,21 +2,102 @@
 
   <div class="page-header">
     <h1>{{ competitionName }}</h1>
-    <div class="page-actions">
-      <a class="awards-link" [routerLink]="['/awards/competition', competitionId]">🏆 Awards</a>
-      <a class="records-link" [routerLink]="['/competition-records', competitionId]">⚽ Records</a>
-    </div>
+
     <div class="season-nav">
+      <app-competition-follow *ngIf="competitionId" [id]="competitionId"></app-competition-follow>
       <button (click)="changeSeason(-1)" [disabled]="season <= 1">&lt;</button>
       <span>Season {{ season }}</span>
       <button (click)="changeSeason(1)" [disabled]="season >= maxSeason">&gt;</button>
     </div>
   </div>
 
-  <app-competition-insights [competitionId]="competitionId" [season]="season"></app-competition-insights>
+  <nav class="europe-tabs" aria-label="Competition sections">
+    <ng-container *ngFor="let tab of tabs">
+      <a *ngIf="tab.key !== 'groups' || hasGroupStage" [routerLink]="[]"
+         [queryParams]="{ view: tab.key === 'overview' ? null : tab.key }"
+         [attr.aria-current]="(view === 'stages' ? 'overview' : view) === tab.key ? 'page' : null">{{ tab.label }}</a>
+    </ng-container>
+  </nav>
+
+  <app-ui-state *ngIf="loading" kind="loading" title="Loading European competition"></app-ui-state>
+  <app-ui-state *ngIf="loadError" kind="error" title="European competition unavailable" [showRetry]="false"></app-ui-state>
+
+  <nav class="europe-tabs" *ngIf="view === 'overview' || view === 'stages'" aria-label="Overview pages">
+    <a [routerLink]="[]" [attr.aria-current]="view === 'overview' && !overviewDetail ? 'page' : null">Summary</a>
+    <a [routerLink]="[]" [queryParams]="{ view: 'stages' }" [attr.aria-current]="view === 'stages' ? 'page' : null">Stages</a>
+    <a *ngFor="let tab of overviewDetails" [routerLink]="[]" [queryParams]="{ detail: tab.key }"
+       [attr.aria-current]="overviewDetail === tab.key ? 'page' : null">{{ tab.label }}</a>
+  </nav>
+  <app-competition-details *ngIf="view === 'overview' && overviewDetail as detail" [id]="competitionId.toString()"
+    [season]="season" [view]="detail"></app-competition-details>
+
+  <section class="rounds-section" *ngIf="view === 'stages' && !loading && !loadError">
+    <h2>Competition stages</h2>
+    <p class="no-data" *ngIf="!stages.length">No stages have been published for this season.</p>
+    <ol class="stage-list" *ngIf="stages.length">
+      <li class="result-card stage-row" *ngFor="let row of stages">
+        <div>
+          <small>{{ stagePhases[row.stage.phase || ''] || 'Stage' }}</small>
+          <h3>{{ row.stage.label }}</h3>
+        </div>
+        <div>
+          <span>{{ row.dates.join(' · ') || 'Date to be confirmed' }}</span>
+          <small *ngIf="row.stage.twoLeg">Two legs</small>
+        </div>
+        <div class="stage-links">
+          <a *ngIf="row.draw as draw" [routerLink]="[]" [queryParams]="{ view: 'draws', draw: draw.matchday }">Draw</a>
+          <a *ngIf="row.stage.phase === 'GROUP' && groupNumbers.length" [routerLink]="[]" [queryParams]="{ view: 'groups' }">Group tables</a>
+          <a *ngIf="row.upcoming" [routerLink]="[]" [queryParams]="{ view: 'matches', list: 'fixtures', round: row.stage.round }">Fixtures ({{ row.upcoming }})</a>
+          <a *ngIf="row.results" [routerLink]="[]" [queryParams]="{ view: 'matches', round: row.stage.round }">Results ({{ row.results }})</a>
+          <small *ngIf="!row.draw && !row.upcoming && !row.results">Fixtures to be confirmed</small>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section class="europe-overview" *ngIf="view === 'overview' && !overviewDetail && !loading && !loadError">
+    <div class="europe-summary">
+      <a [routerLink]="[]" [queryParams]="{ view: 'draws' }"><strong>{{ selectedDraw?.stageLabel || 'Draws' }}</strong><small>{{ selectedDraw?.statusLabel || 'Draw centre' }}</small></a>
+      <a *ngIf="hasGroupStage" [routerLink]="[]" [queryParams]="{ view: 'groups' }"><strong>Group stage</strong><small>{{ groupNumbers.length }} groups</small></a>
+      <a [routerLink]="[]" [queryParams]="{ view: 'matches' }"><strong>Matches</strong><small>{{ roundNumbers.length }} rounds with results</small></a>
+    </div>
+    <div class="europe-dashboard">
+      <section class="europe-summary-card" *ngIf="hasGroupStage">
+        <h2><a [routerLink]="[]" [queryParams]="{ view: 'groups' }">Group stage</a></h2>
+        <div class="europe-summary-group" *ngFor="let group of groupNumbers | slice:0:2">
+          <a [routerLink]="[]" [queryParams]="{ view: 'groups', group: group }">Group {{ group }}</a>
+          <div *ngFor="let team of groups.get(group)">
+            <a [routerLink]="['/team', team.teamId]">{{ team.teamName }}</a><strong>{{ team.points }} pts</strong>
+          </div>
+        </div>
+        <p *ngIf="!groupNumbers.length">The group draw is pending.</p>
+      </section>
+      <section class="europe-summary-card">
+        <h2><a [routerLink]="[]" [queryParams]="{ view: 'matches' }">Fixtures &amp; results</a></h2>
+        <div class="europe-summary-match" *ngFor="let match of overviewMatches">
+          <a [routerLink]="['/team', match.team1Id]">{{ match.team1Name }}</a>
+          <a *ngIf="match.score; else upcomingScore" [routerLink]="['/match-report2', competitionId, season, match.round, match.team1Id, match.team2Id]">{{ match.score }}</a>
+          <ng-template #upcomingScore><strong>vs</strong></ng-template>
+          <a [routerLink]="['/team', match.team2Id]">{{ match.team2Name }}</a>
+        </div>
+        <p *ngIf="!overviewMatches.length">No matches are available yet.</p>
+      </section>
+      <section class="europe-summary-card">
+        <h2><a [routerLink]="[]" [queryParams]="{ view: 'stats' }">Stat leaders</a></h2>
+        <div class="europe-summary-metric" *ngFor="let category of metrics | slice:0:3">
+          <a [routerLink]="[]" [queryParams]="{ view: 'stats', metric: category.key }">{{ category.label }}</a>
+          <ng-container *ngIf="playerStats?.[category.key]?.[0] as leader; else noLeader">
+            <a [routerLink]="['/player', leader.playerId]">{{ leader.playerName }}</a><strong>{{ leader[category.metric] }}</strong>
+          </ng-container>
+          <ng-template #noLeader><small>—</small></ng-template>
+        </div>
+      </section>
+    </div>
+    <app-competition-insights [competitionId]="competitionId" [season]="season"></app-competition-insights>
+  </section>
 
   <!-- DRAW CENTRE -->
-  <section class="draw-centre" *ngIf="draws.length > 0 && selectedDraw as draw">
+  <section class="draw-centre" *ngIf="view === 'draws' && draws.length > 0 && selectedDraw as draw">
     <div class="draw-centre-header">
       <div>
         <div class="eyebrow">European Draw Centre</div>
@@ -105,14 +186,24 @@
   </section>
 
   <!-- GROUP STANDINGS -->
-  <div class="groups-section" *ngIf="groupNumbers.length > 0">
-    <h2>Group Stage</h2>
+  <div class="groups-section" *ngIf="view === 'groups' && groupNumbers.length > 0">
+    <nav class="europe-tabs" aria-label="Group pages">
+      <a [routerLink]="[]" [queryParams]="{ view: 'groups', group: groupFilter || null }" [attr.aria-current]="!positions ? 'page' : null">Standings</a>
+      <a [routerLink]="[]" [queryParams]="{ view: 'groups', table: 'positions', group: groupFilter || null }" [attr.aria-current]="positions ? 'page' : null">Past positions</a>
+    </nav>
+    <div class="groups-toolbar">
+      <h2>{{ positions ? 'Past positions' : 'Group Stage' }}</h2>
+      <select aria-label="Group filter" [ngModel]="groupFilter" (ngModelChange)="selectGroup($event)">
+        <option [ngValue]="0">All groups</option>
+        <option *ngFor="let group of groupNumbers" [ngValue]="group">Group {{ group }}</option>
+      </select>
+    </div>
     <div class="groups-legend">
       <span><strong>P1–P4</strong> = draw seeding pot</span>
       <span>Table order = current group position</span>
     </div>
-    <div class="groups-grid">
-      <div class="group-card" *ngFor="let gn of groupNumbers">
+    <div class="groups-grid" *ngIf="!positions">
+      <div class="group-card" *ngFor="let gn of visibleGroups">
         <div class="group-header">Group {{ gn }}</div>
         <table class="group-table">
           <thead>
@@ -154,8 +245,75 @@
     </div>
   </div>
 
-  <!-- ROUND SELECTOR -->
-  <div class="rounds-section" *ngIf="roundNumbers.length > 0">
+  <section class="groups-grid" *ngIf="view === 'groups' && positions && !loading && !loadError">
+    <article class="group-card" *ngFor="let group of visibleGroups">
+      <h3>Group {{ group }}</h3>
+      <ng-container *ngIf="positionHistory(group) as history">
+        <table *ngIf="history.rounds.length; else emptyPositions">
+          <thead><tr><th scope="col">Club</th><th scope="col" *ngFor="let round of history.rounds; let i = index">MD {{ i + 1 }}</th></tr></thead>
+          <tbody><tr *ngFor="let row of history.teams">
+            <td><a [routerLink]="['/team', row.team.teamId]">{{ row.team.teamName }}</a></td>
+            <td *ngFor="let position of row.positions">{{ position ?? '—' }}</td>
+          </tr></tbody>
+        </table>
+        <ng-template #emptyPositions><p class="no-data">No group results have been recorded yet.</p></ng-template>
+      </ng-container>
+    </article>
+  </section>
+  <nav class="europe-tabs" *ngIf="view === 'matches'" aria-label="Match pages">
+    <a [routerLink]="[]" [queryParams]="{ view: 'matches' }" [attr.aria-current]="matchView === 'results' ? 'page' : null">Results</a>
+    <a [routerLink]="[]" [queryParams]="{ view: 'matches', list: 'fixtures' }" [attr.aria-current]="matchView === 'fixtures' ? 'page' : null">Fixtures</a>
+    <a [routerLink]="[]" [queryParams]="{ view: 'matches', list: 'schedule' }" [attr.aria-current]="matchView === 'schedule' ? 'page' : null">Schedule</a>
+    <a [routerLink]="[]" [queryParams]="{ view: 'matches', list: 'review' }" [attr.aria-current]="matchView === 'review' ? 'page' : null">Competition review</a>
+  </nav>
+  <section class="rounds-section" *ngIf="view === 'matches' && matchView === 'review' && !loading && !loadError">
+    <h2>Competition review</h2>
+    <app-competition-recap [id]="competitionId.toString()" [season]="season" [matches]="recentResults"></app-competition-recap>
+    <p class="no-data" *ngIf="!roundNumbers.length">No match results are available yet.</p>
+    <details class="result-card" *ngFor="let round of roundNumbers">
+      <summary>{{ getRoundLabel(round) }}</summary>
+      <div class="europe-summary-match" *ngFor="let match of rounds.get(round)">
+        <a [routerLink]="['/team', match.team1Id]">{{ match.teamName1 }}</a>
+        <a [routerLink]="['/match-report2', competitionId, season, round, match.team1Id, match.team2Id]">{{ mainScore(match) }}</a>
+        <a [routerLink]="['/team', match.team2Id]">{{ match.teamName2 }}</a>
+      </div>
+    </details>
+  </section>
+  <section class="rounds-section" *ngIf="view === 'matches' && matchView === 'schedule' && !loading && !loadError">
+    <h2>Season schedule</h2>
+    <nav class="europe-tabs" aria-label="Schedule layout">
+      <a [routerLink]="[]" [queryParams]="{ view: 'matches', list: 'schedule' }" [attr.aria-current]="!scheduleCalendar ? 'page' : null">List</a>
+      <a [routerLink]="[]" [queryParams]="{ view: 'matches', list: 'calendar' }" [attr.aria-current]="scheduleCalendar ? 'page' : null">Calendar</a>
+    </nav>
+    <app-competition-calendar *ngIf="scheduleCalendar; else scheduleList" [matches]="allMatches" [otherEvents]="drawEvents" [labels]="stageLabels"
+      [competitionRoute]="['/european-rounds', competitionId, season]"
+      [matchQuery]="{ view: 'matches', list: 'fixtures' }" [resultQuery]="{ view: 'matches' }"></app-competition-calendar>
+    <ng-template #scheduleList>
+      <p class="no-data" *ngIf="!allMatches.length">No matches are available for this season.</p>
+      <article class="result-card" *ngFor="let match of allMatches">
+        <small>{{ match.date }} · {{ getRoundLabel(match.round) }}</small>
+        <div class="europe-summary-match">
+          <a [routerLink]="['/team', match.team1Id]">{{ match.team1Name }}</a>
+          <a *ngIf="match.score; else scheduledMatch"
+             [routerLink]="['/match-report2', competitionId, season, match.round, match.team1Id, match.team2Id]">{{ match.score }}</a>
+          <ng-template #scheduledMatch><strong>vs</strong></ng-template>
+          <a [routerLink]="['/team', match.team2Id]">{{ match.team2Name }}</a>
+        </div>
+      </article>
+    </ng-template>
+  </section>
+  <section class="rounds-section" *ngIf="view === 'matches' && matchView === 'fixtures' && !loading && !loadError">
+    <h2>Upcoming fixtures</h2>
+    <p class="no-data" *ngIf="!visibleUpcoming.length">No upcoming fixtures are scheduled.</p>
+    <article class="result-card" *ngFor="let match of visibleUpcoming">
+      <div class="match-row">
+        <span class="home-team result-team"><a class="fm-link" [routerLink]="['/team', match.team1Id]">{{ match.team1Name }}</a></span>
+        <span class="score-stack"><strong class="score">vs</strong><span class="decision-badge">{{ match.date || getRoundLabel(match.round) }}</span></span>
+        <span class="away-team result-team"><a class="fm-link" [routerLink]="['/team', match.team2Id]">{{ match.team2Name }}</a></span>
+      </div>
+    </article>
+  </section>
+  <div class="rounds-section" *ngIf="view === 'matches' && matchView === 'results' && roundNumbers.length > 0">
     <h2>Results</h2>
     <div class="round-tabs">
       <button *ngFor="let r of roundNumbers"
@@ -178,7 +336,8 @@
               <a [routerLink]="['/team', m.team1Id]" class="fm-link">{{ m.teamName1 }}</a>
             </span>
             <span class="score-stack">
-              <strong class="score">{{ mainScore(m) }}</strong>
+              <a class="score" [routerLink]="['/match-report2', competitionId, season, m.roundId, m.team1Id, m.team2Id]"
+                [attr.aria-label]="'Match report: ' + m.teamName1 + ' ' + mainScore(m) + ' ' + m.teamName2">{{ mainScore(m) }}</a>
               <span class="decision-badge" *ngIf="decisionBadge(m) as badge">{{ badge }}</span>
             </span>
             <span class="away-team result-team"
@@ -212,7 +371,8 @@
                   [class.loser]="group.winnerTeamId != null && group.winnerTeamId !== m.team1Id">
               <a [routerLink]="['/team', m.team1Id]" class="fm-link">{{ m.teamName1 }}</a>
             </span>
-            <strong class="score">{{ mainScore(m) }}</strong>
+            <a class="score" [routerLink]="['/match-report2', competitionId, season, m.roundId, m.team1Id, m.team2Id]"
+                [attr.aria-label]="'Match report: ' + m.teamName1 + ' ' + mainScore(m) + ' ' + m.teamName2">{{ mainScore(m) }}</a>
             <span class="away-team result-team"
                   [class.winner]="group.winnerTeamId === m.team2Id"
                   [class.loser]="group.winnerTeamId != null && group.winnerTeamId !== m.team2Id">
@@ -248,13 +408,40 @@
     </div>
   </div>
 
-  <app-competition-rating-impact
-    [competitionId]="competitionId"
-    [season]="season">
-  </app-competition-rating-impact>
-
-  <div *ngIf="roundNumbers.length === 0 && groupNumbers.length === 0 && draws.length === 0" class="no-data">
-    No data available for this competition in season {{ season }}.
+  <div *ngIf="!loading && !loadError && ((view === 'draws' && !draws.length) ||
+       (view === 'groups' && !groupNumbers.length) || (view === 'matches' && matchView === 'results' && !roundNumbers.length))" class="no-data">
+    No {{ view === 'matches' ? 'match results' : view }} are available for season {{ season }}.
   </div>
+
+  <nav class="europe-tabs" *ngIf="view === 'stats'" aria-label="Statistics pages">
+    <a *ngFor="let tab of statsDetails" [routerLink]="[]" [queryParams]="{ view: 'stats', detail: tab.key }"
+       [attr.aria-current]="statsDetail === tab.key ? 'page' : null">{{ tab.label }}</a>
+  </nav>
+  <ng-container *ngIf="view === 'stats' && !loading && !loadError">
+    <app-competition-details [id]="competitionId.toString()" [season]="season" [view]="statsDetail || 'team-overview'"
+      [metric]="statsMetric" [metricQuery]="{ view: 'stats', detail: statsDetail || 'team-overview' }"></app-competition-details>
+    <app-competition-rating-impact *ngIf="statsDetail === 'player-stats'" [competitionId]="competitionId" [season]="season"></app-competition-rating-impact>
+  </ng-container>
+
+  <app-award-centre *ngIf="view === 'awards' && !loading && !loadError" [embedded]="true" [season]="season"></app-award-centre>
+  <app-competition-details *ngIf="view === 'news'" [id]="competitionId.toString()" [season]="season" view="news"></app-competition-details>
+  <ng-container *ngIf="view === 'history' && !loading && !loadError">
+    <nav class="europe-tabs" aria-label="History pages">
+      <a [routerLink]="[]" [queryParams]="{ view: 'history' }" [attr.aria-current]="historyView === 'records' ? 'page' : null">Records</a>
+      <a [routerLink]="[]" [queryParams]="{ view: 'history', archive: 'winners' }" [attr.aria-current]="historyView === 'winners' ? 'page' : null">Past winners</a>
+      <a [routerLink]="[]" [queryParams]="{ view: 'history', archive: 'notes' }" [attr.aria-current]="historyView === 'notes' ? 'page' : null">Notes</a>
+      <a [routerLink]="[]" [queryParams]="{ view: 'history', archive: 'create-note' }" [attr.aria-current]="historyView === 'create-note' ? 'page' : null">Create note</a>
+    </nav>
+    <app-competition-details *ngIf="historyView === 'winners'" [id]="competitionId.toString()" [season]="season" view="winners"></app-competition-details>
+    <ng-container *ngIf="historyView === 'records'">
+      <nav class="europe-tabs" aria-label="Record categories">
+        <a *ngFor="let tab of recordTabs" [routerLink]="[]" [queryParams]="{ view: 'history', record: tab.key }"
+           [attr.aria-current]="recordView === tab.key ? 'page' : null">{{ tab.label }}</a>
+      </nav>
+      <app-competition-records *ngIf="recordView === 'players'" [embedded]="true" [season]="season"></app-competition-records>
+      <app-competition-details *ngIf="recordView !== 'players'" [id]="competitionId.toString()" [season]="season" [view]="recordView"></app-competition-details>
+    </ng-container>
+    <app-competition-notes *ngIf="historyView === 'notes' || historyView === 'create-note'" [id]="competitionId.toString()" [create]="historyView === 'create-note'"></app-competition-notes>
+  </ng-container>
 
 </div>

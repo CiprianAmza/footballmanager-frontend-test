@@ -1,0 +1,297 @@
+<section class="detail-panel">
+  <h2>{{ labels[view] }}</h2>
+  <p *ngIf="view === 'referees'">The simulator does not record referee assignments or referee statistics.</p>
+  <p *ngIf="view === 'tickets'">Season-ticket prices and sales are unavailable.</p>
+  <ng-container *ngIf="details | async as state">
+    <p *ngIf="state.loading" role="status">Loading…</p>
+    <p *ngIf="state.failed" role="alert">This competition information could not be loaded.</p>
+    <ng-container *ngIf="state.value as data">
+      <ng-container *ngIf="view === 'rules'">
+        <p>{{ data.info?.formatLabel }}</p>
+        <ol class="stages" *ngIf="data.stages?.length; else noStages">
+          <li *ngFor="let stage of data.stages">{{ stage.label }} <small *ngIf="stage.twoLeg">· Two legs</small></li>
+        </ol>
+        <ng-template #noStages><p>No stages have been published for this season.</p></ng-template>
+      </ng-container>
+      <ng-container *ngIf="view === 'news'">
+        <p *ngIf="data.champion as winner"><a [routerLink]="['/team', winner.teamId]">{{ winner.teamName }}</a> win the competition.</p>
+        <div class="news-grid">
+          <div *ngFor="let group of [{ title: 'Recent results', rows: data.results }, { title: 'Upcoming fixtures', rows: data.fixtures }]">
+            <h3>{{ group.title }}</h3>
+            <p *ngIf="!group.rows?.length">No matches to show.</p>
+            <div class="news-match" *ngFor="let match of group.rows">
+              <small>{{ match.date }}</small>
+              <a [routerLink]="['/team', match.team1Id]">{{ match.team1Name }}</a>
+              <a *ngIf="match.score; else versus" [routerLink]="['/match-report2', id, season, match.round, match.team1Id, match.team2Id]">{{ match.score }}</a>
+              <ng-template #versus><strong>vs</strong></ng-template>
+              <a [routerLink]="['/team', match.team2Id]">{{ match.team2Name }}</a>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+      <app-competition-recap *ngIf="view === 'news' && data.results?.length" [id]="id" [season]="season" [matches]="data.results || []"></app-competition-recap>
+      <ng-container *ngIf="view === 'winners'">
+        <table *ngIf="data.winners?.length; else noWinners"><thead><tr>
+          <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'season', label: 'Season', numeric: true }"></ng-container>
+          <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'teamName', label: 'Champion' }"></ng-container>
+          </tr></thead>
+          <tbody><tr *ngFor="let row of sorted(data.winners || [])"><td>{{ row.season }}/{{ row.season + 1 }}</td>
+            <td><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td>
+          </tr></tbody>
+        </table>
+        <ng-template #noWinners><p>No past winners are recorded.</p></ng-template>
+      </ng-container>
+      <div class="news-grid" *ngIf="view === 'record-overview'">
+        <section>
+          <h3>Results</h3>
+          <p *ngIf="data.champion as club">Champion · <a [routerLink]="['/team', club.teamId]">{{ club.teamName }}</a></p>
+          <ng-container *ngFor="let row of data.resultRecords">
+            <p *ngIf="row.match as match">{{ row.label }} · {{ match.team1Name }}
+              <a [routerLink]="['/match-report2', id, season, match.round, match.team1Id, match.team2Id]">{{ match.score }}</a>
+              {{ match.team2Name }}</p>
+          </ng-container>
+          <p *ngIf="!data.resultRecords?.[0]?.match">No results are available yet.</p>
+        </section>
+        <section>
+          <h3>Sequences</h3>
+          <p *ngIf="data.sequences?.[0] as leader; else noRun">Longest unbeaten run ·
+            <a [routerLink]="['/team', leader.club.teamId]">{{ leader.club.teamName }}</a> · {{ leader.best }} matches
+          </p>
+          <ng-template #noRun><p>No unbeaten runs recorded.</p></ng-template>
+        </section>
+        <section>
+          <h3>Attendance</h3>
+          <p *ngIf="data.attendance?.[0] as leader; else noAttendance">Highest average ·
+            <a [routerLink]="['/team', leader.teamId]">{{ leader.teamName }}</a> · {{ leader.averageAttendance | number }}
+          </p>
+          <ng-template #noAttendance><p>{{ data.liveOnly ? 'Available for the current season.' : 'No attendance recorded.' }}</p></ng-template>
+        </section>
+        <section *ngIf="data.clubStats as stats">
+          <h3>Clubs</h3>
+          <ng-container *ngFor="let key of metricKeys(stats.categories)">
+            <p *ngIf="stats.categories[key][0] as row">{{ metricLabel(key) }} ·
+              <a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a> ·
+              {{ row.unit === '€' ? (row.value | fmMoney:true) : ((row.value | number:'1.0-2') + ' ' + row.unit) }}
+            </p>
+          </ng-container>
+          <p *ngIf="!stats.matchesPlayed">No matches played yet.</p>
+        </section>
+        <section *ngIf="data.playerStats as stats">
+          <h3>Players</h3>
+          <ng-container *ngFor="let category of leaderCategories">
+            <p *ngIf="category.key !== 'cleanSheets' && stats[category.key]?.[0] as row">{{ category.label }} ·
+              <a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a> · {{ row[category.metric] | number:'1.0-2' }}
+            </p>
+          </ng-container>
+          <p *ngIf="!stats.topRated?.length">No player ratings recorded.</p>
+        </section>
+      </div>
+      <ng-container *ngIf="data.roundHistory as rows">
+        <div class="detail-table" *ngIf="rows.length; else noRoundHistory">
+          <table aria-label="Cup progress by club"><thead><tr>
+            <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'club.teamName', label: 'Club' }"></ng-container>
+            <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'round', label: 'Furthest round', numeric: true }"></ng-container>
+            <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'played', label: 'Matches played', numeric: true }"></ng-container>
+            <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'status', label: 'Status' }"></ng-container>
+          </tr></thead>
+          <tbody><tr *ngFor="let row of sorted(rows)">
+            <td><a [routerLink]="['/team', row.club.teamId]">{{ row.club.teamName }}</a></td>
+            <td><a [routerLink]="[]" [queryParams]="{ season: season, view: 'matches', round: row.round }">{{ row.stage }}</a></td>
+            <td>{{ row.played }}</td><td>{{ row.status || '—' }}</td>
+          </tr></tbody></table>
+        </div>
+        <ng-template #noRoundHistory><p>No cup fixtures are available for this season.</p></ng-template>
+      </ng-container>
+      <ng-container *ngIf="view === 'record-results' && data.resultRecords as records">
+        <p *ngIf="!records[0]?.match">No results are available yet.</p>
+        <ng-container *ngFor="let row of records">
+          <p *ngIf="row.match as match"><strong>{{ row.label }}</strong> · {{ match.team1Name }}
+            <a [routerLink]="['/match-report2', id, season, match.round, match.team1Id, match.team2Id]">{{ match.score }}</a> {{ match.team2Name }}
+          </p>
+        </ng-container>
+      </ng-container>
+      <ng-container *ngIf="view === 'record-sequences' && data.sequences as rows">
+        <p *ngIf="!rows.length">No results are available yet.</p>
+        <div class="detail-table" *ngIf="rows.length">
+          <table><thead><tr>
+            <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'club.teamName', label: 'Club' }"></ng-container>
+            <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'best', label: 'Matches', numeric: true }"></ng-container>
+          </tr></thead>
+          <tbody><tr *ngFor="let row of sorted(rows)">
+            <td><a [routerLink]="['/team', row.club.teamId]">{{ row.club.teamName }}</a></td><td>{{ row.best }}</td>
+          </tr></tbody></table>
+        </div>
+      </ng-container>
+      <ng-container *ngIf="view === 'record-attendance' && data.attendance as rows">
+        <p *ngIf="!rows.length">No attendance has been recorded yet.</p>
+        <div class="detail-table" *ngIf="rows.length">
+          <table><thead><tr>
+            <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'teamName', label: 'Club' }"></ng-container>
+            <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'homeMatches', label: 'Home matches', numeric: true }"></ng-container>
+            <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'averageAttendance', label: 'Average attendance', numeric: true }"></ng-container>
+          </tr></thead>
+          <tbody><tr *ngFor="let row of sorted(rows)">
+            <td><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td><td>{{ row.homeMatches }}</td><td>{{ row.averageAttendance | number }}</td>
+          </tr></tbody></table>
+        </div>
+      </ng-container>
+      <ng-container *ngIf="data.clubStats as stats">
+        <section class="stats-layout" [class.stats-overview]="view === 'team-overview'"
+          *ngIf="view === 'team-overview' || view === 'team-stats' || view === 'record-clubs'">
+          <ng-container *ngIf="clubMetric(stats) as key">
+            <nav class="stats-picker" aria-label="Statistics categories">
+              <ng-container *ngIf="view === 'team-overview'; else clubGroupsList">
+                <div class="pitch-metrics">
+                  <ng-container *ngFor="let option of teamOverviewKeys">
+                    <ng-container *ngIf="stats.categories[option]"
+                      [ngTemplateOutlet]="clubMetricLink" [ngTemplateOutletContext]="{ key: option, stats: stats, active: key }"></ng-container>
+                  </ng-container>
+                </div>
+              </ng-container>
+              <ng-template #clubGroupsList>
+                <section *ngFor="let group of clubGroups">
+                  <h3>{{ group.label }}</h3>
+                  <ng-container *ngFor="let option of group.keys">
+                    <ng-container *ngIf="stats.categories[option]"
+                      [ngTemplateOutlet]="clubMetricLink" [ngTemplateOutletContext]="{ key: option, stats: stats, active: key }"></ng-container>
+                  </ng-container>
+                </section>
+              </ng-template>
+            </nav>
+            <div class="stats-ranking">
+              <h3>{{ metricLabel(key) }}</h3>
+              <p *ngIf="stats.matchesPlayed">{{ stats.matchesPlayed }} matches in competition</p>
+              <div class="detail-table" *ngIf="stats.categories[key]?.length; else emptyMetric">
+                <table [attr.aria-label]="metricLabel(key) + ' club ranking'"><thead><tr>
+                  <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'rank', label: 'Pos' }"></ng-container>
+                  <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'teamName', label: 'Club' }"></ng-container>
+                  <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'value', label: metricLabel(key), numeric: key !== 'goalsConceded' }"></ng-container>
+                </tr></thead>
+                <tbody><tr *ngFor="let row of sorted(stats.categories[key]) | slice:0:(view === 'team-overview' ? 8 : undefined)">
+                  <td>{{ stats.categories[key].indexOf(row) + 1 }}</td>
+                  <td><a class="detail-club" [routerLink]="['/team', row.teamId]">
+                    <app-team-crest [teamId]="row.teamId" [teamName]="row.teamName" [color1]="row.color1" [color2]="row.color2" [size]="23"></app-team-crest>{{ row.teamName }}</a></td>
+                  <td><strong>{{ formatClubStat(row.value, row.unit) }}</strong></td>
+                </tr></tbody></table>
+              </div>
+            </div>
+          </ng-container>
+        </section>
+      </ng-container>
+      <ng-container *ngIf="data.playerStats as stats">
+        <section class="stats-layout" [class.stats-overview]="view === 'player-overview'"
+          *ngIf="view === 'player-overview' || view === 'player-stats'">
+          <ng-container *ngIf="playerMetric() as active">
+            <nav class="stats-picker" aria-label="Statistics categories">
+              <div class="pitch-metrics" *ngIf="view === 'player-overview'; else detailedPlayers">
+                <ng-container *ngFor="let category of leaderCategories">
+                  <ng-container *ngTemplateOutlet="playerMetricLink; context: { key: category.key, stats: stats, active: active.key }"></ng-container>
+                </ng-container>
+              </div>
+              <ng-template #detailedPlayers>
+                <section *ngFor="let group of playerGroups">
+                  <h3>{{ group.label }}</h3>
+                  <ng-container *ngFor="let key of group.keys">
+                    <ng-container *ngTemplateOutlet="playerMetricLink; context: { key: key, stats: stats, active: active.key }"></ng-container>
+                  </ng-container>
+                </section>
+              </ng-template>
+            </nav>
+            <div class="stats-ranking">
+              <h3>{{ active.label }}</h3>
+              <ng-container *ngIf="playerRows(stats, active.key) as rows">
+                <div class="detail-table" *ngIf="rows.length; else emptyMetric">
+                  <table [attr.aria-label]="active.label + ' ranking'"><thead><tr>
+                    <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'rank', label: 'Pos' }"></ng-container>
+                    <ng-container *ngIf="active.key !== 'cleanSheets'">
+                      <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'playerName', label: 'Player' }"></ng-container>
+                    </ng-container>
+                    <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'teamName', label: 'Club' }"></ng-container>
+                    <ng-container *ngIf="active.key !== 'disciplinary'">
+                      <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'matches', label: 'Apps', numeric: true }"></ng-container>
+                    </ng-container>
+                    <ng-container *ngTemplateOutlet="sortHeader; context: { key: active.metric, label: active.label, numeric: true }"></ng-container>
+                    <ng-container *ngIf="active.key === 'disciplinary'">
+                      <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'yellowCards', label: 'Yellow', numeric: true }"></ng-container>
+                      <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'redCards', label: 'Red', numeric: true }"></ng-container>
+                    </ng-container>
+                  </tr></thead><tbody>
+                    <tr *ngFor="let row of sorted(rows) | slice:0:(view === 'player-overview' ? 8 : undefined)">
+                      <td>{{ rows.indexOf(row) + 1 }}</td>
+                      <td *ngIf="active.key !== 'cleanSheets'"><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a><small *ngIf="row.position"> · {{ row.position }}</small></td>
+                      <td><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td>
+                      <td *ngIf="active.key !== 'disciplinary'">{{ row.matches ?? '—' }}</td>
+                      <td><strong>{{ row[active.metric] | number:(active.key === 'topRated' ? '1.2-2' : '1.0-0') }}</strong></td>
+                      <ng-container *ngIf="active.key === 'disciplinary'"><td>{{ row.yellowCards }}</td><td>{{ row.redCards }}</td></ng-container>
+                    </tr>
+                  </tbody></table>
+                </div>
+              </ng-container>
+            </div>
+          </ng-container>
+        </section>
+      </ng-container>
+      <ng-template #emptyMetric><p>No statistics are available for this metric yet.</p></ng-template>
+      <ng-template #clubMetricLink let-key="key" let-stats="stats" let-active="active">
+        <a class="stats-metric" [routerLink]="[]" queryParamsHandling="merge" [queryParams]="metricParams(key)" [attr.aria-current]="active === key ? 'page' : null">
+          <span>{{ metricLabel(key) }}</span>
+          <strong *ngIf="stats.categories[key][0] as row">{{ row.teamName }} · {{ formatClubStat(row.value, row.unit) }}</strong>
+        </a>
+      </ng-template>
+      <ng-template #playerMetricLink let-key="key" let-stats="stats" let-active="active">
+        <a class="stats-metric" *ngIf="playerCategory(key) as category" [routerLink]="[]" queryParamsHandling="merge"
+           [queryParams]="metricParams(key)" [attr.aria-current]="active === key ? 'page' : null">
+          <span>{{ category.label }}</span>
+          <strong *ngIf="playerRows(stats, key)[0] as row">{{ row.playerName || row.teamName }} · {{ row[category.metric] | number:'1.0-2' }}</strong>
+        </a>
+      </ng-template>
+      <p *ngIf="data.liveOnly && view !== 'record-overview'">This information is available for the current season.</p>
+      <ng-container *ngIf="data.availability as entries">
+        <p *ngIf="!entries.length">No participating clubs have been confirmed.</p>
+        <div class="detail-table" *ngIf="entries.length">
+          <table><thead><tr><th scope="col">Club</th><th scope="col">Affected players</th><th scope="col">Details</th></tr></thead>
+            <tbody><tr *ngFor="let entry of entries">
+              <td><a [routerLink]="['/team', entry.club.teamId]">{{ entry.club.teamName }}</a></td><td>{{ entry.rows.length }}</td>
+              <td><details *ngIf="entry.rows.length"><summary>View players</summary>
+                <div *ngFor="let row of entry.rows"><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a> · {{ row.label }} · {{ row.remaining }} {{ row.remainingUnit }}</div>
+              </details></td>
+            </tr></tbody>
+          </table>
+        </div>
+      </ng-container>
+      <ng-container *ngIf="data.teams as clubs">
+        <p *ngIf="view === 'managers' || view === 'stadiums'">Current information for the clubs in the selected season.</p>
+        <div class="detail-table" *ngIf="clubs.length; else noTeams">
+          <table><thead><tr><ng-container *ngTemplateOutlet="sortHeader; context: { key: 'teamName', label: 'Club' }"></ng-container>
+            <ng-container *ngIf="view === 'teams'"><ng-container *ngTemplateOutlet="sortHeader; context: { key: 'entryStage', label: 'Entry stage' }"></ng-container>
+              <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'progress.statusLabel', label: 'Progress' }"></ng-container>
+              <ng-container *ngIf="hasCoefficients(clubs)"><ng-container *ngTemplateOutlet="sortHeader; context: { key: 'coefficient', label: 'Coefficient', numeric: true }"></ng-container></ng-container></ng-container>
+            <ng-container *ngIf="view === 'stadiums'">
+              <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'stadium', label: 'Stadium' }"></ng-container>
+              <ng-container *ngTemplateOutlet="sortHeader; context: { key: 'capacity', label: 'Capacity', numeric: true }"></ng-container>
+            </ng-container>
+            <ng-container *ngIf="view === 'managers'"><ng-container *ngTemplateOutlet="sortHeader; context: { key: 'manager.managerName', label: 'Manager' }"></ng-container></ng-container>
+          </tr></thead>
+            <tbody><tr *ngFor="let club of sorted(clubs)"><td><a class="detail-club" [routerLink]="['/team', club.teamId]">
+              <app-team-crest [teamId]="club.teamId" [teamName]="club.teamName" [color1]="club.color1" [color2]="club.color2" [size]="20"></app-team-crest>{{ club.teamName }}</a></td>
+              <ng-container *ngIf="view === 'teams'"><td>{{ club.entryStage || '—' }}</td><td>{{ club.progress?.statusLabel || club.progress?.stageReached || '—' }}</td>
+                <td *ngIf="hasCoefficients(clubs)">{{ (club.coefficient | number:'1.2-2') ?? '—' }}</td></ng-container>
+              <ng-container *ngIf="view === 'stadiums'"><td>{{ club.stadium || '—' }}</td><td>{{ (club.capacity | number) ?? '—' }}</td></ng-container>
+              <td *ngIf="view === 'managers'"><a *ngIf="club.manager?.found; else vacant" [routerLink]="['/manager-profile', club.manager?.managerId]">{{ club.manager?.managerName }}</a>
+                <ng-template #vacant>Vacant</ng-template></td>
+            </tr></tbody>
+          </table>
+        </div>
+        <ng-template #noTeams><p>No participating clubs have been confirmed for this season.</p></ng-template>
+      </ng-container>
+    </ng-container>
+  </ng-container>
+</section>
+
+<ng-template #sortHeader let-key="key" let-label="label" let-numeric="numeric">
+  <th scope="col" [attr.aria-sort]="sortColumn === key ? sortOrder : null">
+    <button type="button" class="sort-heading" (click)="sortBy(key, numeric)">{{ label }}
+      <span aria-hidden="true">{{ sortColumn === key ? (sortOrder === 'ascending' ? '↑' : '↓') : '↕' }}</span>
+    </button>
+  </th>
+</ng-template>

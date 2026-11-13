@@ -1,22 +1,22 @@
 <main class="records-page">
   <header class="records-hero">
     <div>
-      <a class="back-link" [routerLink]="world ? ['/competitions'] : ['/competition', competitionId]">← {{ world ? 'Competitions' : 'Competition' }}</a>
+      <a *ngIf="!embedded" class="back-link" [routerLink]="world ? ['/competitions'] : ['/competition', competitionId]">← {{ world ? 'Competitions' : 'Competition' }}</a>
       <span class="eyebrow">Records & Legends</span>
       <h1>{{ data?.scopeName || (world ? 'World football' : 'Competition records') }}</h1>
       <p>Every goal, assist and appearance remains in the archive after a transfer or retirement.</p>
     </div>
     <div class="hero-controls">
-      <label for="record-season">Season XI</label>
-      <select id="record-season" [ngModel]="data?.selectedSeason" (ngModelChange)="load($event)" [disabled]="!data">
+      <label *ngIf="!embedded" for="record-season">Season XI</label>
+      <select *ngIf="!embedded" id="record-season" [ngModel]="data?.selectedSeason" (ngModelChange)="load($event)" [disabled]="!data">
         <option *ngFor="let season of data?.availableSeasons" [ngValue]="season">Season {{ season }}</option>
       </select>
       <label for="record-limit">Show</label>
       <select id="record-limit" [(ngModel)]="limit" (change)="load()">
         <option *ngFor="let option of limitOptions" [ngValue]="option">Top {{ option }}</option>
       </select>
-      <a *ngIf="!world" class="awards-link" [routerLink]="['/awards/competition', competitionId]">🏆 Awards</a>
-      <a *ngIf="!world" class="awards-link" [routerLink]="['/competition-records', 0]">🌍 World records</a>
+      <a *ngIf="!world && !embedded" class="awards-link" [routerLink]="['/awards/competition', competitionId]">🏆 Awards</a>
+      <a *ngIf="!world && !embedded" class="awards-link" [routerLink]="['/competition-records', 0]">🌍 World records</a>
     </div>
   </header>
 
@@ -61,6 +61,15 @@
 </main>
 
 <ng-template #recordsTable let-rows="rows" let-season="season">
-  <div class="table-wrap" *ngIf="rows.length; else noRecords"><table><thead><tr><th>#</th><th>Player</th><th>Club</th><th>{{ season ? 'Position' : 'Seasons' }}</th><th class="number">Apps</th><th class="number">G</th><th class="number">A</th><th class="number primary">Record</th></tr></thead><tbody><tr *ngFor="let row of rows; trackBy: trackRecord"><td class="rank"><span [class.podium]="row.rank <= 3">{{ row.rank }}</span></td><td class="player"><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a></td><td class="club"><a *ngIf="row.teamId; else clubText" [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a><ng-template #clubText><span [class.multiple]="row.multipleClubs">{{ row.teamName }}</span></ng-template></td><td class="season">{{ season ? (row.position || '—') : seasonRange(row) }}</td><td class="number">{{ row.appearances }}</td><td class="number">{{ row.goals }}</td><td class="number">{{ row.assists }}</td><td class="number record-value">{{ row.recordValue }}</td></tr></tbody></table></div>
+  <div class="table-wrap" *ngIf="rows.length; else noRecords"><table><thead><tr>
+    <th *ngFor="let col of columns" scope="col" [class.number]="col.numeric" [class.primary]="col.key === 'recordValue'"
+        [attr.aria-sort]="sortDirection(season, col.key === 'position' && !season ? 'firstSeason' : col.key)">
+      <button class="records-sort" type="button" (click)="sortRows(season, col.key === 'position' && !season ? 'firstSeason' : col.key, col.numeric)">
+        {{ col.key === 'position' && !season ? 'Seasons' : col.label }}
+        <span aria-hidden="true">{{ sortDirection(season, col.key === 'position' && !season ? 'firstSeason' : col.key) === 'ascending' ? '↑'
+          : sortDirection(season, col.key === 'position' && !season ? 'firstSeason' : col.key) === 'descending' ? '↓' : '↕' }}</span>
+      </button>
+    </th>
+  </tr></thead><tbody><tr *ngFor="let row of sortedRows(rows, season); trackBy: trackRecord"><td class="rank"><span [class.podium]="row.rank <= 3">{{ row.rank }}</span></td><td class="player"><a [routerLink]="['/player', row.playerId]">{{ row.playerName }}</a></td><td class="club"><a *ngIf="row.teamId; else clubText" [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a><ng-template #clubText><span [class.multiple]="row.multipleClubs">{{ row.teamName }}</span></ng-template></td><td class="season">{{ season ? (row.position || '—') : seasonRange(row) }}</td><td class="number">{{ row.appearances }}</td><td class="number">{{ row.goals }}</td><td class="number">{{ row.assists }}</td><td class="number record-value">{{ row.recordValue }}</td></tr></tbody></table></div>
   <ng-template #noRecords><div class="empty-state">No records have been registered yet.</div></ng-template>
 </ng-template>

@@ -1,3 +1,4 @@
+import { isLeague } from '../league-competition/league-competition.data';
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -5,7 +6,7 @@ import { combineLatest, Subscription } from 'rxjs';
 import { urlApp } from '../app.component';
 import { GameEventsService } from '../services/game-events.service';
 
-type Section = 'overview' | 'standings' | 'stats' | 'analysis';
+type Section = 'overview' | 'standings' | 'stats' | 'analysis' | 'chances';
 
 @Component({
   selector: 'app-competition-view',
@@ -91,7 +92,7 @@ export class CompetitionViewComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void { this.subscriptions.unsubscribe(); }
 
   private isSection(value: string): value is Section {
-    return value === 'overview' || value === 'standings' || value === 'stats' || value === 'analysis';
+    return value === 'overview' || value === 'standings' || value === 'stats' || value === 'analysis' || value === 'chances';
   }
 
   private resolveSeason(requested: string | null): string {
@@ -113,6 +114,25 @@ export class CompetitionViewComponent implements OnInit, OnDestroy {
         this.http.get<any>(`${urlApp}/competition/getCompetitionInfo/${this.competitionId}`).subscribe({
           next: info => {
             if (version !== this.requestVersion) return;
+            if (isLeague(info)) {
+              void this.router.navigate(['/competition', this.competitionId, this.section],
+                { queryParamsHandling: 'preserve', replaceUrl: true });
+              return;
+            }
+            if (info.kind === 'KNOCKOUT' || info.kind === 'SHOWCASE' || info.typeId === 2 || info.typeId === 6) {
+              const view = this.section === 'standings' ? 'bracket'
+                : this.section === 'analysis' ? 'history' : this.section === 'stats' ? 'stats' : this.section === 'chances' ? 'chances' : null;
+              void this.router.navigate(['/competition', this.competitionId], { replaceUrl: true,
+                queryParams: { season: this.selectedSeason, view, archive: this.section === 'analysis' ? 'landscape' : null } });
+              return;
+            }
+            if (info.kind === 'MULTI_STAGE' || info.typeId === 4 || info.typeId === 5) {
+              const view = this.section === 'standings' ? (info.typeId === 4 ? 'groups' : 'matches')
+                : this.section === 'stats' ? 'stats' : null;
+              void this.router.navigate(['/european-rounds', this.competitionId, this.selectedSeason],
+                { replaceUrl: true, queryParams: { view } });
+              return;
+            }
             this.competitionName = info.name || 'Competition';
             this.competitionType = info.typeId === 4 || info.typeId === 5 ? 'Europe'
               : info.typeId === 2 || info.typeId === 6 ? 'Cup' : 'League';

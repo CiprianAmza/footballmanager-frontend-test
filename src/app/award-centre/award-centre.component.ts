@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { combineLatest } from 'rxjs';
@@ -54,6 +54,9 @@ interface AwardCentreResponse {
   styleUrls: ['./award-centre.component.css']
 })
 export class AwardCentreComponent implements OnInit {
+  @Input() embedded = false;
+  @Input() season?: number;
+  awardType = '';
   data?: AwardCentreResponse;
   selectedSeason?: number;
   loading = false;
@@ -91,7 +94,12 @@ export class AwardCentreComponent implements OnInit {
   }
 
   get visibleSeason(): AwardSeason | undefined {
-    return this.data?.seasons.find(season => season.season === this.selectedSeason);
+    return this.data?.seasons.find(season => season.season === (this.embedded ? this.season : this.selectedSeason));
+  }
+
+  get visibleAwards(): AwardSection[] {
+    const awards = this.visibleSeason?.awards || [];
+    return this.embedded && this.awardType ? awards.filter(award => award.awardType === this.awardType) : awards;
   }
 
   isTeamOfYear(award: AwardSection): boolean {

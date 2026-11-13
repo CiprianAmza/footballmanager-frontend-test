@@ -1,11 +1,50 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
+import { catchError, combineLatest, distinctUntilChanged, forkJoin, map, of, Subscription } from 'rxjs';
+import { LeagueCompetitionData, Standing } from '../league-competition/league-competition.data';
+import { leaguePositionTimeline } from '../league-competition/league-position-timeline';
 import { urlApp } from '../app.component';
 import { ChairmanClubSummary } from '../chairman-club/chairman-club.models';
 import { AuthService } from '../services/auth.service';
 import { ChairmanClubService } from '../services/chairman-club.service';
 import { TeamService } from '../services/team.service';
+
+interface SeasonObjective {
+  competitionId: number;
+  objectiveType: string;
+  description: string;
+  targetValue: number;
+  status: string;
+}
+
+interface ClubPlayerLeader { playerId: number; playerName: string; value: number; }
+interface ClubCompetitionLeaders {
+  competitionId: number;
+  goals: ClubPlayerLeader[];
+  assists: ClubPlayerLeader[];
+  rating: ClubPlayerLeader[];
+}
+
+interface GroupStanding {
+  teamId: number;
+  teamName: string;
+  position: number;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalDifference: number;
+  points: number;
+  qualificationRoute?: string;
+  qualificationFinal?: boolean;
+}
+
+interface CardDetail {
+  standings?: Standing[];
+  positions?: { round: number; rank: number }[];
+  unavailable?: boolean;
+}
 
 interface CompetitionData {
   competitionId: number;
@@ -28,7 +67,9 @@ interface CompetitionData {
   form?: string;
   position?: number;
   totalTeams?: number;
-  cupRound?: number;
+  currentRound?: number;
+  groupNumber?: number;
+  groupStandings?: GroupStanding[];
   status?: string;
   statusLabel?: string;
   entryStage?: string;
@@ -67,9 +108,23 @@ interface CompetitionData {
   templateUrl: './competition-list.component.html',
   styleUrls: ['./competition-list.component.css']
 })
-export class CompetitionsListComponent implements OnInit {
+export class CompetitionsListComponent implements OnInit, OnDestroy {
 
   competitions: CompetitionData[] = [];
+  cardDetails = new Map<number, CardDetail>();
+  objectives = new Map<number, SeasonObjective>();
+  leaders = new Map<number, ClubCompetitionLeaders>();
+  leadersUnavailable = false;
+  loadingLeaders = false;
+  private contextRequest?: Subscription;
+  private managerContext?: Subscription;
+  private teamRequest?: Subscription;
+  readonly leaderMetrics = [
+    { key: 'goals', label: 'Top scorer' }, { key: 'assists', label: 'Most assists' }, { key: 'rating', label: 'Best average rating' }
+  ] as const;
+  readonly shortcuts = [
+    { view: 'team-overview', label: 'Team Stats' }, { view: 'player-overview', label: 'Player Stats' }, { view: 'rules', label: 'Rules' }
+  ] as const;
   controlledClubs: ChairmanClubSummary[] = [];
   selectedTeamId: number | null = null;
   selectedTeamName = '';
@@ -87,25 +142,91 @@ export class CompetitionsListComponent implements OnInit {
               private router: Router,
               private route: ActivatedRoute,
               private authService: AuthService,
-              private chairmanClubService: ChairmanClubService) {}
+              private chairmanClubService: ChairmanClubService,
+              private competitionData: LeagueCompetitionData) {}
 
   openCompetition(comp: CompetitionData): void {
-    if (comp.kind === 'MULTI_STAGE' || comp.typeId === 4 || comp.typeId === 5) {
-      this.router.navigate(['/european-rounds', comp.competitionId, this.teamService.currentSeason]);
-    } else {
-      this.router.navigate(['/competition', comp.competitionId]);
-    }
+    void this.router.navigate(this.competitionLink(comp));
   }
 
-  competitionLink(comp: CompetitionData): any[] {
+  competitionLink(comp: CompetitionData): (string | number)[] {
     return comp.kind === 'MULTI_STAGE' || comp.typeId === 4 || comp.typeId === 5
       ? ['/european-rounds', comp.competitionId, this.teamService.currentSeason]
       : ['/competition', comp.competitionId];
   }
 
+  shortcutLink(comp: CompetitionData, view: string): (string | number)[] {
+    if (this.isLeague(comp)) return ['/competition', comp.competitionId, view === 'rules' ? 'rules' : 'stats'];
+    return this.competitionLink(comp);
+  }
+
+  shortcutParams(comp: CompetitionData, view: string) {
+    if (this.isLeague(comp)) return view === 'rules' ? {} : { view };
+    return view === 'rules' ? { detail: 'rules' } : { view: 'stats', detail: view };
+  }
+
+  objectiveStatus(objective: SeasonObjective, comp: CompetitionData): string {
+    if (objective.status === 'achieved') return 'Achieved';
+    if (objective.status === 'failed') return 'Missed';
+    if (objective.objectiveType === 'league_position' && comp.games && comp.position && objective.targetValue) {
+      return comp.position <= objective.targetValue ? 'On track' : 'Below target';
+    }
+    if (objective.objectiveType === 'cup_round' || objective.objectiveType === 'european_round') {
+      if (comp.status === 'WINNER') return 'Achieved';
+      const isRoundTarget = !/^win\b/i.test(objective.description);
+      const reached = isRoundTarget && comp.currentRound != null && comp.currentRound >= objective.targetValue
+        && (comp.start?.started !== false || objective.targetValue === 0);
+      if (reached) return 'Target reached';
+      if (comp.elimination || ['ELIMINATED', 'RUNNER_UP', 'DROPPED_TO_STARS_CUP'].includes(comp.status || '')) return 'Below target';
+    }
+    return 'In progress';
+  }
+
+  matchPage(comp: CompetitionData, round: number, fixture = true) {
+    if (this.isLeague(comp)) return { view: 'matchday', round };
+    return { view: 'matches', round, list: fixture && this.isEuropean(comp) ? 'fixtures' : null };
+  }
+
+  matchPageLink(comp: CompetitionData): (string | number)[] {
+    return this.isLeague(comp) ? ['/competition', comp.competitionId, 'matches'] : this.competitionLink(comp);
+  }
+
+  groupOutcome(route?: string): string {
+    switch (route) {
+      case 'DIRECT': return 'Qualified';
+      case 'PLAYOFF': return 'Playoff';
+      case 'DROPPED_TO_STARS_CUP': return 'Stars Cup';
+      case 'ELIMINATED': return 'Eliminated';
+      default: return '—';
+    }
+  }
+
+  positionSummary(positions: { round: number; rank: number }[]): string {
+    return positions.map(position => 'Matchday ' + position.round + ': ' + position.rank).join(', ');
+  }
+
+  positionPoints(positions: { rank: number }[], clubs: number): string {
+    return positions.map((position, index) =>
+      (positions.length === 1 ? 50 : 3 + index * 94 / (positions.length - 1)) + ',' +
+      (4 + (position.rank - 1) * 28 / Math.max(1, clubs - 1))
+    ).join(' ');
+  }
+
+  ngOnDestroy(): void {
+    this.managerContext?.unsubscribe();
+    this.contextRequest?.unsubscribe();
+    this.teamRequest?.unsubscribe();
+  }
+
   ngOnInit(): void {
     this.chairmanView = this.authService.careerRole === 'CHAIRMAN';
-    this.loadCompetitions();
+    if (this.chairmanView) {
+      this.loadCompetitions();
+    } else {
+      this.managerContext = combineLatest([this.teamService.teamId$, this.teamService.currentSeason$]).pipe(
+        distinctUntilChanged(([oldTeam, oldSeason], [team, season]) => oldTeam === team && oldSeason === season)
+      ).subscribe(() => this.loadCompetitions());
+    }
   }
 
   loadCompetitions(): void {
@@ -139,7 +260,8 @@ export class CompetitionsListComponent implements OnInit {
   }
 
   private loadChairmanClubContext(): void {
-    this.chairmanClubService.clubs('CONTROLLED').subscribe({
+    this.contextRequest?.unsubscribe();
+    this.contextRequest = this.chairmanClubService.clubs('CONTROLLED').subscribe({
       next: clubs => {
         this.controlledClubs = (clubs || [])
           .filter(club => club.controlledByPrincipal && Number.isSafeInteger(club.teamId) && club.teamId > 0)
@@ -170,18 +292,28 @@ export class CompetitionsListComponent implements OnInit {
   }
 
   private loadTeamCompetitions(teamId: number): void {
+    this.teamRequest?.unsubscribe();
+    this.cardDetails.clear();
+    this.objectives.clear();
+    this.leaders.clear();
+    this.leadersUnavailable = false;
+    this.loadingLeaders = false;
+    const requests = new Subscription();
+    this.teamRequest = requests;
     if (!Number.isSafeInteger(teamId) || teamId <= 0) {
       this.competitions = [];
       this.loading = false;
       this.emptyMessage = 'No active club is selected.';
       return;
     }
-    this.http.get<CompetitionData[]>(urlApp + `/competition/getTeamCompetitions/${teamId}`).subscribe({
+    requests.add(this.http.get<CompetitionData[]>(urlApp + `/competition/getTeamCompetitions/${teamId}`).subscribe({
       next: data => {
-        this.competitions = this.dedupe(data || []);
+        this.competitions = this.dedupe(data || []).sort((a, b) => Number(this.isLeague(b)) - Number(this.isLeague(a)));
         this.loading = false;
         if (this.competitions.length === 0) {
           this.emptyMessage = `No active competition memberships are available for ${this.selectedTeamName || 'this team'}.`;
+        } else {
+          this.loadCardDetails(teamId, requests);
         }
       },
       error: () => {
@@ -189,7 +321,43 @@ export class CompetitionsListComponent implements OnInit {
         this.loading = false;
         this.errorMessage = 'Competitions could not be loaded. Check the connection and try again.';
       }
-    });
+    }));
+  }
+
+  private loadCardDetails(teamId: number, requests: Subscription): void {
+    const season = this.teamService.currentSeason;
+    this.loadingLeaders = true;
+    requests.add(this.http.get<SeasonObjective[]>(`${urlApp}/objectives/${teamId}/${season}`).subscribe({
+      next: rows => this.objectives = new Map(rows.map(row => [row.competitionId, row])),
+      error: () => this.objectives.clear()
+    }));
+    requests.add(this.http.get<ClubCompetitionLeaders[]>(`${urlApp}/stats/team/${teamId}/season/${season}/competition-leaders`).subscribe({
+      next: rows => {
+        this.leaders = new Map(rows.map(row => [row.competitionId, row]));
+        this.loadingLeaders = false;
+      },
+      error: () => {
+        this.leadersUnavailable = true;
+        this.loadingLeaders = false;
+      }
+    }));
+    for (const comp of this.competitions) {
+      const id = String(comp.competitionId);
+      if (this.isLeague(comp)) {
+        requests.add(forkJoin({
+          standings: this.competitionData.standings(id, season, season),
+          results: this.competitionData.results(id, season).pipe(catchError(() => of([])))
+        }).pipe(map(({ standings, results }) => {
+          const timeline = leaguePositionTimeline(results, standings);
+          const club = timeline.clubs.find(row => row.club.teamId === teamId);
+          return { standings, positions: timeline.rounds.map((round, index) => ({ round, rank: club?.ranks[index] ?? 0 }))
+            .filter(row => row.rank > 0) };
+        })).subscribe({
+          next: detail => this.cardDetails.set(comp.competitionId, detail),
+          error: () => this.cardDetails.set(comp.competitionId, { unavailable: true })
+        }));
+      }
+    }
   }
 
   /**
@@ -225,7 +393,7 @@ export class CompetitionsListComponent implements OnInit {
 
   getFormArray(form: string | undefined): string[] {
     if (!form) return [];
-    return form.split('');
+    return form.replace(/[^WDL]/g, '').slice(-5).split('');
   }
 
   getCompetitionColor(comp: CompetitionData): string {

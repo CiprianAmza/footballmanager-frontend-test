@@ -1,5 +1,9 @@
-import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { catchError, distinctUntilChanged, forkJoin, map, of, Subject, switchMap, takeUntil } from 'rxjs';
+import { CalendarEntry } from '../competition-calendar/competition-calendar.component';
+import { DetailsView } from '../competition-details/competition-details.data';
+import { CompetitionStage, LEADER_CATEGORIES, LeagueCompetitionData, LeagueMatch, PlayerStats } from '../league-competition/league-competition.data';
 import { HttpClient } from '@angular/common/http';
 import { urlApp } from '../app.component';
 import { TeamService } from '../services/team.service';
@@ -90,12 +94,53 @@ interface EuropeanDraw {
   groups: DrawGroup[];
 }
 
+type EuropeanView = 'overview' | 'stages' | 'draws' | 'groups' | 'matches' | 'stats' | 'awards' | 'history' | 'news';
+
 @Component({
   selector: 'app-european-rounds',
   templateUrl: './european-rounds.component.html',
   styleUrls: ['./european-rounds.component.css']
 })
-export class EuropeanRoundsComponent implements OnInit {
+export class EuropeanRoundsComponent implements OnInit, OnDestroy {
+  private readonly destroyed = new Subject<void>();
+  readonly tabs: { key: EuropeanView; label: string }[] = [
+    { key: 'overview', label: 'Overview' }, { key: 'draws', label: 'Draws' },
+    { key: 'groups', label: 'Groups' }, { key: 'matches', label: 'Matches' },
+    { key: 'news', label: 'News' }, { key: 'stats', label: 'Stats' }, { key: 'awards', label: 'Awards' }, { key: 'history', label: 'History' }
+  ];
+  readonly metrics = LEADER_CATEGORIES;
+  statsMetric = '';
+  view: EuropeanView = 'overview';
+  readonly recordTabs: { key: DetailsView | 'players'; label: string }[] = [
+    { key: 'record-overview', label: 'Overview' }, { key: 'players', label: 'Players' }, { key: 'record-attendance', label: 'Attendance' },
+    { key: 'record-results', label: 'Results' }, { key: 'record-sequences', label: 'Sequences' }, { key: 'record-clubs', label: 'Clubs' }
+  ];
+  recordView: DetailsView | 'players' = 'record-overview';
+  readonly overviewDetails: { key: DetailsView; label: string }[] = [
+    { key: 'teams', label: 'Teams' }, { key: 'rules', label: 'Rules' }, { key: 'managers', label: 'Managers' },
+    { key: 'tickets', label: 'Season tickets' }, { key: 'stadiums', label: 'Stadiums' }
+  ];
+  overviewDetail?: DetailsView;
+  readonly statsDetails: { key: DetailsView; label: string }[] = [
+    { key: 'team-overview', label: 'Team overview' }, { key: 'team-stats', label: 'Team detailed' },
+    { key: 'player-overview', label: 'Player overview' }, { key: 'player-stats', label: 'Player detailed' }, { key: 'referees', label: 'Referees' },
+    { key: 'injuries', label: 'Injury table' }, { key: 'suspensions', label: 'Suspensions' }
+  ];
+  statsDetail?: DetailsView;
+  historyView: 'records' | 'winners' | 'notes' | 'create-note' = 'records';
+  allMatches: LeagueMatch[] = [];
+  groupFilter = 0;
+  loading = true;
+  loadError = false;
+  playerStats: PlayerStats | null = null;
+  upcoming: LeagueMatch[] = [];
+  recentResults: LeagueMatch[] = [];
+  matchView: 'results' | 'fixtures' | 'schedule' | 'review' = 'results';
+  scheduleCalendar = false;
+  drawEvents: CalendarEntry[] = [];
+  private requestedRound: number | null = null;
+  private requestedDraw: number | null = null;
+  positions = false;
 
   competitionId!: number;
   season!: number;
@@ -117,88 +162,206 @@ export class EuropeanRoundsComponent implements OnInit {
 
   selectedRound: number = 1;
   stageLabels: Map<number, string> = new Map();
+  stages: { stage: CompetitionStage; dates: string[]; upcoming: number; results: number; draw?: EuropeanDraw }[] = [];
+  readonly stagePhases: Record<string, string> = {
+    QUALIFYING: 'Qualifying', GROUP: 'Group stage', KNOCKOUT: 'Knockout', FINAL: 'Final'
+  };
   draws: EuropeanDraw[] = [];
   selectedDrawMatchday: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
     private http: HttpClient,
-    private teamService: TeamService
+    private teamService: TeamService,
+    private router: Router,
+    private data: LeagueCompetitionData
   ) {}
 
   ngOnInit(): void {
-    this.route.params.subscribe(params => {
-      this.competitionId = Number(params['competitionId']);
-      this.season = Number(params['season']) || this.teamService.currentSeason;
-      this.loadData();
+    this.route.queryParamMap.pipe(takeUntil(this.destroyed)).subscribe(query => {
+      const view = query.get('view');
+      this.view = view === 'stages' ? view : this.tabs.find(tab => tab.key === view)?.key || 'overview';
+      this.statsMetric = query.get('metric') || '';
+      const list = query.get('list');
+      this.scheduleCalendar = list === 'calendar';
+      this.matchView = this.scheduleCalendar ? 'schedule' : list === 'fixtures' || list === 'schedule' || list === 'review' ? list : 'results';
+      const rawRound = query.get('round');
+      this.requestedRound = rawRound != null && Number.isInteger(Number(rawRound)) ? Number(rawRound) : null;
+      if (this.requestedRound != null && this.roundNumbers.includes(this.requestedRound)) this.selectRound(this.requestedRound);
+      this.positions = query.get('table') === 'positions';
+      this.overviewDetail = this.overviewDetails.find(tab => tab.key === query.get('detail'))?.key;
+      this.statsDetail = this.statsDetails.find(tab => tab.key === query.get('detail'))?.key
+          || (query.has('metric') ? 'player-stats' : 'team-overview');
+      const archive = query.get('archive');
+      this.recordView = this.recordTabs.find(tab => tab.key === query.get('record'))?.key || 'record-overview';
+      this.historyView = archive === 'winners' || archive === 'notes' || archive === 'create-note' ? archive : 'records';
+      this.groupFilter = Number(query.get('group')) || 0;
+      this.requestedDraw = Number(query.get('draw')) || null;
+      if (this.draws.some(draw => draw.matchday === this.requestedDraw)) this.selectedDrawMatchday = this.requestedDraw;
     });
-    this.http.get<string>(urlApp + '/competition/getCurrentSeason', { responseType: 'text' as 'json' })
-      .subscribe(s => this.maxSeason = Number(s));
+    this.route.paramMap.pipe(
+      map(params => [Number(params.get('competitionId')), Number(params.get('season')) || this.teamService.currentSeason] as const),
+      distinctUntilChanged(([oldId, oldSeason], [id, season]) => oldId === id && oldSeason === season),
+      switchMap(([id, season]) => {
+        this.competitionId = id;
+        this.season = season;
+        this.loading = true;
+        this.loadError = false;
+        this.draws = [];
+        this.stages = [];
+        this.groupNumbers = [];
+        this.roundNumbers = [];
+        this.playerStats = null;
+        this.upcoming = [];
+        return this.loadData(id, season);
+      }),
+      takeUntil(this.destroyed)
+    ).subscribe(result => {
+      this.loading = false;
+      if (!result) {
+        this.loadError = true;
+        return;
+      }
+      this.applyData(result);
+    });
+    this.data.season().pipe(takeUntil(this.destroyed)).subscribe({
+      next: season => this.maxSeason = Number(season),
+      error: () => this.maxSeason = Math.max(this.maxSeason, this.season)
+    });
   }
 
-  loadData(): void {
-    // Load competition name
-    this.http.get(urlApp + `/competition/getCompetitionName/${this.competitionId}`, { responseType: 'text' })
-      .subscribe(name => this.competitionName = name);
+  ngOnDestroy(): void {
+    this.destroyed.next();
+    this.destroyed.complete();
+  }
 
-    // Load round info for correct labels
-    this.http.get<any>(urlApp + `/competition/getCupRoundCount/${this.competitionId}`)
-      .subscribe(info => {
-        this.typeId = info.typeId || 0;
-        this.totalRounds = info.totalRounds || 0;
-        this.groupRounds = info.groupRounds || 0;
-        this.qualifyingRounds = info.qualifyingRounds || 0;
-        this.stageLabels = new Map((info.stages || []).map((stage: any) => [Number(stage.round), stage.label]));
-      });
+  private loadData(id: number, season: number) {
+    return forkJoin({
+      name: this.http.get(urlApp + `/competition/getCompetitionName/${id}`, { responseType: 'text' }),
+      info: this.http.get<{ typeId: number; totalRounds: number; groupRounds: number; qualifyingRounds: number;
+        stages?: CompetitionStage[] }>(urlApp + `/competition/getCupRoundCount/${id}`),
+      stages: this.data.stages(String(id), season).pipe(catchError(() => of([] as CompetitionStage[]))),
+      draws: this.http.get<EuropeanDraw[]>(urlApp + `/competition/europeanDraws/${id}/${season}`),
+      groups: this.http.get<GroupStanding[]>(urlApp + `/competition/getEuropeanGroups/${id}/${season}`),
+      matches: this.http.get<MatchResult[]>(urlApp + `/competition/getMatchesByCompetitionAndSeason/${id}/${season}`),
+      stats: this.data.playerStats(String(id), season).pipe(catchError(() => of(null))),
+      schedule: this.data.schedule(String(id), season).pipe(catchError(() => of([] as LeagueMatch[])))
+    }).pipe(catchError(() => of(null)));
+  }
 
-    this.http.get<EuropeanDraw[]>(urlApp + `/competition/europeanDraws/${this.competitionId}/${this.season}`)
-      .subscribe(data => {
-        this.draws = data || [];
-        const nextDraw = this.draws.find(draw => draw.status !== 'DRAW_COMPLETED');
-        const fallback = this.draws.length > 0 ? this.draws[this.draws.length - 1] : null;
-        this.selectedDrawMatchday = (nextDraw || fallback)?.matchday ?? null;
-      });
+  private applyData({ name, info, stages, draws, groups, matches, stats, schedule }: {
+    name: string; info: { typeId: number; totalRounds: number; groupRounds: number; qualifyingRounds: number;
+      stages?: CompetitionStage[] }; stages: CompetitionStage[]; draws: EuropeanDraw[]; groups: GroupStanding[];
+    matches: MatchResult[]; stats: PlayerStats | null; schedule: LeagueMatch[];
+  }): void {
+    this.competitionName = name;
+    this.typeId = info.typeId || 0;
+    this.totalRounds = info.totalRounds || 0;
+    this.groupRounds = info.groupRounds || 0;
+    this.qualifyingRounds = info.qualifyingRounds || 0;
+    const seasonStages = stages.length ? stages : info.stages || [];
+    this.stageLabels = new Map(seasonStages.map(stage => [stage.round, stage.label]));
+    this.draws = draws || [];
+    this.drawEvents = this.draws.map(draw => ({ day: draw.drawDay, title: draw.stageLabel + ' draw',
+      query: { view: 'draws', draw: draw.matchday } }));
+    const nextDraw = this.draws.find(draw => draw.status !== 'DRAW_COMPLETED');
+    const requestedDraw = this.draws.find(draw => draw.matchday === this.requestedDraw);
+    this.selectedDrawMatchday = (requestedDraw || nextDraw || this.draws[this.draws.length - 1])?.matchday ?? null;
+    this.playerStats = stats;
+    this.upcoming = schedule.filter(match => !match.score);
+    this.allMatches = schedule;
+    this.recentResults = schedule.filter(match => match.score).sort((a, b) => (b.day || 0) - (a.day || 0)).slice(0, 5);
+    this.groups = new Map();
+    for (const row of groups) {
+      const standings = this.groups.get(row.groupNumber) || [];
+      standings.push(row);
+      this.groups.set(row.groupNumber, standings);
+    }
+    this.groups.forEach(standings => standings.sort((a, b) =>
+      b.points - a.points || b.goalDifference - a.goalDifference || b.goalsFor - a.goalsFor));
+    this.groupNumbers = [...this.groups.keys()].sort((a, b) => a - b);
 
-    // Load group standings (only relevant for LoC, but safe to call for any)
-    this.http.get<GroupStanding[]>(urlApp + `/competition/getEuropeanGroups/${this.competitionId}/${this.season}`)
-      .subscribe(data => {
-        this.groups = new Map();
-        data.forEach(s => {
-          if (!this.groups.has(s.groupNumber)) {
-            this.groups.set(s.groupNumber, []);
-          }
-          this.groups.get(s.groupNumber)!.push(s);
-        });
-        this.groups.forEach((standings) => {
-          standings.sort((a, b) => {
-            if (a.points !== b.points) return b.points - a.points;
-            if (a.goalDifference !== b.goalDifference) return b.goalDifference - a.goalDifference;
-            return b.goalsFor - a.goalsFor;
-          });
-        });
-        this.groupNumbers = Array.from(this.groups.keys()).sort();
-      });
+    this.rounds = new Map();
+    for (const match of matches) {
+      const round = this.rounds.get(match.roundId) || [];
+      round.push(match);
+      this.rounds.set(match.roundId, round);
+    }
+    this.resultGroups = new Map();
+    this.rounds.forEach((roundMatches, round) => {
+      roundMatches.sort((a, b) => this.matchOrder(a) - this.matchOrder(b));
+      this.resultGroups.set(round, this.buildResultGroups(roundMatches));
+    });
+    this.roundNumbers = [...this.rounds.keys()].sort((a, b) => a - b);
+    this.stages = seasonStages.map(stage => {
+      const fixtures = schedule.filter(match => match.round === stage.round);
+      const draw = this.draws.find(draw => draw.round === stage.round);
+      const dates = [...new Set(fixtures.sort((a, b) => (a.day || 0) - (b.day || 0))
+        .flatMap(match => match.date ? [match.date] : []))];
+      return {
+        stage, draw, dates: dates.length ? dates : draw?.matchDate ? [draw.matchDate] : [],
+        upcoming: fixtures.filter(match => !match.score).length,
+        results: this.rounds.get(stage.round)?.length ?? 0
+      };
+    });
+    this.selectedRound = this.requestedRound != null && this.roundNumbers.includes(this.requestedRound)
+      ? this.requestedRound : this.roundNumbers[this.roundNumbers.length - 1] ?? 1;
+  }
 
-    // Load all match results for this competition and season
-    this.http.get<MatchResult[]>(urlApp + `/competition/getMatchesByCompetitionAndSeason/${this.competitionId}/${this.season}`)
-      .subscribe(data => {
-        this.rounds = new Map();
-        this.resultGroups = new Map();
-        data.forEach(m => {
-          if (!this.rounds.has(m.roundId)) {
-            this.rounds.set(m.roundId, []);
-          }
-          this.rounds.get(m.roundId)!.push(m);
-        });
-        this.rounds.forEach((matches, round) => {
-          matches.sort((a, b) => this.matchOrder(a) - this.matchOrder(b));
-          this.resultGroups.set(round, this.buildResultGroups(matches));
-        });
-        this.roundNumbers = Array.from(this.rounds.keys()).sort((a, b) => a - b);
-        if (this.roundNumbers.length > 0) {
-          this.selectedRound = this.roundNumbers[0];
-        }
-      });
+  get hasGroupStage(): boolean {
+    return this.typeId === 4 || this.typeId === 5;
+  }
+
+  get visibleGroups(): number[] {
+    return this.groupNumbers.includes(this.groupFilter) ? [this.groupFilter] : this.groupNumbers;
+  }
+
+  selectGroup(group: number): void {
+    void this.router.navigate([], { relativeTo: this.route, queryParamsHandling: 'merge',
+      queryParams: { group: group || null } });
+  }
+
+  positionHistory(group: number): { rounds: number[]; teams: { team: GroupStanding; positions: (number | null)[] }[] } {
+    const groupTeams = this.groups.get(group) || [];
+    const teamIds = new Set(groupTeams.map(team => team.teamId));
+    const matches = this.allMatches.filter(match => this.stageLabels.get(match.round)?.startsWith('Group')
+      && match.team1Id != null && match.team2Id != null && teamIds.has(match.team1Id) && teamIds.has(match.team2Id)
+      && !!match.score);
+    const rounds = [...new Set(matches.map(match => match.round))].sort((a, b) => a - b);
+    const totals = new Map(groupTeams.map(team => [team.teamId, { points: 0, goals: 0, difference: 0 }]));
+    const snapshots = rounds.map(round => {
+      for (const match of matches.filter(row => row.round === round)) {
+        const score = match.score?.match(/^(\d+)\s*-\s*(\d+)/);
+        if (!score) continue;
+        const homeGoals = +score[1];
+        const awayGoals = +score[2];
+        const home = totals.get(match.team1Id!)!;
+        const away = totals.get(match.team2Id!)!;
+        home.points += homeGoals === awayGoals ? 1 : homeGoals > awayGoals ? 3 : 0;
+        away.points += homeGoals === awayGoals ? 1 : awayGoals > homeGoals ? 3 : 0;
+        home.goals += homeGoals;
+        away.goals += awayGoals;
+        home.difference += homeGoals - awayGoals;
+        away.difference += awayGoals - homeGoals;
+      }
+      const ranked = [...totals.entries()].sort(([, a], [, b]) =>
+        b.points - a.points || b.difference - a.difference || b.goals - a.goals);
+      return new Map(ranked.map(([id, stats], index) => {
+        const tied = ranked.findIndex(([, other]) => other.points === stats.points &&
+          other.difference === stats.difference && other.goals === stats.goals);
+        return [id, Math.min(index, tied) + 1];
+      }));
+    });
+    return { rounds, teams: groupTeams.map(team => ({ team, positions: snapshots.map(snapshot => snapshot.get(team.teamId) ?? null) })) };
+  }
+
+  get visibleUpcoming(): LeagueMatch[] {
+    const selected = this.requestedRound;
+    return selected == null ? this.upcoming : this.upcoming.filter(match => match.round === selected);
+  }
+
+  get overviewMatches(): LeagueMatch[] {
+    return this.upcoming.length ? this.upcoming.slice(0, 5) : this.allMatches.slice(-5);
   }
 
   selectRound(r: number): void {
@@ -212,8 +375,8 @@ export class EuropeanRoundsComponent implements OnInit {
   changeSeason(delta: number): void {
     const newSeason = this.season + delta;
     if (newSeason >= 1 && newSeason <= this.maxSeason) {
-      this.season = newSeason;
-      this.loadData();
+      void this.router.navigate(['/european-rounds', this.competitionId, newSeason],
+        { queryParamsHandling: 'preserve' });
     }
   }
 

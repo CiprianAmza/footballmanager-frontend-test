@@ -1,0 +1,30 @@
+<section class="match-recap" *ngIf="matches.length">
+  <h3>Match recaps</h3>
+  <div class="recap-matches">
+    <button type="button" *ngFor="let match of matches" [disabled]="!match.team1Id || !match.team2Id"
+      [attr.aria-pressed]="selected === match" (click)="select(match)">
+      {{ match.team1Name }} {{ match.score }} {{ match.team2Name }}
+    </button>
+  </div>
+  <ng-container *ngIf="selected as match">
+    <ng-container *ngIf="summary | async as panel">
+      <p *ngIf="panel.state === 'loading'" role="status">Loading match details…</p>
+      <p *ngIf="panel.state === 'error'" role="alert">Match details could not be loaded.</p>
+      <div class="recap-report" *ngIf="panel.report as report">
+        <h4>{{ match.team1Name }} {{ match.score }} {{ match.team2Name }}</h4>
+        <p *ngIf="report.manOfTheMatchPlayerId">Player of the match ·
+          <a [routerLink]="['/player', report.manOfTheMatchPlayerId]">{{ report.manOfTheMatchName }}</a>
+          · {{ report.manOfTheMatchRating | fmRating:2 }}
+        </p>
+        <ul *ngIf="report.goals?.length">
+          <li *ngFor="let goal of report.goals">{{ goal.minute }}′
+            <a *ngIf="goal.playerId; else scorerName" [routerLink]="['/player', goal.playerId]">{{ goal.playerName }}</a>
+            <ng-template #scorerName>{{ goal.playerName }}</ng-template>
+            · {{ goal.teamName }}
+          </li>
+        </ul>
+        <a [routerLink]="['/match-report2', id, season, match.round, match.team1Id, match.team2Id]">Full match report →</a>
+      </div>
+    </ng-container>
+  </ng-container>
+</section>

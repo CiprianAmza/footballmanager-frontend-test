@@ -9,12 +9,18 @@ import { Coefficients2Component } from '../../coefficients2/coefficients2.compon
 import { Coefficients3Component } from '../../coefficients3/coefficients3.component';
 import { CompetitionMoneyComponent } from '../../competition-money/competition-money.component';
 import { CompetitionsListComponent } from '../../competition-list/competition-list.component';
+import { CompetitionCalendarComponent } from '../../competition-calendar/competition-calendar.component';
+import { CompetitionRecapComponent } from '../../competition-details/competition-recap.component';
+import { CompetitionFollowComponent } from '../../competition-details/competition-follow.component';
+import { CompetitionNotesComponent } from '../../competition-details/competition-notes.component';
+import { CompetitionDetailsComponent } from '../../competition-details/competition-details.component';
 import { CompetitionInsightsComponent } from '../../competition-insights/competition-insights.component';
 import { CompetitionRatingImpactComponent } from '../../competition-rating-impact/competition-rating-impact.component';
 import { CompetitionRecordsComponent } from '../../competition-records/competition-records.component';
 import { CupOverviewComponent } from '../../competition/cup-overview/cup-overview.component';
-import { CompetitionComponent } from '../../competition/competition.component';
+import { KnockoutCompetitionComponent } from '../../knockout-competition/knockout-competition.component';
 import { CompetitionViewComponent } from '../../competition-view/competition-view.component';
+import { TitleRaceChartComponent } from '../../competition-view/title-race-chart.component';
 import { CompetitionRankingsComponent } from '../../competition-rankings/competition-rankings.component';
 import { CompetitionRankingDetailComponent } from '../../competition-rankings/competition-ranking-detail.component';
 import { CompetitionOveriewComponent } from '../../competitionoveriew/competitionoveriew.component';
@@ -23,6 +29,7 @@ import { Competitions3Component } from '../../competitions3/competitions3.compon
 import { CompetitionsWorldComponent } from '../../competitions-world/competitions-world.component';
 import { DisplayComponent } from '../../display/display.component';
 import { EuropeanRoundsComponent } from '../../european-rounds/european-rounds.component';
+import { LeagueCompetitionComponent } from '../../league-competition/league-competition.component';
 import { LeaguesOverviewComponent } from '../../leagues-overview/leagues-overview.component';
 import { ManagerLeaderboardComponent } from '../../manager-leaderboard/manager-leaderboard.component';
 import { ManagerProfileComponent } from '../../manager-profile/manager-profile.component';
@@ -35,7 +42,8 @@ import { ValueRankingsComponent } from '../../value-rankings/value-rankings.comp
 
 const routes: Routes = [
   { path: 'comp/:competitionId', redirectTo: 'competition/:competitionId', pathMatch: 'full' },
-  { path: 'competition/:competitionId', component: CompetitionComponent, title: 'Competition' },
+  { path: 'competition/:competitionId/:section', component: LeagueCompetitionComponent, title: 'League competition' },
+  { path: 'competition/:competitionId', component: KnockoutCompetitionComponent, title: 'Competition' },
   { path: 'competition-view/:competitionId', component: CompetitionViewComponent, title: 'Competition hub' },
   { path: 'competition-view/:competitionId/:section', component: CompetitionViewComponent, title: 'Competition hub' },
   { path: 'competition-rankings', component: CompetitionRankingsComponent, title: 'Competition rankings' },
@@ -47,7 +55,7 @@ const routes: Routes = [
   { path: 'competition-overview/:competitionId', component: CompetitionOveriewComponent, title: 'Competition overview' },
   { path: 'top3-history/:competitionId', component: Top3FinishersComponent },
   { path: 'mediaPrediction/:competitionId', redirectTo: 'media-prediction/:competitionId', pathMatch: 'full' },
-  { path: 'media-prediction/:competitionId', component: MediaPredictionComponent, title: 'Media prediction' },
+  { path: 'media-prediction/:competitionId', redirectTo: 'competition/:competitionId/media-prediction', pathMatch: 'full' },
   { path: 'hall-of-fame', component: PlayerLeaderboardComponent, title: 'Hall of fame' },
   { path: 'hall-of-fame/managers', component: ManagerLeaderboardComponent, title: 'Manager hall of fame' },
   { path: 'stats/scorers', component: ScorerLeaderboardComponent, title: 'Top scorers' },
@@ -74,12 +82,19 @@ const routes: Routes = [
 
 @NgModule({
   declarations: [
-    CompetitionComponent,
+    KnockoutCompetitionComponent,
+    LeagueCompetitionComponent,
     CompetitionViewComponent,
+    TitleRaceChartComponent,
     CompetitionRankingsComponent,
     CompetitionRankingDetailComponent,
     CupOverviewComponent,
     CompetitionInsightsComponent,
+    CompetitionDetailsComponent,
+    CompetitionNotesComponent,
+    CompetitionFollowComponent,
+    CompetitionRecapComponent,
+    CompetitionCalendarComponent,
     CompetitionRatingImpactComponent,
     DisplayComponent,
     CompetitionOveriewComponent,
