@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, combineLatest, distinctUntilChanged, forkJoin, map, merge, Observable,
   of, shareReplay, startWith, Subject, switchMap, takeUntil } from 'rxjs';
-import { withTitleOdds } from './title-odds';
+import { estimatedTitleOdds } from './title-odds';
 import { TitleRacePoint } from '../competition-view/title-race-chart.component';
 import { leaguePositionTimeline } from './league-position-timeline';
 import { resultRecords, sequences } from '../competition-details/match-records';
@@ -434,8 +434,7 @@ export class LeagueCompetitionComponent implements OnInit, OnDestroy {
       : of(null);
     this.odds = this.panel(odds);
     this.titleRace = this.panel(season === currentSeason ? this.data.titleRace(id) : of([]));
-    this.overview = this.panel(combineLatest([overview, odds.pipe(catchError(() => of(null)))]).pipe(
-      map(([value, chances]) => withTitleOdds(value, chances))));
+    this.overview = this.panel(overview.pipe(map(estimatedTitleOdds)));
     this.results = this.panel(results);
     this.playerStats = this.panel(this.data.playerStats(id, season));
     const transfers = this.data.transfers(season, standings).pipe(shareReplay({ bufferSize: 1, refCount: true }));
