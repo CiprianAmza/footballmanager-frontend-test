@@ -5,6 +5,40 @@ import { urlApp } from '../app.component';
 import { CompetitionDisplayMetadata } from '../services/competition-hub.service';
 import { LegacyRecordsData } from '../competition-records/competition-records.component';
 import { TransferService } from '../services/transfer.service';
+import { TitleRacePoint } from '../competition-view/title-race-chart.component';
+
+/** One club's chances this season; chances are fractions 0..1, odds 1 ÷ chance (null when nil). */
+export interface LeagueOddsRow {
+  teamId: number;
+  teamName: string;
+  position: number;
+  played: number;
+  points: number;
+  goalDifference: number;
+  title: number;
+  titleOdds: number | null;
+  top3: number;
+  champions: number;
+  relegation: number;
+  averagePosition: number;
+}
+
+export interface CupOdds {
+  competitionId: number;
+  season: number;
+  decided: boolean;
+  rows: { teamId: number; teamName: string; win: number; winOdds: number | null; reachFinal: number }[];
+}
+
+export interface LeagueOdds {
+  competitionId: number;
+  season: number;
+  gamesPlayed: number;
+  fixturesLeft: number;
+  championsSpots: number;
+  relegationFrom: number | null;
+  rows: LeagueOddsRow[];
+}
 
 export interface LeagueInfo extends Partial<CompetitionDisplayMetadata> {
   name: string;
@@ -256,6 +290,21 @@ export class LeagueCompetitionData {
 
   overview(id: string, season: number) {
     return this.http.get<LeagueOverview>(`${urlApp}/competition/${id}/${season}/overview`);
+  }
+
+  /** This season's chances, from 10,000 simulated season ends (design DESIGN_MEDIA_SI_COMPETITII §4). */
+  odds(id: string) {
+    return this.http.get<LeagueOdds>(`${urlApp}/odds/league/${id}`);
+  }
+
+  /** A national cup's chances this season: winning it and reaching the final. */
+  cupOdds(id: string) {
+    return this.http.get<CupOdds>(`${urlApp}/odds/cup/${id}`);
+  }
+
+  /** The title race: every team's chances after each stored matchday of this season. */
+  titleRace(id: string) {
+    return this.http.get<TitleRacePoint[]>(`${urlApp}/odds/league/${id}/history`);
   }
 
   results(id: string, season: number) {

@@ -128,7 +128,7 @@
         <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'media prediction' }"></ng-container>
         <div class="prediction-grid" *ngIf="panel.state === 'ready'">
           <article class="panel">
-            <header class="panel-header"><div><h2>Media Prediction</h2><p *ngIf="panel.value.teams?.length">{{ predictionSource(panel.value) }}</p><p *ngIf="panel.value.teams?.[0]?.titleOdds != null">Estimated decimal odds from Best XI strength</p></div></header>
+            <header class="panel-header"><div><h2>Media Prediction</h2><p *ngIf="panel.value.teams?.length">{{ predictionSource(panel.value) }}</p><p *ngIf="season === currentSeason">Title odds from 10,000 simulated season ends · <a [routerLink]="['/competition', id, 'chances']">Title chances →</a></p></div></header>
             <div class="table-wrap" *ngIf="panel.value.teams?.length; else noPrediction">
               <table aria-label="Predicted finishing order">
                 <thead><tr><th scope="col" [attr.aria-sort]="sortDirection('prediction', 'mediaPrediction')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'mediaPrediction', label: 'Pos', desc: false }"></ng-container></th><th scope="col" [attr.aria-sort]="sortDirection('prediction', 'teamName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'teamName', label: 'Club', desc: false }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('prediction', 'topElevenRating')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'topElevenRating', label: 'Best XI', desc: true }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('prediction', 'reputation')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'reputation', label: 'Rep', desc: true }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('prediction', 'squadValue')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'squadValue', label: 'Squad value', desc: true }"></ng-container></th><th scope="col" class="num" [attr.aria-sort]="sortDirection('prediction', 'titleOdds')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'prediction', column: 'titleOdds', label: 'Title odds', desc: false }"></ng-container></th><th scope="col">Lineup</th></tr></thead>
@@ -199,6 +199,57 @@
             </ng-template>
           </article>
         </div>
+      </ng-container>
+    </ng-container>
+
+    <ng-container *ngSwitchCase="'chances'">
+      <article class="panel" *ngIf="season !== currentSeason">
+        <header class="panel-header"><h2>Title chances</h2></header>
+        <p class="empty">Chances are worked out for the season being played only.</p>
+      </article>
+      <ng-container *ngIf="season === currentSeason && (odds | async) as panel">
+        <ng-container *ngTemplateOutlet="panelStatus; context: { panel: panel, title: 'title chances' }"></ng-container>
+        <ng-container *ngIf="panel.state === 'ready' && panel.value as chances">
+          <article class="panel">
+            <header class="panel-header"><div><h2>Title race</h2><p>Each contender's title chance after every matchday</p></div></header>
+            <ng-container *ngIf="titleRace | async as race">
+              <ng-container *ngTemplateOutlet="panelStatus; context: { panel: race, title: 'title race' }"></ng-container>
+              <app-title-race-chart *ngIf="race.state === 'ready'" [points]="race.value" [teamIds]="raceTeams(chances)"></app-title-race-chart>
+            </ng-container>
+          </article>
+          <article class="panel">
+            <header class="panel-header"><div><h2>Title chances</h2><p>{{ chances.fixturesLeft }} matches left · the rest of the season played 10,000 times with the match engine's own chances</p></div></header>
+            <div class="table-wrap">
+              <table aria-label="Title, top 3 and relegation chances">
+                <thead><tr>
+                  <th scope="col" [attr.aria-sort]="sortDirection('chances', 'position')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'chances', column: 'position', label: 'Pos', desc: false }"></ng-container></th>
+                  <th scope="col" [attr.aria-sort]="sortDirection('chances', 'teamName')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'chances', column: 'teamName', label: 'Club', desc: false }"></ng-container></th>
+                  <th scope="col" class="num" [attr.aria-sort]="sortDirection('chances', 'points')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'chances', column: 'points', label: 'Pts', desc: true }"></ng-container></th>
+                  <th scope="col" class="num" [attr.aria-sort]="sortDirection('chances', 'title')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'chances', column: 'title', label: 'Title', desc: true }"></ng-container></th>
+                  <th scope="col" class="num">Odds</th>
+                  <th scope="col" class="num" [attr.aria-sort]="sortDirection('chances', 'top3')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'chances', column: 'top3', label: 'Top 3', desc: true }"></ng-container></th>
+                  <th scope="col" class="num" *ngIf="chances.championsSpots > 0" [attr.aria-sort]="sortDirection('chances', 'champions')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'chances', column: 'champions', label: 'League of Champions', desc: true }"></ng-container></th>
+                  <th scope="col" class="num" *ngIf="chances.relegationFrom" [attr.aria-sort]="sortDirection('chances', 'relegation')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'chances', column: 'relegation', label: 'Relegation', desc: true }"></ng-container></th>
+                  <th scope="col" class="num" [attr.aria-sort]="sortDirection('chances', 'averagePosition')"><ng-container *ngTemplateOutlet="sortHeading; context: { table: 'chances', column: 'averagePosition', label: 'Avg. finish', desc: false }"></ng-container></th>
+                </tr></thead>
+                <tbody>
+                  <tr *ngFor="let row of sorted('chances', chances.rows)">
+                    <td class="rank">{{ row.position }}</td>
+                    <td><ng-container *ngTemplateOutlet="clubLink; context: { club: row }"></ng-container></td>
+                    <td class="num">{{ row.points }}</td>
+                    <td class="num emphasis">{{ chance(row.title) }}</td>
+                    <td class="num">{{ (row.titleOdds | number:'1.2-2') ?? '—' }}</td>
+                    <td class="num">{{ chance(row.top3) }}</td>
+                    <td class="num" *ngIf="chances.championsSpots > 0">{{ chance(row.champions) }}</td>
+                    <td class="num" *ngIf="chances.relegationFrom">{{ chance(row.relegation) }}</td>
+                    <td class="num">{{ row.averagePosition | number:'1.1-1' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="empty compact">Odds are 1 ÷ chance, with no bookmaker margin.<span *ngIf="chances.championsSpots > 0"> League of Champions: top {{ chances.championsSpots }}.</span><span *ngIf="chances.relegationFrom"> Relegation: from position {{ chances.relegationFrom }}.</span></p>
+          </article>
+        </ng-container>
       </ng-container>
     </ng-container>
 

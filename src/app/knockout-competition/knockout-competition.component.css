@@ -39,6 +39,7 @@ table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th, td { text-align: left; padding: 8px 13px; border-bottom: 1px solid var(--fm-divider); }
 thead { background: var(--fm-bg-input); color: var(--fm-text-dim); }
 tbody tr:nth-child(even) { background: var(--fm-bg-row); }
+th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 860px) { .summary-grid { grid-template-columns: 1fr; } }
 .summary-leaders { grid-column: 1 / -1; }
 .summary-leader { display: grid; grid-template-columns: 1fr 2fr auto; align-items: center; gap: 8px; padding: 9px 14px; border-bottom: 1px solid var(--fm-divider); }

@@ -3,9 +3,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, combineLatest, distinctUntilChanged, map, Observable, of, shareReplay,
   startWith, Subject, switchMap, takeUntil } from 'rxjs';
 import { DetailsView } from '../competition-details/competition-details.data';
-import { LEADER_CATEGORIES, LeagueCompetitionData, LeagueInfo, LeagueMatch, LeagueOverview, isLeague } from '../league-competition/league-competition.data';
+import { CupOdds, LEADER_CATEGORIES, LeagueCompetitionData, LeagueInfo, LeagueMatch, LeagueOverview, isLeague } from '../league-competition/league-competition.data';
 
-type View = 'overview' | 'bracket' | 'stats' | 'awards' | 'history' | 'news' | 'matches';
+type View = 'overview' | 'bracket' | 'stats' | 'awards' | 'history' | 'news' | 'matches' | 'chances';
 type Load<T> = { value: T | null; error: boolean };
 
 @Component({
@@ -18,8 +18,15 @@ export class KnockoutCompetitionComponent implements OnInit, OnDestroy {
   readonly metrics = LEADER_CATEGORIES;
   readonly tabs: { key: View; label: string }[] = [
     { key: 'overview', label: 'Overview' }, { key: 'bracket', label: 'Bracket' }, { key: 'matches', label: 'Matches' },
-    { key: 'news', label: 'News' }, { key: 'stats', label: 'Stats' }, { key: 'awards', label: 'Awards' }, { key: 'history', label: 'History' }
+    { key: 'chances', label: 'Chances' }, { key: 'news', label: 'News' }, { key: 'stats', label: 'Stats' },
+    { key: 'awards', label: 'Awards' }, { key: 'history', label: 'History' }
   ];
+  /** Chances to win (design DESIGN_MEDIA_SI_COMPETITII §4.2): national cups this season only, not the Super Cup. */
+  cupOdds?: Observable<Load<CupOdds>>;
+
+  get visibleTabs(): { key: View; label: string }[] {
+    return this.superCup ? this.tabs.filter(tab => tab.key !== 'chances') : this.tabs;
+  }
   id = '';
   info?: LeagueInfo;
   loading = true;
@@ -107,6 +114,8 @@ export class KnockoutCompetitionComponent implements OnInit, OnDestroy {
       this.overview = this.load(this.data.overview(this.id, season));
       this.stats = this.loadStats();
       this.matches = this.load(this.data.schedule(this.id, season));
+      // Read only when the Chances view is opened (the first answer of a season simulates the whole bracket).
+      this.cupOdds = season === this.currentSeason && !this.superCup ? this.load(this.data.cupOdds(this.id)) : undefined;
     });
   }
 
@@ -122,6 +131,14 @@ export class KnockoutCompetitionComponent implements OnInit, OnDestroy {
   query(view: View, metric?: string) {
     return { view: view === 'overview' ? null : view,
       season: this.season === this.currentSeason ? null : this.season, metric: metric || null };
+  }
+
+  /** A chance as a percentage: "<1%" for a sliver, "—" for none. */
+  chance(value: number): string {
+    if (!value) return '—';
+    if (value < 0.005) return '<1%';
+    if (value > 0.995 && value < 1) return '>99%';
+    return `${Math.round(value * 100)}%`;
   }
 
   rounds(rows: LeagueMatch[]): number[] {

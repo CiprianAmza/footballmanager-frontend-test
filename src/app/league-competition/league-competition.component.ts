@@ -2,7 +2,8 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, combineLatest, distinctUntilChanged, forkJoin, map, merge, Observable,
   of, shareReplay, startWith, Subject, switchMap, takeUntil } from 'rxjs';
-import { estimatedTitleOdds } from './title-odds';
+import { withTitleOdds } from './title-odds';
+import { TitleRacePoint } from '../competition-view/title-race-chart.component';
 import { leaguePositionTimeline } from './league-position-timeline';
 import { resultRecords, sequences } from '../competition-details/match-records';
 import { DetailsView } from '../competition-details/competition-details.data';
@@ -10,12 +11,12 @@ import { LegacyRecordsData } from '../competition-records/competition-records.co
 import { ClubEconomyRow } from '../services/competition-hub.service';
 import { GameEventsService } from '../services/game-events.service';
 import { Availability, Club, ClubManager, isLeague, LEADER_CATEGORIES, LeagueCompetitionData,
-  LeagueInfo, LeagueMatch, LineupPlayer, LineupProfile, LeagueOverview, LeagueQualification, LeagueTransfer, PlayerStats,
-  ManagerSeason, Podium, Standing, TransferRumour } from './league-competition.data';
+  LeagueInfo, LeagueMatch, LeagueOdds, LineupPlayer, LineupProfile, LeagueOverview, LeagueQualification, LeagueTransfer,
+  PlayerStats, ManagerSeason, Podium, Standing, TransferRumour } from './league-competition.data';
 
-type Section = 'structure' | 'tickets' | 'sponsorships' | 'managers' | 'rules' | 'stadiums' | 'overview' | 'standings' | 'media-prediction' | 'matches' | 'stats' | 'transfers' | 'analysis' | 'news' | 'awards' | 'history';
+type Section = 'structure' | 'tickets' | 'sponsorships' | 'managers' | 'rules' | 'stadiums' | 'overview' | 'standings' | 'media-prediction' | 'chances' | 'matches' | 'stats' | 'transfers' | 'analysis' | 'news' | 'awards' | 'history';
 type Panel<T> = { state: 'loading' } | { state: 'error' } | { state: 'ready'; value: T };
-const SECTIONS: Section[] = ['structure', 'tickets', 'sponsorships', 'managers', 'rules', 'stadiums', 'overview', 'standings', 'media-prediction', 'matches', 'stats', 'transfers', 'analysis', 'news', 'awards', 'history'];
+const SECTIONS: Section[] = ['structure', 'tickets', 'sponsorships', 'managers', 'rules', 'stadiums', 'overview', 'standings', 'media-prediction', 'chances', 'matches', 'stats', 'transfers', 'analysis', 'news', 'awards', 'history'];
 
 @Component({
   selector: 'app-league-competition',
@@ -44,7 +45,8 @@ export class LeagueCompetitionComponent implements OnInit, OnDestroy {
   ];
   readonly overviewNav = [
     { section: 'overview', label: 'Summary' }, { section: 'standings', label: 'League table' },
-    { section: 'media-prediction', label: 'Media Prediction' }, { section: 'rules', label: 'Rules' },
+    { section: 'media-prediction', label: 'Media Prediction' }, { section: 'chances', label: 'Title chances' },
+    { section: 'rules', label: 'Rules' },
     { section: 'structure', label: 'Structure' }, { section: 'managers', label: 'Managers' },
     { section: 'stadiums', label: 'Stadiums' }, { section: 'tickets', label: 'Season tickets' },
     { section: 'sponsorships', label: 'Sponsorship income' }
@@ -99,6 +101,9 @@ export class LeagueCompetitionComponent implements OnInit, OnDestroy {
   standings?: Observable<Panel<Standing[]>>;
   qualification?: Observable<Panel<LeagueQualification>>;
   overview?: Observable<Panel<LeagueOverview>>;
+  /** This season's chances (null for a past season) and the title race behind them. */
+  odds?: Observable<Panel<LeagueOdds | null>>;
+  titleRace?: Observable<Panel<TitleRacePoint[]>>;
   results?: Observable<Panel<LeagueMatch[]>>;
   fixtures?: Observable<Panel<LeagueMatch[]>>;
   playerStats?: Observable<Panel<PlayerStats>>;
@@ -341,6 +346,19 @@ export class LeagueCompetitionComponent implements OnInit, OnDestroy {
     return 'Recalculated estimate using current squads';
   }
 
+  /** The five clubs with the best title chance now, drawn in the title race (each keeps its colour). */
+  raceTeams(odds: LeagueOdds): number[] {
+    return [...odds.rows].sort((a, b) => b.title - a.title || a.position - b.position).slice(0, 5).map(row => row.teamId);
+  }
+
+  /** A chance as a percentage: "<1%" for a sliver, "—" for none. */
+  chance(value: number): string {
+    if (!value) return '—';
+    if (value < 0.005) return '<1%';
+    if (value > 0.995 && value < 1) return '>99%';
+    return `${Math.round(value * 100)}%`;
+  }
+
   selectPitchPlayer(player: LineupPlayer): void {
     this.selectedPitchPlayer = player;
     this.pitchProfile = this.panel(this.data.playerProfile(player.playerId));
@@ -410,7 +428,14 @@ export class LeagueCompetitionComponent implements OnInit, OnDestroy {
     const results = this.data.results(id, season).pipe(shareReplay({ bufferSize: 1, refCount: true }));
     this.standings = this.panel(standings);
     this.qualification = this.panel(this.data.qualification(id, season));
-    this.overview = this.panel(overview.pipe(map(estimatedTitleOdds)));
+    // Chances exist for the season being played only: they come from the table and the matches still to play.
+    const odds: Observable<LeagueOdds | null> = season === currentSeason
+      ? this.data.odds(id).pipe(shareReplay({ bufferSize: 1, refCount: true }))
+      : of(null);
+    this.odds = this.panel(odds);
+    this.titleRace = this.panel(season === currentSeason ? this.data.titleRace(id) : of([]));
+    this.overview = this.panel(combineLatest([overview, odds.pipe(catchError(() => of(null)))]).pipe(
+      map(([value, chances]) => withTitleOdds(value, chances))));
     this.results = this.panel(results);
     this.playerStats = this.panel(this.data.playerStats(id, season));
     const transfers = this.data.transfers(season, standings).pipe(shareReplay({ bufferSize: 1, refCount: true }));

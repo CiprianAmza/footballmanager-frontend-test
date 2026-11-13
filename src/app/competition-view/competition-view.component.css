@@ -61,7 +61,4 @@
 .cv-category-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid #344b58; font-size: 12px; }.cv-category-row span { color: #819ca5; }.cv-category-row strong { margin-left: auto; }
 .cv-detail { display: flex; flex-wrap: wrap; gap: 10px; }.cv-detail div { display: grid; gap: 5px; padding: 10px 13px; border-radius: 5px; background: #294252; }.cv-detail small { color: #9fbac0; }.cv-detail strong { color: #f6faf8; }
 .cv-empty, .cv-state, .cv-external { padding: 28px; color: #a8bac0; text-align: center; }.cv-state { border: 1px solid #344956; border-radius: 8px; margin-top: 26px; }.cv-error { color: #f2a6a6; }.cv-error button { margin-left: 12px; padding: 5px 10px; cursor: pointer; }.cv-external a { display: inline-block; margin-top: 6px; }
-.cv-odds td { font-variant-numeric: tabular-nums; }
-.cv-odds strong { color: #fff; }
-.cv-odds-price { margin-left: 8px; padding: 2px 6px; border-radius: 4px; background: #253948; color: #a9bac3; font-size: 11px; }
 @media (max-width: 760px) { .cv-page { padding: 14px; }.cv-hero { align-items: stretch; flex-direction: column; min-height: 0; padding: 25px; }.cv-back { margin-bottom: 18px; }.cv-tabs { padding: 0 5px; }.cv-tabs a { padding: 15px 12px; }.cv-card-grid, .cv-category-grid { grid-template-columns: 1fr; }.cv-lead { flex-wrap: wrap; }.cv-lead .cv-text-link { margin-left: 0; width: 100%; }.cv-panel { padding: 15px; } }

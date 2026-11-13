@@ -17,7 +17,7 @@
     </div>
   </header>
   <nav class="section-nav" aria-label="Competition sections">
-    <a *ngFor="let tab of tabs" [routerLink]="[]" [queryParams]="query(tab.key)"
+    <a *ngFor="let tab of visibleTabs" [routerLink]="[]" [queryParams]="query(tab.key)"
        [attr.aria-current]="view === tab.key ? 'page' : null">{{ superCup && tab.key === 'bracket' ? 'Final' : tab.label }}</a>
   </nav>
 
@@ -120,6 +120,31 @@
           </ng-template>
         </ng-container>
         <ng-template #matchStatus><p class="empty">{{ state.error ? 'Matches are unavailable.' : 'Loading matches…' }}</p></ng-template>
+      </ng-container>
+    </section>
+
+    <section *ngSwitchCase="'chances'" class="panel">
+      <header><h2>Chances to win the cup</h2></header>
+      <p class="empty" *ngIf="superCup">The Super Cup is a single match: see the final.</p>
+      <p class="empty" *ngIf="!superCup && season !== currentSeason">Chances are worked out for the season being played only.</p>
+      <ng-container *ngIf="cupOdds | async as state">
+        <ng-container *ngIf="state.value as odds; else oddsStatus">
+          <p class="empty" *ngIf="odds.decided">The cup has been won.</p>
+          <div class="table-wrap" *ngIf="odds.rows.length; else noBracket">
+            <table aria-label="Chances to win the cup and to reach the final">
+              <thead><tr><th scope="col">Club</th><th scope="col" class="num">Win the cup</th><th scope="col" class="num">Odds</th><th scope="col" class="num">Reach the final</th></tr></thead>
+              <tbody><tr *ngFor="let row of odds.rows">
+                <td><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td>
+                <td class="num"><strong>{{ chance(row.win) }}</strong></td>
+                <td class="num">{{ (row.winOdds | number:'1.2-2') ?? '—' }}</td>
+                <td class="num">{{ chance(row.reachFinal) }}</td>
+              </tr></tbody>
+            </table>
+          </div>
+          <p class="empty" *ngIf="odds.rows.length">The rest of the bracket played 10,000 times with the match engine's own chances; a draw goes to penalties. Odds are 1 ÷ chance, with no bookmaker margin.</p>
+          <ng-template #noBracket><p class="empty">No bracket for this season yet.</p></ng-template>
+        </ng-container>
+        <ng-template #oddsStatus><p class="empty">{{ state.error ? 'Chances are unavailable.' : 'Working out the chances…' }}</p></ng-template>
       </ng-container>
     </section>
 

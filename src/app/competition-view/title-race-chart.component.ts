@@ -75,14 +75,23 @@ interface RaceSeries {
   `,
   styles: [`
     :host {
-      --trc-surface: #1a2935;
-      --trc-text: #dce7e9;
-      --trc-text-2: #a9bac3;
-      --trc-muted: #819ca5;
-      --trc-grid: #2b4050;
-      --trc-base: #3b5160;
+      /* Chrome follows the app theme; the series steps are validated on every dark theme surface. */
+      --trc-surface: var(--fm-bg-elevated, #1a2935);
+      --trc-text: var(--fm-text, #dce7e9);
+      --trc-text-2: var(--fm-text-dim, #a9bac3);
+      --trc-muted: var(--fm-text-dim, #819ca5);
+      --trc-grid: var(--fm-divider, #2b4050);
+      --trc-base: var(--fm-border, #3b5160);
+      --trc-tip: var(--fm-bg-input, #13202a);
+      --trc-strong: var(--fm-heading, #ffffff);
+      --trc-link: var(--fm-accent, #b2e6d4);
       --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; --series-5: #d55181;
       display: block;
+    }
+    /* The light theme takes the light steps of the same hues (below 3:1 for three of them: the table view is
+       the relief). */
+    :host-context([data-fm-theme="light"]) {
+      --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100; --series-5: #e87ba4;
     }
     [data-slot="1"] { --c: var(--series-1); } [data-slot="2"] { --c: var(--series-2); }
     [data-slot="3"] { --c: var(--series-3); } [data-slot="4"] { --c: var(--series-4); }
@@ -106,14 +115,14 @@ interface RaceSeries {
     .trc-x span { position: absolute; transform: translateX(-50%); color: var(--trc-muted); font-size: 11px;
       font-variant-numeric: tabular-nums; white-space: nowrap; }
     .trc-tip { position: absolute; top: 4px; transform: translateX(12px); min-width: 170px; padding: 10px 12px;
-      background: #13202a; border: 1px solid rgba(255,255,255,0.10); border-radius: 8px; pointer-events: none;
+      background: var(--trc-tip); border: 1px solid var(--trc-base); border-radius: 8px; pointer-events: none;
       color: var(--trc-text); font-size: 12px; z-index: 2; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
     .trc-tip.flip { transform: translateX(calc(-100% - 12px)); }
     .trc-tip-head { color: var(--trc-text-2); margin-bottom: 6px; }
     .trc-tip-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
-    .trc-tip-row strong { color: #fff; min-width: 38px; font-variant-numeric: tabular-nums; }
+    .trc-tip-row strong { color: var(--trc-strong); min-width: 38px; font-variant-numeric: tabular-nums; }
     .trc-tip-row span:last-child { color: var(--trc-text-2); }
-    .trc-table summary { cursor: pointer; color: #b2e6d4; font-size: 13px; }
+    .trc-table summary { cursor: pointer; color: var(--trc-link); font-size: 13px; }
     .trc-table-wrap { overflow-x: auto; margin-top: 10px; }
     .trc-table table { border-collapse: collapse; font-size: 12px; white-space: nowrap; }
     .trc-table th, .trc-table td { padding: 7px 12px; border-top: 1px solid var(--trc-grid); text-align: left;
