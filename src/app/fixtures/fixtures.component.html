@@ -286,7 +286,7 @@
           <div class="pv-side">
             <h3><a [routerLink]="['/team', p.home.teamId]">{{ p.home.name }}</a></h3>
             <div class="pv-line" *ngIf="p.powerHome"><span>Team rating</span><strong>{{ p.powerHome }}</strong></div>
-            <div class="pv-line"><span>League position</span><strong>{{ p.home.position ? '#' + p.home.position : (loadingPreview ? '…' : '—') }}</strong></div>
+            <div class="pv-line" *ngIf="row.competitionKind !== 'friendly'"><span>League position</span><strong>{{ p.home.position ? '#' + p.home.position : (loadingPreview ? '…' : '—') }}</strong></div>
             <div class="pv-line"><span>Form</span>
               <div class="form-row" *ngIf="p.home.form?.length; else pvNoForm1"><i *ngFor="let f of p.home.form" class="form-dot" [attr.data-outcome]="f">{{ f }}</i></div>
               <ng-template #pvNoForm1><strong class="muted">{{ p.home.form ? 'No games yet' : (loadingForm || loadingPreview ? '…' : '—') }}</strong></ng-template>
@@ -295,7 +295,7 @@
           <div class="pv-side away">
             <h3><a [routerLink]="['/team', p.away.teamId]">{{ p.away.name }}</a></h3>
             <div class="pv-line" *ngIf="p.powerAway"><span>Team rating</span><strong>{{ p.powerAway }}</strong></div>
-            <div class="pv-line"><span>League position</span><strong>{{ p.away.position ? '#' + p.away.position : (loadingPreview ? '…' : '—') }}</strong></div>
+            <div class="pv-line" *ngIf="row.competitionKind !== 'friendly'"><span>League position</span><strong>{{ p.away.position ? '#' + p.away.position : (loadingPreview ? '…' : '—') }}</strong></div>
             <div class="pv-line"><span>Form</span>
               <div class="form-row" *ngIf="p.away.form?.length; else pvNoForm2"><i *ngFor="let f of p.away.form" class="form-dot" [attr.data-outcome]="f">{{ f }}</i></div>
               <ng-template #pvNoForm2><strong class="muted">{{ p.away.form ? 'No games yet' : (loadingForm || loadingPreview ? '…' : '—') }}</strong></ng-template>
@@ -314,9 +314,9 @@
             <strong>{{ m.homeTeamName }} {{ m.score }} {{ m.awayTeamName }}</strong>
             <small>Season {{ m.seasonNumber }} · {{ m.competitionName }}<ng-container *ngIf="h2hDecision(m) as d"> · {{ d }}</ng-container></small>
           </ng-container>
-          <ng-template #noMeeting><strong class="muted">{{ loadingH2h ? '…' : 'First competitive meeting' }}</strong></ng-template>
+          <ng-template #noMeeting><strong class="muted">{{ loadingH2h ? '…' : 'No previous meeting' }}</strong></ng-template>
         </div>
-        <p class="hint" *ngIf="!loadingPreview && !p.home.position && !p.away.position">League positions are only available for current-season fixtures.</p>
+        <p class="hint" *ngIf="row.competitionKind !== 'friendly' && !loadingPreview && !p.home.position && !p.away.position">League positions are only available for current-season fixtures.</p>
       </div>
 
       <!-- Stats -->
