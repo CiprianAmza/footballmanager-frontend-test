@@ -4,8 +4,9 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { combineLatest, Subscription } from 'rxjs';
 import { urlApp } from '../app.component';
 import { GameEventsService } from '../services/game-events.service';
+import { TitleRacePoint } from './title-race-chart.component';
 
-type Section = 'overview' | 'standings' | 'stats' | 'analysis';
+type Section = 'overview' | 'standings' | 'stats' | 'analysis' | 'chances';
 
 @Component({
   selector: 'app-competition-view',
@@ -29,6 +30,11 @@ export class CompetitionViewComponent implements OnInit, OnDestroy {
   playerStats: any = null;
   teamStats: any = null;
   underlying: any = null;
+  /** League or cup chances (design DESIGN_MEDIA_SI_COMPETITII §4); current season only. */
+  leagueOdds: any = null;
+  cupOdds: any = null;
+  raceHistory: TitleRacePoint[] = [];
+  raceTeamIds: number[] = [];
   expandedTeamId: number | null = null;
   playerTab = 'topScorers';
   expandedCategory: string | null = 'possession';
@@ -91,7 +97,8 @@ export class CompetitionViewComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void { this.subscriptions.unsubscribe(); }
 
   private isSection(value: string): value is Section {
-    return value === 'overview' || value === 'standings' || value === 'stats' || value === 'analysis';
+    return value === 'overview' || value === 'standings' || value === 'stats' || value === 'analysis'
+      || value === 'chances';
   }
 
   private resolveSeason(requested: string | null): string {
@@ -139,6 +146,11 @@ export class CompetitionViewComponent implements OnInit, OnDestroy {
     this.playerStats = null;
     this.teamStats = null;
     this.underlying = null;
+    this.leagueOdds = null;
+    this.cupOdds = null;
+    this.raceHistory = [];
+    this.raceTeamIds = [];
+    if (this.section === 'chances') { this.loadChances(version); return; }
     if (this.section === 'overview' || this.section === 'standings') {
       if (this.competitionType !== 'League') { this.loading = false; return; }
       const url = this.selectedSeason === this.currentSeason
@@ -175,6 +187,45 @@ export class CompetitionViewComponent implements OnInit, OnDestroy {
         next: value => { if (version === this.requestVersion) { this.underlying = value; this.loading = false; } },
         error: () => this.showError(version, 'Underlying performance is unavailable.')
       });
+  }
+
+  /** Chances exist for this season only: they come from the table and the matches still to play. */
+  private loadChances(version: number): void {
+    if (this.selectedSeason !== this.currentSeason || this.competitionType === 'Europe') { this.loading = false; return; }
+    if (this.competitionType === 'Cup') {
+      this.http.get<any>(`${urlApp}/odds/cup/${this.competitionId}`).subscribe({
+        next: value => { if (version === this.requestVersion) { this.cupOdds = value; this.loading = false; } },
+        error: () => this.showError(version, 'Cup chances are unavailable.')
+      });
+      return;
+    }
+    this.http.get<any>(`${urlApp}/odds/league/${this.competitionId}`).subscribe({
+      next: value => {
+        if (version !== this.requestVersion) return;
+        this.leagueOdds = value;
+        // The race follows the five teams with the best title chance now; each keeps its colour.
+        this.raceTeamIds = [...(value.rows || [])]
+          .sort((a: any, b: any) => b.title - a.title || a.position - b.position)
+          .slice(0, 5).map((row: any) => row.teamId);
+        this.loading = false;
+      },
+      error: () => this.showError(version, 'League chances are unavailable.')
+    });
+    this.http.get<TitleRacePoint[]>(`${urlApp}/odds/league/${this.competitionId}/history`)
+      .subscribe({ next: value => { if (version === this.requestVersion) this.raceHistory = value || []; } });
+  }
+
+  /** A chance as a percentage: "<1%" for a sliver, "—" for none. */
+  chance(value: number): string {
+    if (!value) return '—';
+    if (value < 0.005) return '<1%';
+    if (value > 0.995 && value < 1) return '>99%';
+    return `${Math.round(value * 100)}%`;
+  }
+
+  /** Decimal odds with no bookmaker margin (1 / chance); empty when the chance is nil. */
+  oddsFor(value: number | null): string {
+    return value ? value.toFixed(2) : '';
   }
 
   private showError(version: number, message: string): void {

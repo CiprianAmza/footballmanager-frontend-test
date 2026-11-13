@@ -22,6 +22,8 @@
        [class.active]="section === 'stats'" [attr.aria-current]="section === 'stats' ? 'page' : null">Statistics</a>
     <a [routerLink]="['/competition-view', competitionId, 'analysis']" [queryParams]="{season: selectedSeason}"
        [class.active]="section === 'analysis'" [attr.aria-current]="section === 'analysis' ? 'page' : null">Analysis</a>
+    <a *ngIf="competitionType !== 'Europe'" [routerLink]="['/competition-view', competitionId, 'chances']" [queryParams]="{season: selectedSeason}"
+       [class.active]="section === 'chances'" [attr.aria-current]="section === 'chances' ? 'page' : null">Chances</a>
   </nav>
 
   <div class="cv-state" *ngIf="loading">Loading {{ section }}…</div>
@@ -41,6 +43,7 @@
         <a class="cv-feature" [routerLink]="['/competition-view', competitionId, 'analysis']" [queryParams]="{season: selectedSeason}"><span>03 / DEEP DIVE</span><strong>Analysis</strong><p>Club landscape, underlying performance and rating impact.</p><b>Explore →</b></a>
       </div>
       <div class="cv-quicklinks"><span>MORE ABOUT THIS COMPETITION</span>
+        <a *ngIf="competitionType !== 'Europe'" [routerLink]="['/competition-view', competitionId, 'chances']">{{ competitionType === 'League' ? 'Title chances' : 'Chances to win' }} ↗</a>
         <a *ngIf="competitionType === 'League'" [routerLink]="['/media-prediction', competitionId]">Media prediction ↗</a>
         <a [routerLink]="['/awards/competition', competitionId]">Awards ↗</a>
         <a [routerLink]="['/competition-records', competitionId]">Records ↗</a>
@@ -77,6 +80,47 @@
       <article class="cv-panel"><div class="cv-panel-head"><div><h3>Underlying performance</h3><p>xG, recent form, opponent strength and points against expectation.</p></div><span *ngIf="underlying">{{ underlying.matches }} matches analysed</span></div>
         <div class="cv-table-wrap" *ngIf="underlying"><table class="cv-table"><thead><tr><th>#</th><th>Club</th><th>MP</th><th>xGD / 90</th><th>xG won</th><th>Last 5</th><th>Last 10</th><th>Last 20</th><th>Luck</th><th></th></tr></thead><tbody><ng-container *ngFor="let team of underlying.teamPerformance"><tr><td>{{ team.rank }}</td><td><a [routerLink]="['/team', team.teamId]">{{ team.teamName }}</a></td><td>{{ team.matches }}</td><td>{{ signed(team.xgDifferencePer90) }}</td><td>{{ team.higherXgMatchPercentage | number:'1.0-1' }}%</td><td>{{ signed(team.rolling5.xgDifferencePer90) }}</td><td>{{ signed(team.rolling10.xgDifferencePer90) }}</td><td>{{ signed(team.rolling20.xgDifferencePer90) }}</td><td>{{ signed(team.luckIndex) }}</td><td><button class="cv-expand" type="button" (click)="expandedTeamId = expandedTeamId === team.teamId ? null : team.teamId" [attr.aria-expanded]="expandedTeamId === team.teamId">{{ expandedTeamId === team.teamId ? '−' : '+' }}</button></td></tr><tr *ngIf="expandedTeamId === team.teamId"><td colspan="10"><div class="cv-detail"><div><small>Actual / expected points</small><strong>{{ team.actualPoints }} / {{ team.expectedPoints | number:'1.2-2' }}</strong></div><div><small>Balanced matches</small><strong>{{ team.balancedMatches.wins }}W {{ team.balancedMatches.draws }}D {{ team.balancedMatches.losses }}L</strong></div><div><small>Vs top 4</small><strong>{{ team.versusTop4.wins }}W {{ team.versusTop4.draws }}D {{ team.versusTop4.losses }}L</strong></div><div><small>Vs upper half</small><strong>{{ team.versusUpperHalf.wins }}W {{ team.versusUpperHalf.draws }}D {{ team.versusUpperHalf.losses }}L</strong></div><div><small>Vs lower half</small><strong>{{ team.versusLowerHalf.wins }}W {{ team.versusLowerHalf.draws }}D {{ team.versusLowerHalf.losses }}L</strong></div></div></td></tr></ng-container></tbody></table><div class="cv-empty" *ngIf="!underlying.teamPerformance?.length">Analysis appears once matches are played.</div></div><p class="cv-method" *ngIf="underlying">{{ underlying.methodology }}</p>
       </article>
+    </section>
+
+    <section *ngIf="section === 'chances'">
+      <div class="cv-section-head"><div><span class="cv-eyebrow">WHO WILL WIN IT</span><h2>{{ competitionType === 'League' ? 'Title chances' : 'Chances to win the cup' }}</h2></div>
+        <span *ngIf="leagueOdds">{{ leagueOdds.fixturesLeft }} matches left</span></div>
+      <div class="cv-external" *ngIf="selectedSeason !== currentSeason">Chances are worked out for the current season only.</div>
+
+      <ng-container *ngIf="leagueOdds as odds">
+        <article class="cv-panel">
+          <div class="cv-panel-head"><div><h3>Title race</h3><p>Each contender's title chance after every matchday.</p></div></div>
+          <app-title-race-chart [points]="raceHistory" [teamIds]="raceTeamIds"></app-title-race-chart>
+        </article>
+        <div class="cv-table-wrap"><table class="cv-table cv-odds">
+          <thead><tr><th>#</th><th>Club</th><th>Pts</th><th>Title</th><th>Top 3</th><th *ngIf="odds.championsSpots > 0">League of Champions</th><th *ngIf="odds.relegationFrom">Relegation</th><th>Avg. finish</th></tr></thead>
+          <tbody><tr *ngFor="let row of odds.rows">
+            <td><span class="cv-position">{{ row.position }}</span></td>
+            <td class="cv-club"><app-team-crest [teamId]="row.teamId" [teamName]="row.teamName" [size]="24"></app-team-crest><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td>
+            <td class="cv-points">{{ row.points }}</td>
+            <td><strong>{{ chance(row.title) }}</strong><span class="cv-odds-price" *ngIf="oddsFor(row.titleOdds)">{{ oddsFor(row.titleOdds) }}</span></td>
+            <td>{{ chance(row.top3) }}</td>
+            <td *ngIf="odds.championsSpots > 0">{{ chance(row.champions) }}</td>
+            <td *ngIf="odds.relegationFrom">{{ chance(row.relegation) }}</td>
+            <td>{{ row.averagePosition | number:'1.1-1' }}</td>
+          </tr></tbody>
+        </table></div>
+        <p class="cv-legend">The rest of the season played 10,000 times with the match engine's own win, draw and defeat chances for every remaining fixture. Odds are 1 ÷ chance, with no bookmaker margin.<span *ngIf="odds.championsSpots > 0"> League of Champions: top {{ odds.championsSpots }}.</span><span *ngIf="odds.relegationFrom"> Relegation: from position {{ odds.relegationFrom }}.</span></p>
+      </ng-container>
+
+      <ng-container *ngIf="cupOdds as odds">
+        <div class="cv-external" *ngIf="odds.decided">The cup has been won.</div>
+        <div class="cv-table-wrap" *ngIf="odds.rows.length"><table class="cv-table cv-odds">
+          <thead><tr><th>Club</th><th>Win the cup</th><th>Reach the final</th></tr></thead>
+          <tbody><tr *ngFor="let row of odds.rows">
+            <td class="cv-club"><app-team-crest [teamId]="row.teamId" [teamName]="row.teamName" [size]="24"></app-team-crest><a [routerLink]="['/team', row.teamId]">{{ row.teamName }}</a></td>
+            <td><strong>{{ chance(row.win) }}</strong><span class="cv-odds-price" *ngIf="oddsFor(row.winOdds)">{{ oddsFor(row.winOdds) }}</span></td>
+            <td>{{ chance(row.reachFinal) }}</td>
+          </tr></tbody>
+        </table></div>
+        <div class="cv-empty" *ngIf="!odds.rows.length">No bracket for this season yet.</div>
+        <p class="cv-legend" *ngIf="odds.rows.length">The rest of the bracket played 10,000 times; a draw goes to penalties. Odds are 1 ÷ chance, with no bookmaker margin.</p>
+      </ng-container>
     </section>
   </ng-container>
 </main>
