@@ -22,6 +22,13 @@
       <button class="save-now" type="button" (click)="saveCheckpoint()" [disabled]="!today.checkpoint.enabled || savePending || today.checkpoint.state === 'SAVING'">{{ savePending || today.checkpoint.state === 'SAVING' ? 'Saving…' : 'Save checkpoint now' }}</button>
     </section>
 
+    <section class="first-day-card" *ngIf="firstDay?.pending" aria-label="First day">
+      <div class="card-heading"><div><span class="eyebrow">Your first day</span><h2>Before the season moves on</h2></div></div>
+      <a class="first-day-step" *ngFor="let s of firstDay!.steps" [routerLink]="s.route" [class.done]="s.done">
+        <span>{{ s.done ? '✓' : '•' }}</span><span>{{ s.label }}</span>
+      </a>
+    </section>
+
     <div class="today-grid">
       <section class="match-card" aria-label="Next match">
         <div class="card-heading"><div><span class="eyebrow">Next match</span><h2>Match day starts here</h2></div><a [routerLink]="['/fixtures', today.teamId]">Schedule →</a></div>

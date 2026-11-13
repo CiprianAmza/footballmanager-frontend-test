@@ -34,6 +34,9 @@ import { TeamService } from '../services/team.service';
           </label>
           <button type="button" (click)="reply()" [disabled]="saving || !answer">Answer</button>
         </div>
+        <button type="button" *ngIf="!meeting.directorAsks && meeting.status === 'PENDING'" (click)="close()" [disabled]="saving">
+          Thank them and leave</button>
+        <p *ngIf="meeting.status === 'HELD' && !meeting.directorAsks">You met the board.</p>
         <p *ngIf="meeting.answeredWith">Your answer to the director: <em>{{ meeting.answeredWith }}</em></p>
       </ng-container>
     </section>
@@ -71,6 +74,14 @@ export class BoardMeetingComponent implements OnInit {
     this.http.get<any>(urlApp + `/board-meeting/${this.teamService.teamId}`).subscribe({
       next: m => this.meeting = m,
       error: () => this.error = 'The board is unavailable.'
+    });
+  }
+
+  close(): void {
+    this.saving = true;
+    this.http.post<any>(urlApp + '/board-meeting/close', { teamId: this.teamService.teamId }).subscribe({
+      next: m => { this.meeting = m; this.saving = false; },
+      error: e => { this.error = e?.error?.error || 'The meeting could not be closed.'; this.saving = false; }
     });
   }
 

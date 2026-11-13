@@ -56,8 +56,9 @@ export class Inbox2Component extends InboxComponent {
   }
 
   override selectMessage(message: ManagerInbox): void {
-    // Keep the message in the Unread folder until the manager explicitly marks it read.
+    // Opening a message reads it (it stays open even if the Unread folder no longer lists it).
     this.selectedMessage = message;
+    if (!message.isRead) this.markAsRead(message);
   }
 
   get visibleMessages(): ManagerInbox[] {
