@@ -16,6 +16,9 @@ export interface ManagerInbox {
   isRead: boolean;
   createdAt: number;
   deduplicationKey?: string | null;
+  /** Optional message button, e.g. NEGOTIATE_TRANSFER (actionRefId = transfer offer id). */
+  actionType?: string | null;
+  actionRefId?: number | null;
 }
 
 interface MatchReportReference {

@@ -199,6 +199,51 @@
 
     </div>
 
+    <!-- COACHES TAB: who coaches each training type -->
+    <div class="coaches-panel" *ngIf="activeTab === 'Coaches'">
+      <h2 class="section-heading">COACHES</h2>
+      <p class="section-desc">
+        Each training type is coached by one member of staff. His rating on the type (the average of two
+        coaching attributes) decides how well that training works. A type with nobody delegated uses the
+        club's best coach for it.
+      </p>
+
+      <div class="focus-message" *ngIf="coachMessage">{{ coachMessage }}</div>
+      <div *ngIf="loadingCoaches && coachTypes.length === 0" class="loading-state">Loading coaches...</div>
+
+      <div class="coach-table" *ngIf="coachTypes.length > 0">
+        <div class="coach-row coach-head">
+          <span>Type</span>
+          <span>Coach</span>
+          <span class="coach-num">Rating</span>
+          <span>Delegate</span>
+        </div>
+        <div class="coach-row" *ngFor="let row of coachTypes">
+          <div class="coach-type">
+            <span class="coach-type-name">{{ trainingTypeLabel(row.type) }}</span>
+            <span class="coach-type-detail">{{ row.coachAttributes.join(' + ') }} · {{ row.attributes.join(', ') }}</span>
+          </div>
+          <div class="coach-current">
+            <span>{{ coachName(row) }}</span>
+            <span class="coach-auto" *ngIf="row.automatic && row.effectiveStaffId != null">auto</span>
+          </div>
+          <span class="coach-num">{{ row.effectiveRating | number:'1.0-1' }}</span>
+          <select class="ind-select" [disabled]="savingCoachType === row.type"
+                  [ngModel]="row.delegatedStaffId"
+                  (ngModelChange)="delegateCoach(row, $event)">
+            <option [ngValue]="null">Automatic (best coach)</option>
+            <option *ngFor="let c of row.candidates" [ngValue]="c.staffId">
+              {{ c.name }} — {{ c.rating | number:'1.0-1' }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="loading-state" *ngIf="!loadingCoaches && coachTypes.length > 0 && coachTypes[0].candidates.length === 0">
+        The club has no coaches: every type trains at level 1.
+      </div>
+    </div>
+
     <!-- 🔹 SAVE BUTTON (Bottom Right) -->
     <button class="save-schedule-btn" (click)="saveSchedule()">
         💾 Save Schedule

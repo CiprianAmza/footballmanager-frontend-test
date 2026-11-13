@@ -1,0 +1,44 @@
+<main class="negotiation-page">
+  <div class="state" *ngIf="loading">Loading the agent…</div>
+  <div class="state error" *ngIf="!loading && !agent">{{ error }}</div>
+
+  <ng-container *ngIf="agent as a">
+    <header class="heading">
+      <div>
+        <span class="eyebrow">Player agent · {{ a.nationName }}</span>
+        <h1>{{ a.name }}</h1>
+        <p>Represents {{ a.players.length }} {{ a.players.length === 1 ? 'player' : 'players' }}</p>
+      </div>
+    </header>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Profile</h2>
+        <dl>
+          <div><dt>Personality</dt><dd>{{ personalityLabel }}</dd></div>
+          <div><dt>Patience</dt><dd>{{ a.patience }} rounds</dd></div>
+          <div><dt>Relation with you</dt><dd [class.poor]="a.refusesToNegotiate">{{ relationLabel }}</dd></div>
+        </dl>
+        <p class="hint">{{ personalityHint }}</p>
+      </article>
+    </section>
+
+    <section class="card players">
+      <h2>Players</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Player</th><th>Pos</th><th>Age</th><th>Rating</th><th>Club</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let p of a.players">
+              <td><a [routerLink]="['/player', p.id]">{{ p.name }}</a></td>
+              <td>{{ p.position }}</td>
+              <td>{{ p.age }}</td>
+              <td>{{ p.rating | number:'1.0-0' }}</td>
+              <td><a *ngIf="p.teamId; else free" [routerLink]="['/team', p.teamId]">{{ p.teamName }}</a><ng-template #free>{{ p.teamName }}</ng-template></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </ng-container>
+</main>

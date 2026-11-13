@@ -345,9 +345,58 @@ export class PlayerComponent implements OnInit, OnDestroy {
             && !this.isOwnPlayer()
             && !this.playerView.isFreeAgent
             && !this.playerView.isRetired
-            && !this.playerView.willNeverLeave
+            // A one-club player can still be bid for; his agent turns personal terms down later.
             && Number.isSafeInteger(playerTeamId)
             && playerTeamId > 0;
+    }
+
+    agentInterest: { interested: boolean; agentName: string; agentId?: number; message: string; personality?: string } | null = null;
+
+    personalityLabel(personality?: string): string {
+        switch (personality) {
+            case 'MONEY': return 'Driven by money';
+            case 'FAME': return 'Driven by fame';
+            case 'AMBITION': return 'Ambitious';
+            default: return '';
+        }
+    }
+    agentInterestLoading = false;
+    buyBackLoading = false;
+
+    /** I sold him with a buy-back clause that still runs. */
+    canExerciseBuyBack(): boolean {
+        return !!this.playerView && this.actingTeamId > 0 && this.playerView.buyBackClubId === this.actingTeamId
+            && this.playerView.buyBackUntilSeason >= this.currentSeason;
+    }
+
+    exerciseBuyBack(): void {
+        this.buyBackLoading = true;
+        this.http.post<any>(urlApp + `/transferOffer/buyBack/${this.playerId}`, { teamId: this.actingTeamId }).subscribe({
+            next: res => {
+                this.buyBackLoading = false;
+                this.marketActionSuccess = true;
+                this.marketActionMessage = res.message;
+                this.fetchData();
+            },
+            error: error => {
+                this.buyBackLoading = false;
+                this.marketActionSuccess = false;
+                this.marketActionMessage = this.marketMutationError(error, 'The buy-back could not be completed.');
+            }
+        });
+    }
+
+    /** Asks the player's agent whether he would talk to my club (no commitment, the day is not blocked). */
+    askAgentInterest(): void {
+        this.agentInterestLoading = true;
+        this.agentInterest = null;
+        this.http.get<any>(urlApp + `/contract/interest/${this.playerId}`).subscribe({
+            next: answer => { this.agentInterest = answer; this.agentInterestLoading = false; },
+            error: () => {
+                this.agentInterestLoading = false;
+                this.agentInterest = { interested: false, agentName: '', message: 'The agent could not be reached.' };
+            }
+        });
     }
 
     canOfferFreeAgentContract(): boolean {
@@ -369,53 +418,26 @@ export class PlayerComponent implements OnInit, OnDestroy {
             return;
         }
         if (!this.canMakeTransferOffer()) return;
-        this.transferOfferAmount = Math.max(1, Number(this.playerView.transferValue) || 0);
-        this.transferOfferResult = null;
-        this.showTransferOfferForm = true;
+        // Opens round-based fee talks with the selling club, or leads back to the ones already open.
+        this.transferOfferLoading = true;
+        this.http.post<any>(urlApp + '/transferOffer/talks/start', { playerId: this.playerId, teamId: this.actingTeamId })
+            .subscribe({
+                next: talks => {
+                    this.transferOfferLoading = false;
+                    this.router.navigate(['/club-negotiation', talks.id]);
+                },
+                error: error => {
+                    this.transferOfferLoading = false;
+                    this.marketActionSuccess = false;
+                    this.marketActionMessage = this.marketMutationError(error, 'The transfer talks could not be opened.');
+                }
+            });
     }
 
     closeTransferOffer(): void {
         if (this.transferOfferLoading) return;
         this.showTransferOfferForm = false;
         this.transferOfferResult = null;
-    }
-
-    submitTransferOffer(amount: number = this.transferOfferAmount): void {
-        if (!this.canMakeTransferOffer() || this.transferOfferLoading || amount <= 0) return;
-        this.transferOfferLoading = true;
-        this.transferOfferResult = null;
-        const body = {
-            playerId: this.playerId,
-            offerAmount: amount,
-            teamId: this.actingTeamId
-        };
-        this.http.post<any>(urlApp + '/transferOffer/makeOffer', body).subscribe({
-            next: result => {
-                this.transferOfferLoading = false;
-                this.transferOfferResult = result;
-                const status = String(result?.status || '').toLowerCase();
-                if (status === 'accepted') {
-                    this.showTransferOfferForm = false;
-                    this.marketActionSuccess = true;
-                    this.marketActionMessage = `${result.playerName || this.playerView.name} has joined your club.`;
-                    this.fetchData();
-                    this.fetchTransferHistory();
-                }
-            },
-            error: error => {
-                this.transferOfferLoading = false;
-                this.marketActionSuccess = false;
-                this.marketActionMessage = this.marketMutationError(error, 'The transfer offer could not be submitted.');
-                this.showTransferOfferForm = false;
-            }
-        });
-    }
-
-    acceptTransferCounter(): void {
-        const askingPrice = Number(this.transferOfferResult?.askingPrice);
-        if (!Number.isFinite(askingPrice) || askingPrice <= 0) return;
-        this.transferOfferAmount = askingPrice;
-        this.submitTransferOffer(askingPrice);
     }
 
     openFreeAgentContract(): void {
@@ -551,26 +573,24 @@ export class PlayerComponent implements OnInit, OnDestroy {
         this.renewMessage = '';
     }
 
-    submitRenewal() {
-        const body = {
-            playerId: this.playerId,
-            teamId: this.playerView.teamId,
-            contractYears: this.renewYears,
-            newWage: this.renewWage
-        };
-        this.http.post<any>(urlApp + '/contract/renew', body)
+    renewStarting = false;
+
+    /** Opens round-based talks with the player's agent (or resumes the open ones) on the negotiation page. */
+    startRenewalNegotiation(): void {
+        this.renewStarting = true;
+        this.renewMessage = '';
+        this.http.post<any>(urlApp + '/contract/negotiation/start', { playerId: this.playerId, teamId: this.playerView.teamId })
             .subscribe({
-                next: (res) => {
-                    this.renewMessage = res.message;
-                    this.renewSuccess = res.success;
-                    if (res.success) {
-                        this.showRenewForm = false;
-                        this.fetchData();
-                    }
+                next: negotiation => {
+                    this.renewStarting = false;
+                    this.router.navigate(['/negotiation', negotiation.id]);
                 },
-                error: (err) => {
-                    this.renewMessage = err.error?.message || 'Renewal failed.';
+                error: err => {
+                    this.renewStarting = false;
                     this.renewSuccess = false;
+                    this.renewMessage = err?.error?.code === 'AGENT_REFUSES'
+                        ? 'The agent refuses to negotiate with you.'
+                        : 'The negotiation could not be opened.';
                 }
             });
     }

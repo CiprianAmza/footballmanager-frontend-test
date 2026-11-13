@@ -438,6 +438,13 @@
   font-weight: bold; cursor: pointer;
 }
 .btn-fire:hover { background: #e74c3c; color: white; }
+.btn-praise {
+  padding: 8px 12px; border: 1px solid #2ecc71; border-radius: 4px; margin-right: 6px;
+  background: transparent; color: #2ecc71; font-size: 0.8em;
+  font-weight: bold; cursor: pointer;
+}
+.btn-praise:hover { background: #2ecc71; color: #111; }
+.coach-read { margin: 6px 0; font-size: 0.8em; font-style: italic; color: #bbb; }
 
 /* Scout Table */
 .scout-table {

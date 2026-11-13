@@ -22,6 +22,88 @@
           <label for="managerAge">Age</label>
           <input id="managerAge" type="number" [(ngModel)]="managerAge" min="25" max="75" />
         </div>
+        <div class="form-row">
+          <label for="birthDay">Birthday</label>
+          <select id="birthDay" [(ngModel)]="birthDay">
+            <option [ngValue]="null">Day</option>
+            <option *ngFor="let d of days" [ngValue]="d">{{ d }}</option>
+          </select>
+          <select aria-label="Birth month" [(ngModel)]="birthMonth">
+            <option [ngValue]="null">Month</option>
+            <option *ngFor="let m of months; let i = index" [ngValue]="i + 1">{{ m }}</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="birthNation">Born in</label>
+          <select id="birthNation" [(ngModel)]="birthNationId">
+            <option [ngValue]="null">Not specified</option>
+            <option *ngFor="let n of options.nations" [ngValue]="n.id">{{ n.name }}</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="favoriteTeam">Favourite club</label>
+          <select id="favoriteTeam" [(ngModel)]="favoriteTeamId">
+            <option [ngValue]="null">None</option>
+            <optgroup *ngFor="let league of leagues" [label]="league.competitionName">
+              <option *ngFor="let team of league.teams" [ngValue]="team.teamId">{{ team.teamName }}</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="preferredTactic">Preferred tactic</label>
+          <select id="preferredTactic" [(ngModel)]="preferredTactic">
+            <option value="">No preference</option>
+            <option *ngFor="let t of options.tactics" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="playingCareer">Playing career</label>
+          <select id="playingCareer" [(ngModel)]="playingCareer">
+            <option *ngFor="let c of options.playingCareers" [value]="c.value">{{ c.label }}</option>
+          </select>
+          <span class="setup-hint" *ngIf="startingReputation !== null">Starting reputation: {{ startingReputation }}</span>
+        </div>
+        <div class="form-row">
+          <label for="coachingLicence">Coaching licence</label>
+          <select id="coachingLicence" [(ngModel)]="coachingLicence">
+            <option *ngFor="let l of options.coachingLicences" [value]="l.value">{{ l.label }}</option>
+          </select>
+          <span class="setup-hint">Top flights need a Pro licence, second tiers an A, lower leagues a B. Without it you are
+            registered as assistant, and clubs above 7,000 reputation refuse you.</span>
+        </div>
+        <div class="face-editor" *ngIf="faceEditorParts.length && options.faceParts?.skinTone">
+          <div class="face-preview">
+            <app-player-face [size]="120" [baseFaceId]="face['baseFaceId']" [skinTone]="face['skinTone']"
+                             [hairStyle]="face['hairStyle']" [hairColor]="face['hairColor']" [eyeColor]="face['eyeColor']"
+                             [faceShape]="face['faceShape']" [noseShape]="face['noseShape']" [eyeShape]="face['eyeShape']"
+                             [mouthShape]="face['mouthShape']" [browShape]="face['browShape']"
+                             [species]="faceSpecies" [nationId]="birthNationId || 0"></app-player-face>
+            <button type="button" class="browse-link" (click)="randomFace()">Random</button>
+            <span class="setup-hint" *ngIf="faceSpecies !== 'human'">Born in this nation: {{ faceSpecies }}</span>
+          </div>
+          <div class="face-parts">
+            <div class="face-part" *ngFor="let part of faceEditorParts">
+              <span>{{ part.label }}</span>
+              <button type="button" (click)="stepPart(part.key, -1)" [attr.aria-label]="'Previous ' + part.label">&lsaquo;</button>
+              <strong>{{ face[part.key] + 1 }}/{{ partCount(part.key) }}</strong>
+              <button type="button" (click)="stepPart(part.key, 1)" [attr.aria-label]="'Next ' + part.label">&rsaquo;</button>
+            </div>
+          </div>
+        </div>
+        <div class="playing-seasons" *ngIf="playingCareer !== 'NONE'">
+          <div class="playing-seasons-head">
+            <span>Seasons as a player (optional)</span>
+            <button type="button" class="browse-link" (click)="addSeason()">+ Add season</button>
+          </div>
+          <div class="playing-season-row" *ngFor="let s of playingSeasons; let i = index">
+            <span>{{ i + 1 }}.</span>
+            <input type="text" [(ngModel)]="s.teamName" placeholder="Club" maxlength="60" />
+            <input type="number" [(ngModel)]="s.goals" min="0" max="200" aria-label="Goals" title="Goals" />
+            <input type="number" [(ngModel)]="s.assists" min="0" max="200" aria-label="Assists" title="Assists" />
+            <button type="button" class="browse-link" (click)="removeSeason(i)">Remove</button>
+          </div>
+          <div class="setup-hint" *ngIf="playingSeasons.length">Club, goals, assists</div>
+        </div>
       </div>
 
       <!-- Team Selection -->
@@ -29,7 +111,10 @@
         <h2>Select Your Club</h2>
         <div class="leagues-container">
           <div class="league-group" *ngFor="let league of leagues">
-            <h3 class="league-name">{{ league.competitionName }}</h3>
+            <h3 class="league-name">
+              {{ league.competitionName }}
+              <button type="button" class="browse-link" (click)="openPage(['/media-prediction', league.competitionId], $event)">Media prediction</button>
+            </h3>
             <div class="teams-grid">
               <div class="team-card"
                    *ngFor="let team of league.teams"
@@ -41,6 +126,11 @@
                 </div>
                 <span class="team-name">{{ team.teamName }}</span>
                 <span class="team-rep">{{ team.reputation }}</span>
+                <span class="team-browse">
+                  <button type="button" class="browse-link" (click)="openPage(['/team', team.teamId], $event)">Club</button>
+                  <button type="button" class="browse-link" (click)="openPage(['/squad4', team.teamId], $event)">Squad</button>
+                  <button type="button" class="browse-link" (click)="openPage(['/team-history', team.teamId], $event)">History</button>
+                </span>
               </div>
             </div>
           </div>

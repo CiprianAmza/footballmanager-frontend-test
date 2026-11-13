@@ -1,0 +1,58 @@
+<main class="negotiation-page">
+  <div class="state" *ngIf="loading">Loading the talks…</div>
+  <div class="state error" *ngIf="!loading && !talks">{{ error }}</div>
+
+  <ng-container *ngIf="talks as t">
+    <header class="heading">
+      <div>
+        <span class="eyebrow">Transfer fee talks</span>
+        <h1><a [routerLink]="['/player', t.playerId]">{{ t.playerName }}</a></h1>
+        <p>with <a [routerLink]="['/team', t.toTeamId]">{{ t.toTeamName }}</a></p>
+      </div>
+      <a class="back" [routerLink]="['/player', t.playerId]">← Player</a>
+    </header>
+
+    <p class="hint" *ngIf="isOpen">You can leave and come back with "Make Offer" on the player's page. The game day keeps moving.</p>
+
+    <section class="grid">
+      <article class="card">
+        <h2>{{ t.toTeamName }}</h2>
+        <dl>
+          <div><dt>{{ t.status === 'final_offer' ? 'Final offer — take it or leave it' : 'Asking price' }}</dt><dd>{{ t.askingPrice | number }}</dd></div>
+          <div *ngIf="t.offerAmount"><dt>Your last offer</dt><dd>{{ t.offerAmount | number }}</dd></div>
+          <div *ngIf="t.rounds"><dt>Round</dt><dd>{{ t.round }} / {{ t.rounds }}</dd></div>
+        </dl>
+        <p class="hint">The club can come down, but only so far. Offers far too low end the talks, and a failed negotiation keeps you away for 3–10 days.</p>
+        <div class="actions" *ngIf="t.status === 'final_offer'">
+          <button type="button" class="secondary" (click)="answerFinal(false)" [disabled]="sending">Refuse</button>
+          <button type="button" (click)="answerFinal(true)" [disabled]="sending">Accept</button>
+        </div>
+      </article>
+
+      <article class="card offer" *ngIf="t.status === 'talks'">
+        <h2>Your offer</h2>
+        <label>Paid now<input type="number" min="0" [(ngModel)]="amount"></label>
+        <label>Instalments (one per season)<select [(ngModel)]="installmentCount"><option *ngFor="let n of [0,1,2,3]" [ngValue]="n">{{ n === 0 ? 'None' : n }}</option></select></label>
+        <label *ngIf="installmentCount > 0">Each instalment<input type="number" min="1" [(ngModel)]="installmentAmount"></label>
+        <label>Sell-on to them (% of his next sale)<input type="number" min="0" max="50" [(ngModel)]="sellOnPercent"></label>
+        <label>Buy-back price for them (0 = none, valid 2 seasons)<input type="number" min="0" [(ngModel)]="buyBackPrice"></label>
+        <label>Goals bonus for them (0 = none, valid 2 seasons)<input type="number" min="0" [(ngModel)]="goalsBonusAmount"></label>
+        <label *ngIf="goalsBonusAmount > 0">Paid when he scores this many goals in a season for you<input type="number" min="1" max="60" [(ngModel)]="goalsBonusTarget"></label>
+        <label>League title bonus for them (0 = none, valid 2 seasons)<input type="number" min="0" [(ngModel)]="titleBonusAmount"></label>
+        <p class="hint">Total money: {{ offerTotal | number }}. The club weighs instalments, sell-on and buy-back by its situation: a club in trouble wants cash now.</p>
+        <div class="actions">
+          <button type="button" (click)="makeOffer()" [disabled]="sending || offerTotal <= 0">Make offer</button>
+        </div>
+        <p class="feedback" *ngIf="feedback">{{ feedback }}</p>
+      </article>
+    </section>
+
+    <p class="error" *ngIf="error">{{ error }}</p>
+    <section class="outcome" *ngIf="outcome" [attr.data-status]="feeAgreed ? 'AGREED' : 'WALKED_AWAY'">
+      {{ outcome }}
+      <div class="actions" *ngIf="t.status === 'fee_agreed'">
+        <button type="button" (click)="openPersonalTerms()">Negotiate personal terms →</button>
+      </div>
+    </section>
+  </ng-container>
+</main>

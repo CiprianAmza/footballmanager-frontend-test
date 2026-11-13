@@ -76,11 +76,24 @@
             <strong>×{{ majorAwardSummary.ballonDors }}</strong>
           </a>
         </div>
+        <div class="profile-action-feedback" *ngIf="playerView?.wanted" role="status">
+          Wanted by {{ playerView?.wantedBy?.length ? playerView.wantedBy.join(', ') : 'another club' }}. Move first if you want him.
+        </div>
         <div class="profile-market-actions" *ngIf="canMakeTransferOffer() || canOfferFreeAgentContract()">
           <button type="button" class="profile-market-btn transfer-action"
                   *ngIf="canMakeTransferOffer()" (click)="openTransferOffer()" [disabled]="!isTransferWindowOpen"
                   [title]="isTransferWindowOpen ? 'Make a transfer offer' : 'Offers open during the transfer window'">
             Make Offer
+          </button>
+          <button type="button" class="profile-market-btn transfer-action"
+                  *ngIf="canExerciseBuyBack()" (click)="exerciseBuyBack()" [disabled]="buyBackLoading || !isTransferWindowOpen"
+                  title="You sold him with a buy-back clause">
+            Buy Back ({{ playerView.buyBackPrice | number }})
+          </button>
+          <button type="button" class="profile-market-btn secondary-action"
+                  *ngIf="canMakeTransferOffer()" (click)="askAgentInterest()" [disabled]="agentInterestLoading"
+                  title="Ask the player's agent whether he would join your club">
+            Ask Agent
           </button>
           <button type="button" class="profile-market-btn contract-action"
                   *ngIf="canOfferFreeAgentContract()" (click)="openFreeAgentContract()">
@@ -89,6 +102,11 @@
           <span class="transfer-window-note" *ngIf="canMakeTransferOffer() && !isTransferWindowOpen">
             Transfer window closed
           </span>
+        </div>
+        <div class="profile-action-feedback" *ngIf="agentInterest as answer"
+             [class.success]="answer.interested" [class.error]="!answer.interested" role="status" aria-live="polite">
+          <strong><a *ngIf="answer.agentId; else selfAnswer" [routerLink]="['/agent', answer.agentId]">{{ answer.agentName }}</a><ng-template #selfAnswer>The player</ng-template>:</strong> “{{ answer.message }}”
+          <small *ngIf="answer.personality"> · {{ personalityLabel(answer.personality) }}</small>
         </div>
         <div class="profile-action-feedback" *ngIf="marketActionMessage"
              [class.success]="marketActionSuccess" [class.error]="!marketActionSuccess"
@@ -106,6 +124,10 @@
             <span class="stat-label">RATING</span>
             <span class="stat-val" *ngIf="playerView.rating != null; else unknownRating">{{ ratingLabel | number:'1.0-0' }}</span>
             <ng-template #unknownRating><span class="stat-val">—</span></ng-template>
+        </div>
+        <div class="stat-box" *ngIf="playerView.specialRating != null" title="Special rating: what he is worth in a match at his position (engine weights)">
+            <span class="stat-label">SPECIAL</span>
+            <span class="stat-val">{{ playerView.specialRating | number:'1.0-0' }}</span>
         </div>
       </div>
     </div>
@@ -188,6 +210,12 @@
                         <span [style.color]="playerView.rating | ratingColor" [style.font-weight]="800">
                           {{ playerView.rating | number:'1.0-0' }}
                           <small style="opacity: 0.7; margin-left: 6px;">{{ playerView.rating | ratingTierName }}</small>
+                        </span>
+                    </div>
+                    <div class="detail-row" *ngIf="playerView.specialRating != null">
+                        <span title="What he is worth in a match at his position (engine weights)">Special Rating</span>
+                        <span [style.color]="playerView.specialRating | ratingColor" [style.font-weight]="800">
+                          {{ playerView.specialRating | number:'1.0-0' }}
                         </span>
                     </div>
                     <div class="detail-row">
@@ -422,35 +450,9 @@
                 <div *ngIf="isContractExpiring()" class="contract-expiring-warning">
                     Contract expiring soon!
                 </div>
-                <button class="renew-btn" (click)="toggleRenewForm()" *ngIf="!showRenewForm">
-                    Offer New Contract
+                <button class="renew-btn" (click)="startRenewalNegotiation()" [disabled]="renewStarting">
+                    Negotiate New Contract
                 </button>
-
-                <div *ngIf="showRenewForm" class="renew-form">
-                    <p class="renew-guidance" *ngIf="renewalDemand > 0">
-                        Current: {{ playerView.wage | currency:'EUR':'symbol':'1.0-0' }} ·
-                        Player request: <strong>{{ renewalDemand | currency:'EUR':'symbol':'1.0-0' }}</strong>
-                        (request is always within −40% / +40% of the current wage)
-                    </p>
-                    <div class="renew-form-row">
-                        <label>New Weekly Wage:</label>
-                        <input type="number" [(ngModel)]="renewWage" class="renew-input" />
-                    </div>
-                    <div class="renew-form-row">
-                        <label>Contract Years:</label>
-                        <select [(ngModel)]="renewYears" class="renew-input">
-                            <option [value]="1">1 year</option>
-                            <option [value]="2">2 years</option>
-                            <option [value]="3">3 years</option>
-                            <option [value]="4">4 years</option>
-                            <option [value]="5">5 years</option>
-                        </select>
-                    </div>
-                    <div class="renew-form-actions">
-                        <button class="renew-submit-btn" (click)="submitRenewal()">Submit Offer</button>
-                        <button class="renew-cancel-btn" (click)="toggleRenewForm()">Cancel</button>
-                    </div>
-                </div>
 
                 <div *ngIf="renewMessage" class="renew-message"
                      [style.color]="renewSuccess ? '#4caf50' : '#ff4444'">
@@ -600,66 +602,6 @@
   </div>
 </div>
 
-<!-- Direct transfer offer -->
-<div class="profile-action-overlay" *ngIf="showTransferOfferForm" (click)="closeTransferOffer()">
-  <section class="profile-action-dialog" (click)="$event.stopPropagation()"
-           role="dialog" aria-modal="true" aria-labelledby="transfer-offer-title">
-    <div class="profile-action-dialog-header">
-      <div>
-        <span class="profile-action-kicker">Transfer offer</span>
-        <h2 id="transfer-offer-title">Sign {{ playerView?.name }}</h2>
-      </div>
-      <button type="button" class="profile-action-close" (click)="closeTransferOffer()"
-              [disabled]="transferOfferLoading" aria-label="Close">&times;</button>
-    </div>
-
-    <ng-container *ngIf="!transferOfferResult">
-      <div class="profile-action-player-summary">
-        <span>{{ playerView?.position }}</span>
-        <a *ngIf="playerView?.teamId; else offerClubName" [routerLink]="['/team', playerView?.teamId]">{{ playerView?.teamName }}</a><ng-template #offerClubName>{{ playerView?.teamName }}</ng-template>
-        <strong>{{ playerView?.transferValue | currency:'EUR':'symbol':'1.0-0' }}</strong>
-      </div>
-      <label class="profile-action-field">
-        <span>Offer amount</span>
-        <input type="number" [(ngModel)]="transferOfferAmount" min="1" step="1000"
-               [disabled]="transferOfferLoading">
-      </label>
-      <div class="profile-action-dialog-buttons">
-        <button type="button" class="profile-market-btn secondary-action" (click)="closeTransferOffer()"
-                [disabled]="transferOfferLoading">Cancel</button>
-        <button type="button" class="profile-market-btn transfer-action" (click)="submitTransferOffer()"
-                [disabled]="transferOfferLoading || transferOfferAmount <= 0">
-          {{ transferOfferLoading ? 'Submitting…' : 'Submit Offer' }}
-        </button>
-      </div>
-    </ng-container>
-
-    <div class="profile-offer-result" *ngIf="transferOfferResult as result"
-         [ngClass]="(result.status || '').toLowerCase()">
-      <h3 *ngIf="result.status?.toLowerCase() === 'counter'">Counter offer received</h3>
-      <h3 *ngIf="result.status?.toLowerCase() === 'rejected'">Offer rejected</h3>
-      <p *ngIf="result.status?.toLowerCase() === 'counter'">
-        {{ result.toTeamName }} wants
-        <strong>{{ result.askingPrice | currency:'EUR':'symbol':'1.0-0' }}</strong>.
-      </p>
-      <p *ngIf="result.status?.toLowerCase() === 'rejected'">
-        {{ result.toTeamName }} rejected the offer of
-        <strong>{{ result.offerAmount | currency:'EUR':'symbol':'1.0-0' }}</strong>.
-      </p>
-      <div class="profile-action-dialog-buttons">
-        <button type="button" class="profile-market-btn secondary-action" (click)="closeTransferOffer()"
-                [disabled]="transferOfferLoading">
-          {{ result.status?.toLowerCase() === 'counter' ? 'Walk Away' : 'Close' }}
-        </button>
-        <button type="button" class="profile-market-btn transfer-action"
-                *ngIf="result.status?.toLowerCase() === 'counter'"
-                (click)="acceptTransferCounter()" [disabled]="transferOfferLoading">
-          {{ transferOfferLoading ? 'Submitting…' : 'Accept Counter' }}
-        </button>
-      </div>
-    </div>
-  </section>
-</div>
 
 <!-- Direct free-agent contract -->
 <div class="profile-action-overlay" *ngIf="showFreeAgentContractForm" (click)="closeFreeAgentContract()">

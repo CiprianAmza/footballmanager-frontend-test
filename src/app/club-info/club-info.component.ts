@@ -103,6 +103,15 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
   teamId!: number;
   club: ClubView | null = null;
   currentManager: CurrentManagerSummary | null = null;
+  /** Chairman, general director and whether the club is in a power struggle (design §5). */
+  board: any = null;
+  /** The chairman's trust in me (0-100), shown only on my own club. */
+  chairmanTrust: number | null = null;
+  /** How I am registered here under the licence rule (design §3), own club only. */
+  registration: any = null;
+  /** The director's recent requests to my club (design §5), own club only. */
+  wishes: any[] = [];
+  boardMessage = '';
   managerLoading = false;
   managerUnavailable = false;
   loading = true;
@@ -133,6 +142,30 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
     private gameEvents: GameEventsService,
     private teamService: TeamService
   ) {}
+
+  loadWishes(): void {
+    this.http.get<any[]>(urlApp + '/club-board/wishes').subscribe({
+      next: w => this.wishes = w || [],
+      error: () => this.wishes = []
+    });
+  }
+
+  /** Go over the director's head: whose wish is it really? (once a season) */
+  askChairman(wish: any): void {
+    this.http.post<any>(urlApp + `/club-board/wishes/${wish.id}/ask-chairman`, {}).subscribe({
+      next: a => { this.boardMessage = a.message; this.loadWishes(); },
+      error: () => this.boardMessage = 'The chairman is unavailable.'
+    });
+  }
+
+  /** Ask the chairman to dismiss the director. */
+  dismissDirector(): void {
+    if (!confirm('Ask the chairman to dismiss the director? If he refuses, he will trust you less.')) return;
+    this.http.post<any>(urlApp + '/club-board/dismiss-director', {}).subscribe({
+      next: a => { this.boardMessage = a.message; this.loadData(); },
+      error: () => this.boardMessage = 'The chairman is unavailable.'
+    });
+  }
 
   ngOnInit(): void {
     this.sub.add(this.route.params.subscribe(params => {
@@ -206,6 +239,23 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
     this.emptyMessage = '';
     this.club = null;
     this.currentManager = null;
+    this.board = null;
+    this.http.get<any>(urlApp + `/club-board/${this.teamId}`).subscribe({
+      next: board => this.board = board,
+      error: () => this.board = null
+    });
+    this.chairmanTrust = null;
+    if (this.teamId === Number(this.teamService.teamId)) {
+      this.http.get<any>(urlApp + `/club-board/${this.teamId}/trust`).subscribe({
+        next: t => this.chairmanTrust = t.chairmanTrust,
+        error: () => this.chairmanTrust = null
+      });
+      this.http.get<any>(urlApp + `/club-board/${this.teamId}/registration`).subscribe({
+        next: r => this.registration = r && r.role ? r : null,
+        error: () => this.registration = null
+      });
+      this.loadWishes();
+    }
     this.managerLoading = false;
     this.managerUnavailable = false;
     this.competitionBreakdownLoading = false;

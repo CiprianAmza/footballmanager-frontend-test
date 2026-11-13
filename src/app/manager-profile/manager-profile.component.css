@@ -827,3 +827,11 @@ tr.relegated td {
   vertical-align: middle;
   font-style: normal;
 }
+
+.manager-background { margin: 16px 0; }
+.background-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.background-grid span { display: block; font-size: 12px; opacity: 0.7; }
+.manager-background .playing-seasons { margin-top: 10px; border-collapse: collapse; }
+.manager-background .playing-seasons th, .manager-background .playing-seasons td { padding: 4px 10px; text-align: left; }
+
+.manager-face { flex: 0 0 auto; margin-right: 16px; }

@@ -558,3 +558,72 @@
 }
 
 .ind-clear-btn:hover:not(:disabled) { color: #fff; border-color: #888; }
+/* Coaches tab */
+.coaches-panel {
+  padding: 20px 0;
+}
+
+.coach-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.coach-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) minmax(140px, 1fr) 70px minmax(200px, 1.4fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  background: rgba(40, 40, 40, 1);
+  border-radius: 6px;
+}
+
+.coach-head {
+  background: transparent;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.coach-type {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.coach-type-name {
+  font-weight: 700;
+}
+
+.coach-type-detail {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.coach-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coach-auto {
+  font-size: 10px;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.coach-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 700px) {
+  .coach-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}

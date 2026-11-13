@@ -102,6 +102,37 @@
               </a>
               <span *ngIf="!managerLoading && !managerUnavailable && !currentManager" class="p-name vacant-role">Vacant</span>
             </div>
+            <div class="person-row" *ngIf="board?.chairmanName">
+              <span class="role">Chairman</span>
+              <span class="p-name">{{ board.chairmanName }}</span>
+            </div>
+            <div class="person-row board-note" *ngIf="registration && !registration.qualified" [class.board-conflict]="true">
+              <span>The league requires a {{ registration.requiredLicence }}; you hold {{ registration.heldLicence }}.
+                You are registered as {{ registration.role === 'GOALKEEPING_COACH' ? 'goalkeeping coach' : 'assistant manager' }}{{ registration.frontCoachName ? '; on paper the head coach is ' + registration.frontCoachName : '' }}.</span>
+            </div>
+            <div class="person-row" *ngIf="chairmanTrust !== null">
+              <span class="role">Chairman's trust in you</span>
+              <span class="p-name" [class.board-conflict]="chairmanTrust < 30">{{ chairmanTrust }}/100</span>
+            </div>
+            <div class="person-row" *ngIf="board?.hasDirector">
+              <span class="role">General Director</span>
+              <span class="p-name">{{ board.directorName }}</span>
+            </div>
+            <div class="person-row board-note" *ngIf="board?.description" [class.board-conflict]="board.conflict">
+              <span>{{ board.description }}</span>
+            </div>
+            <ng-container *ngIf="chairmanTrust !== null && board?.hasDirector">
+              <div class="person-row board-note" *ngFor="let w of wishes.slice(0, 4)">
+                <span>S{{ w.season }}: &ldquo;{{ w.text }}&rdquo;
+                  <em *ngIf="w.settled">({{ w.obeyed ? 'done' : 'ignored' }})</em>
+                  <em *ngIf="w.revealed">({{ w.fromChairman ? 'the chairman confirmed it' : 'not the chairman\'s wish' }})</em></span>
+                <button *ngIf="!w.revealed" type="button" class="inline-retry-btn" (click)="askChairman(w)">Ask the chairman</button>
+              </div>
+              <div class="person-row">
+                <button type="button" class="inline-retry-btn" (click)="dismissDirector()">Ask for the director's dismissal</button>
+              </div>
+              <div class="person-row board-note" *ngIf="boardMessage"><span>{{ boardMessage }}</span></div>
+            </ng-container>
           </div>
         </div>
 

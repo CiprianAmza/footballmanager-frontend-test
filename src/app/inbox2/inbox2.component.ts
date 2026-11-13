@@ -26,7 +26,7 @@ export class Inbox2Component extends InboxComponent {
     'JOB_OFFER', 'PRESS_CONFERENCE', 'board', 'discipline', 'transfer',
     'TACTICAL_MANDATE_UPDATED', 'COACH_COMPLAINT', 'TRADER_ADVICE_AVAILABLE'
   ]);
-  private readonly mediaCategories = new Set(['MEDIA_REACTION', 'MEDIA_PREVIEW', 'TRANSFER_RUMOUR', 'league_news', 'match_result']);
+  private readonly mediaCategories = new Set(['MEDIA_REACTION', 'MEDIA_PREVIEW', 'TRANSFER_RUMOUR', 'league_news', 'match_result', 'press']);
 
   constructor(
     http: HttpClient,
@@ -140,6 +140,8 @@ export class Inbox2Component extends InboxComponent {
     if (this.isMedia(message)) return 'Football Wire';
     if (message.category === 'board' || message.category.includes('MANDATE')) return 'Club Board';
     if (message.category === 'TRANSFER_RUMOUR') return 'Transfer Wire';
+    if (message.category === 'press') return 'Press';
+    if (message.category === 'assistant') return 'Assistant';
     if (message.category === 'transfer') return 'Transfer Office';
     if (message.category === 'JOB_OFFER' || message.category === 'CAREER') return 'Career Office';
     if (message.category === 'discipline') return 'Competition Office';
@@ -158,6 +160,8 @@ export class Inbox2Component extends InboxComponent {
   }
 
   actionLabel(message: ManagerInbox): string | null {
+    if (message.actionType === 'NEGOTIATE_TRANSFER') return 'Negotiate personal terms';
+    if (message.actionType === 'OPEN_NEGOTIATION') return 'Open negotiation';
     if (message.category === 'transfer' || message.category === 'TRANSFER_RUMOUR') return 'Open Transfer Centre';
     if (message.category === 'board') return 'Open Manager Desk';
     if (message.category === 'match_result') return 'Open Fixtures';
@@ -168,7 +172,22 @@ export class Inbox2Component extends InboxComponent {
     return null;
   }
 
+  negotiationError = '';
+
   openMessageAction(message: ManagerInbox): void {
+    if (message.actionType === 'NEGOTIATE_TRANSFER' && message.actionRefId) {
+      // Opens the talks the first time and leads back to them afterwards.
+      this.negotiationError = '';
+      this.http.post<any>(`${urlApp}/contract/negotiation/startTransfer`, { transferOfferId: message.actionRefId }).subscribe({
+        next: negotiation => this.router.navigate(['/negotiation', negotiation.id]),
+        error: err => this.negotiationError = this.negotiationErrorText(err?.error?.code)
+      });
+      return;
+    }
+    if (message.actionType === 'OPEN_NEGOTIATION' && message.actionRefId) {
+      this.router.navigate(['/negotiation', message.actionRefId]);
+      return;
+    }
     const teamId = this.teamService.teamId;
     const routes: { [category: string]: any[] } = {
       transfer: ['/transfers', teamId, this.teamService.currentSeason],
@@ -183,6 +202,15 @@ export class Inbox2Component extends InboxComponent {
     };
     const route = routes[message.category];
     if (route) this.router.navigate(route);
+  }
+
+  private negotiationErrorText(code?: string): string {
+    switch (code) {
+      case 'AGENT_REFUSES': return 'The agent refuses to negotiate with you.';
+      case 'PLAYER_GONE': return 'The player is no longer at the selling club.';
+      case 'FEE_NOT_AGREED': return 'The fee agreement is no longer valid.';
+      default: return 'The negotiation could not be opened.';
+    }
   }
 
   selectRelative(offset: number): void {

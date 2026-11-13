@@ -98,6 +98,8 @@ interface ManagerClubSummary {
 }
 
 interface ManagerProfile {
+  /** The human manager's own story; empty for AI managers. */
+  background?: any;
   managerId: number;
   managerName: string;
   reputation: number;
@@ -414,10 +416,16 @@ export class ManagerProfileComponent implements OnInit, OnDestroy {
     return trophiesWon.split(',').map(t => t.trim()).filter(t => t.length > 0);
   }
 
+  monthName(month: number): string {
+    return ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October',
+      'November', 'December'][month - 1] ?? '';
+  }
+
   getReputationClass(reputation: number): string {
-    if (reputation >= 150) return 'rep-elite';
-    if (reputation >= 100) return 'rep-high';
-    if (reputation >= 50) return 'rep-medium';
+    // Manager reputation is on the clubs' scale, 0-10,000.
+    if (reputation >= 8000) return 'rep-elite';
+    if (reputation >= 5500) return 'rep-high';
+    if (reputation >= 3000) return 'rep-medium';
     return 'rep-low';
   }
 }

@@ -210,3 +210,22 @@ input:focus, select:focus { border-color: var(--sc-accent); box-shadow: 0 0 0 2p
   .builder-footer { align-items: stretch; flex-direction: column; }
   .primary-action { width: 100%; }
 }
+
+.wanted-tag { margin-left:6px; padding:1px 6px; border-radius:99px; background:#5a3a1a; color:#ffd59a; font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+.scout-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0;
+  flex-wrap: wrap;
+}
+.scout-pager button {
+  min-width: 32px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.scout-pager button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

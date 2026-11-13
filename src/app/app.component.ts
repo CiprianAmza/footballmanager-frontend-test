@@ -525,7 +525,20 @@ export class AppComponent implements OnDestroy {
     this.teamService.checkSetup();
   }
 
+  /** Choosing a club: a club or league page is open over the (kept) selection screen. */
+  setupBrowsing = false;
+
+  onSetupBrowse(commands: any[]): void {
+    this.setupBrowsing = true;
+    this.router.navigate(commands);
+  }
+
+  backToSetup(): void {
+    this.setupBrowsing = false;
+  }
+
   onSetupComplete(event: { teamId: number | null; managerName: string; freeAgent?: boolean }): void {
+    this.setupBrowsing = false;
     this.teamService.onSetupComplete(event.teamId ?? 0, !!event.freeAgent);
   }
 
@@ -676,6 +689,10 @@ export class AppComponent implements OnDestroy {
     }
 
     this.autoAdvanceRetryCount = 0;
+    if (err?.error?.code === 'NEGOTIATION_IN_PROGRESS' || err?.error?.message === 'NEGOTIATION_IN_PROGRESS') {
+      this.simulationStopMessage = 'A contract negotiation is in progress. Finish it before moving to the next day (open it from its Inbox message).';
+      return;
+    }
     const detail = err?.error?.message || err?.error?.error || err?.message;
     this.simulationStopMessage = detail
       ? `Simulation stopped: ${detail}`

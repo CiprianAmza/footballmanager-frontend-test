@@ -22,10 +22,14 @@
       <button type="button" [class.active]="activeTab === 'contract'" (click)="selectPrimaryTab('contract')">Contract</button>
       <button type="button" [class.active]="activeTab === 'history'" (click)="selectPrimaryTab('history')">History</button>
     </nav>
+    <div class="profile-header-actions" *ngIf="playerView?.wanted"><span>Wanted by {{ playerView?.wantedBy?.length ? playerView.wantedBy.join(', ') : 'another club' }}.</span></div>
     <div class="profile-header-actions" *ngIf="canMakeTransferOffer() || canOfferFreeAgentContract()">
       <button type="button" class="make-offer" *ngIf="canMakeTransferOffer()"
               (click)="openTransferOffer()" [disabled]="!isTransferWindowOpen"
               [title]="isTransferWindowOpen ? 'Make a transfer offer' : 'Offers open during the transfer window'">Make offer</button>
+      <button type="button" class="make-offer" *ngIf="canMakeTransferOffer()"
+              (click)="askAgentInterest()" [disabled]="agentInterestLoading">Ask agent</button>
+      <span *ngIf="agentInterest as answer"><a *ngIf="answer.agentId; else selfAnswer2" [routerLink]="['/agent', answer.agentId]">{{ answer.agentName }}</a><ng-template #selfAnswer2>The player</ng-template>: “{{ answer.message }}” · {{ personalityLabel(answer.personality) }}</span>
       <button type="button" class="make-offer" *ngIf="canOfferFreeAgentContract()"
               (click)="openFreeAgentContract()">Offer contract</button>
       <span *ngIf="canMakeTransferOffer() && !isTransferWindowOpen">Transfer window closed</span>
@@ -313,7 +317,7 @@
       </dl>
       <div class="contract-alert" *ngIf="isContractExpiring()">Contract expires within one season.</div>
       <div class="form-actions">
-        <button type="button" *ngIf="canRenewContract()" (click)="toggleRenewForm()">{{ showRenewForm ? 'Close offer' : 'Offer new contract' }}</button>
+        <button type="button" *ngIf="canRenewContract()" (click)="startRenewalNegotiation()" [disabled]="renewStarting">Negotiate new contract</button>
         <button type="button" *ngIf="isOwnPlayer()" (click)="toggleClausesForm()">{{ showClausesForm ? 'Close clauses' : 'Edit clauses' }}</button>
         <button type="button" class="primary" *ngIf="canMakeTransferOffer()" (click)="openTransferOffer()" [disabled]="!isTransferWindowOpen">Make transfer offer</button>
         <button type="button" class="primary" *ngIf="canOfferFreeAgentContract()" (click)="openFreeAgentContract()">Offer contract</button>
@@ -321,12 +325,7 @@
     </article>
     <article class="fm-panel detail-panel contract-editor">
       <header>NEGOTIATION</header>
-      <form *ngIf="showRenewForm" (ngSubmit)="submitRenewal()">
-        <p>Player request: <strong>{{ money(renewalDemand) }}</strong></p>
-        <label>Weekly wage<input name="renewWage" type="number" min="0" [(ngModel)]="renewWage"></label>
-        <label>Contract years<select name="renewYears" [(ngModel)]="renewYears"><option *ngFor="let year of [1,2,3,4,5]" [value]="year">{{ year }}</option></select></label>
-        <button class="primary" type="submit">Submit offer</button><p class="action-message" *ngIf="renewMessage">{{ renewMessage }}</p>
-      </form>
+      <p class="action-message" *ngIf="renewMessage">{{ renewMessage }}</p>
       <form *ngIf="showClausesForm" (ngSubmit)="submitClauses()">
         <label>Release clause<input name="releaseClause" type="number" min="0" [(ngModel)]="clauseReleaseClause"></label>
         <label>Sell-on %<input name="sellOn" type="number" min="0" max="50" [(ngModel)]="clauseSellOnPercentage"></label>
@@ -393,16 +392,6 @@
     </article>
   </ng-template>
 </main>
-
-<div class="offer-backdrop" *ngIf="showTransferOfferForm" (click)="closeTransferOffer()">
-  <form class="offer-dialog" (click)="$event.stopPropagation()" (ngSubmit)="submitTransferOffer()">
-    <header><span>TRANSFER OFFER</span><button type="button" (click)="closeTransferOffer()">×</button></header>
-    <strong>Make an offer for {{ playerView?.name }}</strong>
-    <label>Transfer fee <input type="number" min="1" name="fee" [(ngModel)]="transferOfferAmount"></label>
-    <p *ngIf="transferOfferResult">{{ transferOfferResult.message || transferOfferResult.status }}</p>
-    <footer><button type="button" (click)="closeTransferOffer()">Cancel</button><button class="primary" type="submit" [disabled]="transferOfferLoading">Submit offer</button></footer>
-  </form>
-</div>
 
 <div class="offer-backdrop" *ngIf="showFreeAgentContractForm" (click)="closeFreeAgentContract()">
   <form class="offer-dialog" (click)="$event.stopPropagation()" (ngSubmit)="submitFreeAgentContract()">

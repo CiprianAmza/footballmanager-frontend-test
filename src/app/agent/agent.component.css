@@ -1,0 +1,8 @@
+.players { margin-top:14px; }
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th { text-align:left; color:#9aaabc; font-weight:700; padding:8px; border-bottom:1px solid #293748; white-space:nowrap; }
+td { padding:8px; border-bottom:1px solid #223042; white-space:nowrap; }
+td a { color:#8fd8dc; text-decoration:none; }
+td a:hover { text-decoration:underline; }
+dd.poor { color:#ffb2ad; }
