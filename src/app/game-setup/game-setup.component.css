@@ -257,3 +257,31 @@
   background: #1e2d44;
   border-radius: 3px;
 }
+
+.browse-link {
+  margin-left: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.75;
+  cursor: pointer;
+}
+.browse-link:hover { opacity: 1; }
+.team-browse { display: flex; gap: 4px; margin-top: 4px; }
+.team-browse .browse-link { margin-left: 0; }
+
+.setup-hint { margin-left: 8px; font-size: 12px; opacity: 0.75; }
+.form-row select + select { margin-left: 6px; }
+.playing-seasons { margin-top: 10px; }
+.playing-seasons-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.playing-season-row { display: grid; grid-template-columns: 24px 1fr 70px 70px auto; gap: 6px; align-items: center; margin-bottom: 4px; }
+
+.face-editor { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; margin: 12px 0; }
+.face-preview { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.face-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; flex: 1; min-width: 220px; }
+.face-part { display: grid; grid-template-columns: 1fr 28px 52px 28px; align-items: center; gap: 4px; font-size: 13px; }
+.face-part button { cursor: pointer; padding: 2px 0; }
+.face-part strong { text-align: center; font-variant-numeric: tabular-nums; }

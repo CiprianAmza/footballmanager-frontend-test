@@ -110,44 +110,16 @@
               <span>Avg: <strong [style.color]="getAbilityColor(getCoachAvgRating(coach))">{{ getCoachAvgRating(coach) }}</strong></span>
             </div>
             <div class="coach-attrs">
-              <div class="coach-attr">
-                <span class="ca-label">Att</span>
-                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingAttacking)">{{ coach.coachingAttacking }}</span>
-              </div>
-              <div class="coach-attr">
-                <span class="ca-label">Def</span>
-                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingDefending)">{{ coach.coachingDefending }}</span>
-              </div>
-              <div class="coach-attr">
-                <span class="ca-label">Tac</span>
-                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingTactical)">{{ coach.coachingTactical }}</span>
-              </div>
-              <div class="coach-attr">
-                <span class="ca-label">Tec</span>
-                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingTechnical)">{{ coach.coachingTechnical }}</span>
-              </div>
-              <div class="coach-attr">
-                <span class="ca-label">Men</span>
-                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingMental)">{{ coach.coachingMental }}</span>
-              </div>
-              <div class="coach-attr">
-                <span class="ca-label">Fit</span>
-                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingFitness)">{{ coach.coachingFitness }}</span>
-              </div>
-              <div class="coach-attr">
-                <span class="ca-label">GK</span>
-                <span class="ca-value" [style.color]="getAbilityColor(coach.coachingGK)">{{ coach.coachingGK }}</span>
-              </div>
-              <div class="coach-attr">
-                <span class="ca-label">Yth</span>
-                <span class="ca-value" [style.color]="getAbilityColor(coach.workingWithYoungsters)">{{ coach.workingWithYoungsters }}</span>
-              </div>
-              <div class="coach-attr">
-                <span class="ca-label">Mot</span>
-                <span class="ca-value" [style.color]="getAbilityColor(coach.motivating)">{{ coach.motivating }}</span>
+              <div class="coach-attr" *ngFor="let a of coachAttributes" [title]="a.title">
+                <span class="ca-label">{{ a.label }}</span>
+                <span class="ca-value" [style.color]="getAbilityColor(coachAttr(coach, a.key))">{{ coachAttr(coach, a.key) }}</span>
               </div>
             </div>
+            <div class="coach-read" *ngIf="assistantReads[coach.id]" title="Your assistant's opinion">
+              Assistant: &ldquo;{{ assistantReads[coach.id] }}&rdquo;
+            </div>
             <div class="coach-actions-row">
+              <button class="btn-praise" (click)="praiseCoach(coach)" title="Praise him in front of the press">Praise</button>
               <button class="btn-fire" (click)="fireCoach(coach)">Release</button>
             </div>
           </div>
@@ -170,41 +142,9 @@
                 <span>Avg: <strong [style.color]="getAbilityColor(getCoachAvgRating(coach))">{{ getCoachAvgRating(coach) }}</strong></span>
               </div>
               <div class="coach-attrs">
-                <div class="coach-attr">
-                  <span class="ca-label">Att</span>
-                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingAttacking)">{{ coach.coachingAttacking }}</span>
-                </div>
-                <div class="coach-attr">
-                  <span class="ca-label">Def</span>
-                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingDefending)">{{ coach.coachingDefending }}</span>
-                </div>
-                <div class="coach-attr">
-                  <span class="ca-label">Tac</span>
-                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingTactical)">{{ coach.coachingTactical }}</span>
-                </div>
-                <div class="coach-attr">
-                  <span class="ca-label">Tec</span>
-                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingTechnical)">{{ coach.coachingTechnical }}</span>
-                </div>
-                <div class="coach-attr">
-                  <span class="ca-label">Men</span>
-                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingMental)">{{ coach.coachingMental }}</span>
-                </div>
-                <div class="coach-attr">
-                  <span class="ca-label">Fit</span>
-                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingFitness)">{{ coach.coachingFitness }}</span>
-                </div>
-                <div class="coach-attr">
-                  <span class="ca-label">GK</span>
-                  <span class="ca-value" [style.color]="getAbilityColor(coach.coachingGK)">{{ coach.coachingGK }}</span>
-                </div>
-                <div class="coach-attr">
-                  <span class="ca-label">Yth</span>
-                  <span class="ca-value" [style.color]="getAbilityColor(coach.workingWithYoungsters)">{{ coach.workingWithYoungsters }}</span>
-                </div>
-                <div class="coach-attr">
-                  <span class="ca-label">Mot</span>
-                  <span class="ca-value" [style.color]="getAbilityColor(coach.motivating)">{{ coach.motivating }}</span>
+                <div class="coach-attr" *ngFor="let a of coachAttributes" [title]="a.title">
+                  <span class="ca-label">{{ a.label }}</span>
+                  <span class="ca-value" [style.color]="getAbilityColor(coachAttr(coach, a.key))">{{ coachAttr(coach, a.key) }}</span>
                 </div>
               </div>
               <div class="coach-actions-row">

@@ -169,7 +169,17 @@
 
 <!-- Game Setup Screen -->
 <app-game-setup *ngIf="authService.isLoggedIn && teamService.setupChecked && !teamService.setupComplete"
+                [hidden]="setupBrowsing"
+                (browse)="onSetupBrowse($event)"
                 (setupComplete)="onSetupComplete($event)"></app-game-setup>
+
+<!-- Browsing a club or league page while choosing a club: the choice so far is kept behind. -->
+<section class="setup-browse" *ngIf="authService.isLoggedIn && teamService.setupChecked && !teamService.setupComplete && setupBrowsing">
+  <div class="setup-browse-bar">
+    <button type="button" (click)="backToSetup()">&larr; Back to club selection</button>
+  </div>
+  <router-outlet></router-outlet>
+</section>
 
 <section class="chairman-phase-zero" *ngIf="authService.isLoggedIn && teamService.setupComplete && authService.careerRole === 'CHAIRMAN' && !authService.chairmanEnabled">
   <h1>Chairman career created</h1>
@@ -264,6 +274,11 @@
       <a routerLink="/assistant" routerLinkActive="active">Assistant Manager</a>
       <a routerLink="/staff" routerLinkActive="active">Staff</a>
       <a routerLink="/training" routerLinkActive="active">Training</a>
+      <a routerLink="/board-meeting" routerLinkActive="active">Board Meeting</a>
+      <a routerLink="/squad-meeting" routerLinkActive="active">Squad Meeting</a>
+      <a routerLink="/staff-meeting" routerLinkActive="active">Staff Meeting</a>
+      <a routerLink="/press-conference" routerLinkActive="active">Press Conference</a>
+      <a routerLink="/conduct" routerLinkActive="active">Code of Conduct</a>
       <a routerLink="/medical" routerLinkActive="active">Medical Centre</a>
       <a routerLink="/youth-academy" routerLinkActive="active">Youth Academy</a>
     </div>

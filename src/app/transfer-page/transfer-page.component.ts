@@ -522,11 +522,14 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
       setTimeout(() => this.errorMessage = '', 5000);
       return;
     }
-    this.selectedPlayer = player;
-    this.offerAmount = player.transferValue;
-    this.offerResult = null;
-    this.showOfferResult = false;
-    this.showOfferModal = true;
+    // Fee talks with the selling club happen on their own page (round-based, the day is blocked meanwhile).
+    this.transferService.startTalks(player.id, this.teamId).subscribe({
+      next: talks => this.router.navigate(['/club-negotiation', talks.id]),
+      error: err => {
+        this.errorMessage = this.mutationError(err, 'The transfer talks could not be opened.');
+        setTimeout(() => this.errorMessage = '', 5000);
+      }
+    });
   }
 
   closeOfferModal(): void {
@@ -534,46 +537,6 @@ export class TransferPageComponent implements OnInit, OnDestroy, OnChanges {
     this.selectedPlayer = null;
     this.offerResult = null;
     this.showOfferResult = false;
-  }
-
-  submitOffer(): void {
-    if (!this.selectedPlayer || this.offerAmount <= 0) return;
-    this.offerLoading = true;
-
-    this.transferService.makeOffer(this.selectedPlayer.id, this.offerAmount, this.teamId).subscribe({
-      next: (result) => {
-        this.offerResult = result;
-        this.showOfferResult = true;
-        this.offerLoading = false;
-        // Refresh outgoing offers if on that tab
-        if (this.activeTab === 'outgoing') {
-          this.loadOutgoing();
-        }
-      },
-      error: (err) => {
-        console.error('Error making offer:', err);
-        this.offerLoading = false;
-        this.closeOfferModal();
-        this.errorMessage = this.mutationError(err, 'Failed to submit offer.');
-        setTimeout(() => this.errorMessage = '', 5000);
-      }
-    });
-  }
-
-  acceptCounter(): void {
-    if (!this.offerResult) return;
-    this.offerLoading = true;
-
-    this.transferService.makeOffer(this.offerResult.playerId, this.offerResult.askingPrice, this.teamId).subscribe({
-      next: (result) => {
-        this.offerResult = result;
-        this.offerLoading = false;
-      },
-      error: (err) => {
-        console.error('Error accepting counter:', err);
-        this.offerLoading = false;
-      }
-    });
   }
 
   // --- Incoming Offers ---

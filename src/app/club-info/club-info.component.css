@@ -335,3 +335,6 @@
 .compact-state { margin: 0 auto; padding: 28px 20px; }
 .error-state button,
 .error-state a { background: #1f6ea5; border: 1px solid #3189c7; border-radius: 4px; color: white; cursor: pointer; font: inherit; padding: 8px 14px; text-decoration: none; }
+
+.board-note { font-size: 12px; opacity: .8; }
+.board-conflict { color: #f0b35a; opacity: 1; }

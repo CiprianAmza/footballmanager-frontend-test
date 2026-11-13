@@ -1471,3 +1471,7 @@
   .multiplayer-entry-link { display: none; }
   .sidebar a.mobile-only-sidebar-link { display: block; }
 }
+
+.setup-browse { min-height: 100vh; padding: 0 16px 24px; }
+.setup-browse-bar { position: sticky; top: 0; z-index: 20; padding: 10px 0; background: inherit; }
+.setup-browse-bar button { padding: 6px 14px; cursor: pointer; }

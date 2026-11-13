@@ -1,5 +1,12 @@
 <div class="profile-container" *ngIf="!loading && profile">
   <div class="profile-header">
+    <app-player-face *ngIf="profile.background?.playingCareer" class="manager-face" [size]="96"
+                     [baseFaceId]="$any(profile).baseFaceId" [skinTone]="$any(profile).skinTone"
+                     [hairStyle]="$any(profile).hairStyle" [hairColor]="$any(profile).hairColor"
+                     [eyeColor]="$any(profile).eyeColor" [faceShape]="$any(profile).faceShape"
+                     [noseShape]="$any(profile).noseShape" [eyeShape]="$any(profile).eyeShape"
+                     [mouthShape]="$any(profile).mouthShape" [browShape]="$any(profile).browShape"
+                     [species]="$any(profile).species || 'human'"></app-player-face>
     <div class="header-info">
       <h1>{{ profile.managerName }}</h1>
       <div class="header-meta">
@@ -27,6 +34,22 @@
   </div>
 
   <div *ngIf="resignMessage" class="resign-status">{{ resignMessage }}</div>
+
+  <section class="manager-background" *ngIf="profile.background?.playingCareer">
+    <h2>Background</h2>
+    <div class="background-grid">
+      <div *ngIf="profile.background.birthDay"><span>Birthday</span><strong>{{ profile.background.birthDay }} {{ monthName(profile.background.birthMonth) }}</strong></div>
+      <div *ngIf="profile.background.birthNation"><span>Born in</span><strong>{{ profile.background.birthNation }}</strong></div>
+      <div *ngIf="profile.background.favoriteTeamId"><span>Favourite club</span><strong><a [routerLink]="['/team', profile.background.favoriteTeamId]">{{ profile.background.favoriteTeamName }}</a></strong></div>
+      <div><span>Playing career</span><strong>{{ profile.background.playingCareer }}</strong></div>
+      <div><span>Coaching licence</span><strong>{{ profile.background.coachingLicence }}</strong></div>
+      <div *ngIf="profile.tacticStyle"><span>Preferred tactic</span><strong>{{ profile.tacticStyle }}</strong></div>
+    </div>
+    <table class="playing-seasons" *ngIf="profile.background.playingSeasons?.length">
+      <thead><tr><th>#</th><th>Club</th><th>Goals</th><th>Assists</th></tr></thead>
+      <tbody><tr *ngFor="let s of profile.background.playingSeasons"><td>{{ s.season }}</td><td>{{ s.teamName }}</td><td>{{ s.goals }}</td><td>{{ s.assists }}</td></tr></tbody>
+    </table>
+  </section>
 
   <section class="federation-editor" *ngIf="adminService.isAuthenticated">
     <div class="editor-copy">

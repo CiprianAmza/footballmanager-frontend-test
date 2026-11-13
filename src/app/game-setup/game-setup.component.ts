@@ -10,9 +10,38 @@ import { urlApp } from '../app.component';
 export class GameSetupComponent implements OnInit {
 
   @Output() setupComplete = new EventEmitter<{ teamId: number | null; managerName: string; freeAgent?: boolean }>();
+  /** Open a club or league page while choosing; the choice so far is kept. */
+  @Output() browse = new EventEmitter<any[]>();
 
   managerName = '';
   managerAge = 35;
+  // The manager's story (design: DESIGN_START_CARIERA §2.2). All optional.
+  birthDay: number | null = null;
+  birthMonth: number | null = null;
+  birthNationId: number | null = null;
+  favoriteTeamId: number | null = null;
+  preferredTactic = '';
+  playingCareer = 'NONE';
+  coachingLicence = 'NONE';
+  playingSeasons: { teamName: string; goals: number; assists: number }[] = [];
+  options: any = { nations: [], tactics: [], playingCareers: [], coachingLicences: [], faceParts: {}, speciesByNation: {} };
+  /** The face being built in the editor: the same indices players' faces use. */
+  face: Record<string, number> = {};
+  readonly faceEditorParts: { key: string; label: string }[] = [
+    { key: 'skinTone', label: 'Skin' },
+    { key: 'faceShape', label: 'Head' },
+    { key: 'hairStyle', label: 'Hair' },
+    { key: 'hairColor', label: 'Hair colour' },
+    { key: 'browShape', label: 'Brows' },
+    { key: 'eyeShape', label: 'Eyes' },
+    { key: 'eyeColor', label: 'Eye colour' },
+    { key: 'noseShape', label: 'Nose' },
+    { key: 'mouthShape', label: 'Mouth' },
+    { key: 'baseFaceId', label: 'Features' }
+  ];
+  readonly days = Array.from({ length: 31 }, (_, i) => i + 1);
+  readonly months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
+    'October', 'November', 'December'];
   selectedTeamId: number | null = null;
   leagues: any[] = [];
   loading = true;
@@ -22,6 +51,13 @@ export class GameSetupComponent implements OnInit {
   constructor(private http: HttpClient) {}
 
   ngOnInit(): void {
+    this.http.get<any>(urlApp + '/api/career/manager/options').subscribe({
+      next: (options) => {
+        this.options = options;
+        this.randomFace();
+      },
+      error: (err) => console.error('Error loading manager options:', err)
+    });
     this.http.get<any[]>(urlApp + '/game/availableTeams').subscribe({
       next: (data) => {
         this.leagues = data;
@@ -33,6 +69,45 @@ export class GameSetupComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  openPage(commands: any[], event: Event): void {
+    event.stopPropagation();
+    this.browse.emit(commands);
+  }
+
+  get startingReputation(): number | null {
+    return this.options.playingCareers.find((c: any) => c.value === this.playingCareer)?.reputation ?? null;
+  }
+
+  /** The species follows the nation of birth, as for players. */
+  get faceSpecies(): string {
+    return (this.birthNationId != null && this.options.speciesByNation?.[this.birthNationId]) || 'human';
+  }
+
+  partCount(key: string): number {
+    return this.options.faceParts?.[key] || 1;
+  }
+
+  stepPart(key: string, delta: number): void {
+    const count = this.partCount(key);
+    this.face[key] = (((this.face[key] ?? 0) + delta) % count + count) % count;
+  }
+
+  randomFace(): void {
+    const face: Record<string, number> = {};
+    for (const part of this.faceEditorParts) {
+      face[part.key] = Math.floor(Math.random() * this.partCount(part.key));
+    }
+    this.face = face;
+  }
+
+  addSeason(): void {
+    if (this.playingSeasons.length < 30) this.playingSeasons.push({ teamName: '', goals: 0, assists: 0 });
+  }
+
+  removeSeason(index: number): void {
+    this.playingSeasons.splice(index, 1);
   }
 
   selectTeam(teamId: number): void {
@@ -81,7 +156,18 @@ export class GameSetupComponent implements OnInit {
       managerName: this.managerName.trim(),
       managerAge: this.managerAge,
       teamId: body.teamId,
-      freeAgent: body.freeAgent
+      freeAgent: body.freeAgent,
+      birthDay: this.birthDay && this.birthMonth ? this.birthDay : null,
+      birthMonth: this.birthDay && this.birthMonth ? this.birthMonth : null,
+      birthNationId: this.birthNationId,
+      favoriteTeamId: this.favoriteTeamId,
+      preferredTactic: this.preferredTactic || null,
+      playingCareer: this.playingCareer,
+      coachingLicence: this.coachingLicence,
+      face: Object.keys(this.face).length ? this.face : null,
+      playingSeasons: this.playingSeasons
+        .filter(s => s.teamName.trim())
+        .map(s => ({ teamName: s.teamName.trim(), goals: Number(s.goals) || 0, assists: Number(s.assists) || 0 }))
     }).subscribe({
       next: (result) => {
         if (result.success) {

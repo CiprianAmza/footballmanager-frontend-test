@@ -49,7 +49,32 @@ interface CoachInfo {
   coachingGK: number;
   workingWithYoungsters: number;
   motivating: number;
+  coachingSetPieces?: number;
+  coachingDuels?: number;
+  coachingBallWork?: number;
+  coachingGameReading?: number;
+  coachingConditioning?: number;
+  coachingShotStopping?: number;
 }
+
+/** Coaching attributes in training-type pairs (each type is coached through two of them). */
+export const COACH_ATTRIBUTES: { label: string; title: string; key: keyof CoachInfo }[] = [
+  { label: 'Att', title: 'Attacking (Offensive)', key: 'coachingAttacking' },
+  { label: 'SP', title: 'Set Pieces (Offensive)', key: 'coachingSetPieces' },
+  { label: 'Def', title: 'Defending (Defensive)', key: 'coachingDefending' },
+  { label: 'Duel', title: 'Duels (Defensive)', key: 'coachingDuels' },
+  { label: 'Tec', title: 'Technical (Technical)', key: 'coachingTechnical' },
+  { label: 'Ball', title: 'Ball Work (Technical)', key: 'coachingBallWork' },
+  { label: 'Men', title: 'Mental (Mental)', key: 'coachingMental' },
+  { label: 'Mot', title: 'Motivating (Mental)', key: 'motivating' },
+  { label: 'Tac', title: 'Tactical (Tactical)', key: 'coachingTactical' },
+  { label: 'Read', title: 'Game Reading (Tactical)', key: 'coachingGameReading' },
+  { label: 'Fit', title: 'Fitness (Physical)', key: 'coachingFitness' },
+  { label: 'Cond', title: 'Conditioning (Physical)', key: 'coachingConditioning' },
+  { label: 'GK', title: 'Goalkeeping (Goalkeeping)', key: 'coachingGK' },
+  { label: 'Shot', title: 'Shot-stopping (Goalkeeping)', key: 'coachingShotStopping' },
+  { label: 'Yth', title: 'Working With Youngsters', key: 'workingWithYoungsters' }
+];
 
 @Component({
   selector: 'app-staff',
@@ -66,6 +91,8 @@ export class StaffComponent implements OnInit, OnDestroy {
 
   // Coaching Staff
   coachingStaff: CoachInfo[] = [];
+  /** The assistant's read of each colleague (the only hint of hidden staff loyalty). */
+  assistantReads: { [staffId: number]: string } = {};
   trainingRatings: any = {};
   coachingMultiplier: number = 0;
   youthMultiplier: number = 0;
@@ -176,6 +203,10 @@ export class StaffComponent implements OnInit, OnDestroy {
 
   loadStaffOverview(): void {
     const teamId = this.teamService.teamId;
+    this.http.get<{ [id: number]: string }>(urlApp + `/staff/assistant-reads/${teamId}`).subscribe({
+      next: (reads) => this.assistantReads = reads || {},
+      error: () => this.assistantReads = {}
+    });
     this.http.get<any>(urlApp + `/staff/overview/${teamId}`).subscribe({
       next: (data) => {
         this.coachingStaff = data.staff || [];
@@ -258,7 +289,13 @@ export class StaffComponent implements OnInit, OnDestroy {
         coachingFitness: c.coachingFitness,
         coachingGK: c.coachingGK,
         workingWithYoungsters: c.workingWithYoungsters,
-        motivating: c.motivating
+        motivating: c.motivating,
+        coachingSetPieces: c.coachingSetPieces,
+        coachingDuels: c.coachingDuels,
+        coachingBallWork: c.coachingBallWork,
+        coachingGameReading: c.coachingGameReading,
+        coachingConditioning: c.coachingConditioning,
+        coachingShotStopping: c.coachingShotStopping
       })),
       error: (err) => console.error('Error loading available coaches:', err)
     });
@@ -319,21 +356,62 @@ export class StaffComponent implements OnInit, OnDestroy {
     if (!confirmed) return;
 
     this.http.post<any>(urlApp + `/staff/fire/${coach.id}`, {}).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.loadStaffOverview();
-          this.gameEvents.emit('staff', 'finances');
+      next: async (res) => {
+        if (res.directorInsists) {
+          const appeal = await this.feedback.confirm(res.message, {
+            title: 'The director objects', confirmLabel: 'Take it to the chairman', tone: 'error'
+          });
+          if (appeal) this.appealDismissal(coach);
+          return;
         }
+        this.afterDismissal(res);
       },
       error: (err) => console.error('Error firing coach:', err)
     });
   }
 
+  private appealDismissal(coach: CoachInfo): void {
+    this.http.post<any>(urlApp + `/staff/fire/${coach.id}/appeal`, {}).subscribe({
+      next: (res) => this.afterDismissal(res),
+      error: (err) => console.error('Error appealing to the chairman:', err)
+    });
+  }
+
+  private afterDismissal(res: any): void {
+    if (res.done || res.success) {
+      this.feedback.success(res.message);
+      this.loadStaffOverview();
+      this.gameEvents.emit('staff', 'finances');
+    } else if (res.message) {
+      this.feedback.notify(res.message);
+    }
+  }
+
+  /** Praise a member of staff in front of the press (counts once a season). */
+  praiseCoach(coach: CoachInfo): void {
+    this.http.post<any>(urlApp + `/staff/praise/${coach.id}`, {}).subscribe({
+      next: (res) => res.counted ? this.feedback.success(res.message) : this.feedback.notify(res.message),
+      error: (err) => console.error('Error praising coach:', err)
+    });
+  }
+
+  readonly coachAttributes = COACH_ATTRIBUTES;
+
+  /**
+   * A coaching attribute's value. A second attribute of a pair still at 0 (staff created
+   * before it existed) counts as its first, as the training does.
+   */
+  coachAttr(coach: CoachInfo, key: keyof CoachInfo): number {
+    const value = Number(coach[key]) || 0;
+    if (value > 0) return value;
+    const index = COACH_ATTRIBUTES.findIndex(a => a.key === key);
+    if (index > 0 && index < 14 && index % 2 === 1) return Number(coach[COACH_ATTRIBUTES[index - 1].key]) || 0;
+    return value;
+  }
+
   getCoachAvgRating(coach: CoachInfo): number {
-    const sum = coach.coachingAttacking + coach.coachingDefending + coach.coachingTactical +
-      coach.coachingTechnical + coach.coachingMental + coach.coachingFitness +
-      coach.coachingGK + coach.workingWithYoungsters + coach.motivating;
-    return Math.round(sum / 9 * 10) / 10;
+    const sum = COACH_ATTRIBUTES.reduce((total, a) => total + this.coachAttr(coach, a.key), 0);
+    return Math.round(sum / COACH_ATTRIBUTES.length * 10) / 10;
   }
 
   setScoutSubTab(subTab: string) {

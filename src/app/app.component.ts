@@ -525,7 +525,20 @@ export class AppComponent implements OnDestroy {
     this.teamService.checkSetup();
   }
 
+  /** Choosing a club: a club or league page is open over the (kept) selection screen. */
+  setupBrowsing = false;
+
+  onSetupBrowse(commands: any[]): void {
+    this.setupBrowsing = true;
+    this.router.navigate(commands);
+  }
+
+  backToSetup(): void {
+    this.setupBrowsing = false;
+  }
+
   onSetupComplete(event: { teamId: number | null; managerName: string; freeAgent?: boolean }): void {
+    this.setupBrowsing = false;
     this.teamService.onSetupComplete(event.teamId ?? 0, !!event.freeAgent);
   }
 
@@ -567,6 +580,14 @@ export class AppComponent implements OnDestroy {
         if (result.paused && result.reason === 'LIVE_MATCH_PENDING' && result.liveMatchKey) {
           this.liveMatchInteractive = !!result.liveMatchInteractive;
           this.fetchLiveMatch(result.liveMatchKey);
+          return;
+        }
+
+        // The first day at a new club is not over: show what is left on the Today page.
+        if (result.paused && result.reason === 'FIRST_DAY_PENDING') {
+          this.simulationStopMessage = this.describeSimulationPause(result);
+          // Another manager's first day pauses the game too, but there is nothing for me to do on my Today page.
+          if (!this.isOtherManagersFirstDay(result)) this.router.navigate(['/home']);
           return;
         }
 
@@ -676,10 +697,20 @@ export class AppComponent implements OnDestroy {
     }
 
     this.autoAdvanceRetryCount = 0;
+    if (err?.error?.code === 'NEGOTIATION_IN_PROGRESS' || err?.error?.message === 'NEGOTIATION_IN_PROGRESS') {
+      this.simulationStopMessage = 'A contract negotiation is in progress. Finish it before moving to the next day (open it from its Inbox message).';
+      return;
+    }
     const detail = err?.error?.message || err?.error?.error || err?.message;
     this.simulationStopMessage = detail
       ? `Simulation stopped: ${detail}`
       : 'Simulation stopped because the server could not complete the advance. Press Continue to try again.';
+  }
+
+  /** FIRST_DAY_PENDING for a club that is not mine (the backend says whose first day it is). */
+  private isOtherManagersFirstDay(result: any): boolean {
+    const teamId = Number(result?.firstDayTeamId);
+    return teamId > 0 && !!this.teamService.teamId && teamId !== Number(this.teamService.teamId);
   }
 
   private describeSimulationPause(result: any): string {
@@ -691,6 +722,12 @@ export class AppComponent implements OnDestroy {
     }
     if (result.reason === 'LIVE_MATCH_PENDING') {
       return 'Simulation stopped because a live match must be completed.';
+    }
+    if (result.reason === 'FIRST_DAY_PENDING') {
+      if (this.isOtherManagersFirstDay(result)) {
+        return 'Simulation stopped: another manager has not finished their first day at a new club.';
+      }
+      return 'Your first day at the club is not over: ' + (result.firstDayNext || 'see the Today page') + '.';
     }
 
     const eventType = result.blockingEvent

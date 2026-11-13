@@ -1,6 +1,6 @@
 import { Component, ElementRef, HostListener, ViewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { InboxComponent, ManagerInbox } from '../inbox/inbox.component';
 import { TeamService } from '../services/team.service';
 import { CareerService } from '../services/career.service';
@@ -26,16 +26,27 @@ export class Inbox2Component extends InboxComponent {
     'JOB_OFFER', 'PRESS_CONFERENCE', 'board', 'discipline', 'transfer',
     'TACTICAL_MANDATE_UPDATED', 'COACH_COMPLAINT', 'TRADER_ADVICE_AVAILABLE'
   ]);
-  private readonly mediaCategories = new Set(['MEDIA_REACTION', 'MEDIA_PREVIEW', 'TRANSFER_RUMOUR', 'league_news', 'match_result']);
+  private readonly mediaCategories = new Set(['MEDIA_REACTION', 'MEDIA_PREVIEW', 'TRANSFER_RUMOUR', 'league_news', 'match_result', 'press']);
+
+  /** The message last opened: it stays open even when reading it takes it out of the folder shown (Unread). */
+  private openedMessageId: number | null = null;
+  /** ?message=<id> (the Today page's first-day links): open that message once the inbox has loaded. */
+  private requestedMessageId: number | null = null;
 
   constructor(
     http: HttpClient,
     teamService: TeamService,
     careerService: CareerService,
     authService: AuthService,
-    private router: Router
+    private router: Router,
+    route: ActivatedRoute
   ) {
     super(http, teamService, careerService, authService);
+    route.queryParamMap.subscribe(params => {
+      const id = Number(params.get('message'));
+      this.requestedMessageId = id > 0 ? id : null;
+      this.openRequestedMessage();
+    });
   }
 
   override loadMessages(): void {
@@ -47,6 +58,7 @@ export class Inbox2Component extends InboxComponent {
         this.messages = messages;
         this.selectedMessage = messages.find(message => message.id === selectedId) || null;
         this.loading = false;
+        this.openRequestedMessage();
       },
       error: () => {
         this.error = 'Messages could not be loaded.';
@@ -56,8 +68,24 @@ export class Inbox2Component extends InboxComponent {
   }
 
   override selectMessage(message: ManagerInbox): void {
-    // Keep the message in the Unread folder until the manager explicitly marks it read.
+    // Opening a message reads it (it stays open even if the Unread folder no longer lists it).
     this.selectedMessage = message;
+    this.openedMessageId = message.id;
+    if (!message.isRead) this.markAsRead(message);
+  }
+
+  /** Opens the message a link asked for, showing every message if the current folder does not list it. */
+  private openRequestedMessage(): void {
+    if (this.requestedMessageId === null || this.messages.length === 0) return;
+    const message = this.messages.find(m => m.id === this.requestedMessageId);
+    this.requestedMessageId = null;
+    if (!message) return;
+    if (!this.visibleMessages.some(m => m.id === message.id)) {
+      this.workspaceView = 'all';
+      this.topicFilter = 'all';
+      this.searchText = '';
+    }
+    this.selectMessage(message);
   }
 
   get visibleMessages(): ManagerInbox[] {
@@ -77,7 +105,10 @@ export class Inbox2Component extends InboxComponent {
   }
 
   get selectedVisibleMessage(): ManagerInbox | null {
-    return this.visibleMessages.find(message => message.id === this.selectedMessage?.id) || null;
+    const visible = this.visibleMessages.find(message => message.id === this.selectedMessage?.id);
+    if (visible) return visible;
+    // Read just now: the folder may no longer list it, but the reader keeps it open.
+    return this.selectedMessage && this.selectedMessage.id === this.openedMessageId ? this.selectedMessage : null;
   }
 
   get importantCount(): number { return this.messages.filter(message => this.isDecision(message)).length; }
@@ -104,11 +135,13 @@ export class Inbox2Component extends InboxComponent {
 
   setWorkspaceView(view: InboxWorkspaceView): void {
     this.workspaceView = view;
+    this.openedMessageId = null;
     if (!this.selectedVisibleMessage) this.selectedMessage = null;
   }
 
   setTopic(topic: InboxTopic): void {
     this.topicFilter = topic;
+    this.openedMessageId = null;
     if (!this.selectedVisibleMessage) this.selectedMessage = null;
   }
 
@@ -140,6 +173,8 @@ export class Inbox2Component extends InboxComponent {
     if (this.isMedia(message)) return 'Football Wire';
     if (message.category === 'board' || message.category.includes('MANDATE')) return 'Club Board';
     if (message.category === 'TRANSFER_RUMOUR') return 'Transfer Wire';
+    if (message.category === 'press') return 'Press';
+    if (message.category === 'assistant') return 'Assistant';
     if (message.category === 'transfer') return 'Transfer Office';
     if (message.category === 'JOB_OFFER' || message.category === 'CAREER') return 'Career Office';
     if (message.category === 'discipline') return 'Competition Office';
@@ -158,6 +193,8 @@ export class Inbox2Component extends InboxComponent {
   }
 
   actionLabel(message: ManagerInbox): string | null {
+    if (message.actionType === 'NEGOTIATE_TRANSFER') return 'Negotiate personal terms';
+    if (message.actionType === 'OPEN_NEGOTIATION') return 'Open negotiation';
     if (message.category === 'transfer' || message.category === 'TRANSFER_RUMOUR') return 'Open Transfer Centre';
     if (message.category === 'board') return 'Open Manager Desk';
     if (message.category === 'match_result') return 'Open Fixtures';
@@ -168,7 +205,22 @@ export class Inbox2Component extends InboxComponent {
     return null;
   }
 
+  negotiationError = '';
+
   openMessageAction(message: ManagerInbox): void {
+    if (message.actionType === 'NEGOTIATE_TRANSFER' && message.actionRefId) {
+      // Opens the talks the first time and leads back to them afterwards.
+      this.negotiationError = '';
+      this.http.post<any>(`${urlApp}/contract/negotiation/startTransfer`, { transferOfferId: message.actionRefId }).subscribe({
+        next: negotiation => this.router.navigate(['/negotiation', negotiation.id]),
+        error: err => this.negotiationError = this.negotiationErrorText(err?.error?.code)
+      });
+      return;
+    }
+    if (message.actionType === 'OPEN_NEGOTIATION' && message.actionRefId) {
+      this.router.navigate(['/negotiation', message.actionRefId]);
+      return;
+    }
     const teamId = this.teamService.teamId;
     const routes: { [category: string]: any[] } = {
       transfer: ['/transfers', teamId, this.teamService.currentSeason],
@@ -183,6 +235,15 @@ export class Inbox2Component extends InboxComponent {
     };
     const route = routes[message.category];
     if (route) this.router.navigate(route);
+  }
+
+  private negotiationErrorText(code?: string): string {
+    switch (code) {
+      case 'AGENT_REFUSES': return 'The agent refuses to negotiate with you.';
+      case 'PLAYER_GONE': return 'The player is no longer at the selling club.';
+      case 'FEE_NOT_AGREED': return 'The fee agreement is no longer valid.';
+      default: return 'The negotiation could not be opened.';
+    }
   }
 
   selectRelative(offset: number): void {

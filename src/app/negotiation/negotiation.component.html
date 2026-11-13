@@ -1,0 +1,64 @@
+<main class="negotiation-page">
+  <div class="state" *ngIf="loading">Loading the negotiation…</div>
+  <div class="state error" *ngIf="!loading && !negotiation">{{ error }} <a routerLink="/inbox">Back to Inbox</a></div>
+
+  <ng-container *ngIf="negotiation as n">
+    <header class="heading">
+      <div>
+        <span class="eyebrow">{{ n.kind === 'TRANSFER' ? 'Personal terms' : 'Contract renewal' }}</span>
+        <h1><a [routerLink]="['/player', n.playerId]">{{ n.playerName }}</a></h1>
+        <p *ngIf="n.kind === 'TRANSFER'">Transfer fee agreed: {{ n.transferFee | number }}</p>
+      </div>
+      <a class="back" routerLink="/inbox">← Inbox</a>
+    </header>
+
+    <div class="blocked" *ngIf="isOpen">The game day cannot advance until these talks end. You can leave this page and come back from the Inbox message.</div>
+
+    <section class="grid">
+      <article class="card agent">
+        <h2><a *ngIf="n.agentId; else noAgent" class="agent-link" [routerLink]="['/agent', n.agentId]">{{ n.agentName }}</a><ng-template #noAgent>No agent</ng-template></h2>
+        <dl>
+          <div><dt>Personality</dt><dd>{{ personalityLabel }}</dd></div>
+          <div *ngIf="n.agentId"><dt>Relation with you</dt><dd>{{ n.relation }} / 100</dd></div>
+          <div *ngIf="n.status !== 'REFUSED'"><dt>Round</dt><dd>{{ n.round }} / {{ n.rounds }}</dd></div>
+        </dl>
+        <p class="hint">{{ personalityHint }}</p>
+        <div class="actions" *ngIf="canAskToFireAgent">
+          <button type="button" class="secondary" (click)="askToFireAgent()" [disabled]="sending"
+                  title="The agent's relation with you drops whatever the player decides">Ask player to fire his agent</button>
+        </div>
+        <p class="feedback" *ngIf="fireAgentMessage">{{ fireAgentMessage }}</p>
+      </article>
+
+      <article class="card demand" *ngIf="n.status !== 'REFUSED'">
+        <h2>{{ n.status === 'FINAL_OFFER' ? 'Final offer — take it or leave it' : (n.status === 'AGREED' ? 'Signed contract' : 'Agent demand') }}</h2>
+        <dl>
+          <div><dt>Wage / month</dt><dd>{{ n.agentOffer.wage | number }}</dd></div>
+          <div><dt>Length</dt><dd>{{ n.agentOffer.years }} {{ n.agentOffer.years === 1 ? 'year' : 'years' }}</dd></div>
+          <div><dt>Signing bonus</dt><dd>{{ n.agentOffer.signingBonus ? (n.agentOffer.signingBonus | number) : '–' }}</dd></div>
+          <div><dt>Release clause</dt><dd>{{ n.agentOffer.releaseClause ? (n.agentOffer.releaseClause | number) : '–' }}</dd></div>
+        </dl>
+        <div class="actions" *ngIf="n.status === 'FINAL_OFFER'">
+          <button type="button" class="secondary" (click)="answerFinal(false)" [disabled]="sending">Refuse</button>
+          <button type="button" (click)="answerFinal(true)" [disabled]="sending">Accept</button>
+        </div>
+      </article>
+
+      <article class="card offer" *ngIf="n.status === 'OPEN'">
+        <h2>Your offer</h2>
+        <label>Wage / month<input type="number" min="0" [(ngModel)]="offer.wage"></label>
+        <label>Length (years)<select [(ngModel)]="offer.years"><option *ngFor="let y of [1,2,3,4,5]" [ngValue]="y">{{ y }}</option></select></label>
+        <label>Signing bonus<input type="number" min="0" [(ngModel)]="offer.signingBonus"></label>
+        <label>Release clause <small>(0 = none)</small><input type="number" min="0" [(ngModel)]="offer.releaseClause"></label>
+        <div class="actions">
+          <button type="button" class="secondary" (click)="useAgentDemand()" [disabled]="sending">Copy demand</button>
+          <button type="button" (click)="makeOffer()" [disabled]="sending">Make offer</button>
+        </div>
+        <p class="feedback" *ngIf="feedback">{{ feedback }}</p>
+      </article>
+    </section>
+
+    <p class="error" *ngIf="error && negotiation">{{ error }}</p>
+    <section class="outcome" *ngIf="outcome" [attr.data-status]="n.status">{{ outcome }}</section>
+  </ng-container>
+</main>

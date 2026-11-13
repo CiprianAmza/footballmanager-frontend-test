@@ -126,6 +126,12 @@
                 {{ selectedOption === 'Contract Info' ? 'Value' : 'Rating' }}
                 {{ getSortIcon(selectedOption === 'Contract Info' ? 'transferValue' : 'rating') }}
             </th>
+
+            <th class="center" *ngIf="selectedOption === 'General Info'" (click)="sort('specialRating')"
+                title="Special rating: what he is worth in a match at his position (engine weights)">
+                Special
+                {{ getSortIcon('specialRating') }}
+            </th>
           </tr>
         </thead>
         
@@ -217,6 +223,12 @@
                       [style.color]="player.rating | ratingColor"
                       [style.font-weight]="700">{{ player.rating | number:'1.2-2' }}</span>
                 <span *ngIf="selectedOption === 'Contract Info'" class="money-val">{{ player.transferValue | currency:'EUR':'symbol':'1.0-0' }}</span> 
+            </td>
+
+            <td class="center" *ngIf="selectedOption === 'General Info'">
+                <span class="rating-val" *ngIf="player.specialRating != null"
+                      [style.color]="player.specialRating | ratingColor"
+                      [style.font-weight]="700">{{ player.specialRating | number:'1.0-0' }}</span>
             </td>
           </tr>
         </tbody>

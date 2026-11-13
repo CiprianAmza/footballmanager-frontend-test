@@ -34,6 +34,25 @@ interface TrainingScheduleEntry {
   intensity: number;
 }
 
+// One training type with its delegated / effective coach (GET /training/delegations/{teamId}/overview)
+interface CoachOption {
+  staffId: number;
+  name: string;
+  typeId: number;
+  rating: number;
+}
+
+interface TrainingTypeOverview {
+  type: string;
+  attributes: string[];
+  coachAttributes: string[];
+  delegatedStaffId: number | null;
+  effectiveStaffId: number | null;
+  effectiveRating: number;
+  automatic: boolean;
+  candidates: CoachOption[];
+}
+
 interface SessionOption {
   name: string;
   icon: string;
@@ -55,7 +74,7 @@ export class TrainingComponent implements OnInit, OnDestroy {
 
   currentWeek: DaySchedule[] = [];
   activeTab: string = 'Overview';
-  tabs: string[] = ['Overview', 'Calendar', 'Individual'];
+  tabs: string[] = ['Overview', 'Calendar', 'Individual', 'Coaches'];
 
   // Training focus
   trainingFocus: string = 'Balanced';
@@ -129,6 +148,12 @@ export class TrainingComponent implements OnInit, OnDestroy {
     'Match Prev.': '\uD83D\uDCFA'
   };
 
+  // Coach delegation per training type
+  coachTypes: TrainingTypeOverview[] = [];
+  loadingCoaches: boolean = false;
+  savingCoachType: string | null = null;
+  coachMessage: string = '';
+
   // Individual Training
   individualPlayers: any[] = [];
   loadingIndividualPlayers: boolean = false;
@@ -177,6 +202,9 @@ export class TrainingComponent implements OnInit, OnDestroy {
     this.activeTab = tab;
     if (tab === 'Individual' && this.individualPlayers.length === 0) {
       this.loadIndividualPlayers();
+    }
+    if (tab === 'Coaches') {
+      this.loadCoachDelegations();
     }
   }
 
@@ -257,6 +285,53 @@ export class TrainingComponent implements OnInit, OnDestroy {
     this.teamService.dateDisplay$.subscribe(date => {
       this.nextSessionInfo = date ? `Next session: ${date}` : '';
     });
+  }
+
+  // --- COACH DELEGATION ---
+
+  loadCoachDelegations() {
+    this.loadingCoaches = true;
+    const teamId = this.teamService.teamId;
+    this.http.get<TrainingTypeOverview[]>(urlApp + `/training/delegations/${teamId}/overview`).subscribe({
+      next: (data) => {
+        this.coachTypes = data || [];
+        this.loadingCoaches = false;
+      },
+      error: (err) => {
+        console.error('Error loading coach delegations:', err);
+        this.loadingCoaches = false;
+      }
+    });
+  }
+
+  /** Delegates a coach to a training type; null goes back to the automatic choice (best coach). */
+  delegateCoach(row: TrainingTypeOverview, staffId: number | null) {
+    this.savingCoachType = row.type;
+    this.coachMessage = '';
+    const teamId = this.teamService.teamId;
+    const query = staffId == null ? '' : `?staffId=${staffId}`;
+    this.http.put<any>(urlApp + `/training/delegations/${teamId}/${row.type}${query}`, null).subscribe({
+      next: () => {
+        this.savingCoachType = null;
+        this.gameEvents.emit('training');
+        this.loadCoachDelegations();
+      },
+      error: (err) => {
+        console.error('Error delegating coach:', err);
+        this.savingCoachType = null;
+        this.coachMessage = 'Failed to delegate the coach.';
+        setTimeout(() => this.coachMessage = '', 3000);
+      }
+    });
+  }
+
+  coachName(row: TrainingTypeOverview): string {
+    const coach = row.candidates.find(c => c.staffId === row.effectiveStaffId);
+    return coach ? coach.name : 'Nobody';
+  }
+
+  trainingTypeLabel(type: string): string {
+    return type.charAt(0) + type.slice(1).toLowerCase();
   }
 
   getFocusIcon(focus: string): string {

@@ -99,13 +99,14 @@
           <th (click)="sort('teamName')">Club {{ getSortIcon('teamName') }}</th>
           <th class="center" (click)="sort('age')">Age {{ getSortIcon('age') }}</th>
           <th class="center" (click)="sort('rating')">Rating {{ getSortIcon('rating') }}</th>
+          <th class="center" (click)="sort('specialRating')" title="Engine value on the natural position">Special {{ getSortIcon('specialRating') }}</th>
           <th class="right" (click)="sort('salary')">Salary {{ getSortIcon('salary') }}</th>
           <th class="right" (click)="sort('transferValue')">Value {{ getSortIcon('transferValue') }}</th>
           <th class="right" (click)="sort('fitness')">Condition {{ getSortIcon('fitness') }}</th>
           <th class="center" (click)="sort('morale')">Morale {{ getSortIcon('morale') }}</th>
         </tr></thead>
         <tbody>
-          <tr *ngFor="let player of displayedPlayers" [class.loaned-player-row]="player.loaned"
+          <tr *ngFor="let player of pagedPlayers" [class.loaned-player-row]="player.loaned"
               [class.transferred-player-row]="player.transferredThisSeason && !player.loaned">
             <td class="center">
               <button class="shortlist-btn" [class.active]="isShortlisted(player.id)" (click)="toggleShortlist(player.id, $event)"
@@ -116,11 +117,12 @@
             <td class="name-cell">
               <span class="scout-player-preview">
                 <a [routerLink]="['/player', player.id]" [queryParams]="{ actingTeamId: teamService.teamId }" class="fm-link">{{ player.name }}</a>
+                <span class="wanted-tag" *ngIf="player.wanted" [title]="'Wanted by ' + (player.wantedBy?.join(', ') || 'another club')">Wanted</span>
                 <button type="button" class="scout-info-btn" [attr.aria-label]="'Information about ' + player.name">i</button>
                 <span *ngIf="player.loaned" class="scout-market-badge loaned" [title]="marketStatusLabel(player)">LOAN</span>
                 <span *ngIf="player.transferredThisSeason && !player.loaned" class="scout-market-badge transferred">NEW</span>
                 <span class="scout-mini-card" role="tooltip">
-                  <span class="scout-card-head"><strong>{{ player.name }}</strong><b>{{ player.rating | fmRating }}</b></span>
+                  <span class="scout-card-head"><strong>{{ player.name }}</strong><b>{{ player.rating | fmRating }}<ng-container *ngIf="player.specialRating != null"> · S {{ player.specialRating | fmRating }}</ng-container></b></span>
                   <span class="scout-card-sub">{{ player.position }} · <a *ngIf="player.teamId; else scoutClubName" [routerLink]="['/team', player.teamId]">{{ player.teamName }}</a><ng-template #scoutClubName>{{ player.teamName || 'Free Agent' }}</ng-template></span>
                   <span class="scout-card-grid">
                     <span><small>Age</small><strong>{{ player.age }}</strong></span>
@@ -146,6 +148,7 @@
             <td class="club-cell"><a *ngIf="player.teamId" [routerLink]="['/team', player.teamId]" class="fm-link">{{ player.teamName }}</a><span *ngIf="!player.teamId">{{ player.teamName || 'Free Agent' }}</span></td>
             <td class="center">{{ player.age }}</td>
             <td class="center rating-val" [style.color]="player.rating | ratingColor" [style.font-weight]="700">{{ player.rating | fmRating }}</td>
+            <td class="center rating-val" [style.color]="player.specialRating | ratingColor" [style.font-weight]="700">{{ player.specialRating != null ? (player.specialRating | fmRating) : '–' }}</td>
             <td class="right money-val">{{ player.salary | fmMoney }}</td>
             <td class="right money-val">{{ player.transferValue | fmMoney }}</td>
             <td class="right">{{ player.fitness | fmPercent }}</td>
@@ -153,6 +156,13 @@
           </tr>
         </tbody>
       </table>
+      <div class="scout-pager" *ngIf="displayedPlayers.length > pageSize">
+        <button type="button" (click)="goToPage(0)" [disabled]="page === 0" aria-label="First page">«</button>
+        <button type="button" (click)="goToPage(page - 1)" [disabled]="page === 0" aria-label="Previous page">‹</button>
+        <span>Page {{ page + 1 }} / {{ pageCount }} · {{ displayedPlayers.length }} players</span>
+        <button type="button" (click)="goToPage(page + 1)" [disabled]="page >= pageCount - 1" aria-label="Next page">›</button>
+        <button type="button" (click)="goToPage(pageCount - 1)" [disabled]="page >= pageCount - 1" aria-label="Last page">»</button>
+      </div>
       <app-ui-state *ngIf="displayedPlayers.length === 0" kind="empty" title="No players found"
         message="Try widening the age, rating, salary or value filters." [showRetry]="false"></app-ui-state>
     </div>

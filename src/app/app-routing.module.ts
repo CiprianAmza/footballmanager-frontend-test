@@ -149,6 +149,46 @@ export const APP_ROUTES: Routes = [
     title: 'UI comparison lab'
   },
   { path: 'inbox', component: Inbox2Component, title: 'Inbox' },
+  {
+    path: 'agent/:id',
+    loadComponent: () => import('./agent/agent.component').then(module => module.AgentComponent),
+    title: 'Agent'
+  },
+  {
+    path: 'club-negotiation/:id',
+    loadComponent: () => import('./club-negotiation/club-negotiation.component').then(module => module.ClubNegotiationComponent),
+    title: 'Transfer talks'
+  },
+  {
+    path: 'board-meeting',
+    loadComponent: () => import('./board-meeting/board-meeting.component').then(module => module.BoardMeetingComponent),
+    title: 'Meeting with the board'
+  },
+  {
+    path: 'staff-meeting',
+    loadComponent: () => import('./staff-meeting/staff-meeting.component').then(module => module.StaffMeetingComponent),
+    title: 'Staff meeting'
+  },
+  {
+    path: 'press-conference',
+    loadComponent: () => import('./first-press-conference/first-press-conference.component').then(module => module.FirstPressConferenceComponent),
+    title: 'Press conference'
+  },
+  {
+    path: 'squad-meeting',
+    loadComponent: () => import('./squad-meeting/squad-meeting.component').then(module => module.SquadMeetingComponent),
+    title: 'Squad meeting'
+  },
+  {
+    path: 'conduct',
+    loadComponent: () => import('./conduct/conduct.component').then(module => module.ConductComponent),
+    title: 'Code of conduct'
+  },
+  {
+    path: 'negotiation/:id',
+    loadComponent: () => import('./negotiation/negotiation.component').then(module => module.NegotiationComponent),
+    title: 'Negotiation'
+  },
   { path: 'inbox-classic', component: InboxComponent },
   { path: 'inbox2', component: Inbox2Component },
   { path: 'inbox3', component: Inbox3Component },

@@ -56,6 +56,12 @@ export class HomeTodayComponent implements OnInit, OnDestroy {
   error = '';
   savePending = false;
   saveMessage = '';
+  /** The extra bonus for the next match (design §6.4). */
+  bonus: { amount: number; promisedBy: string | null; refusedThisMonth: boolean } | null = null;
+  bonusPending = false;
+  bonusMessage = '';
+  /** The first day at a new club, step by step (design §6). */
+  firstDay: { pending: boolean; steps: { key: string; label: string; done: boolean; route: string; messageId?: number }[] } | null = null;
   private subscriptions = new Subscription();
   private pollTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -80,12 +86,48 @@ export class HomeTodayComponent implements OnInit, OnDestroy {
       next: brief => {
         this.brief = brief;
         this.loading = false;
+        this.loadBonus();
+        this.loadFirstDay();
         if (brief.checkpoint.state === 'SAVING') this.scheduleStatusPoll();
       },
       error: () => {
         this.loading = false;
         this.error = 'Today’s briefing could not be loaded.';
       }
+    });
+  }
+
+  loadFirstDay(): void {
+    const teamId = this.teamService.teamId;
+    if (!teamId) return;
+    this.http.get<any>(`${urlApp}/first-day/${teamId}`).subscribe({
+      next: d => this.firstDay = d,
+      error: () => this.firstDay = null
+    });
+  }
+
+  loadBonus(): void {
+    const teamId = this.teamService.teamId;
+    if (!teamId) return;
+    this.http.get<any>(`${urlApp}/match-bonus/${teamId}`).subscribe({
+      next: b => this.bonus = b,
+      error: () => this.bonus = null
+    });
+  }
+
+  askBonus(): void {
+    this.bonusAction('/match-bonus/request');
+  }
+
+  payBonus(): void {
+    this.bonusAction('/match-bonus/pay-yourself');
+  }
+
+  private bonusAction(path: string): void {
+    this.bonusPending = true;
+    this.http.post<any>(`${urlApp}${path}`, { teamId: this.teamService.teamId }).subscribe({
+      next: r => { this.bonusMessage = r.message; this.bonusPending = false; this.loadBonus(); },
+      error: e => { this.bonusMessage = e?.error?.error || 'The bonus could not be arranged.'; this.bonusPending = false; }
     });
   }
 

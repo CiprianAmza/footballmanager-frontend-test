@@ -142,8 +142,9 @@ export class TransferService {
     return this.http.get<TransferOffer[]>(urlApp + `/transferOffer/history/${teamId}/${season}`);
   }
 
-  makeOffer(playerId: number, offerAmount: number, teamId: number): Observable<TransferOffer> {
-    return this.http.post<TransferOffer>(urlApp + `/transferOffer/makeOffer`, { playerId, offerAmount, teamId });
+  /** Opens fee talks with the selling club, or returns the ones already open for this player. */
+  startTalks(playerId: number, teamId: number): Observable<TransferOffer> {
+    return this.http.post<TransferOffer>(urlApp + `/transferOffer/talks/start`, { playerId, teamId });
   }
 
   respondToOffer(offerId: number, action: 'accept' | 'reject' | 'counter', counterAmount?: number): Observable<TransferOffer> {

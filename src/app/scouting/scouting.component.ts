@@ -16,6 +16,11 @@ export interface PlayerView {
   teamName: string;
   position: string;
   rating: number;
+  specialRating?: number;
+  /** An AI club is about to sign him during this window. */
+  wanted?: boolean;
+  /** Every club that had a chance to sign him. */
+  wantedBy?: string[];
   age: number;
   salary: number;
   transferValue?: number; // Poate nu vine din Java, dar e util
@@ -53,6 +58,21 @@ export class ScoutingComponent implements OnInit, OnDestroy {
 
   allPlayers: PlayerView[] = [];      // Lista originală (cache)
   displayedPlayers: PlayerView[] = []; // Lista filtrată (ce se vede)
+  readonly pageSize = 30;
+  page = 0;
+
+  get pageCount(): number {
+    return Math.max(1, Math.ceil(this.displayedPlayers.length / this.pageSize));
+  }
+
+  get pagedPlayers(): PlayerView[] {
+    const start = this.page * this.pageSize;
+    return this.displayedPlayers.slice(start, start + this.pageSize);
+  }
+
+  goToPage(page: number) {
+    this.page = Math.min(Math.max(page, 0), this.pageCount - 1);
+  }
   loading: boolean = true;
   errorMessage = '';
   activeView: 'database' | 'focuses' | 'reports' = 'database';
@@ -210,6 +230,7 @@ export class ScoutingComponent implements OnInit, OnDestroy {
       }
     }
 
+    this.page = 0;
     this.displayedPlayers.sort((a, b) => {
       // @ts-ignore
       let valA = a[column];
