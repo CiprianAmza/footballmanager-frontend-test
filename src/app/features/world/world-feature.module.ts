@@ -20,6 +20,7 @@ import { CompetitionRecordsComponent } from '../../competition-records/competiti
 import { CupOverviewComponent } from '../../competition/cup-overview/cup-overview.component';
 import { KnockoutCompetitionComponent } from '../../knockout-competition/knockout-competition.component';
 import { CompetitionViewComponent } from '../../competition-view/competition-view.component';
+import { TitleRaceChartComponent } from '../../competition-view/title-race-chart.component';
 import { CompetitionRankingsComponent } from '../../competition-rankings/competition-rankings.component';
 import { CompetitionRankingDetailComponent } from '../../competition-rankings/competition-ranking-detail.component';
 import { CompetitionOveriewComponent } from '../../competitionoveriew/competitionoveriew.component';
@@ -84,6 +85,7 @@ const routes: Routes = [
     KnockoutCompetitionComponent,
     LeagueCompetitionComponent,
     CompetitionViewComponent,
+    TitleRaceChartComponent,
     CompetitionRankingsComponent,
     CompetitionRankingDetailComponent,
     CupOverviewComponent,
