@@ -149,7 +149,7 @@
               </td>
               <td class="col-scorers" *ngIf="listMode === 'goalscorers'">{{ ownScorers(row) }}</td>
               <td class="col-comp">
-                <a *ngIf="row.competitionLink; else compText" [routerLink]="['/competition', row.competitionLink]" (click)="$event.stopPropagation()">{{ row.competitionLabel }}</a>
+                <a *ngIf="row.competitionLink; else compText" [routerLink]="['/competition', row.competitionLink]" [queryParams]="competitionQuery(row)" (click)="$event.stopPropagation()">{{ row.competitionLabel }}</a>
                 <ng-template #compText><span>{{ row.competitionLabel }}</span></ng-template>
               </td>
             </tr>
@@ -242,7 +242,7 @@
           <div>
             <dt>Competition</dt>
             <dd>
-              <a *ngIf="row.competitionLink; else panelComp" [routerLink]="['/competition', row.competitionLink]">{{ row.competitionLabel }}</a>
+              <a *ngIf="row.competitionLink; else panelComp" [routerLink]="['/competition', row.competitionLink]" [queryParams]="competitionQuery(row)">{{ row.competitionLabel }}</a>
               <ng-template #panelComp>{{ row.competitionLabel }}</ng-template>
               <small *ngIf="row.competitionKind === 'league'"> · {{ row.stageLabel }}</small>
             </dd>

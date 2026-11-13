@@ -677,6 +677,11 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
     return meetings[0] || null;
   }
 
+  /** Competition pages open on the current season unless told otherwise. */
+  competitionQuery(row: ScheduleRow): { season: number } | null {
+    return row.source.seasonNumber !== this.currentSeason ? { season: row.source.seasonNumber } : null;
+  }
+
   ordinal(position: number | null): string {
     return ordinalPosition(position);
   }
