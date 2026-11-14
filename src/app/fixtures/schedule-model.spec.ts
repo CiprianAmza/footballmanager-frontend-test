@@ -1,7 +1,8 @@
 import {
-  DEFAULT_FILTERS, ScheduleView, buildCalendarMonth, buildRow, buildRows, competitionOptions, defaultSelection,
-  filterRows, firstWeekdays, formBefore, groupByMonth, hasActiveFilters, hasPanelFilters, ordinalPosition,
-  relativeDay, resultNote, sortRows, summarise
+  DEFAULT_FILTERS, SEASON_MONTHS, ScheduleView, buildCalendarMonth, buildRow, buildRows, buildWeeks, competitionOptions,
+  daysBetween, defaultSelection, filterRows, firstWeekdays, formBefore, freeDates, groupByMonth, groupScorers,
+  hasActiveFilters, hasPanelFilters, isFreeDate, mergeFreeDates, ordinalPosition, panelGoalText, relativeDay,
+  relativeLabel, resultNote, seasonCalendar, seasonMonths, sortRows, summarise
 } from './schedule-model';
 
 const TEAM = 86;
@@ -35,8 +36,8 @@ describe('schedule-model', () => {
       expect(row.monthLabel).toBe('September');
       expect(row.dayOfMonth).toBe(5);
       expect(row.weekday).toBe(1);
-      expect(row.dateLabel).toBe('Tue 5 Sep');
-      expect(row.longDateLabel).toBe('Tuesday 5 September');
+      expect(row.dateLabel).toBe('Tue, 5/9');
+      expect(row.longDateLabel).toBe('Tuesday 5th September');
       expect(row.reportLink).toEqual(['/match-report2', 1, 15, 3, TEAM, 12]);
     });
 
@@ -52,12 +53,12 @@ describe('schedule-model', () => {
       expect([row.teamGoals, row.opponentGoals]).toEqual([0, 3]);
       expect([row.homeGoals, row.awayGoals]).toEqual([3, 0]);
       expect(row.stageLabel).toBe('Matchday 3');
-      expect(row.dateLabel).toBe('5 Sep');
+      expect(row.dateLabel).toBe('5/9');
     });
 
     it('derives the weekday from the game-date anchor of the same season only', () => {
       const anchor = { season: 15, day: 1, dayOfWeek: 'Tuesday' };
-      expect(buildRow(view({ day: 7, date: '7 August' }), TEAM, null, 0, anchor).dateLabel).toBe('Mon 7 Aug');
+      expect(buildRow(view({ day: 7, date: '7 August' }), TEAM, null, 0, anchor).dateLabel).toBe('Mon, 7/8');
       expect(buildRow(view({ day: 7, date: '7 August', seasonNumber: 14 }), TEAM, null, 0, anchor).weekday).toBeNull();
     });
 
@@ -154,12 +155,15 @@ describe('schedule-model', () => {
       expect(filterRows(rows, { ...DEFAULT_FILTERS, search: 'next' }).length).toBe(1);
       expect(hasActiveFilters(DEFAULT_FILTERS)).toBeFalse();
       expect(hasPanelFilters({ ...DEFAULT_FILTERS, venues: ['H'] })).toBeTrue();
+      expect(hasPanelFilters({ ...DEFAULT_FILTERS, freeDates: true })).toBeTrue();
       expect(hasPanelFilters({ ...DEFAULT_FILTERS, search: 'x' })).toBeFalse();
       expect(hasActiveFilters({ ...DEFAULT_FILTERS, search: 'x' })).toBeTrue();
     });
 
-    it('lists competitions league first, friendlies last', () => {
-      expect(competitionOptions(rows).map(o => [o.key, o.count])).toEqual([['c1', 3], ['c5', 1], ['friendly', 1]]);
+    it('lists competitions league first and friendlies last as "No Competition"', () => {
+      const options = competitionOptions(rows);
+      expect(options.map(o => [o.key, o.count])).toEqual([['c1', 3], ['c5', 1], ['friendly', 1]]);
+      expect(options[2].label).toBe('No Competition');
     });
 
     it('sorts by column, keeping the backend order for ties', () => {
@@ -200,14 +204,28 @@ describe('schedule-model', () => {
       expect(firstWeekdays(months)).toEqual([1, 4, 6]);
     });
 
-    it('lays a month out Monday to Sunday', () => {
-      const august = buildCalendarMonth(months[0], 1);
+    it('lays a month out Monday to Sunday, padding with the neighbouring months', () => {
+      const august = buildCalendarMonth(months[0], 1, null, months[1]);
 
       expect(august.aligned).toBeTrue();
-      expect(august.weeks[0].map(c => c.day)).toEqual([null, 1, 2, 3, 4, 5, 6]);
+      expect(august.weeks[0].map(c => c.day)).toEqual([31, 1, 2, 3, 4, 5, 6]);
+      expect(august.weeks[0].map(c => c.outside)).toEqual([true, false, false, false, false, false, false]);
       expect(august.weeks[1][0].day).toBe(7);
       expect(august.weeks[1][0].rows.length).toBe(1);
       expect(august.weeks.every(week => week.length === 7)).toBeTrue();
+    });
+
+    it('shows matches of the next month in the trailing cells', () => {
+      const withSeptember = buildRows([
+        view({ day: 7, date: '7 August', status: 'upcoming' }),
+        view({ day: 32, date: '1 September', roundNumber: 5, status: 'upcoming' })
+      ], TEAM, [], anchor);
+      const groups = groupByMonth(withSeptember, true);
+      const august = buildCalendarMonth(groups[0], 1, null, groups[1]);
+
+      expect(august.weeks[4].map(c => c.day)).toEqual([28, 29, 30, 31, 1, 2, 3]);
+      expect(august.weeks[4].map(c => c.outside)).toEqual([false, false, false, false, true, true, true]);
+      expect(august.weeks[4][4].rows.length).toBe(1);
     });
 
     it('starts on day 1 without weekday alignment when no weekday is known', () => {
@@ -215,15 +233,70 @@ describe('schedule-model', () => {
       expect(grid.aligned).toBeFalse();
       expect(grid.weeks[0][0].day).toBe(1);
     });
+
+    it('maps season days to dates and weekdays', () => {
+      const calendar = seasonCalendar(rows)!;
+      expect(calendar(1)).toEqual({ day: 1, monthIndex: 7, dayOfMonth: 1, weekday: 1 });
+      expect(calendar(32)).toEqual({ day: 32, monthIndex: 8, dayOfMonth: 1, weekday: 4 });
+      expect(calendar(155)).toEqual(jasmine.objectContaining({ monthIndex: 0, dayOfMonth: 2 }));
+    });
+
+    it('lists free dates between matches and merges them by day', () => {
+      const free = freeDates(rows);
+      expect(free.length).toBe(58);
+      expect(free[0].dateLabel).toBe('Tue, 8/8');
+      expect(free[free.length - 1].dateLabel).toBe('Wed, 4/10');
+
+      const merged = mergeFreeDates(rows, free);
+      expect(merged.length).toBe(60);
+      expect(isFreeDate(merged[0])).toBeFalse();
+      expect(isFreeDate(merged[1])).toBeTrue();
+      expect(isFreeDate(merged[59])).toBeFalse();
+    });
+
+    it('builds the twelve season months and seven-day weeks from the season start', () => {
+      expect(seasonMonths(rows).map(m => m.label)).toEqual(SEASON_MONTHS);
+      expect(seasonMonths(rows).map(m => m.rows.length)).toEqual([1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+      const weeks = buildWeeks(rows);
+      expect(weeks.length).toBe(53);
+      expect(weeks[0].label).toBe('Tuesday 1st August - Monday 7th August');
+      expect(weeks[0].days[6].rows.length).toBe(1);
+    });
   });
 
   describe('labels', () => {
-    it('formats relative days and league positions', () => {
+    it('formats relative days across seasons and league positions', () => {
       expect(relativeDay(10, 4)).toBe('6 days');
       expect(relativeDay(4, 84)).toBe('80 days ago');
       expect(relativeDay(5, 5)).toBe('today');
       expect(relativeDay(null, 5)).toBeNull();
+      expect(relativeLabel(daysBetween(16, 7, 16, 1))).toBe('6 days');
+      expect(relativeLabel(daysBetween(15, 7, 16, 1))).toBe('359 days ago');
+      expect(daysBetween(15, null, 16, 1)).toBeNull();
       expect([1, 2, 3, 4, 11, 12, 21, 22].map(ordinalPosition)).toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '21st', '22nd']);
+    });
+
+    it('writes goals the FM way in the panel and in the Goalscorers column', () => {
+      expect(panelGoalText({ playerName: 'Iripus', minute: 8 })).toBe('Iripus (8)');
+      expect(panelGoalText({ playerName: 'Uvipius', minute: 83, details: 'Penalty' })).toBe('Uvipius (pen 83)');
+      expect(panelGoalText({ playerName: 'Karacsony', minute: 10, ownGoal: true })).toBe('Karacsony o.g. (10)');
+      expect(panelGoalText({ playerName: 'Iecapius', minute: null })).toBe('Iecapius');
+
+      expect(groupScorers([
+        { playerId: 1, playerName: 'A', minute: 12 },
+        { playerId: 2, playerName: 'B', minute: 39 },
+        { playerId: 1, playerName: 'A', minute: 13 },
+        { playerId: 1, playerName: 'A', minute: 72, details: 'Penalty' },
+        { playerId: 3, playerName: 'C', minute: null },
+        { playerId: 3, playerName: 'C', minute: null },
+        { playerId: 4, playerName: 'D', minute: 90, ownGoal: true }
+      ])).toEqual([
+        { text: 'A (12, 13, pen 72)', ownGoal: false },
+        { text: 'B (39)', ownGoal: false },
+        { text: 'D o.g. (90)', ownGoal: true },
+        { text: 'C (2)', ownGoal: false }
+      ]);
     });
   });
 });

@@ -128,12 +128,28 @@ export interface ScheduleFilters {
   venues: Venue[];
   result: 'all' | Outcome;
   search: string;
+  /** FM "Free Dates": adds a row for every day without a match. */
+  freeDates: boolean;
 }
 
-export interface MonthGroup {
+export interface MonthGroup<T = ScheduleRow> {
   label: string;
-  rows: ScheduleRow[];
+  rows: T[];
 }
+
+/** A day without a match, listed when the FM "Free Dates" filter is on. */
+export interface FreeDateRow {
+  free: true;
+  key: string;
+  day: number;
+  dateLabel: string;
+  longDateLabel: string;
+  monthLabel: string;
+  monthIndex: number;
+  dayOfMonth: number;
+}
+
+export type ListItem = ScheduleRow | FreeDateRow;
 
 export interface CompetitionOption {
   key: string;
@@ -154,8 +170,10 @@ export interface ScheduleSummary {
 }
 
 export interface CalendarCell {
-  /** Day of month, or null for padding cells outside the month. */
+  /** Day of month; for cells of the neighbouring months it is their own day, shown without a number. */
   day: number | null;
+  /** True for leading/trailing cells that belong to the previous or next month. */
+  outside: boolean;
   rows: ScheduleRow[];
 }
 
@@ -167,7 +185,7 @@ export interface CalendarMonthGrid {
 }
 
 export const DEFAULT_FILTERS: ScheduleFilters = {
-  show: 'all', competitions: [], venues: [], result: 'all', search: ''
+  show: 'all', competitions: [], venues: [], result: 'all', search: '', freeDates: false
 };
 
 export const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -343,12 +361,8 @@ export function buildRow(
     day,
     dateKnown: !!date,
     weekday: date ? weekday : null,
-    dateLabel: date
-      ? `${weekday !== null ? WEEKDAYS[weekday].slice(0, 3) + ' ' : ''}${date.day} ${monthName!.slice(0, 3)}`
-      : '—',
-    longDateLabel: date
-      ? `${weekday !== null ? WEEKDAYS[weekday] + ' ' : ''}${date.day} ${monthName}`
-      : 'Date not recorded',
+    dateLabel: date ? shortDate(weekday, date.day, date.monthIndex) : '—',
+    longDateLabel: date ? longDate(weekday, date.day, date.monthIndex) : 'Date not recorded',
     monthLabel: monthName ?? UNDATED_MONTH,
     monthIndex: date ? date.monthIndex : null,
     dayOfMonth: date ? date.day : null,
@@ -408,7 +422,7 @@ export function competitionOptions(rows: ScheduleRow[]): CompetitionOption[] {
     }
     options.set(key, {
       key,
-      label: row.competitionKind === 'friendly' ? 'No competition (friendlies)' : row.competitionName,
+      label: row.competitionKind === 'friendly' ? 'No Competition' : row.competitionName,
       kind: row.competitionKind,
       count: 1
     });
@@ -435,7 +449,7 @@ export function filterRows(rows: ScheduleRow[], filters: ScheduleFilters): Sched
 
 /** True when the FM-style Filter panel (competitions / venue / result) narrows the list. */
 export function hasPanelFilters(filters: ScheduleFilters): boolean {
-  return filters.competitions.length > 0 || filters.venues.length > 0 || filters.result !== 'all';
+  return filters.competitions.length > 0 || filters.venues.length > 0 || filters.result !== 'all' || filters.freeDates;
 }
 
 export function hasActiveFilters(filters: ScheduleFilters): boolean {
@@ -446,8 +460,10 @@ export function hasActiveFilters(filters: ScheduleFilters): boolean {
  * Groups rows by month in season order. With `fillEmpty`, months without matches
  * between the first and last dated month are shown too, as FM does.
  */
-export function groupByMonth(rows: ScheduleRow[], fillEmpty = false): MonthGroup[] {
-  const groups: MonthGroup[] = [];
+export function groupByMonth<T extends { monthLabel: string; monthIndex: number | null }>(
+  rows: T[], fillEmpty = false
+): MonthGroup<T>[] {
+  const groups: MonthGroup<T>[] = [];
   rows.forEach(row => {
     const last = groups[groups.length - 1];
     if (last && last.label === row.monthLabel) {
@@ -498,19 +514,32 @@ export function sortRows(rows: ScheduleRow[], key: SortKey, descending = false):
  * One FM-style month: Monday–Sunday weeks. The weekday of the 1st comes from any
  * match in that month with a known weekday, or is carried over from a known month.
  */
-export function buildCalendarMonth(month: MonthGroup, firstWeekday: number | null): CalendarMonthGrid {
+export function buildCalendarMonth(
+  month: MonthGroup, firstWeekday: number | null, previous?: MonthGroup | null, next?: MonthGroup | null
+): CalendarMonthGrid {
   const monthIndex = MONTHS.indexOf(month.label);
   if (monthIndex < 0) return { label: month.label, aligned: false, weeks: [] };
   const length = MONTH_LENGTHS[monthIndex];
-  const byDay = new Map<number, ScheduleRow[]>();
-  month.rows.forEach(row => {
-    if (row.dayOfMonth) byDay.set(row.dayOfMonth, [...(byDay.get(row.dayOfMonth) || []), row]);
-  });
+  const byDay = (group?: MonthGroup | null) => {
+    const map = new Map<number, ScheduleRow[]>();
+    (group?.rows || []).forEach(row => {
+      if (row.dayOfMonth) map.set(row.dayOfMonth, [...(map.get(row.dayOfMonth) || []), row]);
+    });
+    return map;
+  };
+  const current = byDay(month);
+  const before = byDay(previous);
+  const after = byDay(next);
+  const previousLength = MONTH_LENGTHS[(monthIndex + 11) % 12];
   const lead = firstWeekday ?? 0;
   const cells: CalendarCell[] = [];
-  for (let i = 0; i < lead; i++) cells.push({ day: null, rows: [] });
-  for (let d = 1; d <= length; d++) cells.push({ day: d, rows: byDay.get(d) || [] });
-  while (cells.length % 7) cells.push({ day: null, rows: [] });
+  // FM shows the matches of the neighbouring months in the padding cells, without a day number.
+  for (let i = lead; i > 0; i--) {
+    const d = previousLength - i + 1;
+    cells.push({ day: d, outside: true, rows: before.get(d) || [] });
+  }
+  for (let d = 1; d <= length; d++) cells.push({ day: d, outside: false, rows: current.get(d) || [] });
+  for (let d = 1; cells.length % 7; d++) cells.push({ day: d, outside: true, rows: after.get(d) || [] });
   const weeks: CalendarCell[][] = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
   return { label: month.label, aligned: firstWeekday !== null, weeks };
@@ -576,4 +605,212 @@ export function relativeDay(matchDay: number | null, currentDay: number | null):
 /** Next unplayed match, or the most recent result when the season is complete. */
 export function defaultSelection(rows: ScheduleRow[]): ScheduleRow | null {
   return rows.find(row => !row.played) ?? rows[rows.length - 1] ?? null;
+}
+
+// ---------------------------------------------------------------- FM date formats
+
+/** FM list date "Mon, 7/8" (the simulator has no calendar year). */
+export function shortDate(weekday: number | null, dayOfMonth: number, monthIndex: number): string {
+  const prefix = weekday !== null ? `${WEEKDAYS[weekday].slice(0, 3)}, ` : '';
+  return `${prefix}${dayOfMonth}/${monthIndex + 1}`;
+}
+
+/** FM long date "Monday 1st January". */
+export function longDate(weekday: number | null, dayOfMonth: number, monthIndex: number): string {
+  return `${weekday !== null ? WEEKDAYS[weekday] + ' ' : ''}${ordinal(dayOfMonth)} ${MONTHS[monthIndex]}`;
+}
+
+// ---------------------------------------------------------------- season calendar
+
+/** Season months in FM order: August to July. */
+export const SEASON_MONTHS = [7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5, 6].map(i => MONTHS[i]);
+
+export interface SeasonDate {
+  day: number;
+  monthIndex: number;
+  dayOfMonth: number;
+  weekday: number | null;
+}
+
+/** Days since 1 August for a date of the season (no leap years in the simulator). */
+function seasonOffset(monthIndex: number, dayOfMonth: number): number {
+  let offset = 0;
+  for (let m = 7; m !== monthIndex; m = (m + 1) % 12) offset += MONTH_LENGTHS[m];
+  return offset + dayOfMonth - 1;
+}
+
+/**
+ * Maps a calendar day of the season to its date, anchored on any row whose day
+ * and date are both known; weekdays come from any row whose weekday is known.
+ */
+export function seasonCalendar(rows: ScheduleRow[]): ((day: number) => SeasonDate) | null {
+  const ref = rows.find(row => row.day !== null && row.monthIndex !== null && row.dayOfMonth);
+  if (!ref) return null;
+  const weekRef = rows.find(row => row.day !== null && row.weekday !== null);
+  const refOffset = seasonOffset(ref.monthIndex as number, ref.dayOfMonth as number) - (ref.day as number);
+  return (day: number) => {
+    let offset = ((refOffset + day) % 365 + 365) % 365;
+    let monthIndex = 7;
+    while (offset >= MONTH_LENGTHS[monthIndex]) {
+      offset -= MONTH_LENGTHS[monthIndex];
+      monthIndex = (monthIndex + 1) % 12;
+    }
+    const weekday = weekRef ? mod7((weekRef.weekday as number) + day - (weekRef.day as number)) : null;
+    return { day, monthIndex, dayOfMonth: offset + 1, weekday };
+  };
+}
+
+/** FM "Free Dates": every day between the first and the last dated match without a match. */
+export function freeDates(rows: ScheduleRow[]): FreeDateRow[] {
+  const calendar = seasonCalendar(rows);
+  const days = rows.map(row => row.day).filter((d): d is number => d !== null);
+  if (!calendar || !days.length) return [];
+  const busy = new Set(days);
+  const result: FreeDateRow[] = [];
+  for (let d = Math.min(...days); d <= Math.max(...days); d++) {
+    if (busy.has(d)) continue;
+    const date = calendar(d);
+    result.push({
+      free: true,
+      key: `free-${d}`,
+      day: d,
+      dateLabel: shortDate(date.weekday, date.dayOfMonth, date.monthIndex),
+      longDateLabel: longDate(date.weekday, date.dayOfMonth, date.monthIndex),
+      monthLabel: MONTHS[date.monthIndex],
+      monthIndex: date.monthIndex,
+      dayOfMonth: date.dayOfMonth
+    });
+  }
+  return result;
+}
+
+/** Interleaves free dates with matches by calendar day; undated matches keep their place. */
+export function mergeFreeDates(rows: ScheduleRow[], free: FreeDateRow[]): ListItem[] {
+  const result: ListItem[] = [];
+  let i = 0;
+  rows.forEach(row => {
+    if (row.day !== null) {
+      while (i < free.length && free[i].day < row.day) result.push(free[i++]);
+    }
+    result.push(row);
+  });
+  while (i < free.length) result.push(free[i++]);
+  return result;
+}
+
+export function isFreeDate(item: ListItem): item is FreeDateRow {
+  return (item as FreeDateRow).free === true;
+}
+
+/** All twelve season months (August–July) with their dated matches. */
+export function seasonMonths(rows: ScheduleRow[]): MonthGroup[] {
+  const dated = rows.filter(row => row.dateKnown);
+  if (!dated.length) return [];
+  return SEASON_MONTHS.map(label => ({ label, rows: dated.filter(row => row.monthLabel === label) }));
+}
+
+export interface WeekDay {
+  date: SeasonDate;
+  label: string;
+  rows: ScheduleRow[];
+}
+
+export interface CalendarWeek {
+  label: string;
+  days: WeekDay[];
+}
+
+/** FM Week view: seven-day windows from the first day of the season. */
+export function buildWeeks(rows: ScheduleRow[], seasonLength = 365): CalendarWeek[] {
+  const calendar = seasonCalendar(rows);
+  if (!calendar) return [];
+  const byDay = new Map<number, ScheduleRow[]>();
+  rows.forEach(row => {
+    if (row.day !== null) byDay.set(row.day, [...(byDay.get(row.day) || []), row]);
+  });
+  const weeks: CalendarWeek[] = [];
+  for (let start = 1; start <= seasonLength; start += 7) {
+    const days: WeekDay[] = [];
+    for (let d = start; d < start + 7 && d <= seasonLength; d++) {
+      const date = calendar(d);
+      days.push({ date, label: longDate(date.weekday, date.dayOfMonth, date.monthIndex), rows: byDay.get(d) || [] });
+    }
+    weeks.push({ label: `${days[0].label} - ${days[days.length - 1].label}`, days });
+  }
+  return weeks;
+}
+
+/**
+ * Days between a match and the game date across seasons: every season runs
+ * 1 August to 31 July, so a calendar day is 365 * season + day.
+ */
+export function daysBetween(matchSeason: number, matchDay: number | null, currentSeason: number, currentDay: number): number | null {
+  if (matchDay === null || currentDay <= 0) return null;
+  return (matchSeason - currentSeason) * 365 + matchDay - currentDay;
+}
+
+/** FM header moment from a day difference: "today", "6 days", "80 days ago". */
+export function relativeLabel(diff: number | null): string | null {
+  if (diff === null) return null;
+  if (diff === 0) return 'today';
+  if (diff === 1) return 'tomorrow';
+  if (diff === -1) return 'yesterday';
+  return diff > 0 ? `${diff} days` : `${-diff} days ago`;
+}
+
+// ---------------------------------------------------------------- goalscorers
+
+export interface GoalLike {
+  playerId?: number | null;
+  playerName: string;
+  minute: number | null;
+  teamId?: number | null;
+  details?: string | null;
+  penalty?: boolean | null;
+  ownGoal?: boolean | null;
+}
+
+export interface ScorerText {
+  text: string;
+  ownGoal: boolean;
+}
+
+export function isOwnGoal(goal: GoalLike): boolean {
+  return !!goal.ownGoal || /own goal/i.test(goal.details || '');
+}
+
+export function isPenalty(goal: GoalLike): boolean {
+  return !!goal.penalty || /penalt/i.test(goal.details || '');
+}
+
+function minuteText(goal: GoalLike): string | null {
+  if (goal.minute == null) return isPenalty(goal) ? 'pen' : null;
+  return isPenalty(goal) ? `pen ${goal.minute}` : `${goal.minute}`;
+}
+
+/** FM panel line, one per goal: "Name (27)", "Name (pen 75)", "Name o.g. (10)". */
+export function panelGoalText(goal: GoalLike): string {
+  const minute = minuteText(goal);
+  const name = isOwnGoal(goal) ? `${goal.playerName} o.g.` : goal.playerName;
+  return minute ? `${name} (${minute})` : name;
+}
+
+/** FM Goalscorers column: one entry per player, "Name (12, 13, 72)", "Name (pen 39, pen 55)". */
+export function groupScorers(goals: GoalLike[]): ScorerText[] {
+  const groups = new Map<string, { goal: GoalLike; minutes: string[]; count: number; first: number }>();
+  goals.forEach((goal, index) => {
+    const key = `${goal.playerId || goal.playerName}|${isOwnGoal(goal)}`;
+    const entry = groups.get(key) || { goal, minutes: [] as string[], count: 0, first: goal.minute ?? 1000 + index };
+    const minute = minuteText(goal);
+    if (minute) entry.minutes.push(minute);
+    entry.count++;
+    groups.set(key, entry);
+  });
+  return Array.from(groups.values())
+    .sort((a, b) => a.first - b.first)
+    .map(({ goal, minutes, count }) => {
+      const name = isOwnGoal(goal) ? `${goal.playerName} o.g.` : goal.playerName;
+      const detail = minutes.length ? minutes.join(', ') : count > 1 ? `${count}` : '';
+      return { text: detail ? `${name} (${detail})` : name, ownGoal: isOwnGoal(goal) };
+    });
 }
