@@ -279,6 +279,7 @@ select:disabled { opacity: .45; }
 .ic-card { display: inline-block; width: 8px; height: 11px; border-radius: 1px; vertical-align: -1px; }
 .ic-card.yellow { background: #f2c94c; }
 .ic-card.red { background: #e0675b; }
+.ic-injury { color: #e0675b; font-weight: 900; }
 .p-rating { width: 46px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 .news h3, .preview h3 { margin: 0 0 6px; color: var(--sc-faded); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
 .news ul { margin: 0; padding-left: 16px; font-size: 12px; }

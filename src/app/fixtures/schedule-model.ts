@@ -758,12 +758,22 @@ export function relativeLabel(diff: number | null): string | null {
   return diff > 0 ? `${diff} days` : `${-diff} days ago`;
 }
 
+/** FM attendance line: "Attendance: 2,727 (13 Away)"; null when the match has no stored crowd. */
+export function attendanceText(attendance: number | null | undefined, away: number | null | undefined): string | null {
+  if (attendance == null || !Number.isFinite(attendance) || attendance <= 0) return null;
+  const format = (n: number) => Math.round(n).toLocaleString('en-US');
+  const awayPart = away != null && Number.isFinite(away) && away > 0 ? ` (${format(away)} Away)` : '';
+  return `Attendance: ${format(attendance)}${awayPart}`;
+}
+
 // ---------------------------------------------------------------- goalscorers
 
 export interface GoalLike {
   playerId?: number | null;
   playerName: string;
   minute: number | null;
+  /** Stoppage time after `minute` ("45+2" = minute 45, addedTime 2). */
+  addedTime?: number | null;
   teamId?: number | null;
   details?: string | null;
   penalty?: boolean | null;
@@ -783,9 +793,16 @@ export function isPenalty(goal: GoalLike): boolean {
   return !!goal.penalty || /penalt/i.test(goal.details || '');
 }
 
+/** FM minute: "27", "45+2"; penalties "pen 75". */
 function minuteText(goal: GoalLike): string | null {
   if (goal.minute == null) return isPenalty(goal) ? 'pen' : null;
-  return isPenalty(goal) ? `pen ${goal.minute}` : `${goal.minute}`;
+  const minute = goal.addedTime && goal.addedTime > 0 ? `${goal.minute}+${goal.addedTime}` : `${goal.minute}`;
+  return isPenalty(goal) ? `pen ${minute}` : minute;
+}
+
+/** Sort key that puts 45+2 after 45 and before 46. */
+function goalTime(goal: GoalLike, fallback: number): number {
+  return goal.minute == null ? fallback : goal.minute + (goal.addedTime && goal.addedTime > 0 ? goal.addedTime / 100 : 0);
 }
 
 /** FM panel line, one per goal: "Name (27)", "Name (pen 75)", "Name o.g. (10)". */
@@ -800,7 +817,7 @@ export function groupScorers(goals: GoalLike[]): ScorerText[] {
   const groups = new Map<string, { goal: GoalLike; minutes: string[]; count: number; first: number }>();
   goals.forEach((goal, index) => {
     const key = `${goal.playerId || goal.playerName}|${isOwnGoal(goal)}`;
-    const entry = groups.get(key) || { goal, minutes: [] as string[], count: 0, first: goal.minute ?? 1000 + index };
+    const entry = groups.get(key) || { goal, minutes: [] as string[], count: 0, first: goalTime(goal, 1000 + index) };
     const minute = minuteText(goal);
     if (minute) entry.minutes.push(minute);
     entry.count++;

@@ -8,7 +8,7 @@ import { TeamService } from '../services/team.service';
 import {
   CalendarEntry, CalendarMonthGrid, CalendarWeek, WeekDay, CompetitionOption, DEFAULT_FILTERS, GoalLike, ListItem, MonthGroup,
   Outcome, ScheduleFilters, ScheduleRow, ScheduleSummary, ScheduleView, ScorerText, SortKey, UNDATED_MONTH, Venue,
-  WEEKDAYS, buildCalendarMonth, buildRows, buildWeeks, competitionOptions, daysBetween, defaultSelection, filterRows,
+  WEEKDAYS, attendanceText, buildCalendarMonth, buildRows, buildWeeks, competitionOptions, daysBetween, defaultSelection, filterRows,
   firstWeekdays, formBefore, freeDates, groupByMonth, groupScorers, hasActiveFilters, hasPanelFilters, isFreeDate,
   isOwnGoal, mergeFreeDates, ordinalPosition, panelGoalText, relativeLabel, seasonCalendar, seasonMonths, sortRows,
   summarise
@@ -35,6 +35,7 @@ export interface MatchEvent {
   teamId1: number;
   teamId2: number;
   minute: number;
+  addedTime?: number | null;
   eventType: string;
   playerId: number;
   playerName: string;
@@ -66,6 +67,7 @@ interface OwnPlayer {
   goals: number;
   yellow: boolean;
   red: boolean;
+  injured: boolean;
 }
 
 /** One row of /teams/availability/{teamId}: an injury or a suspension. */
@@ -973,6 +975,7 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
     const ids = (type: string) => new Set(this.matchEvents.filter(e => e.eventType === type).map(e => Number(e.playerId)));
     const yellow = ids('yellow_card');
     const red = ids('red_card');
+    const injured = ids('injury');
     const rank = (position: string) => {
       const index = POSITION_ORDER.indexOf((position || '').toUpperCase());
       return index < 0 ? POSITION_ORDER.length : index;
@@ -992,9 +995,15 @@ export class FixturesComponent implements OnInit, OnDestroy, OnChanges {
         substitute: !!p.substitute,
         goals: Number(played?.goals ?? p.goals) || 0,
         yellow: yellow.has(id),
-        red: red.has(id)
+        red: red.has(id),
+        injured: injured.has(id)
       };
     });
+  }
+
+  /** "Attendance: 2,727 (13 Away)" from the post-match summary, when the match stored its crowd. */
+  get attendanceLine(): string | null {
+    return attendanceText(this.matchSummary?.attendance, this.matchSummary?.awayAttendance);
   }
 
   goalIcons(count: number): number[] {

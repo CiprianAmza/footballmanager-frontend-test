@@ -1,5 +1,5 @@
 import {
-  DEFAULT_FILTERS, SEASON_MONTHS, ScheduleView, buildCalendarMonth, buildRow, buildRows, buildWeeks, competitionOptions,
+  DEFAULT_FILTERS, SEASON_MONTHS, ScheduleView, attendanceText, buildCalendarMonth, buildRow, buildRows, buildWeeks, competitionOptions,
   daysBetween, defaultSelection, filterRows, firstWeekdays, formBefore, freeDates, groupByMonth, groupScorers,
   hasActiveFilters, hasPanelFilters, isFreeDate, mergeFreeDates, ordinalPosition, panelGoalText, relativeDay,
   relativeLabel, resultNote, seasonCalendar, seasonMonths, sortRows, summarise
@@ -297,6 +297,25 @@ describe('schedule-model', () => {
         { text: 'D o.g. (90)', ownGoal: true },
         { text: 'C (2)', ownGoal: false }
       ]);
+    });
+
+    it('writes stoppage-time goals as "45+2" and orders them after the 45th minute', () => {
+      expect(panelGoalText({ playerName: 'Iripus', minute: 45, addedTime: 2 })).toBe('Iripus (45+2)');
+      expect(panelGoalText({ playerName: 'Uvipius', minute: 90, addedTime: 3, details: 'Penalty' })).toBe('Uvipius (pen 90+3)');
+      expect(panelGoalText({ playerName: 'Zero', minute: 45, addedTime: 0 })).toBe('Zero (45)');
+
+      expect(groupScorers([
+        { playerId: 2, playerName: 'B', minute: 46 },
+        { playerId: 1, playerName: 'A', minute: 45, addedTime: 2 },
+        { playerId: 1, playerName: 'A', minute: 90, addedTime: 1 }
+      ]).map(s => s.text)).toEqual(['A (45+2, 90+1)', 'B (46)']);
+    });
+
+    it('formats the stored attendance like FM', () => {
+      expect(attendanceText(2727, 13)).toBe('Attendance: 2,727 (13 Away)');
+      expect(attendanceText(15400, 0)).toBe('Attendance: 15,400');
+      expect(attendanceText(null, 13)).toBeNull();
+      expect(attendanceText(0, null)).toBeNull();
     });
   });
 });

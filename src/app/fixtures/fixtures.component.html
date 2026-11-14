@@ -391,6 +391,7 @@
           <ng-template #panelComp><span>{{ row.competitionLabel }}</span></ng-template>
           <strong>{{ row.longDateLabel }}<ng-container *ngIf="row.kickoffTime"> {{ row.kickoffTime }}</ng-container></strong>
           <span *ngIf="row.venueName">🏟 {{ row.venueName }}</span>
+          <span *ngIf="row.played && attendanceLine as attendance">{{ attendance }}</span>
         </div>
 
         <!-- Played: own player list in formation order -->
@@ -408,6 +409,7 @@
                     <i *ngFor="let _ of goalIcons(p.goals)" class="ic-goal" title="Goal">⚽</i>
                     <i *ngIf="p.yellow" class="ic-card yellow" title="Yellow card"></i>
                     <i *ngIf="p.red" class="ic-card red" title="Red card"></i>
+                    <i *ngIf="p.injured" class="ic-injury" title="Injured">✚</i>
                   </span>
                 </td>
                 <td class="p-rating">{{ p.rating !== null ? (p.rating | number:'1.1-1') : '-' }}</td>
