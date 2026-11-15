@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 
 import { AnimationPreviewComponent } from '../../animation-preview/animation-preview.component';
 import { MatchRatingsComponent } from '../../match-ratings/match-ratings.component';
+import { Match2dOverlayComponent } from '../../shared/match2d-overlay/match2d-overlay.component';
 import { SharedModule } from '../../shared/shared.module';
 import { SimulateComponent } from '../../simulate/simulate.component';
 
@@ -18,6 +19,6 @@ const routes: Routes = [
 
 @NgModule({
   declarations: [SimulateComponent, AnimationPreviewComponent],
-  imports: [SharedModule, RouterModule.forChild(routes)]
+  imports: [SharedModule, Match2dOverlayComponent, RouterModule.forChild(routes)]
 })
 export class MatchFeatureModule {}

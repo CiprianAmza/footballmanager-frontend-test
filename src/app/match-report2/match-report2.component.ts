@@ -4,12 +4,14 @@ import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 
 import { urlApp } from '../app.component';
+import { match2dReplayUrl } from '../shared/match2d';
+import { Match2dOverlayComponent } from '../shared/match2d-overlay/match2d-overlay.component';
 import { SharedModule } from '../shared/shared.module';
 
 @Component({
   selector: 'app-match-report2',
   standalone: true,
-  imports: [SharedModule],
+  imports: [SharedModule, Match2dOverlayComponent],
   templateUrl: './match-report2.component.html',
   styleUrls: ['./match-report2.component.css']
 })
@@ -23,6 +25,8 @@ export class MatchReport2Component implements OnInit, OnDestroy {
   loading = true;
   error = '';
   report: any = null;
+  /** Replay route of the 2D match (null = 2D window closed). */
+  match2dReplay: string | null = null;
 
   constructor(private http: HttpClient, private route: ActivatedRoute) {}
 
@@ -33,6 +37,7 @@ export class MatchReport2Component implements OnInit, OnDestroy {
       this.round = Number(params.get('round'));
       this.teamId1 = Number(params.get('teamId1'));
       this.teamId2 = Number(params.get('teamId2'));
+      this.match2dReplay = null;
       this.load();
     }));
   }
@@ -59,6 +64,18 @@ export class MatchReport2Component implements OnInit, OnDestroy {
         this.error = 'The post-match report could not be loaded.';
       }
     }));
+  }
+
+  /** Same fixture as this report: the ids come from the route. */
+  openMatch2d(): void {
+    if (!this.report?.match2d) return;
+    this.match2dReplay = match2dReplayUrl(urlApp, this.competitionId, this.season, this.round, this.teamId1, this.teamId2);
+  }
+
+  closeMatch2d(): void { this.match2dReplay = null; }
+
+  get match2dHeading(): string {
+    return `${this.summary.homeTeamName || 'Home'} v ${this.summary.awayTeamName || 'Away'}`;
   }
 
   get summary(): any { return this.report?.summary || {}; }

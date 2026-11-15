@@ -2,6 +2,7 @@ import { Component, NgZone, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
 import { urlApp } from '../app.component';
+import { isFrameableUrl, Match2dPreview, match2dErrorMessage, match2dPreviewUrl } from '../shared/match2d';
 import { KitColors, PitchClip } from '../models/live-match.model';
 import {
   goalAnimationToFrames, kitsFromAnimation, MatchPitchComponent
@@ -62,6 +63,13 @@ export class AnimationPreviewComponent implements OnInit, OnDestroy {
   private shirtNumbers: { [playerId: number]: number } = {};
   private rafId: number | null = null;
   private lastFrameTs = 0;
+
+  // ---- 2D match played from player ratings by the engine service, shown in an iframe ----
+  match2dLoading = false;
+  match2dError = '';
+  match2d: Match2dPreview | null = null;
+  /** Same seed = same match; "Another match" moves to the next one. */
+  match2dSeed = 1;
 
   constructor(private http: HttpClient, private route: ActivatedRoute, private zone: NgZone) {}
 
@@ -201,6 +209,39 @@ export class AnimationPreviewComponent implements OnInit, OnDestroy {
 
   onClipFinished(): void {
     this.zone.run(() => this.pitchClip = null);
+  }
+
+  playMatch2d(): void {
+    this.teamId1 = +this.teamId1;
+    this.teamId2 = +this.teamId2;
+    if (!this.teamId1 || !this.teamId2 || this.teamId1 === this.teamId2 || this.match2dLoading) return;
+    this.match2dLoading = true;
+    this.match2dError = '';
+    const url = match2dPreviewUrl(urlApp, this.teamId1, this.teamId2, this.match2dSeed, 90);
+    this.http.get<Match2dPreview>(url).subscribe({
+      next: (data) => {
+        this.match2dLoading = false;
+        if (!data || !isFrameableUrl(data.viewUrl)) {
+          this.match2dError = 'The 2D engine returned no page to show.';
+          return;
+        }
+        this.match2d = data;
+      },
+      error: (err) => {
+        this.match2dLoading = false;
+        this.match2dError = match2dErrorMessage(err);
+      }
+    });
+  }
+
+  closeMatch2d(): void {
+    this.match2d = null;
+  }
+
+  anotherMatch2d(): void {
+    this.match2dSeed++;
+    this.closeMatch2d();
+    this.playMatch2d();
   }
 
   loadTeams(): void {

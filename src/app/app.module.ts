@@ -42,6 +42,7 @@ import { NotFoundComponent } from './not-found/not-found.component';
 import { PhaseLabComponent } from './phase-lab/phase-lab.component';
 import { AuthInterceptor } from './services/auth.interceptor';
 import { SharedModule } from './shared/shared.module';
+import { Match2dOverlayComponent } from './shared/match2d-overlay/match2d-overlay.component';
 import { SettingsComponent } from './settings/settings.component';
 
 @NgModule({
@@ -84,7 +85,7 @@ import { SettingsComponent } from './settings/settings.component';
     PhaseLabComponent,
     SettingsComponent
   ],
-  imports: [BrowserModule, FormsModule, HttpClientModule, SharedModule, AppRoutingModule],
+  imports: [BrowserModule, FormsModule, HttpClientModule, SharedModule, Match2dOverlayComponent, AppRoutingModule],
   providers: [{ provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }],
   bootstrap: [AppComponent]
 })

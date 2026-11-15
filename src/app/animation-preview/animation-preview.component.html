@@ -37,8 +37,24 @@
               [disabled]="loading || !teamId1 || !teamId2 || teamId1 === teamId2">
         {{ loading ? 'Simulating...' : 'Simulate' }}
       </button>
+
+      <button class="btn-match2d" (click)="playMatch2d()"
+              [disabled]="match2dLoading || !teamId1 || !teamId2 || teamId1 === teamId2"
+              title="Plays the whole match from player ratings, with no scripted phases">
+        {{ match2dLoading ? 'Playing 2D match...' : '2D match' }}
+      </button>
     </div>
+    <p class="match2d-error" *ngIf="match2dError" role="alert">{{ match2dError }}</p>
   </div>
+
+  <!-- 2D match from the ratings engine: its own page, framed over the screen -->
+  <app-match2d-overlay *ngIf="match2d"
+                       [viewUrl]="match2d.viewUrl"
+                       [heading]="match2d.home + ' v ' + match2d.away"
+                       [meta]="'played from ratings · ' + match2d.minutes + ' min · seed ' + match2d.seed"
+                       (closed)="closeMatch2d()">
+    <button class="btn-match2d-ghost" (click)="anotherMatch2d()">Another match</button>
+  </app-match2d-overlay>
 
   <!-- Live match playback -->
   <div class="anim-canvas-area lmp-board" *ngIf="liveMatchData">

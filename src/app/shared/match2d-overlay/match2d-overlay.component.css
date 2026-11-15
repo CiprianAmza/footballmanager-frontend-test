@@ -1,0 +1,67 @@
+.match2d-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  background: #10151c;
+}
+
+.match2d-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #2b3745;
+  color: #e8edf2;
+}
+
+.match2d-meta {
+  color: #93a1b0;
+  font-size: 13px;
+}
+
+.match2d-note {
+  color: #f4d35e;
+  font-size: 13px;
+}
+
+.match2d-spacer {
+  flex: 1;
+}
+
+/* Projected bar buttons are styled by the host page (same class name there). */
+.btn-match2d-ghost {
+  padding: 6px 12px;
+  border: 1px solid #2b3745;
+  border-radius: 6px;
+  background: #263242;
+  color: #e8edf2;
+  cursor: pointer;
+}
+
+.btn-match2d-ghost:hover {
+  background: #324155;
+}
+
+.match2d-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #93a1b0;
+}
+
+.match2d-error p {
+  margin: 0;
+  color: #ff8a80;
+}
+
+.match2d-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+}

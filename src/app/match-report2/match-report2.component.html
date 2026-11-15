@@ -24,6 +24,7 @@
     <footer>
       <span>{{ matchDateLabel }}</span><span>Round {{ round }}</span>
       <span *ngIf="summary.manOfTheMatchName">★ <a [routerLink]="['/player', summary.manOfTheMatchPlayerId]">{{ summary.manOfTheMatchName }}</a> <b>{{ summary.manOfTheMatchRating | number:'1.1-1' }}</b></span>
+      <button type="button" class="watch-2d" *ngIf="report.match2d" (click)="openMatch2d()">Watch 2D</button>
     </footer>
   </header>
 
@@ -108,3 +109,8 @@
     </article>
   </section>
 </main>
+
+<app-match2d-overlay *ngIf="match2dReplay"
+                     [replayUrl]="match2dReplay"
+                     [heading]="match2dHeading"
+                     (closed)="closeMatch2d()"></app-match2d-overlay>

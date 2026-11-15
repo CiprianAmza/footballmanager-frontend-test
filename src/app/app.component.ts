@@ -10,6 +10,7 @@ import { LiveMatchService } from './services/live-match.service';
 import { LiveMatchClosed } from './models/live-match.model';
 import { UiFeedbackService } from './shared/ui-feedback.service';
 import { ThemeService } from './services/theme.service';
+import { match2dReplayUrl } from './shared/match2d';
 
 export const urlApp: string = window.location.port === '4201' ? 'http://localhost:8087' : 'http://localhost:8086';
 @Component({
@@ -76,6 +77,9 @@ export class AppComponent implements OnDestroy {
   // Match result modal state
   showMatchResult = false;
   matchResult: any = null;
+  /** Replay route of the 2D match being watched (null = 2D window closed). */
+  match2dReplay: string | null = null;
+  match2dHeading = '2D match';
 
   // Live match modal state — AppComponent only tracks whether a live match is
   // being shown and which session it is; <app-live-match> owns everything else.
@@ -631,6 +635,7 @@ export class AppComponent implements OnDestroy {
             }
 
             this.showMatchResult = this.matchResult && this.matchResult.score;
+            this.autoOpenMatch2d();
 
             // Auto-close match report if setting is on
             if (this.teamService.autoDismissMatchReport) {
@@ -676,6 +681,8 @@ export class AppComponent implements OnDestroy {
     this.autoAdvanceTimer = setTimeout(() => {
       this.autoAdvanceTimer = null;
       if (this.fastForwardRunning) return;
+      // Watching a 2D match: auto-continue resumes when its window closes.
+      if (this.match2dReplay) return;
       this.advanceGame();
     }, delayMs);
   }
@@ -770,9 +777,37 @@ export class AppComponent implements OnDestroy {
     this.matchResult = null;
 
     // Resume auto-continue after dismissing match result
-    if (this.teamService.autoContinueEnabled) {
+    if (this.teamService.autoContinueEnabled && !this.match2dReplay) {
       this.scheduleAutoAdvance(150);
     }
+  }
+
+  /** Opens the 2D replay of the human team's match (only for matches played with the 2D engine). */
+  openMatch2d(result: any = this.matchResult): void {
+    if (!result?.match2d) return;
+    const season = result.seasonNumber || this.teamService.currentSeason;
+    const round = result.roundNumber || result.matchday;
+    this.match2dHeading = `${result.team1Name || 'Home'} v ${result.team2Name || 'Away'}`;
+    this.match2dReplay = match2dReplayUrl(urlApp, Number(result.competitionId), Number(season), Number(round),
+      Number(result.team1Id), Number(result.team2Id));
+  }
+
+  closeMatch2d(): void {
+    this.match2dReplay = null;
+    if (this.teamService.autoContinueEnabled && !this.showMatchResult && !this.showPressConference) {
+      this.scheduleAutoAdvance(150);
+    }
+  }
+
+  /** A manager who watches full matches gets the 2D replay opened right away. */
+  private autoOpenMatch2d(): void {
+    const result = this.matchResult;
+    const teamId = this.teamService.teamId;
+    if (!result?.match2d || !teamId) return;
+    this.http.get<any>(urlApp + `/managers/responsibilities/${teamId}`).subscribe({
+      next: data => { if (data?.viewFullMatch === true) this.openMatch2d(result); },
+      error: () => { /* the Watch 2D button is still there */ }
+    });
   }
 
   respondToPressConference(responseType: string): void {

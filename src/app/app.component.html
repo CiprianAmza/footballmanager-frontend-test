@@ -462,9 +462,18 @@
            style="margin-bottom:8px;background:#3498db;text-align:center;text-decoration:none;box-sizing:border-box"
            [routerLink]="['/match-report2', matchResult.competitionId, matchResult.seasonNumber || teamService.currentSeason, matchResult.roundNumber || matchResult.matchday, matchResult.team1Id, matchResult.team2Id]"
            (click)="showMatchResult = false">Open full match report</a>
+        <button class="mr-close-btn" *ngIf="matchResult.match2d"
+                style="margin-bottom:8px;background:#263242;border:1px solid #f4d35e;color:#f4d35e"
+                (click)="openMatch2d()">Watch 2D</button>
         <button class="mr-close-btn" (click)="closeMatchResult()">Continue</button>
       </div>
     </div>
+
+    <!-- 2D replay of the human team's match (matches played with the 2D engine) -->
+    <app-match2d-overlay *ngIf="match2dReplay"
+                         [replayUrl]="match2dReplay"
+                         [heading]="match2dHeading"
+                         (closed)="closeMatch2d()"></app-match2d-overlay>
 
     <!-- Live match viewer (modal, lineup preview, goal clips, substitutions).
          AppComponent only decides WHEN a live match exists; everything inside

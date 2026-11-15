@@ -318,3 +318,43 @@
   display: block;
   width: 100%;
 }
+
+/* ---- 2D match from the ratings engine ---- */
+.btn-match2d {
+  padding: 8px 18px;
+  border: 1px solid #f4d35e;
+  border-radius: 6px;
+  background: transparent;
+  color: #f4d35e;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-match2d:hover:not(:disabled) {
+  background: #f4d35e;
+  color: #111;
+}
+
+.btn-match2d:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.match2d-error {
+  margin: 10px 0 0;
+  color: #ff8a80;
+}
+
+/* "Another match", projected into the 2D overlay bar */
+.btn-match2d-ghost {
+  padding: 6px 12px;
+  border: 1px solid #2b3745;
+  border-radius: 6px;
+  background: #263242;
+  color: #e8edf2;
+  cursor: pointer;
+}
+
+.btn-match2d-ghost:hover {
+  background: #324155;
+}

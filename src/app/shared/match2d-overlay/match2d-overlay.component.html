@@ -1,0 +1,18 @@
+<!-- 2D match from the ratings engine: its own page, framed over the screen -->
+<div class="match2d-overlay" role="dialog" aria-modal="true" [attr.aria-label]="heading">
+  <header class="match2d-bar">
+    <strong>{{ heading }}</strong>
+    <span class="match2d-meta" *ngIf="meta">{{ meta }}</span>
+    <span class="match2d-note" *ngIf="versionMismatch">The 2D engine has changed since this match was played, so the replay may differ slightly.</span>
+    <span class="match2d-spacer"></span>
+    <ng-content></ng-content>
+    <button class="btn-match2d-ghost" (click)="close()">Close</button>
+  </header>
+
+  <div class="match2d-state" *ngIf="loading">Loading the 2D match...</div>
+  <div class="match2d-state match2d-error" *ngIf="!loading && error" role="alert">
+    <p>{{ error }}</p>
+    <button class="btn-match2d-ghost" *ngIf="replayUrl" (click)="load()">Retry</button>
+  </div>
+  <iframe class="match2d-frame" *ngIf="!loading && !error && frameUrl" [src]="frameUrl" [title]="heading"></iframe>
+</div>
