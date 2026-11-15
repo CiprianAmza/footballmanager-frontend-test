@@ -29,6 +29,27 @@ interface Geom {
   special?: number;
 }
 
+type WorldSpecies = 'veyran' | 'branik' | 'sileth';
+
+/** The six skin/hair and four eye choices exposed by the shared face editor. */
+const WORLD_PALETTES: Record<WorldSpecies, { skin: string[]; hair: string[]; eyes: string[] }> = {
+  veyran: {
+    skin: ['#bdcfe9', '#9eafcf', '#8298bc', '#6f87ad', '#587397', '#435d80'],
+    hair: ['#e4e8f3', '#242d51', '#607293', '#cbd7e8', '#8195b6', '#121e35'],
+    eyes: ['#347c87', '#b68b37', '#527e68', '#4f6c9b']
+  },
+  branik: {
+    skin: ['#d68a63', '#c87953', '#ba6849', '#a6553f', '#8e4938', '#713e32'],
+    hair: ['#211b22', '#e5d8c4', '#654638', '#984b31', '#42404a', '#bdb9b6'],
+    eyes: ['#b68134', '#536e8e', '#6d8057', '#764a31']
+  },
+  sileth: {
+    skin: ['#cbb6dd', '#b39acb', '#a381b5', '#986e9f', '#855d91', '#6d4b7e'],
+    hair: ['#30223f', '#d7d0e2', '#58426e', '#2d334e', '#8b698b', '#e7e1ec'],
+    eyes: ['#c4a365', '#5c9b6b', '#8f76b9', '#6b9eac']
+  }
+};
+
 /**
  * Favored STRUCTURAL index subsets per nation — the small biased pool a player
  * generator should draw the head / brow / hair indices from to make each nation
@@ -61,6 +82,17 @@ export const NATION_STRUCTURE: NationStructProfile[] = [
   { head: [16, 17, 10, 11],  brow: [8, 5, 2],    hair: [5, 7, 9, 10] },
   // 7 Eleven — cyber-angular: hexagonal + very-tall + diamond, long-flat/thin-sharp brows, undercut/spikes
   { head: [15, 13, 2, 6],    brow: [5, 4, 6],    hair: [3, 2, 11, 14] },
+  // 8 Mareval / 9 Tervala — mirror their backend structural fallback pools.
+  { head: [0, 1, 2, 4], brow: [0, 2, 4], hair: [0, 1, 3, 5, 8] },
+  { head: [0, 1, 2, 4], brow: [0, 2, 4], hair: [0, 1, 3, 5, 8] },
+  // 10 Altzair — mirror its backend structural fallback pool.
+  { head: [0, 1, 2, 4], brow: [0, 2, 4], hair: [0, 1, 3, 5, 8] },
+  // 11 Veyra — smooth blue faces, double ear lobes and flowing hair.
+  { head: [1, 4, 12, 2],    brow: [2, 4, 8],    hair: [5, 7, 8, 9, 10] },
+  // 12 Branik — broad terracotta faces with three rounded forehead arches.
+  { head: [0, 3, 14, 15],   brow: [0, 3, 7],    hair: [0, 2, 3, 8, 11] },
+  // 13 Sileth — lilac faces and two stacked pairs of natural eyes.
+  { head: [1, 2, 4, 12, 15], brow: [1, 4, 8],   hair: [1, 3, 7, 8, 9] },
 ];
 
 @Component({
@@ -226,7 +258,8 @@ export class PlayerFaceComponent {
    * hairColor -> hair / brow colour, baseFaceId -> iris colour / soot count + placement /
    * small jaw jitter.
    */
-  // Allowed values: 'human' | 'crystalline' | 'saurian' | 'monument' | 'rokykario' | 'eleftamide' | 'salmarid' | 'kaarnid' | 'ikazkin'.
+  // Supported: human, crystalline, saurian, monument, rokykario, eleftamide,
+  // aquanimenti, salmarid, kaarnid, ikazkin, veyran, branik and sileth.
   // Typed as string so backend-driven model fields bind cleanly; unknown values fall back to human in dispatch.
   @Input() species: string = 'human';
 
@@ -251,7 +284,10 @@ export class PlayerFaceComponent {
   constructor(private sanitizer: DomSanitizer) {}
 
   private nationIdx(): number {
-    return ((this.nationId % 8) + 8) % 8;
+    // Signatures belong to the original nations, not repeating blocks of eight.
+    // New/unknown nations are neutral here; their stored species drives their face.
+    return Number.isInteger(this.nationId) && this.nationId >= 0 && this.nationId <= 7
+      ? this.nationId : 0;
   }
 
   // ---- PALETTES (0-5 realistic, 6-11 vivid but controlled) ----
@@ -663,12 +699,12 @@ export class PlayerFaceComponent {
   //  15 HEXAGONAL/ANGULAR— hard angular hexagon: flat temples, hard cheek, flat wide chin
   //  16 STRONG CRESCENT  — hand-built lunar profile: big rounded cranium arc + jutting chin
   //  17 ONION/DOMED-BULB — hand-built bulbous dome swelling past temples to a small chin
-  private geom() {
+  private geom(applyNationSignature = true) {
     const b = ((this.baseFaceId % 18) + 18) % 18;
     let shape = this.faceShape >= 0 ? (((this.faceShape % 18) + 18) % 18) : b;
     // Gallactick (nation 1) FORCES an elongated alien cranium even on a human roll.
     // (the alien skull family is indices 5-9; any non-alien roll snaps into it).
-    if (this.nationIdx() === 1 && (shape < 5 || shape > 9)) shape = 5 + (shape % 2 === 0 ? 0 : 4); // 5 ELONGATED-TALL or 9 BROAD-CRANIUM
+    if (applyNationSignature && this.nationIdx() === 1 && (shape < 5 || shape > 9)) shape = 5 + (shape % 2 === 0 ? 0 : 4); // 5 ELONGATED-TALL or 9 BROAD-CRANIUM
     // base sliver of within-shape jitter so faces sharing a shape differ a touch
     const j = (b % 2);
     let rx: number, jaw: number, jawW: number, cheek: number, crown: number, taper: number, chinBlunt: number, topY: number;
@@ -1031,8 +1067,8 @@ export class PlayerFaceComponent {
   //   2 UP-SLANTED       — outer corner lifts UP (sharp/aggressive)
   //   3 HOODED           — heavy lid pushes top edge down, less sclera (brooding)
   //   4 DEEP-SET NARROW  — shorter + flatter, slightly raised, recessed (intense)
-  private eyeShapeIdx(): number {
-    const n = this.nationIdx();
+  private eyeShapeIdx(applyNationSignature = true): number {
+    const n = applyNationSignature ? this.nationIdx() : 0;
     let v = this.eyeShape >= 0 ? ((this.eyeShape % 10) + 10) % 10 : ((((this.baseFaceId + 1) % 5) + 5) % 5);
     // Gallactick (1) FORCES a big almond / wide-set alien eye look.
     if (n === 1 && v < 5) v = 5;
@@ -1040,17 +1076,17 @@ export class PlayerFaceComponent {
     if (n === 6) v = (v % 2 === 0) ? 4 : 7;
     return v;
   }
-  private eyeGroup(eyeHex: string, uid: string): string {
+  private eyeGroup(eyeHex: string, uid: string, applyNationSignature = true, naturalSpecies = false): string {
     const sports = this.style === 'sports', premium = this.style === 'premium';
     const seinen = this.style === 'seinen';
-    const shape = this.eyeShapeIdx();
+    const shape = this.eyeShapeIdx(applyNationSignature);
     // Shorter + more horizontal than before (height cut harder than width).
     const cyL = 56.8, cxL = 39.5, cxR = 60.5;
     let ew = sports ? 5.8 : (premium ? 5.3 : 5.5);     // half-width
     let eh = sports ? 1.4 : (premium ? 1.3 : 1.45);    // half-height (flatness)
     let drop = sports ? 1.6 : (premium ? 1.0 : 1.3);   // +ve = outer corner DOWN
     let irisR = premium ? 1.9 : 2.0;                   // smaller iris
-    const lidW = sports ? 2.2 : (premium ? 1.5 : 1.9); // hard lid line weight
+    const lidW = naturalSpecies ? 1.25 : (sports ? 2.2 : (premium ? 1.5 : 1.9)); // hard lid line weight
     const lid = '#15121a';
     // per-shape geometry knobs (all keep narrow/hard masculine read)
     let topCurve = 0.45;   // upper-lid control X spread (lower => flatter/harder)
@@ -1088,6 +1124,15 @@ export class PlayerFaceComponent {
         break;
       default: // 0 STRAIGHT ALMOND (calm)
         break;
+    }
+
+    if (naturalSpecies) {
+      // Keep iris colours and both Sileth pairs legible at 64px. These species
+      // have natural eyes, even when an exaggerated eye-shape index is selected.
+      eh = Math.max(2.7, eh + 1.8);
+      irisR = Math.max(2.0, irisR);
+      drop *= 0.6;
+      glow = false;
     }
 
     const one = (cx0: number, s: number, tag: string): string => {
@@ -2608,6 +2653,134 @@ export class PlayerFaceComponent {
     return s;
   }
 
+  /** Blend a trusted palette colour toward white (+) or black (-). */
+  private paletteTone(hex: string, amount: number): string {
+    const target = amount >= 0 ? 255 : 0;
+    const weight = Math.abs(amount);
+    return '#' + [1, 3, 5].map(offset => {
+      const channel = parseInt(hex.slice(offset, offset + 2), 16);
+      return Math.round(channel + (target - channel) * weight).toString(16).padStart(2, '0');
+    }).join('');
+  }
+
+  /**
+   * The three new nations share the ten editable descriptor fields with humans.
+   * Their anatomy and palettes remain species-specific, while each head, hair,
+   * brow, eye, nose and mouth choice continues to change the actual drawing.
+   * No nation signature is applied: moving clubs must not change this anatomy.
+   */
+  private drawWorldSpecies(species: WorldSpecies): string {
+    const palette = WORLD_PALETTES[species];
+    const skin = this.pick(palette.skin, this.skinTone);
+    const shade = this.paletteTone(skin, -0.22);
+    const deep = this.paletteTone(skin, -0.4);
+    const light = this.paletteTone(skin, 0.22);
+    const hair = this.pick(palette.hair, this.hairColor);
+    const hairShade = this.paletteTone(hair, -0.3);
+    const hairLight = this.paletteTone(hair, 0.27);
+    const eye = this.pick(palette.eyes, this.eyeColor);
+    const ink = this.ink(), width = this.inkW();
+    const variation = ((this.baseFaceId % 10) + 10) % 10;
+    const g = this.geom(false);
+    if (species === 'veyran') {
+      g.rx *= 0.94;
+      g.jaw += 2;
+      g.jawW *= 0.94;
+    } else if (species === 'branik') {
+      g.rx *= 1.03;
+      g.jawW *= 1.12;
+      g.chinBlunt = Math.min(1, g.chinBlunt + 0.15);
+    } else {
+      g.rx *= 0.95;
+      g.jaw += 2;
+      g.jawW *= 0.94;
+    }
+    // Include every geometry input: two cards with a different head/eye setting
+    // must not accidentally use one another's SVG clipping paths.
+    const uid = 'world_' + species + '_' + this.style + '_' + [
+      this.baseFaceId, this.skinTone, this.hairColor, this.eyeColor,
+      this.hairStyle, this.faceShape, this.browShape, this.eyeShape,
+      this.noseShape, this.mouthShape
+    ].join('_');
+    const head = this.headPath(g);
+    const hp = this.hair(g);
+    let svg = `<g data-species="${species}">`;
+    if (hp.back) svg += `<path d="${hp.back}" fill="${hairShade}" stroke="${ink}" stroke-width="${width}" stroke-linejoin="round"/>`;
+    const neck = g.jawW * (species === 'branik' ? 1.02 : 0.88);
+    svg += `<path d="M ${50 - neck} ${g.jaw - 7} L ${49 - neck} 94 L ${51 + neck} 94 L ${50 + neck} ${g.jaw - 7} Z" fill="${shade}" stroke="${ink}" stroke-width="${width}"/>`;
+    svg += `<path d="M ${50 - neck} ${g.jaw - 5} Q 50 ${g.jaw + 7} ${50 + neck} ${g.jaw - 5} L ${50 + neck} 87 Q 50 91 ${50 - neck} 87 Z" fill="${deep}" opacity="0.45"/>`;
+
+    for (const side of [-1, 1]) {
+      const x = 50 + side * (g.rx - 1);
+      if (species === 'veyran') {
+        // Two rounded cartilage lobes on EACH side: neither pointed elf ears
+        // nor the external gills of Aquanimenti.
+        const earWidth = 5.3 + (variation % 3) * 0.45;
+        svg += `<g data-feature="double-ear">` +
+          `<ellipse cx="${x + side * 1.7}" cy="55.5" rx="${earWidth}" ry="7.2" fill="${skin}" stroke="${ink}" stroke-width="${width}"/>` +
+          `<ellipse cx="${x + side * 1.3}" cy="65" rx="${earWidth - 0.9}" ry="4.5" fill="${skin}" stroke="${ink}" stroke-width="${width}"/>` +
+          `<path d="M ${x + side * 2} 51 Q ${x + side * 6} 54 ${x + side * 2} 59 M ${x + side * 1.5} 63 Q ${x + side * 4} 65 ${x + side * 1.5} 67" fill="none" stroke="${deep}" stroke-width="1.1"/>` +
+          `</g>`;
+      } else {
+        const radius = species === 'branik' ? 4.2 + (variation % 3) * 0.25 : 3.1;
+        svg += `<ellipse cx="${x}" cy="58" rx="${radius}" ry="5.5" fill="${skin}" stroke="${ink}" stroke-width="${width}"/>`;
+        svg += `<path d="M ${x} 55 q ${side * 2.2} 2 0 5" fill="none" stroke="${deep}" stroke-width="1.1"/>`;
+      }
+    }
+    svg += `<path d="${head}" fill="${skin}" stroke="${ink}" stroke-width="${width}" stroke-linejoin="round"/>`;
+    svg += `<clipPath id="head_${uid}"><path d="${head}"/></clipPath>`;
+    svg += `<g clip-path="url(#head_${uid})">` +
+      `<path d="${this.faceShadowPath(g)}" fill="${shade}" opacity="0.65"/>` +
+      `<path d="M ${50 - g.jawW - 5} ${g.jaw - 8} Q 50 ${g.jaw + 7} ${50 + g.jawW + 5} ${g.jaw - 8} Q 50 ${g.jaw} ${50 - g.jawW - 5} ${g.jaw - 8} Z" fill="${deep}" opacity="0.25"/>` +
+      `</g>`;
+
+    if (species === 'branik') {
+      // Exactly three biological arches, with varying relief rather than horns.
+      const relief = 3.2 + (variation % 4) * 0.45;
+      for (const x of [38, 50, 62]) {
+        const y = x === 50 ? 40.4 : 38.7;
+        svg += `<g data-feature="brow-arch">` +
+          `<path d="M ${x - 5.5} ${y + 1} Q ${x} ${y - relief - 3} ${x + 5.5} ${y + 1} Q ${x} ${y - 1.4} ${x - 5.5} ${y + 1} Z" fill="${shade}"/>` +
+          `<path d="M ${x - 5} ${y} Q ${x} ${y - relief - 2.3} ${x + 5} ${y}" fill="none" stroke="${light}" stroke-width="0.8" opacity="0.7"/>` +
+          `</g>`;
+      }
+    }
+
+    if (species === 'sileth') {
+      svg += `<g transform="translate(0,-7)">${this.brows(hairShade)}</g>`;
+      svg += `<g data-eye-pair="upper" transform="translate(0,-7)">${this.eyeGroup(eye, uid + '_upper', false, true)}</g>`;
+      svg += `<g data-eye-pair="lower" transform="translate(0,3)">${this.eyeGroup(eye, uid + '_lower', false, true)}</g>`;
+    } else {
+      svg += this.brows(hairShade);
+      svg += `<g data-eye-pair="single">${this.eyeGroup(eye, uid, false, true)}</g>`;
+    }
+    svg += this.nose(shade);
+    if (species === 'branik') {
+      svg += `<path d="M 50.1 64.6 l 0 2.4" fill="none" stroke="${deep}" stroke-width="0.9" stroke-linecap="round"/>`;
+    }
+    svg += this.mouth();
+    // Features adds subtle cheek creases as well as the silhouette/ear/arch
+    // variation, without painting human stubble over the new skin palettes.
+    if (variation % 3 > 0) {
+      svg += `<path d="M 30 62 l 3 2 M 70 62 l -3 2" fill="none" stroke="${deep}" stroke-width="0.7" opacity="${variation % 3 === 1 ? 0.3 : 0.5}"/>`;
+    }
+
+    if (species === 'sileth') {
+      // Long bangs must never hide the defining second eye pair. Preserve the
+      // top silhouette and side locks while keeping the eye band unobstructed.
+      svg += `<mask id="hairmask_${uid}" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="white"/><rect x="27" y="43" width="46" height="22" rx="5" fill="black"/></mask>`;
+    }
+    svg += `<g${species === 'sileth' ? ` mask="url(#hairmask_${uid})"` : ''}>`;
+    svg += `<path d="${hp.front}" fill="${hair}" stroke="${ink}" stroke-width="${width}" stroke-linejoin="round"/>`;
+    svg += `<clipPath id="hair_${uid}"><path d="${hp.front}"/></clipPath>`;
+    svg += `<g clip-path="url(#hair_${uid})">`;
+    if (hp.part) svg += `<path d="${hp.part}" fill="none" stroke="${hairShade}" stroke-width="1.6" stroke-linecap="round"/>`;
+    svg += `<path d="M 33 28 Q 49 16 67 25 M 37 31 Q 51 23 63 29" fill="none" stroke="${hairLight}" stroke-width="${this.style === 'premium' ? 1.4 : 2}" stroke-linecap="round" opacity="0.8"/>`;
+    svg += `<path d="M 65 14 L 84 20 L 84 85 L 65 85 Z" fill="${hairShade}" opacity="0.3"/>`;
+    svg += `</g></g></g>`;
+    return svg;
+  }
+
   private buildInner(): string {
     if (this.species === 'crystalline') return this.drawCrystalline();
     if (this.species === 'saurian') return this.drawSaurian();
@@ -2618,6 +2791,9 @@ export class PlayerFaceComponent {
     if (this.species === 'salmarid') return this.drawSalmarid();
     if (this.species === 'kaarnid') return this.drawKaarnid();
     if (this.species === 'ikazkin') return this.drawIkazkin();
+    if (this.species === 'veyran' || this.species === 'branik' || this.species === 'sileth') {
+      return this.drawWorldSpecies(this.species);
+    }
     const C = PlayerFaceComponent;
     const g = this.geom();
     const uid = this.style + this.baseFaceId + '_' + this.skinTone + this.hairColor + this.eyeColor + this.hairStyle;

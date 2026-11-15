@@ -118,6 +118,14 @@ export const AQUA_FIN_MID: readonly string[] = [
   '#f08030', '#e84a60', '#f04ab0', '#8a4ae8', '#3a78e0', '#28b0b0'
 ];
 
+/** WORLD_PALETTES in player-face.component.ts — native skin and real hair. */
+export const VEYRAN_SKIN: readonly string[] = ['#bdcfe9', '#9eafcf', '#8298bc', '#6f87ad', '#587397', '#435d80'];
+export const VEYRAN_HAIR: readonly string[] = ['#e4e8f3', '#242d51', '#607293', '#cbd7e8', '#8195b6', '#121e35'];
+export const BRANIK_SKIN: readonly string[] = ['#d68a63', '#c87953', '#ba6849', '#a6553f', '#8e4938', '#713e32'];
+export const BRANIK_HAIR: readonly string[] = ['#211b22', '#e5d8c4', '#654638', '#984b31', '#42404a', '#bdb9b6'];
+export const SILETH_SKIN: readonly string[] = ['#cbb6dd', '#b39acb', '#a381b5', '#986e9f', '#855d91', '#6d4b7e'];
+export const SILETH_HAIR: readonly string[] = ['#30223f', '#d7d0e2', '#58426e', '#2d334e', '#8b698b', '#e7e1ec'];
+
 // ------------------------------------------------------------ hair styles
 
 /** The 8 silhouettes the sprite renderer can draw at a 3px head radius. */
@@ -173,7 +181,8 @@ interface SpeciesTint {
  * repaint cached looks.
  */
 const SPECIES_ORDER: readonly string[] =
-  ['crystalline', 'saurian', 'monument', 'rokykario', 'eleftamide', 'aquanimenti'];
+  ['crystalline', 'saurian', 'monument', 'rokykario', 'eleftamide', 'aquanimenti',
+   'veyran', 'branik', 'sileth'];
 
 const SPECIES_TINTS: { [species: string]: SpeciesTint } = {
   // Horns/crest on the card reuse the body palette indexed by hairColor.
@@ -185,7 +194,10 @@ const SPECIES_TINTS: { [species: string]: SpeciesTint } = {
   // Jagged rock crest → mohawk, tinted with the ember accent.
   rokykario:   { body: ROK_ROCK_MID,  crest: ROK_CREST_MID, forcedStyle: 'mohawk' },
   eleftamide:  { body: ELF_SKIN_MID,  crest: ELF_PLUME_MID },
-  aquanimenti: { body: AQUA_SKIN_MID, crest: AQUA_FIN_MID }
+  aquanimenti: { body: AQUA_SKIN_MID, crest: AQUA_FIN_MID },
+  veyran:     { body: VEYRAN_SKIN, crest: VEYRAN_HAIR },
+  branik:     { body: BRANIK_SKIN, crest: BRANIK_HAIR },
+  sileth:     { body: SILETH_SKIN, crest: SILETH_HAIR }
 };
 
 // --------------------------------------------- legacy playerId-hash look
@@ -284,7 +296,7 @@ function mod(n: number, m: number): number {
  * the descriptor band starts at 1000 so it can NEVER collide with the legacy
  * 0-35 band, and hairColor keeps all 12 values (rather than %6) so two looks
  * with different hair hexes can never share a cache key.
- * Max id = 1000 + (6*144 + 143)*8 + 7 = 9063 — still bounded.
+ * Species are appended to the cache-key registry so existing IDs stay stable.
  */
 export function spriteAppearance(face: FaceDescriptor | null | undefined,
                                  playerId?: number): SpriteAppearance {
@@ -317,8 +329,8 @@ export function spriteAppearance(face: FaceDescriptor | null | undefined,
   let hairColor: string;
   let hairStyle: SpriteHairStyle;
   if (tint) {
-    skin = tint.body[skinTone];
-    hairColor = tint.crest[hairColorIdx];
+    skin = tint.body[mod(skinTone, tint.body.length)];
+    hairColor = tint.crest[mod(hairColorIdx, tint.crest.length)];
     hairStyle = tint.forcedStyle || mappedStyle;
   } else {
     // human (and any species string this build does not know yet)
