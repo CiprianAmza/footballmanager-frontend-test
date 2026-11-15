@@ -214,8 +214,19 @@ export class PlayerFaceComponent {
    * Colour inputs drive it: skinTone -> bark type, eyeColor -> sap glow hue,
    * hairColor -> foliage (or bare twigs), baseFaceId -> moss side / drifting leaf /
    * silhouette + leaf-layout jitter.
+   *
+   * IKAZKIN (nation Altzair — forge and mine folk). Drawn by a fully self-contained
+   * renderer (drawIkazkin) — no other helper runs, so everything stays byte-for-byte
+   * unchanged whenever species !== 'ikazkin'.
+   *   - FACE: a broad, SQUARE head, pale skin, thick straight brows, hooded eyes,
+   *           an unshaven jaw and short cropped hair (black to grey).
+   *   - SIGNATURE: SOOT smudges on cheeks / chin + WELDER GOGGLES pushed up on the
+   *           forehead (strap, metal rims, coloured lenses).
+   * Colour inputs drive it: skinTone -> skin tone, eyeColor -> goggle lens tint,
+   * hairColor -> hair / brow colour, baseFaceId -> iris colour / soot count + placement /
+   * small jaw jitter.
    */
-  // Allowed values: 'human' | 'crystalline' | 'saurian' | 'monument' | 'rokykario' | 'eleftamide' | 'salmarid' | 'kaarnid'.
+  // Allowed values: 'human' | 'crystalline' | 'saurian' | 'monument' | 'rokykario' | 'eleftamide' | 'salmarid' | 'kaarnid' | 'ikazkin'.
   // Typed as string so backend-driven model fields bind cleanly; unknown values fall back to human in dispatch.
   @Input() species: string = 'human';
 
@@ -574,6 +585,45 @@ export class PlayerFaceComponent {
     '#ffb83a', '#ffd24a', '#ff9a3a', '#c8e04a', '#ffe07a', '#ff7a2a',
     '#a0e05a', '#ffc060', '#e8f06a', '#ff8a5a', '#7ad08a', '#fff0a0'
   ];
+
+  // ===================== IKAZKIN (Altzair forge and mine folk) palettes =====================
+  /** pale-to-weathered SKIN (by skinTone): skin = base, shade = side / neck shadow + nose. */
+  private static readonly IKAZ_SKIN = [
+    { skin: '#f0dcc8', shade: '#d2b89e' }, // 0 pale
+    { skin: '#e6c8ae', shade: '#c4a388' }, // 1 light
+    { skin: '#dcb896', shade: '#b89270' }, // 2 warm light
+    { skin: '#d0a884', shade: '#aa825e' }, // 3 tan
+    { skin: '#c09672', shade: '#9a7250' }, // 4 weathered tan
+    { skin: '#b08460', shade: '#8a6242' }, // 5 weathered
+    { skin: '#e0b09a', shade: '#bc8c76' }, // 6 ruddy
+    { skin: '#e4dcd2', shade: '#c2b8ac' }, // 7 ash-pale
+    { skin: '#dcc898', shade: '#b8a272' }, // 8 sallow
+    { skin: '#e8b8a0', shade: '#c6927a' }, // 9 heat-flushed
+    { skin: '#a87a58', shade: '#84583a' }, // 10 deep weathered
+    { skin: '#8e6648', shade: '#6c4830' }, // 11 dark weathered
+  ];
+  /** short cropped HAIR (by hairColor): hair = cap, brow = thick brows (a shade darker). */
+  private static readonly IKAZ_HAIR = [
+    { hair: '#1c1a1c', brow: '#1c1a1c' }, // 0 black
+    { hair: '#2a2628', brow: '#1c1a1c' }, // 1 soot-dark
+    { hair: '#55565c', brow: '#2a2628' }, // 2 dark grey
+    { hair: '#8a8e96', brow: '#55565c' }, // 3 grey
+    { hair: '#5a4a3e', brow: '#3a2e26' }, // 4 ash brown
+    { hair: '#b4b8be', brow: '#6a6e76' }, // 5 silver
+    { hair: '#8a4a2a', brow: '#5a2e1a' }, // 6 rust
+    { hair: '#6a6e74', brow: '#44464c' }, // 7 iron grey
+    { hair: '#e6e6e8', brow: '#a8aab0' }, // 8 white
+    { hair: '#3a2a22', brow: '#22180f' }, // 9 dark brown
+    { hair: '#7a746c', brow: '#4a4640' }, // 10 grizzled
+    { hair: '#6a3e26', brow: '#44261a' }, // 11 copper-brown
+  ];
+  /** welder-goggle LENS glass tint (by eyeColor). */
+  private static readonly IKAZ_LENS = [
+    '#d08a1e', '#2f7a4a', '#2f5f96', '#9a3a2a', '#c8b030', '#3a8a8a',
+    '#5a3a7a', '#3a3a40', '#b0602a', '#6a8a2a', '#2a3a6a', '#8a2a4a'
+  ];
+  /** IKAZKIN iris colour (by baseFaceId % 4). */
+  private static readonly IKAZ_IRIS = ['#4a2e16', '#235e96', '#7a5a22', '#3a5a3a'];
 
   private pick(arr: string[], i: number): string {
     return arr[(((i % arr.length) + arr.length) % arr.length)];
@@ -2470,6 +2520,94 @@ export class PlayerFaceComponent {
     return s;
   }
 
+  // ============================================================================
+  // IKAZKIN (nation Altzair) — a fully SELF-CONTAINED renderer for the forge and mine
+  // folk: a broad, square head, pale skin with SOOT smudges, short cropped hair, thick
+  // straight brows, hooded eyes, an unshaven jaw and WELDER GOGGLES pushed up on the
+  // forehead. It does NOT call any other helper, so everything stays byte-for-byte
+  // unchanged whenever species !== 'ikazkin'. Deterministic.
+  //   skinTone -> skin tone, eyeColor -> goggle lens tint, hairColor -> hair / brows,
+  //   baseFaceId -> iris colour / soot count + placement / jaw jitter.
+  // ============================================================================
+  private drawIkazkin(): string {
+    const C = PlayerFaceComponent;
+    const sk = C.IKAZ_SKIN[(((this.skinTone % C.IKAZ_SKIN.length) + C.IKAZ_SKIN.length) % C.IKAZ_SKIN.length)];
+    const hr = C.IKAZ_HAIR[(((this.hairColor % C.IKAZ_HAIR.length) + C.IKAZ_HAIR.length) % C.IKAZ_HAIR.length)];
+    const lens = C.IKAZ_LENS[(((this.eyeColor % C.IKAZ_LENS.length) + C.IKAZ_LENS.length) % C.IKAZ_LENS.length)];
+    const I = this.style === 'sports' ? '#1a1620' : (this.style === 'premium' ? '#2a2430' : '#221c28');
+    const IW = this.style === 'sports' ? 1.6 : (this.style === 'premium' ? 1.1 : 1.4);
+    const uid = 'iz' + this.skinTone + '_' + this.eyeColor + '_' + this.hairColor + '_' + this.baseFaceId + this.style;
+
+    // deterministic variety from baseFaceId
+    const j = (((this.baseFaceId % 4) + 4) % 4);
+    const iris = C.IKAZ_IRIS[j];
+    const sootCount = 1 + (((this.baseFaceId % 3) + 3) % 3);
+    const sootStart = ((((this.baseFaceId * 5 + this.skinTone) % 3) + 3) % 3);
+    const chinY = 84 + (j % 2) * 1.5;                                  // chin depth
+    const jw = 13 + (j >> 1) * 1.5;                                    // lower-jaw control half-width
+
+    let s = '';
+
+    // ---- NECK ----
+    s += `<path d="M 40 74 L 39 93 L 61 93 L 60 74 Z" fill="${sk.shade}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+
+    // ---- EARS ----
+    s += `<ellipse cx="25.4" cy="56" rx="3.6" ry="6.2" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}"/>`;
+    s += `<ellipse cx="74.6" cy="56" rx="3.6" ry="6.2" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}"/>`;
+
+    // ---- broad, square HEAD ----
+    const head =
+      `M 27 46 C 27 28 37 20 50 20 C 63 20 73 28 73 46 L 73 62 ` +
+      `C 73 74 ${50 + jw} ${chinY - 1} 50 ${chinY} ` +
+      `C ${50 - jw} ${chinY - 1} 27 74 27 62 Z`;
+    s += `<path d="${head}" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    s += `<clipPath id="ih${uid}"><path d="${head}"/></clipPath>`;
+
+    // ---- side shadow, unshaven jaw band, SOOT smudges (signature) ----
+    s += `<g clip-path="url(#ih${uid})">`;
+    s += `<path d="M 64 20 C 72 40 70 66 58 86 L 76 86 L 76 20 Z" fill="${sk.shade}" opacity="0.55"/>`;
+    s += `<path d="M 27 61 C 30 78 42 86 50 86 C 58 86 70 78 73 61 C 68 69 60 71 50 71 C 40 71 32 69 27 61 Z" fill="#3a2c24" opacity="0.28"/>`;
+    const soot = [
+      'M 30 61 C 33 57.6 40 58.4 42.4 62.4 C 40 66.6 33.6 67.4 30.4 64.6 Z',   // left cheek
+      'M 56 66 C 60 62.8 67.4 63.8 69.4 68 C 66 72.4 59 72.4 56 69.4 Z',       // right cheek
+      'M 43 77.4 C 46.4 75 53.6 75 57 78 C 53.6 81.4 46.4 81.4 43 79.4 Z',     // chin
+    ];
+    for (let k = 0; k < sootCount; k++) {
+      s += `<path d="${soot[(sootStart + k) % 3]}" fill="#1c1a1c" opacity="0.42"/>`;
+    }
+    s += `</g>`;
+
+    // ---- thick straight BROWS ----
+    s += `<path d="M 32.5 49.6 L 45.5 50.8" stroke="${hr.brow}" stroke-width="4" stroke-linecap="round"/>`;
+    s += `<path d="M 54.5 50.8 L 67.5 49.6" stroke="${hr.brow}" stroke-width="4" stroke-linecap="round"/>`;
+
+    // ---- hooded EYES ----
+    for (const x of [39.5, 60.5]) {
+      s += `<path d="M ${x - 5.4} 56.4 Q ${x} 54 ${x + 5.4} 56.4 Q ${x} 59 ${x - 5.4} 56.4 Z" fill="#fdfbf6" stroke="${I}" stroke-width="${IW * 0.65}" stroke-linejoin="round"/>`;
+      s += `<circle cx="${x}" cy="56.4" r="1.9" fill="${iris}"/>`;
+      s += `<circle cx="${x}" cy="56.4" r="0.85" fill="#101014"/>`;
+      s += `<path d="M ${x - 5.6} 55.6 Q ${x} 53 ${x + 5.6} 55.6" fill="none" stroke="${I}" stroke-width="${IW * 1.25}"/>`;
+    }
+
+    // ---- broad NOSE + pressed MOUTH ----
+    s += `<path d="M 50 57.6 L 48.6 65.4 M 45.6 66.8 Q 50 69.4 54.4 66.8" fill="none" stroke="${sk.shade}" stroke-width="1.6" stroke-linecap="round"/>`;
+    s += `<path d="M 44.5 74 L 55.5 74" stroke="#7e463a" stroke-width="1.8" stroke-linecap="round"/>`;
+
+    // ---- short cropped HAIR cap ----
+    s += `<path d="M 26.5 45 C 24 24 36 14 50 14 C 64 14 76 24 73.5 45 C 71 35 63 28 50 28 C 37 28 29 35 26.5 45 Z" fill="${hr.hair}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+
+    // ---- WELDER GOGGLES pushed up on the forehead (signature): strap, bridge, rimmed lenses ----
+    s += `<path d="M 26 35.6 Q 50 30 74 35.6 L 74 40.2 Q 50 34.6 26 40.2 Z" fill="#3a2a1e" stroke="${I}" stroke-width="${IW * 0.7}" stroke-linejoin="round"/>`;
+    s += `<path d="M 46 36.5 L 54 36.5" stroke="#8a8e96" stroke-width="2.6"/>`;
+    for (const x of [40, 60]) {
+      s += `<circle cx="${x}" cy="36.5" r="7" fill="#8a8e96" stroke="${I}" stroke-width="${IW * 0.8}"/>`;
+      s += `<circle cx="${x}" cy="36.5" r="4.9" fill="${lens}" stroke="${I}" stroke-width="${IW * 0.55}"/>`;
+      s += `<path d="M ${x - 3} 34.6 Q ${x - 1} 32.5 ${x + 1.4} 32.7" fill="none" stroke="#ffffff" stroke-width="1" stroke-linecap="round" opacity="0.7"/>`;
+    }
+
+    return s;
+  }
+
   private buildInner(): string {
     if (this.species === 'crystalline') return this.drawCrystalline();
     if (this.species === 'saurian') return this.drawSaurian();
@@ -2479,6 +2617,7 @@ export class PlayerFaceComponent {
     if (this.species === 'aquanimenti') return this.drawAquanimenti();
     if (this.species === 'salmarid') return this.drawSalmarid();
     if (this.species === 'kaarnid') return this.drawKaarnid();
+    if (this.species === 'ikazkin') return this.drawIkazkin();
     const C = PlayerFaceComponent;
     const g = this.geom();
     const uid = this.style + this.baseFaceId + '_' + this.skinTone + this.hairColor + this.eyeColor + this.hairStyle;
