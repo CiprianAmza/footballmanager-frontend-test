@@ -192,8 +192,30 @@ export class PlayerFaceComponent {
    * Colour inputs drive it: skinTone -> face/base-plumage tone, eyeColor -> eye hue,
    * hairColor -> feather/plumage crest tint (the DEFINING colour), baseFaceId ->
    * deterministic silhouette + feather-layout jitter.
+   *
+   * SALMARID (nation Mareval — sun-and-salt harbour folk). Drawn by a fully
+   * self-contained renderer (drawSalmarid) — no other helper runs, so everything stays
+   * byte-for-byte unchanged whenever species !== 'salmarid'.
+   *   - FACE: sun-worn COPPER skin, a slight smirk, a small SHELL EARRING on one ear.
+   *   - HAIR: sun-bleached (pale blond to salt white) worn as a ponytail, loose and
+   *           long, or a top-knot.
+   *   - SIGNATURE: a white SALT STRIPE across the nose and cheekbones; sea-coloured eyes.
+   * Colour inputs drive it: skinTone -> copper tone, eyeColor -> sea eye hue,
+   * hairColor -> bleached hair tint, baseFaceId -> hairstyle / stripe width /
+   * earring side / small jaw jitter.
+   *
+   * KAARNID (nation Tervala — bark folk). Drawn by a fully self-contained renderer
+   * (drawKaarnid) — no other helper runs, so everything stays byte-for-byte unchanged
+   * whenever species !== 'kaarnid'.
+   *   - HEAD: an elongated trunk-like head of BARK with grain lines (birch dashes on
+   *           pale barks), bark brow ridges and a cracked-line mouth.
+   *   - CROWN: a crown of LEAVES instead of hair (or bare twigs), one drifting leaf.
+   *   - EYES: KNOT-HOLE eyes lit from inside with a sap glow; a moss patch on a cheek.
+   * Colour inputs drive it: skinTone -> bark type, eyeColor -> sap glow hue,
+   * hairColor -> foliage (or bare twigs), baseFaceId -> moss side / drifting leaf /
+   * silhouette + leaf-layout jitter.
    */
-  // Allowed values: 'human' | 'crystalline' | 'saurian' | 'monument' | 'rokykario' | 'eleftamide'.
+  // Allowed values: 'human' | 'crystalline' | 'saurian' | 'monument' | 'rokykario' | 'eleftamide' | 'salmarid' | 'kaarnid'.
   // Typed as string so backend-driven model fields bind cleanly; unknown values fall back to human in dispatch.
   @Input() species: string = 'human';
 
@@ -475,6 +497,82 @@ export class PlayerFaceComponent {
     { bright: '#c8a8ff', mid: '#8a4ae8', dk: '#4a18a8', edge: '#e8d8ff' }, // 9 violet fin
     { bright: '#8cc8ff', mid: '#3a78e0', dk: '#103a90', edge: '#cce4ff' }, // 10 cobalt fin
     { bright: '#7fe8e0', mid: '#28b0b0', dk: '#0a6a6a', edge: '#caf6f4' }, // 11 deep cyan
+  ];
+
+  // ===================== SALMARID (Mareval sun-and-salt harbour folk) palettes =====================
+  /** sun-worn copper SKIN (by skinTone): skin = base, shade = cheek / neck shadow. */
+  private static readonly SALM_SKIN = [
+    { skin: '#e2b083', shade: '#c08e62' }, // 0 light copper
+    { skin: '#d9a06c', shade: '#b57c4c' }, // 1 warm copper
+    { skin: '#c98a5a', shade: '#a56c40' }, // 2 copper
+    { skin: '#b97a4a', shade: '#955c32' }, // 3 deep copper
+    { skin: '#a8703f', shade: '#84542c' }, // 4 bronze copper
+    { skin: '#8f5c33', shade: '#6e4424' }, // 5 dark copper
+    { skin: '#d99a7a', shade: '#b5785a' }, // 6 sun-reddened
+    { skin: '#e0b070', shade: '#bc8c4c' }, // 7 golden tan
+    { skin: '#b08a5a', shade: '#8c6a40' }, // 8 olive tan
+    { skin: '#c47a52', shade: '#9e5a36' }, // 9 ruddy copper
+    { skin: '#7a4a2a', shade: '#5a3218' }, // 10 deep bronze
+    { skin: '#6e4028', shade: '#4e2a18' }, // 11 dark mahogany
+  ];
+  /** sun-bleached HAIR (by hairColor): hair = cap / knot, shade = back hair + brows. */
+  private static readonly SALM_HAIR = [
+    { hair: '#f6f0dc', shade: '#cfc49a' }, // 0 salt white
+    { hair: '#efe2b4', shade: '#c9b06a' }, // 1 pale blond
+    { hair: '#e4c877', shade: '#b89642' }, // 2 straw
+    { hair: '#d8b860', shade: '#a88a38' }, // 3 gold
+    { hair: '#e8d8c0', shade: '#bca88a' }, // 4 sand
+    { hair: '#dfe2e4', shade: '#aab0b6' }, // 5 silver
+    { hair: '#e6ecd6', shade: '#b6c0a0' }, // 6 sea-foam blond
+    { hair: '#d8d2be', shade: '#a8a08a' }, // 7 ash blond
+    { hair: '#dcb06a', shade: '#ae823e' }, // 8 honey
+    { hair: '#f2f2ec', shade: '#c4c4ba' }, // 9 platinum
+    { hair: '#dceee6', shade: '#a8c4b8' }, // 10 brine-tinted white
+    { hair: '#e0b890', shade: '#b08a62' }, // 11 bleached copper
+  ];
+  /** sea-coloured EYE iris (by eyeColor). */
+  private static readonly SALM_EYE = [
+    '#2f9f8f', '#2f7fbf', '#3f8f5a', '#2a8aa0', '#1f6f8f', '#4aa8b8',
+    '#2a5f7a', '#5fae9a', '#3a7fa8', '#6a9a8a', '#2f8f7a', '#4f8fcf'
+  ];
+
+  // ===================== KAARNID (Tervala bark folk) palettes =====================
+  /** BARK skin (by skinTone): bark = base, shade = side shadow, grain = grain / brow / crack lines,
+   *  birch = draw horizontal birch dashes instead of vertical grain. */
+  private static readonly KAARN_BARK = [
+    { bark: '#ebe7dc', shade: '#c2bcab', grain: '#3a3630', birch: true },  // 0 birch white
+    { bark: '#d6d2c4', shade: '#aaa595', grain: '#3a3630', birch: true },  // 1 aspen
+    { bark: '#b59f84', shade: '#8a765e', grain: '#4a3826', birch: false }, // 2 ash
+    { bark: '#9a6b42', shade: '#6e4a2a', grain: '#3e2814', birch: false }, // 3 oak
+    { bark: '#7a5236', shade: '#553824', grain: '#2a1a10', birch: false }, // 4 walnut
+    { bark: '#5e4334', shade: '#3e2b20', grain: '#1e140e', birch: false }, // 5 dark alder
+    { bark: '#a0583a', shade: '#743a22', grain: '#3a1a0c', birch: false }, // 6 pine red-brown
+    { bark: '#b8875a', shade: '#8c6238', grain: '#40281a', birch: false }, // 7 larch
+    { bark: '#9a968a', shade: '#726e62', grain: '#2e2c26', birch: false }, // 8 grey willow
+    { bark: '#4a3a38', shade: '#302424', grain: '#8a7470', birch: false }, // 9 blackthorn (pale cracks)
+    { bark: '#8a937a', shade: '#646c56', grain: '#2a3022', birch: false }, // 10 mossy grey-green
+    { bark: '#3a3230', shade: '#221c1a', grain: '#7a6a60', birch: false }, // 11 charred (ash cracks)
+  ];
+  /** LEAF crown (by hairColor): a / b = alternating leaf fills, vein = midrib,
+   *  bare = bare twig crown, no leaves. */
+  private static readonly KAARN_LEAF = [
+    { a: '#2f7a3e', b: '#1e5a2c', vein: '#143a1e', bare: false }, // 0 deep green
+    { a: '#4fa85a', b: '#2f7a3e', vein: '#1e4f28', bare: false }, // 1 spring green
+    { a: '#e0b83a', b: '#c4922a', vein: '#7a5a14', bare: false }, // 2 yellow
+    { a: '#c8452a', b: '#e07a2a', vein: '#7a2a14', bare: false }, // 3 autumn red
+    { a: '#c8782a', b: '#a8561e', vein: '#6a3410', bare: false }, // 4 copper
+    { a: '#6a5038', b: '#4a3828', vein: '#2a1e14', bare: true },  // 5 bare twigs
+    { a: '#9ab08a', b: '#7a9070', vein: '#4a5a40', bare: false }, // 6 lichen grey-green
+    { a: '#f0a0b8', b: '#e07a98', vein: '#8a3a50', bare: false }, // 7 blossom pink
+    { a: '#1e4a30', b: '#143a24', vein: '#0a2014', bare: false }, // 8 dark pine
+    { a: '#f0c840', b: '#d8a020', vein: '#8a6410', bare: false }, // 9 golden
+    { a: '#a8481e', b: '#c86a2a', vein: '#5a2010', bare: false }, // 10 rust
+    { a: '#6a5038', b: '#4a3828', vein: '#2a1e14', bare: true },  // 11 bare twigs (alt)
+  ];
+  /** knot-hole SAP glow (by eyeColor). */
+  private static readonly KAARN_SAP = [
+    '#ffb83a', '#ffd24a', '#ff9a3a', '#c8e04a', '#ffe07a', '#ff7a2a',
+    '#a0e05a', '#ffc060', '#e8f06a', '#ff8a5a', '#7ad08a', '#fff0a0'
   ];
 
   private pick(arr: string[], i: number): string {
@@ -2186,6 +2284,192 @@ export class PlayerFaceComponent {
     return s;
   }
 
+  // ============================================================================
+  // SALMARID (nation Mareval) — a fully SELF-CONTAINED renderer for the sun-and-salt
+  // harbour folk: copper skin, sun-bleached hair (ponytail / loose / top-knot), a white
+  // SALT STRIPE across nose and cheekbones, sea-coloured eyes, a shell earring and a
+  // slight smirk. It does NOT call any other helper, so everything stays byte-for-byte
+  // unchanged whenever species !== 'salmarid'. Deterministic.
+  //   skinTone -> copper tone, eyeColor -> sea eye hue, hairColor -> bleached hair,
+  //   baseFaceId -> hairstyle / stripe width / earring side / jaw jitter.
+  // ============================================================================
+  private drawSalmarid(): string {
+    const C = PlayerFaceComponent;
+    const sk = C.SALM_SKIN[(((this.skinTone % C.SALM_SKIN.length) + C.SALM_SKIN.length) % C.SALM_SKIN.length)];
+    const hr = C.SALM_HAIR[(((this.hairColor % C.SALM_HAIR.length) + C.SALM_HAIR.length) % C.SALM_HAIR.length)];
+    const eye = C.SALM_EYE[(((this.eyeColor % C.SALM_EYE.length) + C.SALM_EYE.length) % C.SALM_EYE.length)];
+    const I = this.style === 'sports' ? '#1a1620' : (this.style === 'premium' ? '#2a2430' : '#221c28');
+    const IW = this.style === 'sports' ? 1.6 : (this.style === 'premium' ? 1.1 : 1.4);
+    const uid = 'sm' + this.skinTone + '_' + this.eyeColor + '_' + this.hairColor + '_' + this.baseFaceId + this.style;
+
+    // deterministic variety from baseFaceId
+    const j = (((this.baseFaceId % 4) + 4) % 4);
+    const hairStyle = (((this.baseFaceId % 3) + 3) % 3);              // 0 ponytail, 1 loose, 2 top-knot
+    const salt = [2.4, 4, 6][((((this.baseFaceId * 7 + this.skinTone) % 3) + 3) % 3)];
+    const chinY = 83 + (j % 2) * 1.5;                                  // chin depth
+    const jw = 12 + (j >> 1) * 1.5;                                    // lower-jaw control half-width
+    const earX = (((this.baseFaceId % 2) + 2) % 2) === 0 ? 29 : 71;    // earring: left on even, right on odd
+
+    let s = '';
+
+    // ---- back hair (behind the neck / head) ----
+    if (hairStyle === 1) {
+      s += `<path d="M 27 42 C 19 58 19 78 25 92 L 39 90 L 34 48 Z M 73 42 C 81 58 81 78 75 92 L 61 90 L 66 48 Z" fill="${hr.shade}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    } else if (hairStyle === 0) {
+      s += `<path d="M 66 28 C 84 28 90 46 84 62 C 82 69 78 74 75 79 C 77 65 77 50 68 42 Z" fill="${hr.shade}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    }
+
+    // ---- NECK ----
+    s += `<path d="M 42 72 L 41 93 L 59 93 L 58 72 Z" fill="${sk.shade}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+
+    // ---- EARS + small SHELL EARRING ----
+    s += `<ellipse cx="29" cy="56" rx="3.2" ry="5.6" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}"/>`;
+    s += `<ellipse cx="71" cy="56" rx="3.2" ry="5.6" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}"/>`;
+    s += `<path d="M ${earX} 61.6 L ${earX - 3.4} 68 Q ${earX} 70.8 ${earX + 3.4} 68 Z" fill="#f7ead2" stroke="${I}" stroke-width="${IW * 0.55}" stroke-linejoin="round"/>`;
+    s += `<path d="M ${earX} 62.4 L ${earX - 1.6} 68.4 M ${earX} 62.4 L ${earX} 69.2 M ${earX} 62.4 L ${earX + 1.6} 68.4" stroke="#b9a37c" stroke-width="0.5"/>`;
+
+    // ---- HEAD ----
+    const head =
+      `M 30 50 C 30 30 39 20 50 20 C 61 20 70 30 70 50 ` +
+      `C 70 66 ${50 + jw} ${chinY - 2} 50 ${chinY} ` +
+      `C ${50 - jw} ${chinY - 2} 30 66 30 50 Z`;
+    s += `<path d="${head}" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    s += `<clipPath id="sh${uid}"><path d="${head}"/></clipPath>`;
+
+    // ---- cheek shadow + white SALT STRIPE across nose and cheekbones (signature) ----
+    s += `<g clip-path="url(#sh${uid})">`;
+    s += `<path d="M 63 40 C 68 54 66 70 55 ${chinY - 2} C 64 76 70 63 70 50 C 70 46 67 42 63 40 Z" fill="${sk.shade}" opacity="0.5"/>`;
+    s += `<path d="M 31.4 ${59 - salt / 2} Q 50 ${64 - salt / 2} 68.6 ${59 - salt / 2} L 68.4 ${59 + salt / 2} Q 50 ${64 + salt / 2} 31.6 ${59 + salt / 2} Z" fill="#fbf7ee" opacity="0.92"/>`;
+    s += `</g>`;
+
+    // ---- BROWS (bleached, hair shade) ----
+    s += `<path d="M 33.5 47.5 Q 39 45 45.5 47.2" fill="none" stroke="${hr.shade}" stroke-width="2.4" stroke-linecap="round"/>`;
+    s += `<path d="M 54.5 47.2 Q 61 45 66.5 47.5" fill="none" stroke="${hr.shade}" stroke-width="2.4" stroke-linecap="round"/>`;
+
+    // ---- sea-coloured EYES ----
+    for (const x of [39.5, 60.5]) {
+      s += `<path d="M ${x - 5.2} 53.4 Q ${x} 49.6 ${x + 5.2} 52.6 Q ${x} 56 ${x - 5.2} 53.4 Z" fill="#fdfbf6" stroke="${I}" stroke-width="${IW * 0.7}" stroke-linejoin="round"/>`;
+      s += `<circle cx="${x}" cy="52.9" r="2" fill="${eye}"/>`;
+      s += `<circle cx="${x}" cy="52.9" r="0.9" fill="#101014"/>`;
+    }
+
+    // ---- NOSE + slight SMIRK ----
+    s += `<path d="M 50 55 L 48.4 64.5 Q 50 66 52 64.8" fill="none" stroke="${sk.shade}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += `<path d="M 44.5 72.4 Q 48 71 50.4 71.9 L 55.6 71.4" fill="none" stroke="#7e463a" stroke-width="1.7" stroke-linecap="round"/>`;
+
+    // ---- sun-bleached HAIR cap + highlight (+ top-knot) ----
+    s += `<path d="M 29 50 C 27 30 36 15 50 15 C 64 15 73 30 71 50 C 68 38 62 30 50 29 C 38 30 32 38 29 50 Z" fill="${hr.hair}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    s += `<path d="M 38 22 Q 50 16.5 62 22" fill="none" stroke="#fffdf2" stroke-width="2.2" stroke-linecap="round" opacity="0.7"/>`;
+    if (hairStyle === 2) {
+      s += `<ellipse cx="50" cy="10.5" rx="7" ry="5.5" fill="${hr.hair}" stroke="${I}" stroke-width="${IW}"/>`;
+      s += `<path d="M 44 15 Q 50 17.5 56 15" fill="none" stroke="${hr.shade}" stroke-width="1.6"/>`;
+    }
+
+    return s;
+  }
+
+  // ============================================================================
+  // KAARNID (nation Tervala) — a fully SELF-CONTAINED renderer for the bark folk: an
+  // elongated trunk-like BARK head with grain lines, a crown of LEAVES (or bare twigs),
+  // KNOT-HOLE eyes lit by a sap glow, bark brow ridges, a cracked-line mouth, a moss
+  // patch on one cheek and one drifting leaf. It does NOT call any other helper, so
+  // everything stays byte-for-byte unchanged whenever species !== 'kaarnid'. Deterministic.
+  //   skinTone -> bark type, eyeColor -> sap glow, hairColor -> foliage / bare twigs,
+  //   baseFaceId -> moss side / drifting leaf / silhouette + leaf-layout jitter.
+  // ============================================================================
+  private drawKaarnid(): string {
+    const C = PlayerFaceComponent;
+    const bk = C.KAARN_BARK[(((this.skinTone % C.KAARN_BARK.length) + C.KAARN_BARK.length) % C.KAARN_BARK.length)];
+    const lf = C.KAARN_LEAF[(((this.hairColor % C.KAARN_LEAF.length) + C.KAARN_LEAF.length) % C.KAARN_LEAF.length)];
+    const sap = C.KAARN_SAP[(((this.eyeColor % C.KAARN_SAP.length) + C.KAARN_SAP.length) % C.KAARN_SAP.length)];
+    const I = this.style === 'sports' ? '#1a120c' : (this.style === 'premium' ? '#2a2018' : '#20170f');
+    const IW = this.style === 'sports' ? 1.6 : (this.style === 'premium' ? 1.1 : 1.4);
+    const uid = 'ka' + this.skinTone + '_' + this.eyeColor + '_' + this.hairColor + '_' + this.baseFaceId + this.style;
+
+    // deterministic silhouette + leaf-layout jitter
+    const j = (((this.baseFaceId % 4) + 4) % 4);
+    const chinY = 89 - (j % 2) * 1.5;                                  // trunk-chin depth
+    const jw = 11 + (j >> 1) * 1.5;                                    // lower-jaw control half-width
+    const layout = (((this.baseFaceId * 3 + this.hairColor) % 4) + 4) % 4;
+    const rot = (layout - 1.5) * 6;                                    // crown leaf rotation offset
+    const dx = (layout - 1.5) * 0.8;                                   // crown leaf x offset
+    const moss = (((this.baseFaceId % 2) + 2) % 2) === 0 ? 1 : -1;     // right cheek on even, left on odd
+    const drift = !lf.bare && (((this.baseFaceId % 3) + 3) % 3) === 0;
+
+    // a leaf: pointed oval blade with a midrib
+    const leaf = (x: number, y: number, r: number, a: number, col: string): string =>
+      `<g transform="translate(${x} ${y}) rotate(${a})">` +
+      `<path d="M 0 ${-r} C ${r * 0.7} ${-r * 0.5} ${r * 0.7} ${r * 0.5} 0 ${r} C ${-r * 0.7} ${r * 0.5} ${-r * 0.7} ${-r * 0.5} 0 ${-r} Z" fill="${col}" stroke="${I}" stroke-width="${IW * 0.7}" stroke-linejoin="round"/>` +
+      `<path d="M 0 ${-r * 0.8} L 0 ${r * 0.8}" stroke="${lf.vein}" stroke-width="0.8"/></g>`;
+
+    let s = '';
+
+    // ---- NECK (trunk) ----
+    s += `<path d="M 43 76 L 42 93 L 58 93 L 57 76 Z" fill="${bk.shade}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+
+    // ---- LEAF CROWN behind the head (or bare twigs) ----
+    if (!lf.bare) {
+      const back = [[28, 27, 9, -50], [37, 15, 10, -25], [50, 10, 11, 0], [63, 15, 10, 25], [72, 27, 9, 50], [26, 40, 8, -72], [74, 40, 8, 72]];
+      for (let i = 0; i < back.length; i++) {
+        const p = back[i];
+        const side = i % 2 ? -1 : 1;
+        s += leaf(p[0] + dx * side, p[1] + ((i + layout) % 2) * 1.2, p[2] + (((i + layout) % 3) - 1) * 0.6, p[3] + rot, i % 2 ? lf.b : lf.a);
+      }
+    } else {
+      s += `<path d="M 40 22 L 33 6 M 36.6 14 L 29 11 M 50 18 L 50 3 M 50 9 L 56.5 5 M 60 22 L 67 6 M 63.6 14 L 71.5 12 M 34 30 L 22 21 M 66 30 L 78 21 M 27 25 L 25 17 M 73 25 L 76 17" fill="none" stroke="${bk.grain}" stroke-width="2.2" stroke-linecap="round"/>`;
+    }
+
+    // ---- elongated trunk-like HEAD ----
+    const head =
+      `M 33 46 C 32 28 40 16 50 16 C 60 16 68 28 67 46 ` +
+      `C 67 66 ${50 + jw} ${chinY - 4} 50 ${chinY} ` +
+      `C ${50 - jw} ${chinY - 4} 33 66 33 46 Z`;
+    s += `<path d="${head}" fill="${bk.bark}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    s += `<clipPath id="kh${uid}"><path d="${head}"/></clipPath>`;
+
+    // ---- side shadow + bark GRAIN (birch dashes on pale barks) ----
+    s += `<g clip-path="url(#kh${uid})">`;
+    s += `<path d="M 60 16 C 70 34 68 66 56 92 L 72 92 L 72 16 Z" fill="${bk.shade}" opacity="0.6"/>`;
+    if (bk.birch) {
+      s += `<path d="M 35 34 h 7 M 56 30 h 8 M 37 67 h 6 M 55 77 h 7 M 44 24 h 5 M 58 44 h 6 M 35 43 h 4 M 46 82 h 5" stroke="${bk.grain}" stroke-width="1.6" stroke-linecap="round"/>`;
+    } else {
+      s += `<path d="M 38 22 C 36 40 37 62 42 84 M 45 18 C 44 30 45 38 44 44 M 56 18 C 58 30 56 38 57 44 M 62 24 C 65 42 63 64 58 84 M 47 78 C 48 81 48 85 47 88 M 53 78 C 52 81 53 85 54 88" fill="none" stroke="${bk.grain}" stroke-width="1" stroke-linecap="round" opacity="0.75"/>`;
+    }
+    s += `</g>`;
+
+    // ---- bark BROW RIDGES ----
+    s += `<path d="M 33.6 49 Q 40 44.5 46.5 48.5" fill="none" stroke="${bk.grain}" stroke-width="2.6" stroke-linecap="round"/>`;
+    s += `<path d="M 53.5 48.5 Q 60 44.5 66.4 49" fill="none" stroke="${bk.grain}" stroke-width="2.6" stroke-linecap="round"/>`;
+
+    // ---- KNOT-HOLE EYES lit from inside by sap ----
+    for (const x of [40, 60]) {
+      s += `<ellipse cx="${x}" cy="55.4" rx="5.4" ry="3.8" fill="#1c120a" stroke="${bk.grain}" stroke-width="1.2"/>`;
+      s += `<circle cx="${x}" cy="55.4" r="3.3" fill="${sap}" opacity="0.35"/>`;
+      s += `<circle cx="${x}" cy="55.4" r="2.1" fill="${sap}"/>`;
+      s += `<circle cx="${x - 0.7}" cy="54.7" r="0.7" fill="#fff6d8"/>`;
+    }
+
+    // ---- NOSE ridge + cracked-line MOUTH ----
+    s += `<path d="M 50 57 L 49 67.5 L 51.6 68.4" fill="none" stroke="${bk.grain}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>`;
+    s += `<path d="M 44 75.4 L 48 74.8 L 52 75.6 L 56 75" fill="none" stroke="${bk.grain}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+    // ---- MOSS patch on one cheek ----
+    const mx = moss > 0 ? 60.5 : 39.5;
+    s += `<g fill="#6fa35a" stroke="#3f6e34" stroke-width="0.6"><circle cx="${mx}" cy="65.6" r="2.6"/><circle cx="${mx + 2.4 * moss}" cy="68.2" r="2"/><circle cx="${mx - 1.6 * moss}" cy="69" r="1.7"/></g>`;
+
+    // ---- three leaves over the forehead + one drifting leaf ----
+    if (!lf.bare) {
+      const front = [[37, 25, 7, -40], [50, 20, 8, 0], [63, 25, 7, 40]];
+      for (let i = 0; i < front.length; i++) {
+        const p = front[i];
+        s += leaf(p[0] + dx * 0.5, p[1], p[2], p[3] + rot * (i === 1 ? 1 : 0.5), i % 2 ? lf.a : lf.b);
+      }
+    }
+    if (drift) s += leaf(84, 58, 4.5, 35 + rot, lf.a);
+
+    return s;
+  }
+
   private buildInner(): string {
     if (this.species === 'crystalline') return this.drawCrystalline();
     if (this.species === 'saurian') return this.drawSaurian();
@@ -2193,6 +2477,8 @@ export class PlayerFaceComponent {
     if (this.species === 'rokykario') return this.drawRokykario();
     if (this.species === 'eleftamide') return this.drawEleftamide();
     if (this.species === 'aquanimenti') return this.drawAquanimenti();
+    if (this.species === 'salmarid') return this.drawSalmarid();
+    if (this.species === 'kaarnid') return this.drawKaarnid();
     const C = PlayerFaceComponent;
     const g = this.geom();
     const uid = this.style + this.baseFaceId + '_' + this.skinTone + this.hairColor + this.eyeColor + this.hairStyle;
