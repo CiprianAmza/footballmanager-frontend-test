@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { EMPTY, Subscription, firstValueFrom, timer } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { ArenaCompetitionsPanelComponent } from './arena-competitions-panel.component';
+import { ArenaPlayersComponent } from './arena-players.component';
 import { ArenaProgressComponent } from './arena-progress.component';
 import { ArenaResultsComponent } from './arena-results.component';
 import { ArenaSchedulePanelComponent } from './arena-schedule-panel.component';
@@ -35,7 +36,7 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
   standalone: true,
   imports: [
     CommonModule, RouterModule, ArenaResultsComponent, ArenaProgressComponent,
-    ArenaSchedulePanelComponent, ArenaCompetitionsPanelComponent, TacticArenaEditorComponent
+    ArenaSchedulePanelComponent, ArenaCompetitionsPanelComponent, TacticArenaEditorComponent, ArenaPlayersComponent
   ],
   styleUrls: ['./tactic-arena.css'],
   template: `
@@ -82,6 +83,7 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                   <th title="Final league place / clubs in the league">Finished</th>
                   <th>PLD</th><th>PTS</th><th>GD</th><th>GF</th><th>GA</th><th>xGF</th><th>xGA</th><th>xGD</th>
                   <th title="Diamond League points / maximum · final place / clubs">Diamond League</th>
+                  <th class="ta-left" *ngIf="hasPlayerSummary" title="Top scorer · team average rating">Players</th>
                   <th class="ta-left">Cups</th>
                 </tr>
               </thead>
@@ -115,10 +117,11 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                       </td>
                     </ng-template>
                     <td>{{ diamondText(run) }}</td>
+                    <td class="ta-left ta-small" *ngIf="hasPlayerSummary">{{ playersText(run) }}</td>
                     <td class="ta-left ta-small ta-cups">{{ cups(run) }}</td>
                   </tr>
                   <tr class="ta-run-detail" *ngIf="expanded === run.index" [attr.id]="'ta-run-' + run.index">
-                    <td colspan="16" class="ta-left">
+                    <td [attr.colspan]="hasPlayerSummary ? 17 : 16" class="ta-left">
                       <h3>{{ runLabel(run) }} · {{ run.teamName || 'chosen when the world is ready' }}
                         <span class="ta-small" *ngIf="run.teamName">· reputation {{ run.teamReputation }} · media prediction {{ prediction(run) }}</span></h3>
                       <p class="ta-error" *ngIf="run.message">{{ run.message }}</p>
@@ -126,6 +129,7 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                       <app-arena-results *ngIf="diamondResults(run) as diamond" [results]="diamond"
                                          [title]="'Diamond League' + (run.diamond?.position != null ? ' · finished ' + run.diamond?.position + ' / ' + (run.diamond?.of ?? '—') : '')"></app-arena-results>
                       <p class="ta-muted" *ngIf="!run.stats">Available when this run has finished ({{ run.progress | number:'1.0-0' }}%).</p>
+                      <app-arena-players *ngIf="run.result?.players?.length" [players]="run.result?.players"></app-arena-players>
                       <div class="ta-shots" *ngIf="run.status === 'DONE' && run.result">
                         <div class="ta-shot" *ngFor="let kind of kinds">
                           <figure *ngIf="shot(run, kind) as state">
@@ -287,6 +291,21 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
   private isLeague(comp: { kind?: string; typeId?: number; name?: string }): boolean {
     if (isDiamondLeague(comp)) return false;
     return comp.kind === 'LEAGUE' || comp.typeId === 1 || comp.typeId === 3;
+  }
+
+  /** The Players column only appears when some run has a player summary (newer tests). */
+  get hasPlayerSummary(): boolean {
+    return (this.test?.runs || []).some(run => !!run.result?.playerSummary);
+  }
+
+  /** "Name 31 · avg 7.12": top scorer and team average rating. */
+  playersText(run: ArenaRun): string {
+    const summary = run.result?.playerSummary;
+    if (!summary) return '—';
+    const parts: string[] = [];
+    if (summary.topScorer?.name) parts.push(`${summary.topScorer.name} ${summary.topScorer.goals ?? ''}`.trim());
+    if (summary.teamAvgRating != null) parts.push(`avg ${Number(summary.teamAvgRating).toFixed(2)}`);
+    return parts.join(' · ') || '—';
   }
 
   /** "45 / 84 · 3 / 8", or "—" when the club does not play in the Diamond League. */

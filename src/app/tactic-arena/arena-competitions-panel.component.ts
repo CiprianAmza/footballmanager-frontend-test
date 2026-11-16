@@ -37,7 +37,7 @@ import { ArenaCompetition, ArenaRunResult, ArenaTableRow } from './tactic-arena.
                 <span class="label">POSITION</span>
                 <div class="position-box">
                   <span class="pos-val">{{ comp.position ?? '—' }}</span>
-                  <span class="pos-total" *ngIf="comp.totalTeams || result.leagueTable.length">/{{ comp.totalTeams || result.leagueTable.length }}</span>
+                  <span class="pos-total" *ngIf="clubsIn(comp) as total">/{{ total }}</span>
                 </div>
               </div>
               <div class="info-block right">
@@ -76,6 +76,14 @@ import { ArenaCompetition, ArenaRunResult, ArenaTableRow } from './tactic-arena.
 
       <div class="standings-group arena-table" *ngIf="result.leagueTable.length">
         <h2>{{ result.leagueName }} · final table</h2>
+        <ng-container *ngTemplateOutlet="standings; context: { rows: table }"></ng-container>
+      </div>
+      <div class="standings-group arena-table" *ngIf="diamondTable.length">
+        <h2>Diamond League · final table</h2>
+        <ng-container *ngTemplateOutlet="standings; context: { rows: diamondTable }"></ng-container>
+      </div>
+
+      <ng-template #standings let-rows="rows">
         <table class="standings-table">
           <thead>
             <tr>
@@ -84,7 +92,7 @@ import { ArenaCompetition, ArenaRunResult, ArenaTableRow } from './tactic-arena.
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let row of table; let i = index" [class.human-team]="row.teamId === result.teamId">
+            <tr *ngFor="let row of rows; let i = index" [class.human-team]="row.teamId === result.teamId">
               <td class="pos">{{ row.position || i + 1 }}</td>
               <td class="team-col">{{ row.name || row.teamName }}</td>
               <td>{{ row.games }}</td><td>{{ row.wins }}</td><td>{{ row.draws }}</td><td>{{ row.loses }}</td>
@@ -94,7 +102,7 @@ import { ArenaCompetition, ArenaRunResult, ArenaTableRow } from './tactic-arena.
             </tr>
           </tbody>
         </table>
-      </div>
+      </ng-template>
     </main>
   `
 })
@@ -110,19 +118,35 @@ export class ArenaCompetitionsPanelComponent {
     return (this.result.competitions || []).filter(comp => comp.trophy).map(comp => comp.name);
   }
 
-  get table(): ArenaTableRow[] {
-    return [...(this.result.leagueTable || [])].sort((left, right) =>
+  get table(): ArenaTableRow[] { return this.sorted(this.result.leagueTable); }
+
+  /** Final Diamond League table; empty for clubs that do not play in it. */
+  get diamondTable(): ArenaTableRow[] { return this.sorted(this.result.diamondTable); }
+
+  private sorted(rows: ArenaTableRow[] | null | undefined): ArenaTableRow[] {
+    return [...(rows || [])].sort((left, right) =>
       (Number(left.position) || 0) - (Number(right.position) || 0)
       || (Number(right.points) || 0) - (Number(left.points) || 0));
   }
 
+  /** Clubs in a league-shaped competition: the Diamond League's own count, else the league's. */
+  clubsIn(comp: ArenaCompetition): number | null {
+    if (this.isDiamond(comp)) return Number(comp['of']) || comp.totalTeams || this.diamondTable.length || null;
+    return comp.totalTeams || this.result.leagueTable.length || null;
+  }
+
+  private isDiamond(comp: ArenaCompetition): boolean {
+    return comp.kind === 'DIAMOND' || comp['diamond'] === true || comp.typeId === 7;
+  }
+
   private order(comp: ArenaCompetition): number {
-    if (comp.typeId === 7) return 1;
+    if (this.isDiamond(comp)) return 1;
     return this.isLeague(comp) ? 0 : 2;
   }
 
+  /** League-shaped cards (position, points, record): the club's league and the Diamond League. */
   isLeague(comp: ArenaCompetition): boolean {
-    return comp.kind === 'LEAGUE' || comp.typeId === 1 || comp.typeId === 3;
+    return this.isDiamond(comp) || comp.kind === 'LEAGUE' || comp.typeId === 1 || comp.typeId === 3;
   }
 
   gd(row: ArenaTableRow): string {

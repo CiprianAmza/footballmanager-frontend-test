@@ -151,6 +151,9 @@ export interface ArenaClubResult {
   leagueName?: string | null;
   results: { overall: ArenaSplit; home: ArenaSplit; away: ArenaSplit } | null;
   diamond?: ArenaDiamondResults | null;
+  /** Final place in the club's own league and the league's size. */
+  finalPosition?: number | null;
+  finalLeagueSize?: number | null;
 }
 
 export const ARENA_TIERS: ArenaTier[] = ['TOP', 'MID', 'BOTTOM'];
@@ -160,6 +163,9 @@ export interface ArenaTierResult {
   teamName: string | null;
   results: { overall: ArenaSplit; home: ArenaSplit; away: ArenaSplit } | null;
   diamond?: ArenaDiamondResults | null;
+  /** Final place in the club's own league and the league's size. */
+  finalPosition?: number | null;
+  finalLeagueSize?: number | null;
 }
 
 export interface ArenaReferenceTeam {
@@ -182,6 +188,8 @@ export interface ArenaMatch {
   competitionId: number;
   competitionName: string;
   competitionType: string;
+  /** LEAGUE | DIAMOND | CUP | CONTINENTAL | OTHER */
+  competitionKind?: string | null;
   roundNumber: number;
   roundLabel?: string;
   homeOrAway: string;
@@ -262,6 +270,46 @@ export interface ArenaRunResult {
   matches: ArenaMatch[];
   competitions: ArenaCompetition[];
   leagueTable: ArenaTableRow[];
+  /** Final Diamond League table and its competition id, when the club plays in it. */
+  diamondTable?: ArenaTableRow[] | null;
+  diamondLeagueId?: number | null;
+  /** Season stats of the club's players (absent in older tests). */
+  players?: ArenaPlayerStats[] | null;
+  playerSummary?: ArenaPlayerSummary | null;
+}
+
+export interface ArenaPlayerKindStats {
+  apps?: number | null;
+  goals?: number | null;
+  assists?: number | null;
+  avgRating?: number | null;
+}
+
+export interface ArenaPlayerStats {
+  playerId: number;
+  name: string;
+  position?: string | null;
+  age?: number | null;
+  rating?: number | null;
+  apps?: number | null;
+  starts?: number | null;
+  minutes?: number | null;
+  goals?: number | null;
+  assists?: number | null;
+  avgRating?: number | null;
+  motm?: number | null;
+  yellow?: number | null;
+  red?: number | null;
+  cleanSheets?: number | null;
+  /** Split per competition kind: LEAGUE | DIAMOND | CUP. */
+  byKind?: Partial<Record<'LEAGUE' | 'DIAMOND' | 'CUP', ArenaPlayerKindStats>> | null;
+}
+
+export interface ArenaPlayerSummary {
+  topScorer?: { name: string; goals: number } | null;
+  topAssists?: { name: string; assists: number } | null;
+  bestRated?: { name: string; avgRating: number; apps?: number | null } | null;
+  teamAvgRating?: number | null;
 }
 
 export interface ArenaRun {
@@ -275,6 +323,9 @@ export interface ArenaRun {
   tier?: ArenaTier | null;
   /** The run's Diamond League figures, when its club plays in it. */
   diamond?: ArenaDiamondResults | null;
+  /** Final place in the club's own league and the league's size. */
+  finalPosition?: number | null;
+  finalLeagueSize?: number | null;
   /** Role label from the backend (e.g. "Reference"); falls back to the kind. */
   label?: string | null;
   /** Media prediction: predicted league place / clubs in the league (null when unknown). */
@@ -444,8 +495,8 @@ export function pointsPct(split: ArenaSplit | null | undefined): number | null {
 }
 
 /** The Diamond League (competition type 7) is a league in format, but not the club's own league. */
-export function isDiamondLeague(comp: { typeId?: number | null; name?: string | null; competitionName?: string | null }): boolean {
-  return comp.typeId === 7 || /diamond league/i.test(comp.name || comp.competitionName || '');
+export function isDiamondLeague(comp: { typeId?: number | null; kind?: string | null; name?: string | null; competitionName?: string | null }): boolean {
+  return comp.typeId === 7 || comp.kind === 'DIAMOND' || /diamond league/i.test(comp.name || comp.competitionName || '');
 }
 
 /** "6 / 12" from a media prediction, "—" when unknown. */

@@ -26,8 +26,26 @@ export async function captureElement(element: HTMLElement, maxScale = 2): Promis
   clone.style.setProperty('top', 'auto');
   clone.style.setProperty('transform', 'none');
   clone.style.setProperty('width', width + 'px');
-  clone.style.setProperty('height', height + 'px');
-  clone.style.setProperty('overflow', 'hidden');
+  // The clone can come out TALLER than the live panel: inside an SVG image the browser may pick
+  // other fonts for generic families (e.g. `monospace`), so text wraps differently and rows grow.
+  // So the clone keeps its natural height (at least the measured one), it is drawn on a generous
+  // canvas, and the empty rows below the content are trimmed away afterwards.
+  clone.style.setProperty('height', 'auto');
+  clone.style.setProperty('min-height', height + 'px');
+  clone.style.setProperty('overflow', 'visible');
+  // The panel's outer wrappers carry their live pixel height; let them grow with the clone too,
+  // so their background still covers rows that came out taller.
+  let wrapper = clone.firstElementChild as HTMLElement | null;
+  for (let depth = 0; wrapper && depth < 3; depth++) {
+    const live = wrapper.style.getPropertyValue('height');
+    // Boxes that clip or scroll by design (the tactics page shell) keep their fixed size.
+    const clips = /hidden|auto|scroll|clip/.test(wrapper.style.getPropertyValue('overflow-y') || wrapper.style.getPropertyValue('overflow'));
+    if (live && !clips) {
+      wrapper.style.setProperty('min-height', live);
+      wrapper.style.setProperty('height', 'auto');
+    }
+    wrapper = wrapper.firstElementChild as HTMLElement | null;
+  }
   if (pseudoRules.length) {
     const style = document.createElement('style');
     style.textContent = pseudoRules.join('\n');
@@ -36,27 +54,58 @@ export async function captureElement(element: HTMLElement, maxScale = 2): Promis
   await inlineImages(clone);
 
   const background = pageBackground(element);
+  const drawHeight = Math.ceil(height * 1.5) + 400;
   const xhtml = new XMLSerializer().serializeToString(clone);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${drawHeight}">`
     + `<foreignObject x="0" y="0" width="100%" height="100%">${xhtml}</foreignObject></svg>`;
   const image = await loadImage('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg));
 
-  const scale = Math.min(maxScale, Math.max(1, window.devicePixelRatio || 1));
+  // Canvas sides stay well under the browsers' limits.
+  const scale = Math.min(maxScale, Math.max(1, window.devicePixelRatio || 1), 16000 / drawHeight);
+  const full = document.createElement('canvas');
+  full.width = Math.round(width * scale);
+  full.height = Math.round(drawHeight * scale);
+  const fullContext = full.getContext('2d');
+  if (!fullContext) throw new Error('Canvas 2D context unavailable.');
+  fullContext.fillStyle = background;
+  fullContext.fillRect(0, 0, full.width, full.height);
+  fullContext.scale(scale, scale);
+  fullContext.drawImage(image, 0, 0, width, drawHeight);
+
+  const contentRows = lastContentRow(fullContext, full.width, full.height) + 1;
+  const finalHeight = Math.min(full.height, Math.max(Math.round(height * scale), contentRows + Math.round(8 * scale)));
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(width * scale);
-  canvas.height = Math.round(height * scale);
+  canvas.width = full.width;
+  canvas.height = finalHeight;
   const context = canvas.getContext('2d');
   if (!context) throw new Error('Canvas 2D context unavailable.');
-  context.fillStyle = background;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.scale(scale, scale);
-  context.drawImage(image, 0, 0, width, height);
+  context.drawImage(full, 0, 0);
 
   const webp = await toBlob(canvas, 'image/webp', 0.9);
   if (webp && webp.type === 'image/webp') return webp;
   const png = await toBlob(canvas, 'image/png');
   if (!png) throw new Error('The browser could not encode the capture.');
   return png;
+}
+
+/** Index of the lowest canvas row that differs from the background (the bottom-right pixel). */
+function lastContentRow(context: CanvasRenderingContext2D, width: number, height: number): number {
+  const corner = context.getImageData(width - 1, height - 1, 1, 1).data;
+  const [r, g, b] = [corner[0], corner[1], corner[2]];
+  const strip = 256;
+  // Scanned bottom-up in strips, so a tall capture never needs one huge pixel buffer.
+  for (let bottom = height; bottom > 0; bottom -= strip) {
+    const top = Math.max(0, bottom - strip);
+    const data = context.getImageData(0, top, width, bottom - top).data;
+    for (let y = bottom - top - 1; y >= 0; y--) {
+      const row = y * width * 4;
+      for (let x = 0; x < width; x += 2) {
+        const i = row + x * 4;
+        if (Math.abs(data[i] - r) > 6 || Math.abs(data[i + 1] - g) > 6 || Math.abs(data[i + 2] - b) > 6) return top + y;
+      }
+    }
+  }
+  return 0;
 }
 
 function cloneWithStyles(source: Node, pseudoRules: string[], ids: { counter: number }): Node {
@@ -119,6 +168,10 @@ function copyStyles(source: Element, target: Element, tag: string): void {
     if (property.startsWith('--') || SKIPPED_PROPERTIES.has(property)) continue;
     const value = computed.getPropertyValue(property);
     if (defaults.get(property) === value) continue;
+    if (property === 'font-family' && value.trim() === 'monospace') {
+      declarations.push('font-family:Consolas, "Cascadia Mono", "Courier New", monospace');
+      continue;
+    }
     declarations.push(`${property}:${value}`);
   }
   target.setAttribute('style', declarations.join(';'));

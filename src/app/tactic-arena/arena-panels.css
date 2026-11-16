@@ -11,3 +11,4 @@
 .arena-table { padding: 0 20px 20px; }
 .arena-table h2 { color: #c8d6e5; font-size: 16px; }
 .arena-comp-diamond { background: #4fc3f7 !important; color: #0b2230 !important; }
+.arena-panel .cal-round { white-space: nowrap; }

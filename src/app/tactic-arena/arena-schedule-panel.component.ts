@@ -39,7 +39,7 @@ import { ArenaMatch, ArenaRunResult } from './tactic-arena.service';
                   [class.arena-before-run]="!match.inRun">
                 <td class="cal-round">{{ match.date || ('Day ' + match.day) }}</td>
                 <td class="cal-comp">
-                  <span class="comp-type-badge" [ngClass]="compTypeClass(match.competitionType, match.competitionName)">
+                  <span class="comp-type-badge" [ngClass]="compTypeClass(match)">
                     {{ match.competitionName | slice:0:3 | uppercase }}
                   </span>
                   <span class="comp-full-name">{{ match.competitionName }}</span>
@@ -89,10 +89,16 @@ export class ArenaSchedulePanelComponent {
   get losses(): number { return this.result.matches.filter(match => match.resultOutcome === 'L').length; }
   get beforeRun(): number { return this.result.matches.filter(match => !match.inRun).length; }
 
-  /** The game reports Diamond League matches as "League": they are told apart by name. */
-  compTypeClass(type: string, name?: string): string {
-    if (/diamond league/i.test(name || '')) return 'arena-comp-diamond';
-    switch (type) {
+  /** Badge from `competitionKind`; older data (no kind) falls back to the name and the type. */
+  compTypeClass(match: ArenaMatch): string {
+    switch (match.competitionKind) {
+      case 'DIAMOND': return 'arena-comp-diamond';
+      case 'LEAGUE': return 'comp-league';
+      case 'CUP': return 'comp-cup';
+      case 'CONTINENTAL': return 'comp-european';
+    }
+    if (/diamond league/i.test(match.competitionName || '')) return 'arena-comp-diamond';
+    switch (match.competitionType) {
       case 'Cup': return 'comp-cup';
       case 'European':
       case 'Continental': return 'comp-european';

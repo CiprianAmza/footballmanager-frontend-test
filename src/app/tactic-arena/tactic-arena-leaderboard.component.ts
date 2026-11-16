@@ -4,13 +4,16 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { EMPTY, Subscription, timer } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import {
-  ARENA_TIERS, ArenaLeaderboard, ArenaReferenceTeam, ArenaSplit, ArenaTestSummary, ArenaTier, TacticArenaService,
+  ARENA_TIERS, ArenaClubResult, ArenaLeaderboard, ArenaReferenceTeam, ArenaSplit, ArenaTestSummary, ArenaTier,
+  ArenaTierResult, TacticArenaService,
   formationLabel, isActive, pointsPct, predictionLabel, referenceNames, signed
 } from './tactic-arena.service';
 
 type Split = 'overall' | 'home' | 'away';
 type Category = 'general' | 'diamond';
-type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'diamond' | 'uploaded';
+type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'leaguePos' | 'diamond' | 'dlPos' | 'uploaded';
+/** One club's entry of a test: a reference tier (General) or a Diamond League club. */
+type ClubEntry = (ArenaTierResult | ArenaClubResult) & { predictedPosition?: number | null };
 const TEAM_TIER: Record<string, ArenaTier> = { top: 'TOP', mid: 'MID', bottom: 'BOTTOM' };
 const TIER_TITLES: Record<ArenaTier, string> = { TOP: 'Top club', MID: 'Mid-table club', BOTTOM: 'Bottom club' };
 
@@ -98,8 +101,13 @@ interface TeamOption { key: string; label: string; }
               <th class="ta-left">League</th>
               <th *ngFor="let column of numericColumns" class="sortable" [class.sorted]="sortKey === column.key"
                   (click)="sortBy(column.key)">{{ column.label }}{{ sortKey === column.key ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
+              <th *ngIf="showLeaguePos" class="sortable" [class.sorted]="sortKey === 'leaguePos'" (click)="sortBy('leaguePos')"
+                  [attr.title]="team === 'all' ? 'Final league place of the top · mid-table · bottom club' : 'Final league place / clubs'">
+                League pos{{ sortKey === 'leaguePos' ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
               <th *ngIf="showDiamond" class="sortable" [class.sorted]="sortKey === 'diamond'" (click)="sortBy('diamond')"
                   title="Diamond League points / maximum">Diamond League{{ sortKey === 'diamond' ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
+              <th *ngIf="showDlPos" class="sortable" [class.sorted]="sortKey === 'dlPos'" (click)="sortBy('dlPos')"
+                  title="Final Diamond League place / clubs">DL pos{{ sortKey === 'dlPos' ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
               <th class="sortable" [class.sorted]="sortKey === 'uploaded'" (click)="sortBy('uploaded')">
                 Uploaded{{ sortKey === 'uploaded' ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
             </tr>
@@ -135,18 +143,21 @@ interface TeamOption { key: string; label: string; }
               <ng-template #emptyCells>
                 <td class="ta-muted" *ngFor="let column of numericColumns">—</td>
               </ng-template>
+              <td *ngIf="showLeaguePos" [class.ta-pos]="leagueDelta(test) > 0" [class.ta-neg]="leagueDelta(test) < 0"
+                  [attr.title]="leagueDeltaTitle(test)">{{ leaguePosText(test) }}</td>
               <td *ngIf="showDiamond">
                 <ng-container *ngIf="diamondRow(test) as d; else noDiamond">{{ d.pts }} / {{ d.ptsMax }}
                   <span class="ta-small" *ngIf="pct(d) !== null">{{ pct(d) | number:'1.0-0' }}%</span></ng-container>
                 <ng-template #noDiamond><span class="ta-muted">—</span></ng-template>
               </td>
+              <td *ngIf="showDlPos">{{ dlPosText(test) }}</td>
               <td>{{ (test.finishedAt || test.createdAt) | date:'dd.MM.yyyy' }}</td>
             </tr>
             <tr *ngIf="board && !categoryTests.length">
-              <td class="ta-left ta-muted" [attr.colspan]="numericColumns.length + (showDiamond ? 7 : 6)">No tactic has been tested in this category yet.</td>
+              <td class="ta-left ta-muted" [attr.colspan]="columnCount">No tactic has been tested in this category yet.</td>
             </tr>
             <tr *ngIf="!board && !error">
-              <td class="ta-left ta-muted" [attr.colspan]="numericColumns.length + (showDiamond ? 7 : 6)">Loading…</td>
+              <td class="ta-left ta-muted" [attr.colspan]="columnCount">Loading…</td>
             </tr>
           </tbody>
         </table>
@@ -317,6 +328,96 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
 
   diamondRow(test: ArenaTestSummary): ArenaSplit | null { return this.diamondOf(test, this.team, this.split); }
 
+  // ---------- final places ----------
+
+  /** The chosen club's entry (null with "All"). */
+  private entry(test: ArenaTestSummary, team = this.team): ClubEntry | null {
+    if (team === 'all') return null;
+    if (this.cat === 'diamond') return (test.byClub || []).find(club => String(club.teamId) === team) || null;
+    const tier = TEAM_TIER[team];
+    return tier ? test.byTier?.[tier] || null : null;
+  }
+
+  /** The prediction of a club entry: its own, else the reference club's of that tier. */
+  private entryPrediction(entry: ClubEntry | null, team = this.team): number | null {
+    if (!entry) return null;
+    if (entry.predictedPosition != null) return entry.predictedPosition;
+    const tier = TEAM_TIER[team];
+    return tier ? this.refTeam(tier)?.predictedPosition ?? null : null;
+  }
+
+  /** General + All: the three reference clubs' places, top · mid · bottom. */
+  private tierPlaces(test: ArenaTestSummary): (number | null)[] {
+    return ARENA_TIERS.map(tier => test.byTier?.[tier]?.finalPosition ?? null);
+  }
+
+  leaguePosText(test: ArenaTestSummary): string {
+    if (this.team === 'all') {
+      const places = this.tierPlaces(test);
+      return places.some(place => place != null) ? places.map(place => place ?? '—').join(' · ') : '—';
+    }
+    const entry = this.entry(test);
+    if (entry?.finalPosition == null) return '—';
+    return entry.finalLeagueSize ? `${entry.finalPosition} / ${entry.finalLeagueSize}` : `${entry.finalPosition}`;
+  }
+
+  /** Sort value: the club's place, or the average of the three reference places. */
+  private leaguePosValue(test: ArenaTestSummary): number | null {
+    if (this.team === 'all') {
+      const places = this.tierPlaces(test).filter((place): place is number => place != null);
+      return places.length ? places.reduce((sum, place) => sum + place, 0) / places.length : null;
+    }
+    return this.entry(test)?.finalPosition ?? null;
+  }
+
+  /** > 0: finished above the media prediction, < 0: below (one club only). */
+  leagueDelta(test: ArenaTestSummary): number {
+    const entry = this.entry(test);
+    const predicted = this.entryPrediction(entry);
+    if (entry?.finalPosition == null || predicted == null) return 0;
+    return predicted - entry.finalPosition;
+  }
+
+  leagueDeltaTitle(test: ArenaTestSummary): string | null {
+    const delta = this.leagueDelta(test);
+    if (!delta) return null;
+    return delta > 0 ? `${delta} place(s) above the media prediction` : `${-delta} place(s) below the media prediction`;
+  }
+
+  /** Diamond League entry for "DL pos": the chosen club, or the top club with "All" (General). */
+  private dlEntry(test: ArenaTestSummary): ClubEntry | null {
+    if (this.team === 'all') return this.cat === 'general' ? test.byTier?.TOP || null : null;
+    return this.entry(test);
+  }
+
+  private dlEntryPosition(test: ArenaTestSummary): number | null {
+    return this.dlEntry(test)?.diamond?.position ?? null;
+  }
+
+  dlPosText(test: ArenaTestSummary): string {
+    const diamond = this.dlEntry(test)?.diamond;
+    if (diamond?.position == null) return '—';
+    return diamond.of ? `${diamond.position} / ${diamond.of}` : `${diamond.position}`;
+  }
+
+  /** "League pos": not for "All 8 clubs" (too many places); only when some test has places. */
+  get showLeaguePos(): boolean {
+    if (this.cat === 'diamond' && this.team === 'all') return false;
+    return this.categoryTests.some(test => this.team === 'all'
+      ? this.tierPlaces(test).some(place => place != null)
+      : this.entry(test)?.finalPosition != null);
+  }
+
+  /** "DL pos": not for "All 8 clubs" (they all play each other); only when some test has it. */
+  get showDlPos(): boolean {
+    if (this.cat === 'diamond' && this.team === 'all') return false;
+    return this.categoryTests.some(test => this.dlEntryPosition(test) != null);
+  }
+
+  get columnCount(): number {
+    return this.numericColumns.length + 6 + [this.showLeaguePos, this.showDiamond, this.showDlPos].filter(Boolean).length;
+  }
+
   /** The Diamond League column only appears when a test of the category has Diamond League figures. */
   get showDiamond(): boolean {
     return this.categoryTests.some(test => !!test.diamond
@@ -363,13 +464,16 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
 
   sortBy(key: SortKey): void {
     if (this.sortKey === key) this.sortDesc = !this.sortDesc;
-    else { this.sortKey = key; this.sortDesc = key !== 'ga' && key !== 'xga'; }
+    // Places sort best (lowest) first; goals against too.
+    else { this.sortKey = key; this.sortDesc = !['ga', 'xga', 'leaguePos', 'dlPos'].includes(key); }
   }
 
   get sortedTests(): ArenaTestSummary[] {
     const tests = [...this.categoryTests];
     const value = (test: ArenaTestSummary): number | null => {
       if (this.sortKey === 'uploaded') return Date.parse(test.finishedAt || test.createdAt) || 0;
+      if (this.sortKey === 'leaguePos') return this.leaguePosValue(test);
+      if (this.sortKey === 'dlPos') return this.dlEntryPosition(test);
       if (this.sortKey === 'diamond') {
         const diamond = this.diamondRow(test);
         return diamond ? pointsPct(diamond) ?? diamond.pts : null;

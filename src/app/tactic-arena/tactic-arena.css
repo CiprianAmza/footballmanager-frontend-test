@@ -132,3 +132,10 @@
   border: 1px solid var(--fm-border); border-radius: var(--fm-radius); padding: 10px 12px; cursor: pointer; }
 .ta-cat-switch button.active { border-color: var(--fm-accent); box-shadow: 0 0 0 1px var(--fm-accent) inset; }
 .ta-cat-switch strong { display: block; color: var(--fm-heading); }
+
+/* Test page: Players panel of a run. */
+.ta-players { margin: 12px 0 16px; }
+.ta-players-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.ta-players-head h3 { margin: 0 0 6px; color: var(--fm-heading); font-size: 1.05em; }
+.ta-players-scopes { border-bottom: 0; }
+.ta-players-table { border-top: 1px solid var(--fm-border); border-radius: var(--fm-radius); max-height: 520px; overflow-y: auto; }
