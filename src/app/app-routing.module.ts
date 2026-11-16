@@ -129,6 +129,21 @@ export const APP_ROUTES: Routes = [
     title: 'Tactical selection studio'
   },
   {
+    path: 'tactic-arena',
+    loadComponent: () => import('./tactic-arena/tactic-arena-leaderboard.component').then(module => module.TacticArenaLeaderboardComponent),
+    title: 'Tactic Arena'
+  },
+  {
+    path: 'tactic-arena/new',
+    loadComponent: () => import('./tactic-arena/tactic-arena-new.component').then(module => module.TacticArenaNewComponent),
+    title: 'Tactic Arena · new test'
+  },
+  {
+    path: 'tactic-arena/:id',
+    loadComponent: () => import('./tactic-arena/tactic-arena-test.component').then(module => module.TacticArenaTestComponent),
+    title: 'Tactic Arena · test'
+  },
+  {
     path: 'match-centre2/:matchKey',
     loadComponent: () => import('./match-centre2/match-centre2.component').then(module => module.MatchCentre2Component),
     title: 'Broadcast match centre'

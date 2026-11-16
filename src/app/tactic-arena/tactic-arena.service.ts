@@ -1,0 +1,324 @@
+import { HttpClient } from '@angular/common/http';
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { urlApp } from '../app.component';
+
+/** Shapes from fm-match2d/docs/TACTIC_ARENA_API.md. */
+
+export interface ArenaFormationSlot {
+  positionIndex: number;
+  playerId: number;
+  role?: string | null;
+  duty?: string | null;
+  instructions?: string[] | null;
+  specialRole?: 'SHOOTER' | null;
+  shadow?: boolean;
+}
+
+/** The tactic exactly as the tactics page saves it (PersonalizedTacticView). */
+export interface ArenaTactic {
+  teamId?: number;
+  tactic: string;
+  mentality: string;
+  inPossession: string;
+  passingType: string;
+  tempo: string;
+  timeWasting: string;
+  defensiveLine: string;
+  pressing: string;
+  width: string;
+  dribbling: string;
+  foulFrequency: string;
+  foulHardness: string;
+  tempoFragmentation: string;
+  widePlay: string;
+  transition: string;
+  recovery?: string;
+  penaltyTakerId?: number | null;
+  freeKickTakerId?: number | null;
+  cornerTakerLeftId?: number | null;
+  cornerTakerRightId?: number | null;
+  formationDataList: ArenaFormationSlot[];
+}
+
+export interface ArenaSplit {
+  pld: number; pts: number; ptsMax: number;
+  w: number; d: number; l: number;
+  gf: number; ga: number; gd: number;
+  xgf: number | null; xga: number | null; xgd: number | null;
+}
+
+export interface ArenaResults {
+  basedOn: number;
+  overall: ArenaSplit;
+  home: ArenaSplit;
+  away: ArenaSplit;
+}
+
+export interface ArenaGitPushStatus {
+  enabled: boolean;
+  lastAttemptAt: string | null;
+  ok: boolean | null;
+  message: string | null;
+}
+
+export type ArenaStatus = 'QUEUED' | 'RUNNING' | 'DONE' | 'FAILED' | 'CANCELLED';
+
+export interface ArenaTestSummary {
+  id: number;
+  uid: string;
+  name: string;
+  formation: string;
+  owner: string;
+  teamId: number;
+  teamName: string;
+  leagueId: number;
+  leagueName: string;
+  season: number;
+  startDay: number;
+  endDay: number;
+  engine: string;
+  createdAt: string;
+  finishedAt: string | null;
+  status: ArenaStatus;
+  progress: number;
+  results: ArenaResults | null;
+  chosen: ArenaResults | null;
+}
+
+export interface ArenaLeaderboard {
+  testsCount: number;
+  matchesPlayed: number;
+  gitPush: ArenaGitPushStatus | null;
+  tests: ArenaTestSummary[];
+}
+
+export type ArenaImageKind = 'tactic' | 'schedule' | 'competitions';
+export type ArenaRunKind = 'CHOSEN' | 'REFERENCE_TOP' | 'REFERENCE_MEDIAN' | 'REFERENCE_BOTTOM';
+
+export interface ArenaMatch {
+  day: number;
+  date: string;
+  dayOfWeek?: string;
+  competitionId: number;
+  competitionName: string;
+  competitionType: string;
+  roundNumber: number;
+  roundLabel?: string;
+  homeOrAway: string;
+  homeTeamAbbr?: string;
+  awayTeamAbbr?: string;
+  opponentTeam: string;
+  opponentTeamId: number;
+  score: string;
+  teamGoals?: number | null;
+  opponentGoals?: number | null;
+  resultOutcome?: string | null;
+  decidedBy?: string | null;
+  winnerTeamId?: number | null;
+  penaltyTeam1Score?: number | null;
+  penaltyTeam2Score?: number | null;
+  aggregateTeam1Score?: number | null;
+  aggregateTeam2Score?: number | null;
+  legNumber?: number;
+  teamId1: number;
+  teamId2: number;
+  xgFor: number | null;
+  xgAgainst: number | null;
+  inRun: boolean;
+}
+
+export interface ArenaCompetition {
+  competitionId?: number;
+  name: string;
+  typeId?: number;
+  kind?: string;
+  tier?: number;
+  stageReached?: string;
+  currentStage?: string;
+  entryStage?: string;
+  status?: string;
+  statusLabel?: string;
+  games?: number;
+  wins?: number;
+  draws?: number;
+  loses?: number;
+  goalsFor?: number;
+  goalsAgainst?: number;
+  totalTeams?: number;
+  position: number | null;
+  points: number | null;
+  trophy: boolean;
+  [key: string]: unknown;
+}
+
+export interface ArenaTableRow {
+  teamId?: number;
+  name?: string;
+  teamName?: string;
+  position?: number;
+  games?: number;
+  wins?: number;
+  draws?: number;
+  loses?: number;
+  goalsFor?: number;
+  goalsAgainst?: number;
+  points?: number;
+  [key: string]: unknown;
+}
+
+export interface ArenaRunResult {
+  teamId: number;
+  teamName: string;
+  leagueId: number;
+  leagueName: string;
+  season: number;
+  startDay: number;
+  endDay: number;
+  engine: string;
+  tactic: ArenaTactic;
+  squad: any[];
+  matches: ArenaMatch[];
+  competitions: ArenaCompetition[];
+  leagueTable: ArenaTableRow[];
+}
+
+export interface ArenaRun {
+  id: number;
+  index: number;
+  kind: ArenaRunKind;
+  teamId: number;
+  teamName: string;
+  teamReputation: number;
+  status: ArenaStatus;
+  progress: number;
+  currentDay: number;
+  simulatedDays: number;
+  totalDays: number;
+  message: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  images: ArenaImageKind[];
+  stats: ArenaResults | null;
+  result: ArenaRunResult | null;
+}
+
+export interface ArenaTestDetail extends ArenaTestSummary {
+  message: string | null;
+  tactic: ArenaTactic;
+  leagueMatchesTotal: number;
+  leagueMatchesRemaining: number;
+  gitPush: ArenaGitPushStatus | null;
+  runs: ArenaRun[];
+}
+
+export interface ArenaClub {
+  teamId: number;
+  name: string;
+  reputation: number;
+  color1?: string;
+  color2?: string;
+}
+
+export interface ArenaLeague {
+  competitionId: number;
+  name: string;
+  nationId: number;
+  nationName: string;
+  tier: number;
+  teams: ArenaClub[];
+}
+
+export interface ArenaSetup {
+  team: {
+    teamId: number;
+    name: string;
+    competitionId: number;
+    competitionName: string;
+    reputation: number;
+    color1?: string;
+    color2?: string;
+  };
+  players: any[];
+  formationCatalog: { tacticName: string; totalRating: number }[];
+  savedTactic: ArenaTactic | null;
+  teamView: any;
+}
+
+export const RUN_KIND_LABELS: Record<ArenaRunKind, string> = {
+  CHOSEN: 'Chosen club',
+  REFERENCE_TOP: 'Reference · highest reputation',
+  REFERENCE_MEDIAN: 'Reference · median reputation',
+  REFERENCE_BOTTOM: 'Reference · lowest reputation'
+};
+
+export const IMAGE_KIND_LABELS: Record<ArenaImageKind, string> = {
+  tactic: 'Tactic',
+  schedule: 'Schedule',
+  competitions: 'Competition overview'
+};
+
+@Injectable({ providedIn: 'root' })
+export class TacticArenaService {
+  private readonly base = urlApp + '/tactic-arena';
+
+  constructor(private http: HttpClient) {}
+
+  clubs(): Observable<{ leagues: ArenaLeague[] }> {
+    return this.http.get<{ leagues: ArenaLeague[] }>(`${this.base}/clubs`);
+  }
+
+  setup(teamId: number): Observable<ArenaSetup> {
+    return this.http.get<ArenaSetup>(`${this.base}/clubs/${teamId}/setup`);
+  }
+
+  start(name: string, teamId: number, tactic: ArenaTactic): Observable<{ id: number }> {
+    return this.http.post<{ id: number }>(`${this.base}/tests`, { name, teamId, tactic });
+  }
+
+  leaderboard(): Observable<ArenaLeaderboard> {
+    return this.http.get<ArenaLeaderboard>(`${this.base}/tests`);
+  }
+
+  test(id: number): Observable<ArenaTestDetail> {
+    return this.http.get<ArenaTestDetail>(`${this.base}/tests/${id}`);
+  }
+
+  cancel(id: number): Observable<ArenaTestSummary> {
+    return this.http.post<ArenaTestSummary>(`${this.base}/tests/${id}/cancel`, {});
+  }
+
+  delete(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/tests/${id}`);
+  }
+
+  image(testId: number, runId: number, kind: ArenaImageKind): Observable<Blob> {
+    return this.http.get(`${this.base}/tests/${testId}/runs/${runId}/images/${kind}`, { responseType: 'blob' });
+  }
+
+  uploadImage(testId: number, runId: number, kind: ArenaImageKind, image: Blob): Observable<unknown> {
+    return this.http.put(`${this.base}/tests/${testId}/runs/${runId}/images/${kind}`, image, {
+      headers: { 'Content-Type': image.type || 'image/png' }
+    });
+  }
+}
+
+export function isActive(status: ArenaStatus | undefined | null): boolean {
+  return status === 'QUEUED' || status === 'RUNNING';
+}
+
+export function signed(value: number | null | undefined): string {
+  if (value === null || value === undefined) return '—';
+  return value > 0 ? `+${value}` : `${value}`;
+}
+
+export function formationLabel(key: string | null | undefined): string {
+  if (!key) return '—';
+  const pretty: Record<string, string> = {
+    '442': '4-4-2', '433': '4-3-3', '343': '3-4-3', '451': '4-5-1', '352': '3-5-2',
+    '4231': '4-2-3-1', '4141': '4-1-4-1', '4411': '4-4-1-1', '4321': '4-3-2-1',
+    '4222': '4-2-2-2', '3421': '3-4-2-1', '532': '5-3-2', '5212': '5-2-1-2',
+    '541': '5-4-1', '3511': '3-5-1-1', '31411': '3-1-4-1-1'
+  };
+  return pretty[key] || key;
+}

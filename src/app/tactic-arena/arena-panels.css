@@ -1,0 +1,12 @@
+/* Small additions shared by the Tactic Arena screenshot panels. */
+.arena-panel { min-height: 0 !important; }
+.arena-panel .calendar-view { overflow: visible; }
+.arena-panel-meta { color: #aab0c3; font-size: 0.85rem; font-weight: 600; }
+.arena-no-scroll { max-height: none !important; overflow: visible !important; }
+.arena-before-run { opacity: 0.45; }
+.arena-decided { display: block; margin-top: 2px; font-size: 0.72rem; color: #aab0c3; }
+.arena-xg { font-variant-numeric: tabular-nums; color: #aab0c3; white-space: nowrap; }
+.arena-panel-foot { padding: 10px 20px 16px; color: #7f8499; font-size: 0.8rem; }
+.arena-trophies { color: #f1c40f; font-weight: 700; }
+.arena-table { padding: 0 20px 20px; }
+.arena-table h2 { color: #c8d6e5; font-size: 16px; }
