@@ -29,6 +29,27 @@ interface Geom {
   special?: number;
 }
 
+type WorldSpecies = 'veyran' | 'branik' | 'sileth';
+
+/** The six skin/hair and four eye choices exposed by the shared face editor. */
+const WORLD_PALETTES: Record<WorldSpecies, { skin: string[]; hair: string[]; eyes: string[] }> = {
+  veyran: {
+    skin: ['#bdcfe9', '#9eafcf', '#8298bc', '#6f87ad', '#587397', '#435d80'],
+    hair: ['#e4e8f3', '#242d51', '#607293', '#cbd7e8', '#8195b6', '#121e35'],
+    eyes: ['#347c87', '#b68b37', '#527e68', '#4f6c9b']
+  },
+  branik: {
+    skin: ['#d68a63', '#c87953', '#ba6849', '#a6553f', '#8e4938', '#713e32'],
+    hair: ['#211b22', '#e5d8c4', '#654638', '#984b31', '#42404a', '#bdb9b6'],
+    eyes: ['#b68134', '#536e8e', '#6d8057', '#764a31']
+  },
+  sileth: {
+    skin: ['#cbb6dd', '#b39acb', '#a381b5', '#986e9f', '#855d91', '#6d4b7e'],
+    hair: ['#30223f', '#d7d0e2', '#58426e', '#2d334e', '#8b698b', '#e7e1ec'],
+    eyes: ['#c4a365', '#5c9b6b', '#8f76b9', '#6b9eac']
+  }
+};
+
 /**
  * Favored STRUCTURAL index subsets per nation — the small biased pool a player
  * generator should draw the head / brow / hair indices from to make each nation
@@ -61,6 +82,17 @@ export const NATION_STRUCTURE: NationStructProfile[] = [
   { head: [16, 17, 10, 11],  brow: [8, 5, 2],    hair: [5, 7, 9, 10] },
   // 7 Eleven — cyber-angular: hexagonal + very-tall + diamond, long-flat/thin-sharp brows, undercut/spikes
   { head: [15, 13, 2, 6],    brow: [5, 4, 6],    hair: [3, 2, 11, 14] },
+  // 8 Mareval / 9 Tervala — mirror their backend structural fallback pools.
+  { head: [0, 1, 2, 4], brow: [0, 2, 4], hair: [0, 1, 3, 5, 8] },
+  { head: [0, 1, 2, 4], brow: [0, 2, 4], hair: [0, 1, 3, 5, 8] },
+  // 10 Altzair — mirror its backend structural fallback pool.
+  { head: [0, 1, 2, 4], brow: [0, 2, 4], hair: [0, 1, 3, 5, 8] },
+  // 11 Veyra — smooth blue faces, double ear lobes and flowing hair.
+  { head: [1, 4, 12, 2],    brow: [2, 4, 8],    hair: [5, 7, 8, 9, 10] },
+  // 12 Branik — broad terracotta faces with three rounded forehead arches.
+  { head: [0, 3, 14, 15],   brow: [0, 3, 7],    hair: [0, 2, 3, 8, 11] },
+  // 13 Sileth — lilac faces and two stacked pairs of natural eyes.
+  { head: [1, 2, 4, 12, 15], brow: [1, 4, 8],   hair: [1, 3, 7, 8, 9] },
 ];
 
 @Component({
@@ -192,8 +224,42 @@ export class PlayerFaceComponent {
    * Colour inputs drive it: skinTone -> face/base-plumage tone, eyeColor -> eye hue,
    * hairColor -> feather/plumage crest tint (the DEFINING colour), baseFaceId ->
    * deterministic silhouette + feather-layout jitter.
+   *
+   * SALMARID (nation Mareval — sun-and-salt harbour folk). Drawn by a fully
+   * self-contained renderer (drawSalmarid) — no other helper runs, so everything stays
+   * byte-for-byte unchanged whenever species !== 'salmarid'.
+   *   - FACE: sun-worn COPPER skin, a slight smirk, a small SHELL EARRING on one ear.
+   *   - HAIR: sun-bleached (pale blond to salt white) worn as a ponytail, loose and
+   *           long, or a top-knot.
+   *   - SIGNATURE: a white SALT STRIPE across the nose and cheekbones; sea-coloured eyes.
+   * Colour inputs drive it: skinTone -> copper tone, eyeColor -> sea eye hue,
+   * hairColor -> bleached hair tint, baseFaceId -> hairstyle / stripe width /
+   * earring side / small jaw jitter.
+   *
+   * KAARNID (nation Tervala — bark folk). Drawn by a fully self-contained renderer
+   * (drawKaarnid) — no other helper runs, so everything stays byte-for-byte unchanged
+   * whenever species !== 'kaarnid'.
+   *   - HEAD: an elongated trunk-like head of BARK with grain lines (birch dashes on
+   *           pale barks), bark brow ridges and a cracked-line mouth.
+   *   - CROWN: a crown of LEAVES instead of hair (or bare twigs), one drifting leaf.
+   *   - EYES: KNOT-HOLE eyes lit from inside with a sap glow; a moss patch on a cheek.
+   * Colour inputs drive it: skinTone -> bark type, eyeColor -> sap glow hue,
+   * hairColor -> foliage (or bare twigs), baseFaceId -> moss side / drifting leaf /
+   * silhouette + leaf-layout jitter.
+   *
+   * IKAZKIN (nation Altzair — forge and mine folk). Drawn by a fully self-contained
+   * renderer (drawIkazkin) — no other helper runs, so everything stays byte-for-byte
+   * unchanged whenever species !== 'ikazkin'.
+   *   - FACE: a broad, SQUARE head, pale skin, thick straight brows, hooded eyes,
+   *           an unshaven jaw and short cropped hair (black to grey).
+   *   - SIGNATURE: SOOT smudges on cheeks / chin + WELDER GOGGLES pushed up on the
+   *           forehead (strap, metal rims, coloured lenses).
+   * Colour inputs drive it: skinTone -> skin tone, eyeColor -> goggle lens tint,
+   * hairColor -> hair / brow colour, baseFaceId -> iris colour / soot count + placement /
+   * small jaw jitter.
    */
-  // Allowed values: 'human' | 'crystalline' | 'saurian' | 'monument' | 'rokykario' | 'eleftamide'.
+  // Supported: human, crystalline, saurian, monument, rokykario, eleftamide,
+  // aquanimenti, salmarid, kaarnid, ikazkin, veyran, branik and sileth.
   // Typed as string so backend-driven model fields bind cleanly; unknown values fall back to human in dispatch.
   @Input() species: string = 'human';
 
@@ -218,7 +284,10 @@ export class PlayerFaceComponent {
   constructor(private sanitizer: DomSanitizer) {}
 
   private nationIdx(): number {
-    return ((this.nationId % 8) + 8) % 8;
+    // Signatures belong to the original nations, not repeating blocks of eight.
+    // New/unknown nations are neutral here; their stored species drives their face.
+    return Number.isInteger(this.nationId) && this.nationId >= 0 && this.nationId <= 7
+      ? this.nationId : 0;
   }
 
   // ---- PALETTES (0-5 realistic, 6-11 vivid but controlled) ----
@@ -477,6 +546,121 @@ export class PlayerFaceComponent {
     { bright: '#7fe8e0', mid: '#28b0b0', dk: '#0a6a6a', edge: '#caf6f4' }, // 11 deep cyan
   ];
 
+  // ===================== SALMARID (Mareval sun-and-salt harbour folk) palettes =====================
+  /** sun-worn copper SKIN (by skinTone): skin = base, shade = cheek / neck shadow. */
+  private static readonly SALM_SKIN = [
+    { skin: '#e2b083', shade: '#c08e62' }, // 0 light copper
+    { skin: '#d9a06c', shade: '#b57c4c' }, // 1 warm copper
+    { skin: '#c98a5a', shade: '#a56c40' }, // 2 copper
+    { skin: '#b97a4a', shade: '#955c32' }, // 3 deep copper
+    { skin: '#a8703f', shade: '#84542c' }, // 4 bronze copper
+    { skin: '#8f5c33', shade: '#6e4424' }, // 5 dark copper
+    { skin: '#d99a7a', shade: '#b5785a' }, // 6 sun-reddened
+    { skin: '#e0b070', shade: '#bc8c4c' }, // 7 golden tan
+    { skin: '#b08a5a', shade: '#8c6a40' }, // 8 olive tan
+    { skin: '#c47a52', shade: '#9e5a36' }, // 9 ruddy copper
+    { skin: '#7a4a2a', shade: '#5a3218' }, // 10 deep bronze
+    { skin: '#6e4028', shade: '#4e2a18' }, // 11 dark mahogany
+  ];
+  /** sun-bleached HAIR (by hairColor): hair = cap / knot, shade = back hair + brows. */
+  private static readonly SALM_HAIR = [
+    { hair: '#f6f0dc', shade: '#cfc49a' }, // 0 salt white
+    { hair: '#efe2b4', shade: '#c9b06a' }, // 1 pale blond
+    { hair: '#e4c877', shade: '#b89642' }, // 2 straw
+    { hair: '#d8b860', shade: '#a88a38' }, // 3 gold
+    { hair: '#e8d8c0', shade: '#bca88a' }, // 4 sand
+    { hair: '#dfe2e4', shade: '#aab0b6' }, // 5 silver
+    { hair: '#e6ecd6', shade: '#b6c0a0' }, // 6 sea-foam blond
+    { hair: '#d8d2be', shade: '#a8a08a' }, // 7 ash blond
+    { hair: '#dcb06a', shade: '#ae823e' }, // 8 honey
+    { hair: '#f2f2ec', shade: '#c4c4ba' }, // 9 platinum
+    { hair: '#dceee6', shade: '#a8c4b8' }, // 10 brine-tinted white
+    { hair: '#e0b890', shade: '#b08a62' }, // 11 bleached copper
+  ];
+  /** sea-coloured EYE iris (by eyeColor). */
+  private static readonly SALM_EYE = [
+    '#2f9f8f', '#2f7fbf', '#3f8f5a', '#2a8aa0', '#1f6f8f', '#4aa8b8',
+    '#2a5f7a', '#5fae9a', '#3a7fa8', '#6a9a8a', '#2f8f7a', '#4f8fcf'
+  ];
+
+  // ===================== KAARNID (Tervala bark folk) palettes =====================
+  /** BARK skin (by skinTone): bark = base, shade = side shadow, grain = grain / brow / crack lines,
+   *  birch = draw horizontal birch dashes instead of vertical grain. */
+  private static readonly KAARN_BARK = [
+    { bark: '#ebe7dc', shade: '#c2bcab', grain: '#3a3630', birch: true },  // 0 birch white
+    { bark: '#d6d2c4', shade: '#aaa595', grain: '#3a3630', birch: true },  // 1 aspen
+    { bark: '#b59f84', shade: '#8a765e', grain: '#4a3826', birch: false }, // 2 ash
+    { bark: '#9a6b42', shade: '#6e4a2a', grain: '#3e2814', birch: false }, // 3 oak
+    { bark: '#7a5236', shade: '#553824', grain: '#2a1a10', birch: false }, // 4 walnut
+    { bark: '#5e4334', shade: '#3e2b20', grain: '#1e140e', birch: false }, // 5 dark alder
+    { bark: '#a0583a', shade: '#743a22', grain: '#3a1a0c', birch: false }, // 6 pine red-brown
+    { bark: '#b8875a', shade: '#8c6238', grain: '#40281a', birch: false }, // 7 larch
+    { bark: '#9a968a', shade: '#726e62', grain: '#2e2c26', birch: false }, // 8 grey willow
+    { bark: '#4a3a38', shade: '#302424', grain: '#8a7470', birch: false }, // 9 blackthorn (pale cracks)
+    { bark: '#8a937a', shade: '#646c56', grain: '#2a3022', birch: false }, // 10 mossy grey-green
+    { bark: '#3a3230', shade: '#221c1a', grain: '#7a6a60', birch: false }, // 11 charred (ash cracks)
+  ];
+  /** LEAF crown (by hairColor): a / b = alternating leaf fills, vein = midrib,
+   *  bare = bare twig crown, no leaves. */
+  private static readonly KAARN_LEAF = [
+    { a: '#2f7a3e', b: '#1e5a2c', vein: '#143a1e', bare: false }, // 0 deep green
+    { a: '#4fa85a', b: '#2f7a3e', vein: '#1e4f28', bare: false }, // 1 spring green
+    { a: '#e0b83a', b: '#c4922a', vein: '#7a5a14', bare: false }, // 2 yellow
+    { a: '#c8452a', b: '#e07a2a', vein: '#7a2a14', bare: false }, // 3 autumn red
+    { a: '#c8782a', b: '#a8561e', vein: '#6a3410', bare: false }, // 4 copper
+    { a: '#6a5038', b: '#4a3828', vein: '#2a1e14', bare: true },  // 5 bare twigs
+    { a: '#9ab08a', b: '#7a9070', vein: '#4a5a40', bare: false }, // 6 lichen grey-green
+    { a: '#f0a0b8', b: '#e07a98', vein: '#8a3a50', bare: false }, // 7 blossom pink
+    { a: '#1e4a30', b: '#143a24', vein: '#0a2014', bare: false }, // 8 dark pine
+    { a: '#f0c840', b: '#d8a020', vein: '#8a6410', bare: false }, // 9 golden
+    { a: '#a8481e', b: '#c86a2a', vein: '#5a2010', bare: false }, // 10 rust
+    { a: '#6a5038', b: '#4a3828', vein: '#2a1e14', bare: true },  // 11 bare twigs (alt)
+  ];
+  /** knot-hole SAP glow (by eyeColor). */
+  private static readonly KAARN_SAP = [
+    '#ffb83a', '#ffd24a', '#ff9a3a', '#c8e04a', '#ffe07a', '#ff7a2a',
+    '#a0e05a', '#ffc060', '#e8f06a', '#ff8a5a', '#7ad08a', '#fff0a0'
+  ];
+
+  // ===================== IKAZKIN (Altzair forge and mine folk) palettes =====================
+  /** pale-to-weathered SKIN (by skinTone): skin = base, shade = side / neck shadow + nose. */
+  private static readonly IKAZ_SKIN = [
+    { skin: '#f0dcc8', shade: '#d2b89e' }, // 0 pale
+    { skin: '#e6c8ae', shade: '#c4a388' }, // 1 light
+    { skin: '#dcb896', shade: '#b89270' }, // 2 warm light
+    { skin: '#d0a884', shade: '#aa825e' }, // 3 tan
+    { skin: '#c09672', shade: '#9a7250' }, // 4 weathered tan
+    { skin: '#b08460', shade: '#8a6242' }, // 5 weathered
+    { skin: '#e0b09a', shade: '#bc8c76' }, // 6 ruddy
+    { skin: '#e4dcd2', shade: '#c2b8ac' }, // 7 ash-pale
+    { skin: '#dcc898', shade: '#b8a272' }, // 8 sallow
+    { skin: '#e8b8a0', shade: '#c6927a' }, // 9 heat-flushed
+    { skin: '#a87a58', shade: '#84583a' }, // 10 deep weathered
+    { skin: '#8e6648', shade: '#6c4830' }, // 11 dark weathered
+  ];
+  /** short cropped HAIR (by hairColor): hair = cap, brow = thick brows (a shade darker). */
+  private static readonly IKAZ_HAIR = [
+    { hair: '#1c1a1c', brow: '#1c1a1c' }, // 0 black
+    { hair: '#2a2628', brow: '#1c1a1c' }, // 1 soot-dark
+    { hair: '#55565c', brow: '#2a2628' }, // 2 dark grey
+    { hair: '#8a8e96', brow: '#55565c' }, // 3 grey
+    { hair: '#5a4a3e', brow: '#3a2e26' }, // 4 ash brown
+    { hair: '#b4b8be', brow: '#6a6e76' }, // 5 silver
+    { hair: '#8a4a2a', brow: '#5a2e1a' }, // 6 rust
+    { hair: '#6a6e74', brow: '#44464c' }, // 7 iron grey
+    { hair: '#e6e6e8', brow: '#a8aab0' }, // 8 white
+    { hair: '#3a2a22', brow: '#22180f' }, // 9 dark brown
+    { hair: '#7a746c', brow: '#4a4640' }, // 10 grizzled
+    { hair: '#6a3e26', brow: '#44261a' }, // 11 copper-brown
+  ];
+  /** welder-goggle LENS glass tint (by eyeColor). */
+  private static readonly IKAZ_LENS = [
+    '#d08a1e', '#2f7a4a', '#2f5f96', '#9a3a2a', '#c8b030', '#3a8a8a',
+    '#5a3a7a', '#3a3a40', '#b0602a', '#6a8a2a', '#2a3a6a', '#8a2a4a'
+  ];
+  /** IKAZKIN iris colour (by baseFaceId % 4). */
+  private static readonly IKAZ_IRIS = ['#4a2e16', '#235e96', '#7a5a22', '#3a5a3a'];
+
   private pick(arr: string[], i: number): string {
     return arr[(((i % arr.length) + arr.length) % arr.length)];
   }
@@ -515,12 +699,12 @@ export class PlayerFaceComponent {
   //  15 HEXAGONAL/ANGULAR— hard angular hexagon: flat temples, hard cheek, flat wide chin
   //  16 STRONG CRESCENT  — hand-built lunar profile: big rounded cranium arc + jutting chin
   //  17 ONION/DOMED-BULB — hand-built bulbous dome swelling past temples to a small chin
-  private geom() {
+  private geom(applyNationSignature = true) {
     const b = ((this.baseFaceId % 18) + 18) % 18;
     let shape = this.faceShape >= 0 ? (((this.faceShape % 18) + 18) % 18) : b;
     // Gallactick (nation 1) FORCES an elongated alien cranium even on a human roll.
     // (the alien skull family is indices 5-9; any non-alien roll snaps into it).
-    if (this.nationIdx() === 1 && (shape < 5 || shape > 9)) shape = 5 + (shape % 2 === 0 ? 0 : 4); // 5 ELONGATED-TALL or 9 BROAD-CRANIUM
+    if (applyNationSignature && this.nationIdx() === 1 && (shape < 5 || shape > 9)) shape = 5 + (shape % 2 === 0 ? 0 : 4); // 5 ELONGATED-TALL or 9 BROAD-CRANIUM
     // base sliver of within-shape jitter so faces sharing a shape differ a touch
     const j = (b % 2);
     let rx: number, jaw: number, jawW: number, cheek: number, crown: number, taper: number, chinBlunt: number, topY: number;
@@ -883,8 +1067,8 @@ export class PlayerFaceComponent {
   //   2 UP-SLANTED       — outer corner lifts UP (sharp/aggressive)
   //   3 HOODED           — heavy lid pushes top edge down, less sclera (brooding)
   //   4 DEEP-SET NARROW  — shorter + flatter, slightly raised, recessed (intense)
-  private eyeShapeIdx(): number {
-    const n = this.nationIdx();
+  private eyeShapeIdx(applyNationSignature = true): number {
+    const n = applyNationSignature ? this.nationIdx() : 0;
     let v = this.eyeShape >= 0 ? ((this.eyeShape % 10) + 10) % 10 : ((((this.baseFaceId + 1) % 5) + 5) % 5);
     // Gallactick (1) FORCES a big almond / wide-set alien eye look.
     if (n === 1 && v < 5) v = 5;
@@ -892,17 +1076,17 @@ export class PlayerFaceComponent {
     if (n === 6) v = (v % 2 === 0) ? 4 : 7;
     return v;
   }
-  private eyeGroup(eyeHex: string, uid: string): string {
+  private eyeGroup(eyeHex: string, uid: string, applyNationSignature = true, naturalSpecies = false): string {
     const sports = this.style === 'sports', premium = this.style === 'premium';
     const seinen = this.style === 'seinen';
-    const shape = this.eyeShapeIdx();
+    const shape = this.eyeShapeIdx(applyNationSignature);
     // Shorter + more horizontal than before (height cut harder than width).
     const cyL = 56.8, cxL = 39.5, cxR = 60.5;
     let ew = sports ? 5.8 : (premium ? 5.3 : 5.5);     // half-width
     let eh = sports ? 1.4 : (premium ? 1.3 : 1.45);    // half-height (flatness)
     let drop = sports ? 1.6 : (premium ? 1.0 : 1.3);   // +ve = outer corner DOWN
     let irisR = premium ? 1.9 : 2.0;                   // smaller iris
-    const lidW = sports ? 2.2 : (premium ? 1.5 : 1.9); // hard lid line weight
+    const lidW = naturalSpecies ? 1.25 : (sports ? 2.2 : (premium ? 1.5 : 1.9)); // hard lid line weight
     const lid = '#15121a';
     // per-shape geometry knobs (all keep narrow/hard masculine read)
     let topCurve = 0.45;   // upper-lid control X spread (lower => flatter/harder)
@@ -940,6 +1124,15 @@ export class PlayerFaceComponent {
         break;
       default: // 0 STRAIGHT ALMOND (calm)
         break;
+    }
+
+    if (naturalSpecies) {
+      // Keep iris colours and both Sileth pairs legible at 64px. These species
+      // have natural eyes, even when an exaggerated eye-shape index is selected.
+      eh = Math.max(2.7, eh + 1.8);
+      irisR = Math.max(2.0, irisR);
+      drop *= 0.6;
+      glow = false;
     }
 
     const one = (cx0: number, s: number, tag: string): string => {
@@ -2186,6 +2379,408 @@ export class PlayerFaceComponent {
     return s;
   }
 
+  // ============================================================================
+  // SALMARID (nation Mareval) — a fully SELF-CONTAINED renderer for the sun-and-salt
+  // harbour folk: copper skin, sun-bleached hair (ponytail / loose / top-knot), a white
+  // SALT STRIPE across nose and cheekbones, sea-coloured eyes, a shell earring and a
+  // slight smirk. It does NOT call any other helper, so everything stays byte-for-byte
+  // unchanged whenever species !== 'salmarid'. Deterministic.
+  //   skinTone -> copper tone, eyeColor -> sea eye hue, hairColor -> bleached hair,
+  //   baseFaceId -> hairstyle / stripe width / earring side / jaw jitter.
+  // ============================================================================
+  private drawSalmarid(): string {
+    const C = PlayerFaceComponent;
+    const sk = C.SALM_SKIN[(((this.skinTone % C.SALM_SKIN.length) + C.SALM_SKIN.length) % C.SALM_SKIN.length)];
+    const hr = C.SALM_HAIR[(((this.hairColor % C.SALM_HAIR.length) + C.SALM_HAIR.length) % C.SALM_HAIR.length)];
+    const eye = C.SALM_EYE[(((this.eyeColor % C.SALM_EYE.length) + C.SALM_EYE.length) % C.SALM_EYE.length)];
+    const I = this.style === 'sports' ? '#1a1620' : (this.style === 'premium' ? '#2a2430' : '#221c28');
+    const IW = this.style === 'sports' ? 1.6 : (this.style === 'premium' ? 1.1 : 1.4);
+    const uid = 'sm' + this.skinTone + '_' + this.eyeColor + '_' + this.hairColor + '_' + this.baseFaceId + this.style;
+
+    // deterministic variety from baseFaceId
+    const j = (((this.baseFaceId % 4) + 4) % 4);
+    const hairStyle = (((this.baseFaceId % 3) + 3) % 3);              // 0 ponytail, 1 loose, 2 top-knot
+    const salt = [2.4, 4, 6][((((this.baseFaceId * 7 + this.skinTone) % 3) + 3) % 3)];
+    const chinY = 83 + (j % 2) * 1.5;                                  // chin depth
+    const jw = 12 + (j >> 1) * 1.5;                                    // lower-jaw control half-width
+    const earX = (((this.baseFaceId % 2) + 2) % 2) === 0 ? 29 : 71;    // earring: left on even, right on odd
+
+    let s = '';
+
+    // ---- back hair (behind the neck / head) ----
+    if (hairStyle === 1) {
+      s += `<path d="M 27 42 C 19 58 19 78 25 92 L 39 90 L 34 48 Z M 73 42 C 81 58 81 78 75 92 L 61 90 L 66 48 Z" fill="${hr.shade}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    } else if (hairStyle === 0) {
+      s += `<path d="M 66 28 C 84 28 90 46 84 62 C 82 69 78 74 75 79 C 77 65 77 50 68 42 Z" fill="${hr.shade}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    }
+
+    // ---- NECK ----
+    s += `<path d="M 42 72 L 41 93 L 59 93 L 58 72 Z" fill="${sk.shade}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+
+    // ---- EARS + small SHELL EARRING ----
+    s += `<ellipse cx="29" cy="56" rx="3.2" ry="5.6" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}"/>`;
+    s += `<ellipse cx="71" cy="56" rx="3.2" ry="5.6" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}"/>`;
+    s += `<path d="M ${earX} 61.6 L ${earX - 3.4} 68 Q ${earX} 70.8 ${earX + 3.4} 68 Z" fill="#f7ead2" stroke="${I}" stroke-width="${IW * 0.55}" stroke-linejoin="round"/>`;
+    s += `<path d="M ${earX} 62.4 L ${earX - 1.6} 68.4 M ${earX} 62.4 L ${earX} 69.2 M ${earX} 62.4 L ${earX + 1.6} 68.4" stroke="#b9a37c" stroke-width="0.5"/>`;
+
+    // ---- HEAD ----
+    const head =
+      `M 30 50 C 30 30 39 20 50 20 C 61 20 70 30 70 50 ` +
+      `C 70 66 ${50 + jw} ${chinY - 2} 50 ${chinY} ` +
+      `C ${50 - jw} ${chinY - 2} 30 66 30 50 Z`;
+    s += `<path d="${head}" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    s += `<clipPath id="sh${uid}"><path d="${head}"/></clipPath>`;
+
+    // ---- cheek shadow + white SALT STRIPE across nose and cheekbones (signature) ----
+    s += `<g clip-path="url(#sh${uid})">`;
+    s += `<path d="M 63 40 C 68 54 66 70 55 ${chinY - 2} C 64 76 70 63 70 50 C 70 46 67 42 63 40 Z" fill="${sk.shade}" opacity="0.5"/>`;
+    s += `<path d="M 31.4 ${59 - salt / 2} Q 50 ${64 - salt / 2} 68.6 ${59 - salt / 2} L 68.4 ${59 + salt / 2} Q 50 ${64 + salt / 2} 31.6 ${59 + salt / 2} Z" fill="#fbf7ee" opacity="0.92"/>`;
+    s += `</g>`;
+
+    // ---- BROWS (bleached, hair shade) ----
+    s += `<path d="M 33.5 47.5 Q 39 45 45.5 47.2" fill="none" stroke="${hr.shade}" stroke-width="2.4" stroke-linecap="round"/>`;
+    s += `<path d="M 54.5 47.2 Q 61 45 66.5 47.5" fill="none" stroke="${hr.shade}" stroke-width="2.4" stroke-linecap="round"/>`;
+
+    // ---- sea-coloured EYES ----
+    for (const x of [39.5, 60.5]) {
+      s += `<path d="M ${x - 5.2} 53.4 Q ${x} 49.6 ${x + 5.2} 52.6 Q ${x} 56 ${x - 5.2} 53.4 Z" fill="#fdfbf6" stroke="${I}" stroke-width="${IW * 0.7}" stroke-linejoin="round"/>`;
+      s += `<circle cx="${x}" cy="52.9" r="2" fill="${eye}"/>`;
+      s += `<circle cx="${x}" cy="52.9" r="0.9" fill="#101014"/>`;
+    }
+
+    // ---- NOSE + slight SMIRK ----
+    s += `<path d="M 50 55 L 48.4 64.5 Q 50 66 52 64.8" fill="none" stroke="${sk.shade}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += `<path d="M 44.5 72.4 Q 48 71 50.4 71.9 L 55.6 71.4" fill="none" stroke="#7e463a" stroke-width="1.7" stroke-linecap="round"/>`;
+
+    // ---- sun-bleached HAIR cap + highlight (+ top-knot) ----
+    s += `<path d="M 29 50 C 27 30 36 15 50 15 C 64 15 73 30 71 50 C 68 38 62 30 50 29 C 38 30 32 38 29 50 Z" fill="${hr.hair}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    s += `<path d="M 38 22 Q 50 16.5 62 22" fill="none" stroke="#fffdf2" stroke-width="2.2" stroke-linecap="round" opacity="0.7"/>`;
+    if (hairStyle === 2) {
+      s += `<ellipse cx="50" cy="10.5" rx="7" ry="5.5" fill="${hr.hair}" stroke="${I}" stroke-width="${IW}"/>`;
+      s += `<path d="M 44 15 Q 50 17.5 56 15" fill="none" stroke="${hr.shade}" stroke-width="1.6"/>`;
+    }
+
+    return s;
+  }
+
+  // ============================================================================
+  // KAARNID (nation Tervala) — a fully SELF-CONTAINED renderer for the bark folk: an
+  // elongated trunk-like BARK head with grain lines, a crown of LEAVES (or bare twigs),
+  // KNOT-HOLE eyes lit by a sap glow, bark brow ridges, a cracked-line mouth, a moss
+  // patch on one cheek and one drifting leaf. It does NOT call any other helper, so
+  // everything stays byte-for-byte unchanged whenever species !== 'kaarnid'. Deterministic.
+  //   skinTone -> bark type, eyeColor -> sap glow, hairColor -> foliage / bare twigs,
+  //   baseFaceId -> moss side / drifting leaf / silhouette + leaf-layout jitter.
+  // ============================================================================
+  private drawKaarnid(): string {
+    const C = PlayerFaceComponent;
+    const bk = C.KAARN_BARK[(((this.skinTone % C.KAARN_BARK.length) + C.KAARN_BARK.length) % C.KAARN_BARK.length)];
+    const lf = C.KAARN_LEAF[(((this.hairColor % C.KAARN_LEAF.length) + C.KAARN_LEAF.length) % C.KAARN_LEAF.length)];
+    const sap = C.KAARN_SAP[(((this.eyeColor % C.KAARN_SAP.length) + C.KAARN_SAP.length) % C.KAARN_SAP.length)];
+    const I = this.style === 'sports' ? '#1a120c' : (this.style === 'premium' ? '#2a2018' : '#20170f');
+    const IW = this.style === 'sports' ? 1.6 : (this.style === 'premium' ? 1.1 : 1.4);
+    const uid = 'ka' + this.skinTone + '_' + this.eyeColor + '_' + this.hairColor + '_' + this.baseFaceId + this.style;
+
+    // deterministic silhouette + leaf-layout jitter
+    const j = (((this.baseFaceId % 4) + 4) % 4);
+    const chinY = 89 - (j % 2) * 1.5;                                  // trunk-chin depth
+    const jw = 11 + (j >> 1) * 1.5;                                    // lower-jaw control half-width
+    const layout = (((this.baseFaceId * 3 + this.hairColor) % 4) + 4) % 4;
+    const rot = (layout - 1.5) * 6;                                    // crown leaf rotation offset
+    const dx = (layout - 1.5) * 0.8;                                   // crown leaf x offset
+    const moss = (((this.baseFaceId % 2) + 2) % 2) === 0 ? 1 : -1;     // right cheek on even, left on odd
+    const drift = !lf.bare && (((this.baseFaceId % 3) + 3) % 3) === 0;
+
+    // a leaf: pointed oval blade with a midrib
+    const leaf = (x: number, y: number, r: number, a: number, col: string): string =>
+      `<g transform="translate(${x} ${y}) rotate(${a})">` +
+      `<path d="M 0 ${-r} C ${r * 0.7} ${-r * 0.5} ${r * 0.7} ${r * 0.5} 0 ${r} C ${-r * 0.7} ${r * 0.5} ${-r * 0.7} ${-r * 0.5} 0 ${-r} Z" fill="${col}" stroke="${I}" stroke-width="${IW * 0.7}" stroke-linejoin="round"/>` +
+      `<path d="M 0 ${-r * 0.8} L 0 ${r * 0.8}" stroke="${lf.vein}" stroke-width="0.8"/></g>`;
+
+    let s = '';
+
+    // ---- NECK (trunk) ----
+    s += `<path d="M 43 76 L 42 93 L 58 93 L 57 76 Z" fill="${bk.shade}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+
+    // ---- LEAF CROWN behind the head (or bare twigs) ----
+    if (!lf.bare) {
+      const back = [[28, 27, 9, -50], [37, 15, 10, -25], [50, 10, 11, 0], [63, 15, 10, 25], [72, 27, 9, 50], [26, 40, 8, -72], [74, 40, 8, 72]];
+      for (let i = 0; i < back.length; i++) {
+        const p = back[i];
+        const side = i % 2 ? -1 : 1;
+        s += leaf(p[0] + dx * side, p[1] + ((i + layout) % 2) * 1.2, p[2] + (((i + layout) % 3) - 1) * 0.6, p[3] + rot, i % 2 ? lf.b : lf.a);
+      }
+    } else {
+      s += `<path d="M 40 22 L 33 6 M 36.6 14 L 29 11 M 50 18 L 50 3 M 50 9 L 56.5 5 M 60 22 L 67 6 M 63.6 14 L 71.5 12 M 34 30 L 22 21 M 66 30 L 78 21 M 27 25 L 25 17 M 73 25 L 76 17" fill="none" stroke="${bk.grain}" stroke-width="2.2" stroke-linecap="round"/>`;
+    }
+
+    // ---- elongated trunk-like HEAD ----
+    const head =
+      `M 33 46 C 32 28 40 16 50 16 C 60 16 68 28 67 46 ` +
+      `C 67 66 ${50 + jw} ${chinY - 4} 50 ${chinY} ` +
+      `C ${50 - jw} ${chinY - 4} 33 66 33 46 Z`;
+    s += `<path d="${head}" fill="${bk.bark}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    s += `<clipPath id="kh${uid}"><path d="${head}"/></clipPath>`;
+
+    // ---- side shadow + bark GRAIN (birch dashes on pale barks) ----
+    s += `<g clip-path="url(#kh${uid})">`;
+    s += `<path d="M 60 16 C 70 34 68 66 56 92 L 72 92 L 72 16 Z" fill="${bk.shade}" opacity="0.6"/>`;
+    if (bk.birch) {
+      s += `<path d="M 35 34 h 7 M 56 30 h 8 M 37 67 h 6 M 55 77 h 7 M 44 24 h 5 M 58 44 h 6 M 35 43 h 4 M 46 82 h 5" stroke="${bk.grain}" stroke-width="1.6" stroke-linecap="round"/>`;
+    } else {
+      s += `<path d="M 38 22 C 36 40 37 62 42 84 M 45 18 C 44 30 45 38 44 44 M 56 18 C 58 30 56 38 57 44 M 62 24 C 65 42 63 64 58 84 M 47 78 C 48 81 48 85 47 88 M 53 78 C 52 81 53 85 54 88" fill="none" stroke="${bk.grain}" stroke-width="1" stroke-linecap="round" opacity="0.75"/>`;
+    }
+    s += `</g>`;
+
+    // ---- bark BROW RIDGES ----
+    s += `<path d="M 33.6 49 Q 40 44.5 46.5 48.5" fill="none" stroke="${bk.grain}" stroke-width="2.6" stroke-linecap="round"/>`;
+    s += `<path d="M 53.5 48.5 Q 60 44.5 66.4 49" fill="none" stroke="${bk.grain}" stroke-width="2.6" stroke-linecap="round"/>`;
+
+    // ---- KNOT-HOLE EYES lit from inside by sap ----
+    for (const x of [40, 60]) {
+      s += `<ellipse cx="${x}" cy="55.4" rx="5.4" ry="3.8" fill="#1c120a" stroke="${bk.grain}" stroke-width="1.2"/>`;
+      s += `<circle cx="${x}" cy="55.4" r="3.3" fill="${sap}" opacity="0.35"/>`;
+      s += `<circle cx="${x}" cy="55.4" r="2.1" fill="${sap}"/>`;
+      s += `<circle cx="${x - 0.7}" cy="54.7" r="0.7" fill="#fff6d8"/>`;
+    }
+
+    // ---- NOSE ridge + cracked-line MOUTH ----
+    s += `<path d="M 50 57 L 49 67.5 L 51.6 68.4" fill="none" stroke="${bk.grain}" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>`;
+    s += `<path d="M 44 75.4 L 48 74.8 L 52 75.6 L 56 75" fill="none" stroke="${bk.grain}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+    // ---- MOSS patch on one cheek ----
+    const mx = moss > 0 ? 60.5 : 39.5;
+    s += `<g fill="#6fa35a" stroke="#3f6e34" stroke-width="0.6"><circle cx="${mx}" cy="65.6" r="2.6"/><circle cx="${mx + 2.4 * moss}" cy="68.2" r="2"/><circle cx="${mx - 1.6 * moss}" cy="69" r="1.7"/></g>`;
+
+    // ---- three leaves over the forehead + one drifting leaf ----
+    if (!lf.bare) {
+      const front = [[37, 25, 7, -40], [50, 20, 8, 0], [63, 25, 7, 40]];
+      for (let i = 0; i < front.length; i++) {
+        const p = front[i];
+        s += leaf(p[0] + dx * 0.5, p[1], p[2], p[3] + rot * (i === 1 ? 1 : 0.5), i % 2 ? lf.a : lf.b);
+      }
+    }
+    if (drift) s += leaf(84, 58, 4.5, 35 + rot, lf.a);
+
+    return s;
+  }
+
+  // ============================================================================
+  // IKAZKIN (nation Altzair) — a fully SELF-CONTAINED renderer for the forge and mine
+  // folk: a broad, square head, pale skin with SOOT smudges, short cropped hair, thick
+  // straight brows, hooded eyes, an unshaven jaw and WELDER GOGGLES pushed up on the
+  // forehead. It does NOT call any other helper, so everything stays byte-for-byte
+  // unchanged whenever species !== 'ikazkin'. Deterministic.
+  //   skinTone -> skin tone, eyeColor -> goggle lens tint, hairColor -> hair / brows,
+  //   baseFaceId -> iris colour / soot count + placement / jaw jitter.
+  // ============================================================================
+  private drawIkazkin(): string {
+    const C = PlayerFaceComponent;
+    const sk = C.IKAZ_SKIN[(((this.skinTone % C.IKAZ_SKIN.length) + C.IKAZ_SKIN.length) % C.IKAZ_SKIN.length)];
+    const hr = C.IKAZ_HAIR[(((this.hairColor % C.IKAZ_HAIR.length) + C.IKAZ_HAIR.length) % C.IKAZ_HAIR.length)];
+    const lens = C.IKAZ_LENS[(((this.eyeColor % C.IKAZ_LENS.length) + C.IKAZ_LENS.length) % C.IKAZ_LENS.length)];
+    const I = this.style === 'sports' ? '#1a1620' : (this.style === 'premium' ? '#2a2430' : '#221c28');
+    const IW = this.style === 'sports' ? 1.6 : (this.style === 'premium' ? 1.1 : 1.4);
+    const uid = 'iz' + this.skinTone + '_' + this.eyeColor + '_' + this.hairColor + '_' + this.baseFaceId + this.style;
+
+    // deterministic variety from baseFaceId
+    const j = (((this.baseFaceId % 4) + 4) % 4);
+    const iris = C.IKAZ_IRIS[j];
+    const sootCount = 1 + (((this.baseFaceId % 3) + 3) % 3);
+    const sootStart = ((((this.baseFaceId * 5 + this.skinTone) % 3) + 3) % 3);
+    const chinY = 84 + (j % 2) * 1.5;                                  // chin depth
+    const jw = 13 + (j >> 1) * 1.5;                                    // lower-jaw control half-width
+
+    let s = '';
+
+    // ---- NECK ----
+    s += `<path d="M 40 74 L 39 93 L 61 93 L 60 74 Z" fill="${sk.shade}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+
+    // ---- EARS ----
+    s += `<ellipse cx="25.4" cy="56" rx="3.6" ry="6.2" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}"/>`;
+    s += `<ellipse cx="74.6" cy="56" rx="3.6" ry="6.2" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}"/>`;
+
+    // ---- broad, square HEAD ----
+    const head =
+      `M 27 46 C 27 28 37 20 50 20 C 63 20 73 28 73 46 L 73 62 ` +
+      `C 73 74 ${50 + jw} ${chinY - 1} 50 ${chinY} ` +
+      `C ${50 - jw} ${chinY - 1} 27 74 27 62 Z`;
+    s += `<path d="${head}" fill="${sk.skin}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+    s += `<clipPath id="ih${uid}"><path d="${head}"/></clipPath>`;
+
+    // ---- side shadow, unshaven jaw band, SOOT smudges (signature) ----
+    s += `<g clip-path="url(#ih${uid})">`;
+    s += `<path d="M 64 20 C 72 40 70 66 58 86 L 76 86 L 76 20 Z" fill="${sk.shade}" opacity="0.55"/>`;
+    s += `<path d="M 27 61 C 30 78 42 86 50 86 C 58 86 70 78 73 61 C 68 69 60 71 50 71 C 40 71 32 69 27 61 Z" fill="#3a2c24" opacity="0.28"/>`;
+    const soot = [
+      'M 30 61 C 33 57.6 40 58.4 42.4 62.4 C 40 66.6 33.6 67.4 30.4 64.6 Z',   // left cheek
+      'M 56 66 C 60 62.8 67.4 63.8 69.4 68 C 66 72.4 59 72.4 56 69.4 Z',       // right cheek
+      'M 43 77.4 C 46.4 75 53.6 75 57 78 C 53.6 81.4 46.4 81.4 43 79.4 Z',     // chin
+    ];
+    for (let k = 0; k < sootCount; k++) {
+      s += `<path d="${soot[(sootStart + k) % 3]}" fill="#1c1a1c" opacity="0.42"/>`;
+    }
+    s += `</g>`;
+
+    // ---- thick straight BROWS ----
+    s += `<path d="M 32.5 49.6 L 45.5 50.8" stroke="${hr.brow}" stroke-width="4" stroke-linecap="round"/>`;
+    s += `<path d="M 54.5 50.8 L 67.5 49.6" stroke="${hr.brow}" stroke-width="4" stroke-linecap="round"/>`;
+
+    // ---- hooded EYES ----
+    for (const x of [39.5, 60.5]) {
+      s += `<path d="M ${x - 5.4} 56.4 Q ${x} 54 ${x + 5.4} 56.4 Q ${x} 59 ${x - 5.4} 56.4 Z" fill="#fdfbf6" stroke="${I}" stroke-width="${IW * 0.65}" stroke-linejoin="round"/>`;
+      s += `<circle cx="${x}" cy="56.4" r="1.9" fill="${iris}"/>`;
+      s += `<circle cx="${x}" cy="56.4" r="0.85" fill="#101014"/>`;
+      s += `<path d="M ${x - 5.6} 55.6 Q ${x} 53 ${x + 5.6} 55.6" fill="none" stroke="${I}" stroke-width="${IW * 1.25}"/>`;
+    }
+
+    // ---- broad NOSE + pressed MOUTH ----
+    s += `<path d="M 50 57.6 L 48.6 65.4 M 45.6 66.8 Q 50 69.4 54.4 66.8" fill="none" stroke="${sk.shade}" stroke-width="1.6" stroke-linecap="round"/>`;
+    s += `<path d="M 44.5 74 L 55.5 74" stroke="#7e463a" stroke-width="1.8" stroke-linecap="round"/>`;
+
+    // ---- short cropped HAIR cap ----
+    s += `<path d="M 26.5 45 C 24 24 36 14 50 14 C 64 14 76 24 73.5 45 C 71 35 63 28 50 28 C 37 28 29 35 26.5 45 Z" fill="${hr.hair}" stroke="${I}" stroke-width="${IW}" stroke-linejoin="round"/>`;
+
+    // ---- WELDER GOGGLES pushed up on the forehead (signature): strap, bridge, rimmed lenses ----
+    s += `<path d="M 26 35.6 Q 50 30 74 35.6 L 74 40.2 Q 50 34.6 26 40.2 Z" fill="#3a2a1e" stroke="${I}" stroke-width="${IW * 0.7}" stroke-linejoin="round"/>`;
+    s += `<path d="M 46 36.5 L 54 36.5" stroke="#8a8e96" stroke-width="2.6"/>`;
+    for (const x of [40, 60]) {
+      s += `<circle cx="${x}" cy="36.5" r="7" fill="#8a8e96" stroke="${I}" stroke-width="${IW * 0.8}"/>`;
+      s += `<circle cx="${x}" cy="36.5" r="4.9" fill="${lens}" stroke="${I}" stroke-width="${IW * 0.55}"/>`;
+      s += `<path d="M ${x - 3} 34.6 Q ${x - 1} 32.5 ${x + 1.4} 32.7" fill="none" stroke="#ffffff" stroke-width="1" stroke-linecap="round" opacity="0.7"/>`;
+    }
+
+    return s;
+  }
+
+  /** Blend a trusted palette colour toward white (+) or black (-). */
+  private paletteTone(hex: string, amount: number): string {
+    const target = amount >= 0 ? 255 : 0;
+    const weight = Math.abs(amount);
+    return '#' + [1, 3, 5].map(offset => {
+      const channel = parseInt(hex.slice(offset, offset + 2), 16);
+      return Math.round(channel + (target - channel) * weight).toString(16).padStart(2, '0');
+    }).join('');
+  }
+
+  /**
+   * The three new nations share the ten editable descriptor fields with humans.
+   * Their anatomy and palettes remain species-specific, while each head, hair,
+   * brow, eye, nose and mouth choice continues to change the actual drawing.
+   * No nation signature is applied: moving clubs must not change this anatomy.
+   */
+  private drawWorldSpecies(species: WorldSpecies): string {
+    const palette = WORLD_PALETTES[species];
+    const skin = this.pick(palette.skin, this.skinTone);
+    const shade = this.paletteTone(skin, -0.22);
+    const deep = this.paletteTone(skin, -0.4);
+    const light = this.paletteTone(skin, 0.22);
+    const hair = this.pick(palette.hair, this.hairColor);
+    const hairShade = this.paletteTone(hair, -0.3);
+    const hairLight = this.paletteTone(hair, 0.27);
+    const eye = this.pick(palette.eyes, this.eyeColor);
+    const ink = this.ink(), width = this.inkW();
+    const variation = ((this.baseFaceId % 10) + 10) % 10;
+    const g = this.geom(false);
+    if (species === 'veyran') {
+      g.rx *= 0.94;
+      g.jaw += 2;
+      g.jawW *= 0.94;
+    } else if (species === 'branik') {
+      g.rx *= 1.03;
+      g.jawW *= 1.12;
+      g.chinBlunt = Math.min(1, g.chinBlunt + 0.15);
+    } else {
+      g.rx *= 0.95;
+      g.jaw += 2;
+      g.jawW *= 0.94;
+    }
+    // Include every geometry input: two cards with a different head/eye setting
+    // must not accidentally use one another's SVG clipping paths.
+    const uid = 'world_' + species + '_' + this.style + '_' + [
+      this.baseFaceId, this.skinTone, this.hairColor, this.eyeColor,
+      this.hairStyle, this.faceShape, this.browShape, this.eyeShape,
+      this.noseShape, this.mouthShape
+    ].join('_');
+    const head = this.headPath(g);
+    const hp = this.hair(g);
+    let svg = `<g data-species="${species}">`;
+    if (hp.back) svg += `<path d="${hp.back}" fill="${hairShade}" stroke="${ink}" stroke-width="${width}" stroke-linejoin="round"/>`;
+    const neck = g.jawW * (species === 'branik' ? 1.02 : 0.88);
+    svg += `<path d="M ${50 - neck} ${g.jaw - 7} L ${49 - neck} 94 L ${51 + neck} 94 L ${50 + neck} ${g.jaw - 7} Z" fill="${shade}" stroke="${ink}" stroke-width="${width}"/>`;
+    svg += `<path d="M ${50 - neck} ${g.jaw - 5} Q 50 ${g.jaw + 7} ${50 + neck} ${g.jaw - 5} L ${50 + neck} 87 Q 50 91 ${50 - neck} 87 Z" fill="${deep}" opacity="0.45"/>`;
+
+    for (const side of [-1, 1]) {
+      const x = 50 + side * (g.rx - 1);
+      if (species === 'veyran') {
+        // Two rounded cartilage lobes on EACH side: neither pointed elf ears
+        // nor the external gills of Aquanimenti.
+        const earWidth = 5.3 + (variation % 3) * 0.45;
+        svg += `<g data-feature="double-ear">` +
+          `<ellipse cx="${x + side * 1.7}" cy="55.5" rx="${earWidth}" ry="7.2" fill="${skin}" stroke="${ink}" stroke-width="${width}"/>` +
+          `<ellipse cx="${x + side * 1.3}" cy="65" rx="${earWidth - 0.9}" ry="4.5" fill="${skin}" stroke="${ink}" stroke-width="${width}"/>` +
+          `<path d="M ${x + side * 2} 51 Q ${x + side * 6} 54 ${x + side * 2} 59 M ${x + side * 1.5} 63 Q ${x + side * 4} 65 ${x + side * 1.5} 67" fill="none" stroke="${deep}" stroke-width="1.1"/>` +
+          `</g>`;
+      } else {
+        const radius = species === 'branik' ? 4.2 + (variation % 3) * 0.25 : 3.1;
+        svg += `<ellipse cx="${x}" cy="58" rx="${radius}" ry="5.5" fill="${skin}" stroke="${ink}" stroke-width="${width}"/>`;
+        svg += `<path d="M ${x} 55 q ${side * 2.2} 2 0 5" fill="none" stroke="${deep}" stroke-width="1.1"/>`;
+      }
+    }
+    svg += `<path d="${head}" fill="${skin}" stroke="${ink}" stroke-width="${width}" stroke-linejoin="round"/>`;
+    svg += `<clipPath id="head_${uid}"><path d="${head}"/></clipPath>`;
+    svg += `<g clip-path="url(#head_${uid})">` +
+      `<path d="${this.faceShadowPath(g)}" fill="${shade}" opacity="0.65"/>` +
+      `<path d="M ${50 - g.jawW - 5} ${g.jaw - 8} Q 50 ${g.jaw + 7} ${50 + g.jawW + 5} ${g.jaw - 8} Q 50 ${g.jaw} ${50 - g.jawW - 5} ${g.jaw - 8} Z" fill="${deep}" opacity="0.25"/>` +
+      `</g>`;
+
+    if (species === 'branik') {
+      // Exactly three biological arches, with varying relief rather than horns.
+      const relief = 3.2 + (variation % 4) * 0.45;
+      for (const x of [38, 50, 62]) {
+        const y = x === 50 ? 40.4 : 38.7;
+        svg += `<g data-feature="brow-arch">` +
+          `<path d="M ${x - 5.5} ${y + 1} Q ${x} ${y - relief - 3} ${x + 5.5} ${y + 1} Q ${x} ${y - 1.4} ${x - 5.5} ${y + 1} Z" fill="${shade}"/>` +
+          `<path d="M ${x - 5} ${y} Q ${x} ${y - relief - 2.3} ${x + 5} ${y}" fill="none" stroke="${light}" stroke-width="0.8" opacity="0.7"/>` +
+          `</g>`;
+      }
+    }
+
+    if (species === 'sileth') {
+      svg += `<g transform="translate(0,-7)">${this.brows(hairShade)}</g>`;
+      svg += `<g data-eye-pair="upper" transform="translate(0,-7)">${this.eyeGroup(eye, uid + '_upper', false, true)}</g>`;
+      svg += `<g data-eye-pair="lower" transform="translate(0,3)">${this.eyeGroup(eye, uid + '_lower', false, true)}</g>`;
+    } else {
+      svg += this.brows(hairShade);
+      svg += `<g data-eye-pair="single">${this.eyeGroup(eye, uid, false, true)}</g>`;
+    }
+    svg += this.nose(shade);
+    if (species === 'branik') {
+      svg += `<path d="M 50.1 64.6 l 0 2.4" fill="none" stroke="${deep}" stroke-width="0.9" stroke-linecap="round"/>`;
+    }
+    svg += this.mouth();
+    // Features adds subtle cheek creases as well as the silhouette/ear/arch
+    // variation, without painting human stubble over the new skin palettes.
+    if (variation % 3 > 0) {
+      svg += `<path d="M 30 62 l 3 2 M 70 62 l -3 2" fill="none" stroke="${deep}" stroke-width="0.7" opacity="${variation % 3 === 1 ? 0.3 : 0.5}"/>`;
+    }
+
+    if (species === 'sileth') {
+      // Long bangs must never hide the defining second eye pair. Preserve the
+      // top silhouette and side locks while keeping the eye band unobstructed.
+      svg += `<mask id="hairmask_${uid}" maskUnits="userSpaceOnUse" x="0" y="0" width="100" height="100"><rect width="100" height="100" fill="white"/><rect x="27" y="43" width="46" height="22" rx="5" fill="black"/></mask>`;
+    }
+    svg += `<g${species === 'sileth' ? ` mask="url(#hairmask_${uid})"` : ''}>`;
+    svg += `<path d="${hp.front}" fill="${hair}" stroke="${ink}" stroke-width="${width}" stroke-linejoin="round"/>`;
+    svg += `<clipPath id="hair_${uid}"><path d="${hp.front}"/></clipPath>`;
+    svg += `<g clip-path="url(#hair_${uid})">`;
+    if (hp.part) svg += `<path d="${hp.part}" fill="none" stroke="${hairShade}" stroke-width="1.6" stroke-linecap="round"/>`;
+    svg += `<path d="M 33 28 Q 49 16 67 25 M 37 31 Q 51 23 63 29" fill="none" stroke="${hairLight}" stroke-width="${this.style === 'premium' ? 1.4 : 2}" stroke-linecap="round" opacity="0.8"/>`;
+    svg += `<path d="M 65 14 L 84 20 L 84 85 L 65 85 Z" fill="${hairShade}" opacity="0.3"/>`;
+    svg += `</g></g></g>`;
+    return svg;
+  }
+
   private buildInner(): string {
     if (this.species === 'crystalline') return this.drawCrystalline();
     if (this.species === 'saurian') return this.drawSaurian();
@@ -2193,6 +2788,12 @@ export class PlayerFaceComponent {
     if (this.species === 'rokykario') return this.drawRokykario();
     if (this.species === 'eleftamide') return this.drawEleftamide();
     if (this.species === 'aquanimenti') return this.drawAquanimenti();
+    if (this.species === 'salmarid') return this.drawSalmarid();
+    if (this.species === 'kaarnid') return this.drawKaarnid();
+    if (this.species === 'ikazkin') return this.drawIkazkin();
+    if (this.species === 'veyran' || this.species === 'branik' || this.species === 'sileth') {
+      return this.drawWorldSpecies(this.species);
+    }
     const C = PlayerFaceComponent;
     const g = this.geom();
     const uid = this.style + this.baseFaceId + '_' + this.skinTone + this.hairColor + this.eyeColor + this.hairStyle;
