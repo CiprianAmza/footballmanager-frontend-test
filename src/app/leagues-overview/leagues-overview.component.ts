@@ -253,7 +253,7 @@ interface RatingImpactHistoryResponse {
 type OverviewView = 'all' | 'leagues' | 'cups' | 'statistics' | 'team-values' | 'world-xi' | 'rating-history';
 type TeamValueSort = 'power' | 'market' | 'reputation';
 type StatisticsScope = 'LEAGUE' | 'CUP' | 'EUROPEAN' | 'ALL';
-type RatingHistoryScope = 'ALL' | 'LEAGUES' | 'CUPS' | 'CHAMPIONS' | 'STARS_CUP' | 'SUPER_CUPS';
+type RatingHistoryScope = 'ALL' | 'LEAGUES' | 'CUPS' | 'CHAMPIONS' | 'STARS_CUP' | 'SUPER_CUPS' | 'DIAMOND_LEAGUE';
 type RatingHistorySort = keyof Pick<RatingImpactHistoryRow,
   'competitionName' | 'seasonNumber' | 'playerName' | 'teamName' | 'appearances'
   | 'playerRating' | 'teamRating' | 'difference'>;
@@ -312,12 +312,13 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
   ratingHistorySort: RatingHistorySort = 'difference';
   ratingHistorySortDirection: 1 | -1 = -1;
   readonly ratingHistoryScopes: { key: RatingHistoryScope; label: string; typeIds: number[] }[] = [
-    { key: 'ALL', label: 'All', typeIds: [1, 2, 3, 4, 5, 6] },
+    { key: 'ALL', label: 'All', typeIds: [1, 2, 3, 4, 5, 6, 7] },
     { key: 'LEAGUES', label: 'Leagues', typeIds: [1, 3] },
     { key: 'CUPS', label: 'Cups', typeIds: [2] },
     { key: 'CHAMPIONS', label: 'League of Champions', typeIds: [4] },
     { key: 'STARS_CUP', label: 'Stars Cup', typeIds: [5] },
-    { key: 'SUPER_CUPS', label: 'Super Cups', typeIds: [6] }
+    { key: 'SUPER_CUPS', label: 'Super Cups', typeIds: [6] },
+    { key: 'DIAMOND_LEAGUE', label: 'Diamond League', typeIds: [7] }
   ];
 
   // Per-league visibility — keyed by competitionId. Default true.
@@ -656,6 +657,7 @@ export class LeaguesOverviewComponent implements OnInit, OnDestroy {
       case 4: return '#2d6cdf';
       case 5: return '#14a37f';
       case 6: return '#d5a500';
+      case 7: return '#4fc3f7';
       default: return '#95a5a6';
     }
   }

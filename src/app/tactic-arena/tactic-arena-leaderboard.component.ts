@@ -10,7 +10,7 @@ import {
 
 type Split = 'overall' | 'home' | 'away';
 type Category = 'general' | 'diamond';
-type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'uploaded';
+type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'diamond' | 'uploaded';
 const TEAM_TIER: Record<string, ArenaTier> = { top: 'TOP', mid: 'MID', bottom: 'BOTTOM' };
 const TIER_TITLES: Record<ArenaTier, string> = { TOP: 'Top club', MID: 'Mid-table club', BOTTOM: 'Bottom club' };
 
@@ -98,6 +98,8 @@ interface TeamOption { key: string; label: string; }
               <th class="ta-left">League</th>
               <th *ngFor="let column of numericColumns" class="sortable" [class.sorted]="sortKey === column.key"
                   (click)="sortBy(column.key)">{{ column.label }}{{ sortKey === column.key ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
+              <th *ngIf="showDiamond" class="sortable" [class.sorted]="sortKey === 'diamond'" (click)="sortBy('diamond')"
+                  title="Diamond League points / maximum">Diamond League{{ sortKey === 'diamond' ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
               <th class="sortable" [class.sorted]="sortKey === 'uploaded'" (click)="sortBy('uploaded')">
                 Uploaded{{ sortKey === 'uploaded' ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
             </tr>
@@ -133,13 +135,18 @@ interface TeamOption { key: string; label: string; }
               <ng-template #emptyCells>
                 <td class="ta-muted" *ngFor="let column of numericColumns">—</td>
               </ng-template>
+              <td *ngIf="showDiamond">
+                <ng-container *ngIf="diamondRow(test) as d; else noDiamond">{{ d.pts }} / {{ d.ptsMax }}
+                  <span class="ta-small" *ngIf="pct(d) !== null">{{ pct(d) | number:'1.0-0' }}%</span></ng-container>
+                <ng-template #noDiamond><span class="ta-muted">—</span></ng-template>
+              </td>
               <td>{{ (test.finishedAt || test.createdAt) | date:'dd.MM.yyyy' }}</td>
             </tr>
             <tr *ngIf="board && !categoryTests.length">
-              <td class="ta-left ta-muted" [attr.colspan]="numericColumns.length + 6">No tactic has been tested in this category yet.</td>
+              <td class="ta-left ta-muted" [attr.colspan]="numericColumns.length + (showDiamond ? 7 : 6)">No tactic has been tested in this category yet.</td>
             </tr>
             <tr *ngIf="!board && !error">
-              <td class="ta-left ta-muted" [attr.colspan]="numericColumns.length + 6">Loading…</td>
+              <td class="ta-left ta-muted" [attr.colspan]="numericColumns.length + (showDiamond ? 7 : 6)">Loading…</td>
             </tr>
           </tbody>
         </table>
@@ -298,12 +305,31 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
 
   row(test: ArenaTestSummary): ArenaSplit | null { return this.splitOf(test, this.team, this.split); }
 
+  /** Diamond League figures for the chosen team view (the average, or one club's run). */
+  private diamondOf(test: ArenaTestSummary, team: string, split: Split): ArenaSplit | null {
+    if (team === 'all') return test.diamond?.[split] || null;
+    if (this.cat === 'diamond') {
+      return (test.byClub || []).find(club => String(club.teamId) === team)?.diamond?.[split] || null;
+    }
+    const tier = TEAM_TIER[team];
+    return tier ? test.byTier?.[tier]?.diamond?.[split] || null : null;
+  }
+
+  diamondRow(test: ArenaTestSummary): ArenaSplit | null { return this.diamondOf(test, this.team, this.split); }
+
+  /** The Diamond League column only appears when a test of the category has Diamond League figures. */
+  get showDiamond(): boolean {
+    return this.categoryTests.some(test => !!test.diamond
+      || Object.values(test.byTier || {}).some(entry => !!entry?.diamond)
+      || (test.byClub || []).some(club => !!club.diamond));
+  }
+
   /** Best tactic of the category and for each of its clubs; ties broken by goal difference. */
   get bestCards(): BestCard[] {
-    const pick = (team: string) => {
+    const pick = (team: string, diamond = false) => {
       let best: { test: ArenaTestSummary; split: ArenaSplit } | null = null;
       for (const test of this.categoryTests) {
-        const value = this.splitOf(test, team, 'overall');
+        const value = diamond ? this.diamondOf(test, team, 'overall') : this.splitOf(test, team, 'overall');
         if (!value) continue;
         const a = pointsPct(value) ?? value.pts;
         const b = best ? pointsPct(best.split) ?? best.split.pts : -Infinity;
@@ -311,24 +337,27 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
       }
       return best;
     };
-    const card = (title: string, club: string | null, team: string): BestCard => {
-      const best = pick(team);
+    const card = (title: string, club: string | null, team: string, diamond = false): BestCard => {
+      const best = pick(team, diamond);
       return { title, club, test: best?.test || null, split: best?.split || null };
     };
+    const diamondCard = this.showDiamond ? [card('Best in the Diamond League', null, 'all', true)] : [];
     if (this.cat === 'diamond') {
       return [
         card(`Best overall (${this.diamondClubs.length || 8} clubs)`, null, 'all'),
         ...this.diamondClubs.filter(team => team.teamId != null)
           .map(team => card(`Best for ${team.name || team.teamName || 'club ' + team.teamId}`,
             team.predictedPosition != null ? `prediction ${predictionLabel(team.predictedPosition, team.leagueSize)}` : null,
-            String(team.teamId)))
+            String(team.teamId))),
+        ...diamondCard
       ];
     }
     return [
       card('Best overall', this.refs, 'all'),
       card('Best for a top club', this.clubText(this.refTeam('TOP')), 'top'),
       card('Best for a mid-table club', this.clubText(this.refTeam('MID')), 'mid'),
-      card('Best for a bottom club', this.clubText(this.refTeam('BOTTOM')), 'bottom')
+      card('Best for a bottom club', this.clubText(this.refTeam('BOTTOM')), 'bottom'),
+      ...diamondCard
     ];
   }
 
@@ -341,6 +370,10 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
     const tests = [...this.categoryTests];
     const value = (test: ArenaTestSummary): number | null => {
       if (this.sortKey === 'uploaded') return Date.parse(test.finishedAt || test.createdAt) || 0;
+      if (this.sortKey === 'diamond') {
+        const diamond = this.diamondRow(test);
+        return diamond ? pointsPct(diamond) ?? diamond.pts : null;
+      }
       const split = this.row(test);
       if (!split) return null;
       // Points sort by share of the maximum, so seasons of different length compare fairly.

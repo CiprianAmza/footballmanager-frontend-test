@@ -51,6 +51,17 @@ export interface ArenaSplit {
   ptsPct?: number | null;
 }
 
+/** Diamond League figures (same split shape as the league), present only when the club plays in it. */
+export interface ArenaDiamondResults {
+  basedOn?: number | null;
+  overall: ArenaSplit;
+  home: ArenaSplit;
+  away: ArenaSplit;
+  /** One run only: final Diamond League place and number of clubs. */
+  position?: number | null;
+  of?: number | null;
+}
+
 export interface ArenaResults {
   basedOn: number;
   overall: ArenaSplit;
@@ -108,6 +119,8 @@ export interface ArenaTestSummary {
   chosen: ArenaResults | null;
   /** Each reference club's own run (null while it is not done). */
   byTier?: Partial<Record<ArenaTier, ArenaTierResult | null>> | null;
+  /** Diamond League figures of the category's clubs that play in it, or null. */
+  diamond?: ArenaDiamondResults | null;
   /** GENERAL (3 fixed reference clubs, default) or DIAMOND (the 8 Diamond League clubs). */
   category?: ArenaCategory | null;
   /** DIAMOND: each club's own run (results null while it is not done). */
@@ -137,6 +150,7 @@ export interface ArenaClubResult {
   leagueSize?: number | null;
   leagueName?: string | null;
   results: { overall: ArenaSplit; home: ArenaSplit; away: ArenaSplit } | null;
+  diamond?: ArenaDiamondResults | null;
 }
 
 export const ARENA_TIERS: ArenaTier[] = ['TOP', 'MID', 'BOTTOM'];
@@ -145,6 +159,7 @@ export interface ArenaTierResult {
   teamId: number | null;
   teamName: string | null;
   results: { overall: ArenaSplit; home: ArenaSplit; away: ArenaSplit } | null;
+  diamond?: ArenaDiamondResults | null;
 }
 
 export interface ArenaReferenceTeam {
@@ -258,6 +273,8 @@ export interface ArenaRun {
   teamReputation: number;
   /** TOP | MID | BOTTOM for a reference run, null for the chosen club. */
   tier?: ArenaTier | null;
+  /** The run's Diamond League figures, when its club plays in it. */
+  diamond?: ArenaDiamondResults | null;
   /** Role label from the backend (e.g. "Reference"); falls back to the kind. */
   label?: string | null;
   /** Media prediction: predicted league place / clubs in the league (null when unknown). */
@@ -424,6 +441,11 @@ export function pointsPct(split: ArenaSplit | null | undefined): number | null {
   if (!split) return null;
   if (split.ptsPct != null) return split.ptsPct;
   return split.ptsMax ? (split.pts / split.ptsMax) * 100 : null;
+}
+
+/** The Diamond League (competition type 7) is a league in format, but not the club's own league. */
+export function isDiamondLeague(comp: { typeId?: number | null; name?: string | null; competitionName?: string | null }): boolean {
+  return comp.typeId === 7 || /diamond league/i.test(comp.name || comp.competitionName || '');
 }
 
 /** "6 / 12" from a media prediction, "—" when unknown. */

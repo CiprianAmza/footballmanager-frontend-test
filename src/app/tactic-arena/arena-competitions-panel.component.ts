@@ -103,7 +103,7 @@ export class ArenaCompetitionsPanelComponent {
 
   get competitions(): ArenaCompetition[] {
     return [...(this.result.competitions || [])]
-      .sort((left, right) => Number(this.isLeague(right)) - Number(this.isLeague(left)));
+      .sort((left, right) => this.order(left) - this.order(right));
   }
 
   get trophies(): string[] {
@@ -114,6 +114,11 @@ export class ArenaCompetitionsPanelComponent {
     return [...(this.result.leagueTable || [])].sort((left, right) =>
       (Number(left.position) || 0) - (Number(right.position) || 0)
       || (Number(right.points) || 0) - (Number(left.points) || 0));
+  }
+
+  private order(comp: ArenaCompetition): number {
+    if (comp.typeId === 7) return 1;
+    return this.isLeague(comp) ? 0 : 2;
   }
 
   isLeague(comp: ArenaCompetition): boolean {
@@ -132,6 +137,7 @@ export class ArenaCompetitionsPanelComponent {
       case 3: return '#2c3e50';
       case 4: return '#2e3192';
       case 5: return '#009460';
+      case 7: return '#4fc3f7';
       default: return '#34495e';
     }
   }

@@ -404,6 +404,7 @@ export class CompetitionsListComponent implements OnInit, OnDestroy {
       case 4: return '#2e3192'; // Champions blue
       case 5: return '#009460'; // Stars Cup green
       case 6: return '#d5a500'; // Super Cup gold
+      case 7: return '#4fc3f7'; // Diamond League
       default: return '#95a5a6';
     }
   }

@@ -39,7 +39,7 @@ import { ArenaMatch, ArenaRunResult } from './tactic-arena.service';
                   [class.arena-before-run]="!match.inRun">
                 <td class="cal-round">{{ match.date || ('Day ' + match.day) }}</td>
                 <td class="cal-comp">
-                  <span class="comp-type-badge" [ngClass]="compTypeClass(match.competitionType)">
+                  <span class="comp-type-badge" [ngClass]="compTypeClass(match.competitionType, match.competitionName)">
                     {{ match.competitionName | slice:0:3 | uppercase }}
                   </span>
                   <span class="comp-full-name">{{ match.competitionName }}</span>
@@ -89,10 +89,13 @@ export class ArenaSchedulePanelComponent {
   get losses(): number { return this.result.matches.filter(match => match.resultOutcome === 'L').length; }
   get beforeRun(): number { return this.result.matches.filter(match => !match.inRun).length; }
 
-  compTypeClass(type: string): string {
+  /** The game reports Diamond League matches as "League": they are told apart by name. */
+  compTypeClass(type: string, name?: string): string {
+    if (/diamond league/i.test(name || '')) return 'arena-comp-diamond';
     switch (type) {
       case 'Cup': return 'comp-cup';
-      case 'European': return 'comp-european';
+      case 'European':
+      case 'Continental': return 'comp-european';
       default: return 'comp-league';
     }
   }

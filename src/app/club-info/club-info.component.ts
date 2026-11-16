@@ -193,6 +193,7 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
       case 4:
       case 5: return 'Continental competition';
       case 6: return 'Season showcase';
+      case 7: return 'Diamond League';
       default: return 'Competition';
     }
   }
@@ -422,7 +423,7 @@ export class ClubInfoComponent implements OnInit, OnDestroy {
     for (const record of historyList) {
       if (record.lastPosition !== 1) continue;
       if (!trophyMap.has(record.competitionId)) {
-        const level: Trophy['level'] = [4, 5].includes(record.competitionTypeId)
+        const level: Trophy['level'] = [4, 5, 7].includes(record.competitionTypeId)
           ? 'Continental' : [2, 6].includes(record.competitionTypeId) ? 'Cup' : 'National';
         trophyMap.set(record.competitionId, {
           name: record.competitionName,

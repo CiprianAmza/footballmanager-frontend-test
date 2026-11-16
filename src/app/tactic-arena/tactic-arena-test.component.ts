@@ -11,7 +11,7 @@ import { captureElement } from './dom-capture';
 import { TacticArenaEditorComponent } from './tactic-arena-editor.component';
 import {
   ArenaImageKind, ArenaRun, ArenaSetup, ArenaTestDetail, IMAGE_KIND_LABELS, runRoleLabel,
-  TacticArenaService, formationLabel, isActive, signed
+  ArenaResults, TacticArenaService, formationLabel, isActive, isDiamondLeague, signed
 } from './tactic-arena.service';
 
 interface ShotState {
@@ -81,6 +81,7 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                   <th title="Media prediction: predicted place / clubs in the league">Media prediction</th>
                   <th title="Final league place / clubs in the league">Finished</th>
                   <th>PLD</th><th>PTS</th><th>GD</th><th>GF</th><th>GA</th><th>xGF</th><th>xGA</th><th>xGD</th>
+                  <th title="Diamond League points / maximum · final place / clubs">Diamond League</th>
                   <th class="ta-left">Cups</th>
                 </tr>
               </thead>
@@ -113,14 +114,17 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                         <span class="ta-small" *ngIf="run.status !== 'DONE'"> {{ run.progress | number:'1.0-0' }}%</span>
                       </td>
                     </ng-template>
+                    <td>{{ diamondText(run) }}</td>
                     <td class="ta-left ta-small ta-cups">{{ cups(run) }}</td>
                   </tr>
                   <tr class="ta-run-detail" *ngIf="expanded === run.index" [attr.id]="'ta-run-' + run.index">
-                    <td colspan="15" class="ta-left">
+                    <td colspan="16" class="ta-left">
                       <h3>{{ runLabel(run) }} · {{ run.teamName || 'chosen when the world is ready' }}
                         <span class="ta-small" *ngIf="run.teamName">· reputation {{ run.teamReputation }} · media prediction {{ prediction(run) }}</span></h3>
                       <p class="ta-error" *ngIf="run.message">{{ run.message }}</p>
-                      <app-arena-results *ngIf="run.stats" [results]="run.stats"></app-arena-results>
+                      <app-arena-results *ngIf="run.stats" [results]="run.stats" title="League"></app-arena-results>
+                      <app-arena-results *ngIf="diamondResults(run) as diamond" [results]="diamond"
+                                         [title]="'Diamond League' + (run.diamond?.position != null ? ' · finished ' + run.diamond?.position + ' / ' + (run.diamond?.of ?? '—') : '')"></app-arena-results>
                       <p class="ta-muted" *ngIf="!run.stats">Available when this run has finished ({{ run.progress | number:'1.0-0' }}%).</p>
                       <div class="ta-shots" *ngIf="run.status === 'DONE' && run.result">
                         <div class="ta-shot" *ngFor="let kind of kinds">
@@ -279,8 +283,32 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
     return league?.position ?? null;
   }
 
-  private isLeague(comp: { kind?: string; typeId?: number }): boolean {
+  /** The club's own league: the Diamond League (type 7) is a league in format but not this one. */
+  private isLeague(comp: { kind?: string; typeId?: number; name?: string }): boolean {
+    if (isDiamondLeague(comp)) return false;
     return comp.kind === 'LEAGUE' || comp.typeId === 1 || comp.typeId === 3;
+  }
+
+  /** "45 / 84 · 3 / 8", or "—" when the club does not play in the Diamond League. */
+  diamondText(run: ArenaRun): string {
+    const diamond = run.diamond;
+    if (!diamond?.overall) return '—';
+    const points = `${diamond.overall.pts} / ${diamond.overall.ptsMax}`;
+    return diamond.position != null ? `${points} · ${diamond.position} / ${diamond.of ?? '—'}` : points;
+  }
+
+  private diamondCache = new WeakMap<object, ArenaResults>();
+
+  /** The run's Diamond League figures in the results-block shape (stable per response). */
+  diamondResults(run: ArenaRun): ArenaResults | null {
+    const diamond = run.diamond;
+    if (!diamond?.overall) return null;
+    let results = this.diamondCache.get(diamond);
+    if (!results) {
+      results = { basedOn: diamond.basedOn ?? 1, overall: diamond.overall, home: diamond.home, away: diamond.away };
+      this.diamondCache.set(diamond, results);
+    }
+    return results;
   }
 
   shot(run: ArenaRun, kind: ArenaImageKind): ShotState | undefined {

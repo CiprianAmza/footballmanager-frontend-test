@@ -180,6 +180,7 @@ export class AllTimeChampionsComponent implements OnInit {
       case 4: return 'League of Champions';
       case 5: return 'Stars Cup';
       case 6: return 'Super Cup';
+      case 7: return 'Diamond League';
       default: return 'Other';
     }
   }

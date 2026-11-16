@@ -396,6 +396,7 @@ export class ManagerProfileComponent implements OnInit, OnDestroy {
       case 4:
       case 5: return 'Continental competition';
       case 6: return 'Season showcase';
+      case 7: return 'Diamond League';
       default: return 'Competition';
     }
   }

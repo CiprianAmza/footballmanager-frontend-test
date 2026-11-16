@@ -79,6 +79,7 @@ export class PlayerCompetitionHistoryComponent implements OnInit, OnChanges {
       case 4:
       case 5: return 'Continental competition';
       case 6: return 'Super Cup';
+      case 7: return 'Diamond League';
       default: return '';
     }
   }

@@ -55,7 +55,7 @@ export class SeasonSummaryComponent implements OnInit {
 
   getLeagueStandings(): any[] {
     if (!this.summary?.standings) return [];
-    return this.summary.standings.filter((s: any) => s.competitionTypeId === 1 || s.competitionTypeId === 3);
+    return this.summary.standings.filter((s: any) => [1, 3, 7].includes(s.competitionTypeId));
   }
 
   getCupStandings(): any[] {
