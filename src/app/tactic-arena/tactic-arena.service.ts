@@ -47,6 +47,8 @@ export interface ArenaSplit {
   w: number; d: number; l: number;
   gf: number; ga: number; gd: number;
   xgf: number | null; xga: number | null; xgd: number | null;
+  /** Points as a percentage of the maximum (comparable when maxima differ). */
+  ptsPct?: number | null;
 }
 
 export interface ArenaResults {
@@ -104,6 +106,12 @@ export interface ArenaTestSummary {
   progress: number;
   results: ArenaResults | null;
   chosen: ArenaResults | null;
+  /** Each reference club's own run (null while it is not done). */
+  byTier?: Partial<Record<ArenaTier, ArenaTierResult | null>> | null;
+  /** GENERAL (3 fixed reference clubs, default) or DIAMOND (the 8 Diamond League clubs). */
+  category?: ArenaCategory | null;
+  /** DIAMOND: each club's own run (results null while it is not done). */
+  byClub?: ArenaClubResult[] | null;
 }
 
 export interface ArenaLeaderboard {
@@ -113,10 +121,34 @@ export interface ArenaLeaderboard {
   baseline?: ArenaBaseline | null;
   /** The fixed reference clubs every test is also run on ("general" part). */
   referenceTeams?: ArenaReferenceTeam[] | null;
+  /** The 8 Diamond League clubs of the DIAMOND category. */
+  diamondTeams?: ArenaReferenceTeam[] | null;
   tests: ArenaTestSummary[];
 }
 
+/** Which fixed reference club a run is: top, mid-table or bottom club. */
+export type ArenaTier = 'TOP' | 'MID' | 'BOTTOM';
+export type ArenaCategory = 'GENERAL' | 'DIAMOND';
+
+export interface ArenaClubResult {
+  teamId: number;
+  teamName: string | null;
+  predictedPosition?: number | null;
+  leagueSize?: number | null;
+  leagueName?: string | null;
+  results: { overall: ArenaSplit; home: ArenaSplit; away: ArenaSplit } | null;
+}
+
+export const ARENA_TIERS: ArenaTier[] = ['TOP', 'MID', 'BOTTOM'];
+
+export interface ArenaTierResult {
+  teamId: number | null;
+  teamName: string | null;
+  results: { overall: ArenaSplit; home: ArenaSplit; away: ArenaSplit } | null;
+}
+
 export interface ArenaReferenceTeam {
+  tier?: ArenaTier | null;
   teamId: number;
   name?: string | null;
   teamName?: string | null;
@@ -224,6 +256,8 @@ export interface ArenaRun {
   teamId: number;
   teamName: string;
   teamReputation: number;
+  /** TOP | MID | BOTTOM for a reference run, null for the chosen club. */
+  tier?: ArenaTier | null;
   /** Role label from the backend (e.g. "Reference"); falls back to the kind. */
   label?: string | null;
   /** Media prediction: predicted league place / clubs in the league (null when unknown). */
@@ -342,8 +376,9 @@ export class TacticArenaService {
   }
 
   /** `owner` is sent only for anonymous users (signed-in users are the owner on the server). */
-  start(name: string, teamId: number, tactic: ArenaTactic, owner?: string): Observable<{ id: number }> {
-    const body: Record<string, unknown> = { name, teamId, tactic };
+  start(name: string, teamId: number, tactic: ArenaTactic, owner?: string,
+        category: ArenaCategory = 'GENERAL'): Observable<{ id: number }> {
+    const body: Record<string, unknown> = { name, teamId, tactic, category };
     if (owner) body['owner'] = owner;
     return this.http.post<{ id: number }>(`${this.base}/tests`, body);
   }
@@ -382,6 +417,13 @@ export function isActive(status: ArenaStatus | undefined | null): boolean {
 export function signed(value: number | null | undefined): string {
   if (value === null || value === undefined) return '—';
   return value > 0 ? `+${value}` : `${value}`;
+}
+
+/** Points share of the maximum, for sorting: `ptsPct` when given, else computed. */
+export function pointsPct(split: ArenaSplit | null | undefined): number | null {
+  if (!split) return null;
+  if (split.ptsPct != null) return split.ptsPct;
+  return split.ptsMax ? (split.pts / split.ptsMax) * 100 : null;
 }
 
 /** "6 / 12" from a media prediction, "—" when unknown. */

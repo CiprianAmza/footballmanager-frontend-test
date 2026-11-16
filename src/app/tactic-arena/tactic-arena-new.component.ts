@@ -11,7 +11,7 @@ import { ArenaProgressComponent } from './arena-progress.component';
 import { ArenaResultsComponent } from './arena-results.component';
 import { TacticArenaEditorComponent } from './tactic-arena-editor.component';
 import {
-  ArenaClub, ArenaLeague, ArenaSetup, ArenaTestDetail, TacticArenaService, isActive, predictionLabel, referenceNames
+  ArenaCategory, ArenaClub, ArenaLeague, ArenaSetup, ArenaTestDetail, TacticArenaService, isActive, predictionLabel, referenceNames
 } from './tactic-arena.service';
 
 /**
@@ -96,6 +96,20 @@ import {
 
         <section class="ta-card" *ngIf="setup" style="margin-top: 16px">
           <h2>3 · Name and start</h2>
+          <div class="ta-cat-switch" role="radiogroup" aria-label="Simulation">
+            <button type="button" role="radio" [class.active]="category === 'GENERAL'" [attr.aria-checked]="category === 'GENERAL'"
+                    (click)="category = 'GENERAL'">
+              <strong>General (3 reference clubs)</strong>
+              <span class="ta-small">The tactic on the fixed top, mid-table and bottom reference clubs{{ refs ? ' (' + refs + ')' : '' }},
+                plus your club. Ranked in the General leaderboard.</span>
+            </button>
+            <button type="button" role="radio" [class.active]="category === 'DIAMOND'" [attr.aria-checked]="category === 'DIAMOND'"
+                    (click)="category = 'DIAMOND'">
+              <strong>Diamond League clubs (8 clubs)</strong>
+              <span class="ta-small">The tactic on each of the 8 elite clubs{{ diamond ? ' (' + diamond + ')' : '' }}, plus your club;
+                the average of all 8. Ranked in the Diamond League leaderboard.</span>
+            </button>
+          </div>
           <div class="ta-form">
             <label class="ta-field">
               <span>Test name</span>
@@ -150,7 +164,10 @@ export class TacticArenaNewComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // The fixed reference clubs are listed with the leaderboard.
-    this.api.leaderboard().subscribe({ next: board => this.refs = referenceNames(board?.referenceTeams), error: () => {} });
+    this.api.leaderboard().subscribe({ next: board => {
+      this.refs = referenceNames(board?.referenceTeams);
+      this.diamond = referenceNames(board?.diamondTeams);
+    }, error: () => {} });
     this.querySub = this.route.queryParamMap.subscribe(params => {
       const id = Number(params.get('test')) || null;
       // The first emission must always run: without ?test= the id equals the initial null.
@@ -174,6 +191,8 @@ export class TacticArenaNewComponent implements OnInit, OnDestroy {
 
   readonly prediction = predictionLabel;
   refs: string | null = null;
+  diamond: string | null = null;
+  category: ArenaCategory = 'GENERAL';
 
   /** Anonymous users name themselves; so does everyone in the simulator build (no game login there). */
   get showOwner(): boolean { return ARENA_SAME_ORIGIN || !this.auth.isLoggedIn; }
@@ -232,7 +251,7 @@ export class TacticArenaNewComponent implements OnInit, OnDestroy {
     this.starting = true;
     this.startError = '';
     const owner = this.showOwner ? this.owner.trim() || undefined : undefined;
-    this.api.start(this.name.trim(), this.setup.team.teamId, tactic, owner).subscribe({
+    this.api.start(this.name.trim(), this.setup.team.teamId, tactic, owner, this.category).subscribe({
       next: response => {
         this.starting = false;
         void this.router.navigate([], { relativeTo: this.route, queryParams: { test: response.id } });

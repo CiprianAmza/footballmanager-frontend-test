@@ -62,8 +62,9 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                             (cancel)="cancelTest()"></app-arena-progress>
 
         <section class="ta-card">
-          <app-arena-results [results]="test.results" title="Results · reference clubs"
-                             emptyText="Available when the three reference runs have finished."></app-arena-results>
+          <app-arena-results [results]="test.results"
+                             [title]="test.category === 'DIAMOND' ? 'Results · Diamond League clubs' : 'Results · reference clubs'"
+                             emptyText="Available when all reference runs have finished."></app-arena-results>
         </section>
 
         <section class="ta-card">

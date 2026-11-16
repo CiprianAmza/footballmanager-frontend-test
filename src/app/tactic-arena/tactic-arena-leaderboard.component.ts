@@ -1,16 +1,28 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { EMPTY, Subscription, timer } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import {
-  ArenaLeaderboard, ArenaSplit, ArenaTestSummary, TacticArenaService, formationLabel, isActive, predictionLabel, referenceNames, signed
+  ARENA_TIERS, ArenaLeaderboard, ArenaReferenceTeam, ArenaSplit, ArenaTestSummary, ArenaTier, TacticArenaService,
+  formationLabel, isActive, pointsPct, predictionLabel, referenceNames, signed
 } from './tactic-arena.service';
 
 type Split = 'overall' | 'home' | 'away';
+type Category = 'general' | 'diamond';
 type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'uploaded';
+const TEAM_TIER: Record<string, ArenaTier> = { top: 'TOP', mid: 'MID', bottom: 'BOTTOM' };
+const TIER_TITLES: Record<ArenaTier, string> = { TOP: 'Top club', MID: 'Mid-table club', BOTTOM: 'Bottom club' };
 
-/** /tactic-arena — every tested tactic, like the fm-arena aggregator table. */
+interface BestCard { title: string; club: string | null; test: ArenaTestSummary | null; split: ArenaSplit | null; }
+interface TeamOption { key: string; label: string; }
+
+/**
+ * /tactic-arena — every tested tactic, like the fm-arena aggregator table, in two categories:
+ * General (3 fixed reference clubs: top, mid-table, bottom) and Diamond League clubs (8 clubs).
+ * The "Team" selector shows the average of the category's clubs or one club's own run.
+ * Category and team are kept in the URL (?cat=diamond&team=top|mid|bottom|<teamId>).
+ */
 @Component({
   selector: 'app-tactic-arena-leaderboard',
   standalone: true,
@@ -23,7 +35,7 @@ type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'upl
           <span class="ta-eyebrow">Tactic Arena</span>
           <h1>Tactic testing</h1>
           <p class="ta-sub" *ngIf="board">
-            {{ board.testsCount }} tactics have been tested. Total number of matches played is {{ board.matchesPlayed }}.
+            {{ doneCount }} tactics have been tested. Total number of matches played is {{ matchesCount }}.
           </p>
         </div>
         <div class="ta-actions">
@@ -43,9 +55,37 @@ type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'upl
         Export push: <span [class.ta-pos]="board?.gitPush?.ok" [class.ta-neg]="board?.gitPush?.ok === false">{{ board?.gitPush?.message }}</span>
       </p>
 
-      <div class="ta-tabs" role="tablist">
-        <button *ngFor="let tab of tabs" type="button" role="tab" [class.active]="split === tab.key"
-                [attr.aria-selected]="split === tab.key" (click)="split = tab.key">{{ tab.label }}</button>
+      <div class="ta-tabs ta-cat-tabs" role="tablist" *ngIf="hasDiamond">
+        <button type="button" role="tab" [class.active]="cat === 'general'" [attr.aria-selected]="cat === 'general'"
+                (click)="selectCategory('general')">General</button>
+        <button type="button" role="tab" [class.active]="cat === 'diamond'" [attr.aria-selected]="cat === 'diamond'"
+                (click)="selectCategory('diamond')">Diamond League clubs</button>
+      </div>
+
+      <div class="ta-best-grid" *ngIf="board" [class.compact]="cat === 'diamond'">
+        <div class="ta-best" *ngFor="let card of bestCards">
+          <span class="ta-eyebrow">{{ card.title }}</span>
+          <span class="ta-small" *ngIf="card.club">{{ card.club }}</span>
+          <ng-container *ngIf="card.test && card.split; else noBest">
+            <a class="ta-best-name" [routerLink]="['/tactic-arena', card.test.id]">{{ card.test.name }}</a>
+            <span class="ta-small">{{ formation(card.test.formation) }} · <strong>{{ card.split.pts }} / {{ card.split.ptsMax }}</strong> pts
+              · GD {{ signed(card.split.gd) }}</span>
+          </ng-container>
+          <ng-template #noBest><span class="ta-muted">No finished test yet.</span></ng-template>
+        </div>
+      </div>
+
+      <div class="ta-tabs-bar">
+        <div class="ta-tabs" role="tablist">
+          <button *ngFor="let tab of tabs" type="button" role="tab" [class.active]="split === tab.key"
+                  [attr.aria-selected]="split === tab.key" (click)="split = tab.key">{{ tab.label }}</button>
+        </div>
+        <label class="ta-team-pick">
+          <span>Team</span>
+          <select [value]="team" (change)="selectTeam($any($event.target).value)">
+            <option *ngFor="let option of teamOptions" [value]="option.key" [selected]="option.key === team">{{ option.label }}</option>
+          </select>
+        </label>
       </div>
       <div class="ta-table-wrap">
         <table class="ta-table">
@@ -81,7 +121,8 @@ type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'upl
               <td class="ta-left">{{ test.leagueName || '—' }}</td>
               <ng-container *ngIf="row(test) as s; else emptyCells">
                 <td>{{ s.pld }}</td>
-                <td class="ta-strong">{{ s.pts }} / {{ s.ptsMax }}</td>
+                <td class="ta-strong">{{ s.pts }} / {{ s.ptsMax }}
+                  <span class="ta-small" *ngIf="pct(s) !== null">{{ pct(s) | number:'1.0-0' }}%</span></td>
                 <td [class.ta-pos]="s.gd > 0" [class.ta-neg]="s.gd < 0">{{ signed(s.gd) }}</td>
                 <td>{{ s.gf }}</td>
                 <td>{{ s.ga }}</td>
@@ -94,8 +135,8 @@ type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'upl
               </ng-template>
               <td>{{ (test.finishedAt || test.createdAt) | date:'dd.MM.yyyy' }}</td>
             </tr>
-            <tr *ngIf="board && !board.tests.length">
-              <td class="ta-left ta-muted" [attr.colspan]="numericColumns.length + 6">No tactic has been tested yet.</td>
+            <tr *ngIf="board && !categoryTests.length">
+              <td class="ta-left ta-muted" [attr.colspan]="numericColumns.length + 6">No tactic has been tested in this category yet.</td>
             </tr>
             <tr *ngIf="!board && !error">
               <td class="ta-left ta-muted" [attr.colspan]="numericColumns.length + 6">Loading…</td>
@@ -103,8 +144,14 @@ type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'upl
           </tbody>
         </table>
       </div>
-      <p class="ta-small">PTS = average league points per season / maximum possible, from the general simulations: the same tactic
-        on the fixed reference clubs{{ refs ? ' (' + refs + ')' : '' }}, so every test is comparable. The chosen club's own run (custom) is on the test page.</p>
+      <p class="ta-small" *ngIf="cat === 'general'">PTS = league points per season / maximum possible, from the general simulations:
+        the same tactic on the fixed reference clubs{{ refs ? ' (' + refs + ')' : '' }}, so every test is comparable.
+        "All reference clubs" is their average; Top / Mid-table / Bottom club shows that club's run alone.
+        The chosen club's own run (custom) is on the test page.</p>
+      <p class="ta-small" *ngIf="cat === 'diamond'">PTS = league points per season / maximum possible, from the same tactic on
+        each of the Diamond League clubs{{ diamondNames ? ' (' + diamondNames + ')' : '' }}. "All 8 clubs" is their average; picking
+        a club shows its run alone. The percentage is used to sort when maxima differ.</p>
+      <p class="ta-small">Best cards use the Overall figures (points share of the maximum), ties broken by goal difference.</p>
     </div>
   `
 })
@@ -112,6 +159,8 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
   board: ArenaLeaderboard | null = null;
   error = '';
   split: Split = 'overall';
+  cat: Category = 'general';
+  team = 'all';
   sortKey: SortKey = 'pts';
   sortDesc = true;
   readonly tabs: { key: Split; label: string }[] = [
@@ -125,14 +174,18 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
   readonly signed = signed;
   readonly formation = formationLabel;
   readonly prediction = predictionLabel;
-
-  get refs(): string | null { return referenceNames(this.board?.referenceTeams); }
+  readonly pct = pointsPct;
   readonly active = (test: ArenaTestSummary) => isActive(test.status);
   private poll?: Subscription;
+  private querySub?: Subscription;
 
-  constructor(private api: TacticArenaService, private router: Router) {}
+  constructor(private api: TacticArenaService, private router: Router, private route: ActivatedRoute) {}
 
   ngOnInit(): void {
+    this.querySub = this.route.queryParamMap.subscribe(params => {
+      this.cat = params.get('cat') === 'diamond' ? 'diamond' : 'general';
+      this.team = params.get('team') || 'all';
+    });
     // Refreshed every 5 s so tests in progress show their current percentage.
     this.poll = timer(0, 5000).pipe(switchMap(() => this.api.leaderboard().pipe(
       catchError(error => {
@@ -142,10 +195,141 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
     ))).subscribe(board => { this.board = board; this.error = ''; });
   }
 
-  ngOnDestroy(): void { this.poll?.unsubscribe(); }
+  ngOnDestroy(): void { this.poll?.unsubscribe(); this.querySub?.unsubscribe(); }
 
-  row(test: ArenaTestSummary): ArenaSplit | null {
-    return test.results ? test.results[this.split] : null;
+  // ---------- categories ----------
+
+  private isDiamond(test: ArenaTestSummary): boolean { return test.category === 'DIAMOND'; }
+
+  get hasDiamond(): boolean {
+    return !!this.board?.diamondTeams?.length || (this.board?.tests || []).some(test => this.isDiamond(test));
+  }
+
+  get categoryTests(): ArenaTestSummary[] {
+    const diamond = this.cat === 'diamond';
+    return (this.board?.tests || []).filter(test => this.isDiamond(test) === diamond);
+  }
+
+  get doneCount(): number { return this.categoryTests.filter(test => test.status === 'DONE').length; }
+
+  get matchesCount(): number {
+    return this.categoryTests.filter(test => test.status === 'DONE')
+      .reduce((sum, test) => sum + (test.results?.overall?.pld || 0), 0);
+  }
+
+  selectCategory(cat: Category): void {
+    this.cat = cat;
+    this.team = 'all';
+    this.updateUrl();
+  }
+
+  selectTeam(value: string): void {
+    this.team = this.teamOptions.some(option => option.key === value) ? value : 'all';
+    this.updateUrl();
+  }
+
+  private updateUrl(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { cat: this.cat === 'diamond' ? 'diamond' : null, team: this.team === 'all' ? null : this.team },
+      queryParamsHandling: 'merge', replaceUrl: true
+    });
+  }
+
+  // ---------- clubs ----------
+
+  get refs(): string | null { return referenceNames(this.board?.referenceTeams); }
+  get diamondNames(): string | null { return referenceNames(this.diamondClubs); }
+
+  /** The reference club of a tier: by its `tier`, else by position (top, mid, bottom). */
+  private refTeam(tier: ArenaTier): ArenaReferenceTeam | null {
+    const teams = this.board?.referenceTeams || [];
+    const tagged = teams.find(team => team.tier === tier);
+    if (tagged) return tagged;
+    return teams.every(team => !team.tier) ? teams[ARENA_TIERS.indexOf(tier)] || null : null;
+  }
+
+  /** The Diamond League clubs: from the response, else gathered from the tests' per-club results. */
+  private get diamondClubs(): ArenaReferenceTeam[] {
+    if (this.board?.diamondTeams?.length) return this.board.diamondTeams;
+    const clubs = new Map<number, ArenaReferenceTeam>();
+    for (const test of this.board?.tests || []) {
+      for (const club of test.byClub || []) {
+        if (!clubs.has(club.teamId)) {
+          clubs.set(club.teamId, { teamId: club.teamId, name: club.teamName, predictedPosition: club.predictedPosition, leagueSize: club.leagueSize });
+        }
+      }
+    }
+    return [...clubs.values()];
+  }
+
+  private clubText(team: ArenaReferenceTeam | null): string | null {
+    const name = team?.name || team?.teamName;
+    if (!name) return null;
+    return team?.predictedPosition != null ? `${name} · ${predictionLabel(team.predictedPosition, team.leagueSize)}` : name;
+  }
+
+  get teamOptions(): TeamOption[] {
+    if (this.cat === 'diamond') {
+      return [
+        { key: 'all', label: `All ${this.diamondClubs.length || 8} clubs` },
+        ...this.diamondClubs.filter(team => team.teamId != null)
+          .map(team => ({ key: String(team.teamId), label: this.clubText(team) || `Club ${team.teamId}` }))
+      ];
+    }
+    const option = (key: string, tier: ArenaTier): TeamOption => {
+      const club = this.clubText(this.refTeam(tier));
+      return { key, label: club ? `${TIER_TITLES[tier]} — ${club}` : TIER_TITLES[tier] };
+    };
+    return [{ key: 'all', label: 'All reference clubs' }, option('top', 'TOP'), option('mid', 'MID'), option('bottom', 'BOTTOM')];
+  }
+
+  // ---------- figures ----------
+
+  /** The figures shown for a test: the category average, or one club's own run. */
+  private splitOf(test: ArenaTestSummary, team: string, split: Split): ArenaSplit | null {
+    if (team === 'all') return test.results ? test.results[split] : null;
+    if (this.cat === 'diamond') {
+      return (test.byClub || []).find(club => String(club.teamId) === team)?.results?.[split] || null;
+    }
+    const tier = TEAM_TIER[team];
+    return tier ? test.byTier?.[tier]?.results?.[split] || null : null;
+  }
+
+  row(test: ArenaTestSummary): ArenaSplit | null { return this.splitOf(test, this.team, this.split); }
+
+  /** Best tactic of the category and for each of its clubs; ties broken by goal difference. */
+  get bestCards(): BestCard[] {
+    const pick = (team: string) => {
+      let best: { test: ArenaTestSummary; split: ArenaSplit } | null = null;
+      for (const test of this.categoryTests) {
+        const value = this.splitOf(test, team, 'overall');
+        if (!value) continue;
+        const a = pointsPct(value) ?? value.pts;
+        const b = best ? pointsPct(best.split) ?? best.split.pts : -Infinity;
+        if (!best || a > b || (a === b && value.gd > best.split.gd)) best = { test, split: value };
+      }
+      return best;
+    };
+    const card = (title: string, club: string | null, team: string): BestCard => {
+      const best = pick(team);
+      return { title, club, test: best?.test || null, split: best?.split || null };
+    };
+    if (this.cat === 'diamond') {
+      return [
+        card(`Best overall (${this.diamondClubs.length || 8} clubs)`, null, 'all'),
+        ...this.diamondClubs.filter(team => team.teamId != null)
+          .map(team => card(`Best for ${team.name || team.teamName || 'club ' + team.teamId}`,
+            team.predictedPosition != null ? `prediction ${predictionLabel(team.predictedPosition, team.leagueSize)}` : null,
+            String(team.teamId)))
+      ];
+    }
+    return [
+      card('Best overall', this.refs, 'all'),
+      card('Best for a top club', this.clubText(this.refTeam('TOP')), 'top'),
+      card('Best for a mid-table club', this.clubText(this.refTeam('MID')), 'mid'),
+      card('Best for a bottom club', this.clubText(this.refTeam('BOTTOM')), 'bottom')
+    ];
   }
 
   sortBy(key: SortKey): void {
@@ -154,11 +338,13 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
   }
 
   get sortedTests(): ArenaTestSummary[] {
-    const tests = [...(this.board?.tests || [])];
+    const tests = [...this.categoryTests];
     const value = (test: ArenaTestSummary): number | null => {
       if (this.sortKey === 'uploaded') return Date.parse(test.finishedAt || test.createdAt) || 0;
       const split = this.row(test);
       if (!split) return null;
+      // Points sort by share of the maximum, so seasons of different length compare fairly.
+      if (this.sortKey === 'pts') return pointsPct(split) ?? split.pts;
       return (split as any)[this.sortKey] ?? null;
     };
     return tests.sort((left, right) => {
