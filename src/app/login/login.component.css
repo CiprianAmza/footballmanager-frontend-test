@@ -121,3 +121,13 @@
   background: transparent;
   border: 1px solid #536176;
 }
+
+.public-arena-link {
+  display: inline-block;
+  margin-top: 18px;
+  color: #6f86a3;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.public-arena-link:hover { color: #1a8fc4; text-decoration: underline; }

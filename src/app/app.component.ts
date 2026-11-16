@@ -11,6 +11,7 @@ import { LiveMatchClosed } from './models/live-match.model';
 import { UiFeedbackService } from './shared/ui-feedback.service';
 import { ThemeService } from './services/theme.service';
 import { match2dReplayUrl } from './shared/match2d';
+import { ARENA_SAME_ORIGIN } from './tactic-arena/arena-env';
 
 export const urlApp: string = window.location.port === '4201' ? 'http://localhost:8087' : 'http://localhost:8086';
 @Component({
@@ -163,6 +164,18 @@ export class AppComponent implements OnDestroy {
   get isAdminRoute(): boolean {
     return this.router.url === '/admin' || this.router.url.startsWith('/admin/')
         || this.router.url.startsWith('/dev/');
+  }
+
+  readonly arenaSimulator = ARENA_SAME_ORIGIN;
+
+  /** Tactic Arena is public: without a career it gets its own plain shell instead of the sign-in screen. */
+  get isPublicArenaRoute(): boolean {
+    const url = this.router.url;
+    if (url !== '/tactic-arena' && !url.startsWith('/tactic-arena/') && !url.startsWith('/tactic-arena?')) return false;
+    // Simulator build: served by the Arena backend alone, there is no game login to wait for.
+    if (this.arenaSimulator) return true;
+    if (!this.authService.sessionChecked) return false;
+    return !this.authService.isLoggedIn || (this.teamService.setupChecked && !this.teamService.setupComplete);
   }
 
   get fastForwardRunning(): boolean {

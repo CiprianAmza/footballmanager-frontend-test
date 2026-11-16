@@ -1,0 +1,4 @@
+/* Screenshot mode of the Arena editor: the tactics page is sized to the viewport
+   (height: calc(100vh - 50px)); the capture must not depend on the window, so fix it. */
+:host(.arena-fixed-size) { display: block; width: 1440px; }
+:host(.arena-fixed-size) .lab-shell { height: 1100px; }

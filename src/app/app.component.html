@@ -1,9 +1,17 @@
 <app-ui-feedback-host></app-ui-feedback-host>
 
-<ng-container *ngIf="isAdminRoute; else gameApplication">
+<ng-container *ngIf="isAdminRoute; else (isPublicArenaRoute ? publicArena : gameApplication)">
   <app-route-semantic-header></app-route-semantic-header>
   <router-outlet></router-outlet>
 </ng-container>
+
+<ng-template #publicArena>
+  <header style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;background:var(--fm-topbar-bg);border-bottom:1px solid var(--fm-border)">
+    <a routerLink="/tactic-arena" style="color:var(--fm-heading);font-weight:800;font-size:1.15em;text-decoration:none">Tactic Arena</a>
+    <a *ngIf="!arenaSimulator" routerLink="/home" style="color:var(--fm-accent);font-weight:700;text-decoration:none">Sign in</a>
+  </header>
+  <main style="background:var(--fm-page-bg);min-height:calc(100vh - 50px)"><router-outlet></router-outlet></main>
+</ng-template>
 
 <ng-template #gameApplication>
 <a *ngIf="authService.isLoggedIn && teamService.setupComplete" routerLink="/multiplayer" class="multiplayer-entry-link">Multiplayer room</a>

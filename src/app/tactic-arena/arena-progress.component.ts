@@ -16,7 +16,8 @@ import { ArenaRun, ArenaTestDetail, RUN_KIND_LABELS, isActive } from './tactic-a
           <p class="ta-sub">
             <span class="ta-status" [ngClass]="test.status">{{ test.status }}</span>
             {{ test.progress | number:'1.0-1' }}% total
-            <ng-container *ngIf="test.status === 'QUEUED'"> · waiting for the test ahead of it</ng-container>
+            <ng-container *ngIf="test.status === 'QUEUED'"> · waiting for a free simulation slot</ng-container>
+            <ng-container *ngIf="test.status === 'PREPARING'"> · generating the base world first</ng-container>
           </p>
         </div>
         <div class="ta-actions">
@@ -32,7 +33,7 @@ import { ArenaRun, ArenaTestDetail, RUN_KIND_LABELS, isActive } from './tactic-a
 
       <div class="ta-runs" style="margin-top: 14px">
         <div class="ta-run-row" *ngFor="let run of test.runs">
-          <div><strong>{{ run.teamName }}</strong><div class="ta-small">{{ label(run) }}</div></div>
+          <div><strong>{{ run.teamName || 'Chosen when the world is ready' }}</strong><div class="ta-small">{{ label(run) }}</div></div>
           <div><span class="ta-status" [ngClass]="run.status">{{ run.status }}</span></div>
           <div>
             <div class="ta-bar" [class.done]="run.status === 'DONE'" [class.failed]="run.status === 'FAILED'">

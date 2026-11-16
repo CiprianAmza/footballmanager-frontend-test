@@ -49,6 +49,7 @@
 
 .ta-status { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75em; font-weight: 800; letter-spacing: 0.05em; }
 .ta-status.QUEUED { background: rgba(127,132,153,0.25); color: var(--fm-text-dim); }
+.ta-status.PREPARING { background: rgba(155,89,182,0.2); color: var(--fm-tier-world); }
 .ta-status.RUNNING { background: rgba(52,152,219,0.2); color: var(--fm-info); }
 .ta-status.DONE { background: rgba(39,174,96,0.2); color: var(--fm-success); }
 .ta-status.FAILED { background: rgba(231,76,60,0.2); color: var(--fm-danger); }

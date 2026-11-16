@@ -1,7 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, HostBinding, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { urlApp } from '../app.component';
 import { AdminService } from '../services/admin.service';
 import { AuthService } from '../services/auth.service';
 import { ChairmanClubService } from '../services/chairman-club.service';
@@ -11,7 +10,28 @@ import { TeamService } from '../services/team.service';
 import { SharedModule } from '../shared/shared.module';
 import { UiFeedbackService } from '../shared/ui-feedback.service';
 import { Tactics4Component } from '../tactics4/tactics4.component';
-import { ArenaSetup, ArenaTactic } from './tactic-arena.service';
+import { ArenaRatingTierService } from './arena-rating-tier.service';
+import { ARENA_API, ArenaSetup, ArenaTactic } from './tactic-arena.service';
+
+/** Copy of TacticService.FORMATION_GRID_INDICES (backend): the 0..29 pitch cells of each formation. */
+const FORMATION_GRID_INDICES: Record<string, number[]> = {
+  '442': [1, 3, 10, 11, 13, 14, 20, 21, 23, 24, 27],
+  '433': [1, 2, 3, 10, 12, 14, 20, 21, 23, 24, 27],
+  '343': [1, 2, 3, 10, 11, 13, 14, 20, 22, 24, 27],
+  '451': [2, 10, 11, 12, 13, 14, 20, 21, 23, 24, 27],
+  '352': [1, 3, 10, 11, 12, 13, 14, 20, 22, 24, 27],
+  '4231': [2, 5, 7, 9, 16, 18, 20, 21, 23, 24, 27],
+  '4141': [2, 10, 11, 13, 14, 17, 20, 21, 23, 24, 27],
+  '4411': [2, 7, 10, 11, 13, 14, 20, 21, 23, 24, 27],
+  '4321': [2, 6, 8, 11, 12, 13, 20, 21, 23, 24, 27],
+  '4222': [1, 3, 5, 9, 16, 18, 20, 21, 23, 24, 27],
+  '3421': [2, 6, 8, 11, 13, 15, 19, 21, 22, 23, 27],
+  '532': [1, 3, 11, 12, 13, 20, 21, 22, 23, 24, 27],
+  '5212': [1, 3, 7, 12, 17, 20, 21, 22, 23, 24, 27],
+  '541': [2, 10, 11, 13, 14, 20, 21, 22, 23, 24, 27],
+  '3511': [2, 7, 11, 12, 13, 15, 19, 21, 22, 23, 27],
+  '31411': [2, 7, 10, 11, 13, 14, 17, 21, 22, 23, 27]
+};
 
 /**
  * The game's tactics page (Tactics4Component: same template, same styles) bound to Tactic
@@ -27,12 +47,17 @@ import { ArenaSetup, ArenaTactic } from './tactic-arena.service';
   standalone: true,
   imports: [SharedModule],
   templateUrl: '../tactics4/tactics4.component.html',
-  styleUrls: ['../tactics4/tactics4.component.css']
+  styleUrls: ['../tactics4/tactics4.component.css', './arena-editor.css'],
+  // Tier colours of the base world, from the public route (the root service reads the career).
+  providers: [{ provide: RatingTierService, useClass: ArenaRatingTierService }]
 })
 export class TacticArenaEditorComponent extends Tactics4Component implements OnChanges {
   @Input() setup: ArenaSetup | null = null;
   @Input() arenaReadOnly = false;
   @Output() tacticSaved = new EventEmitter<ArenaTactic>();
+
+  /** Read-only (screenshot) mode draws at a fixed size, whatever the window: see arena-editor.css. */
+  @HostBinding('class.arena-fixed-size') get arenaFixedSize(): boolean { return this.arenaReadOnly; }
 
   constructor(
     route: ActivatedRoute,
@@ -53,6 +78,71 @@ export class TacticArenaEditorComponent extends Tactics4Component implements OnC
   override isSlotLocked(_positionIndex: number, _position?: string): boolean { return false; }
   override isManagerChairmanPlayerLocked(_playerId: number): boolean { return false; }
 
+  /**
+   * Tactic Arena is public and its clubs live in the base world, not in the career. The
+   * club-specific `/tactic/...` helpers (player card, assistant, set-piece suggestion, role
+   * suitability, team info) read the career, so they are never called here. The static
+   * catalogues come from their public copies `/tactic-arena/roles|instructions/{position}`.
+   */
+  private arenaRoleCache = new Map<string, any[]>();
+  private arenaInstructionCache = new Map<string, any[]>();
+
+  /** Pitch cells from the local copy of the engine's formation table: no request needed. */
+  override setFormationIndices(tactic: string): void {
+    const self = this as any;
+    self.formationRequestId++;
+    self.clearLineupState();
+    this.allowedIndexes = tactic ? [...(FORMATION_GRID_INDICES[tactic] || FORMATION_GRID_INDICES['442'])] : [];
+  }
+
+  override openPlayerCard(_playerId: number): void { /* career-only card */ }
+
+  override askAssistant(): void {
+    this.arenaFeedback.error('The assistant works on your career squad only; place the players by dragging them.');
+  }
+
+  override suggestSetPieceTakers(): void {
+    this.arenaFeedback.error('Set-piece suggestions work on your career squad only; pick the takers from the lists.');
+  }
+
+  /** Role catalogue for the position (no per-player suitability: that would read the career). */
+  override loadRolesForPlayer(player: any): void {
+    const position = String(player?.position || '');
+    this.availableRoles = [];
+    this.loadingRoles = false;
+    if (!position) return;
+    const cached = this.arenaRoleCache.get(position);
+    if (cached) { this.availableRoles = cached; return; }
+    this.loadingRoles = true;
+    this.arenaHttp.get<any[]>(ARENA_API + `/roles/${encodeURIComponent(position)}`).subscribe({
+      next: data => {
+        const roles = (data || []).map(role => ({ name: role.name, duties: role.duties || [] }));
+        this.arenaRoleCache.set(position, roles);
+        if (this.activeRoleSlot?.player?.position === position) this.availableRoles = roles;
+        this.loadingRoles = false;
+      },
+      error: () => { this.availableRoles = []; this.loadingRoles = false; }
+    });
+  }
+
+  override loadInstructionsForPosition(position: string): void {
+    this.availableInstructions = [];
+    this.loadingInstructions = false;
+    if (!position) return;
+    const cached = this.arenaInstructionCache.get(position);
+    if (cached) { this.availableInstructions = cached; return; }
+    this.loadingInstructions = true;
+    this.arenaHttp.get<any[]>(ARENA_API + `/instructions/${encodeURIComponent(position)}`).subscribe({
+      next: data => {
+        const instructions = data || [];
+        this.arenaInstructionCache.set(position, instructions);
+        if (this.activeInstructionsSlot?.player?.position === position) this.availableInstructions = instructions;
+        this.loadingInstructions = false;
+      },
+      error: () => { this.availableInstructions = []; this.loadingInstructions = false; }
+    });
+  }
+
   override ngOnChanges(changes: SimpleChanges): void {
     if (changes['setup'] && !changes['setup'].firstChange) this.loadData();
   }
@@ -65,15 +155,6 @@ export class TacticArenaEditorComponent extends Tactics4Component implements OnC
     this.teamId = setup.team.teamId;
     if (setup.team.color1) this.teamColor1 = self.normalizeColor(setup.team.color1);
     if (setup.team.color2) this.teamColor2 = self.normalizeColor(setup.team.color2);
-    if (!setup.team.color1) {
-      this.arenaHttp.get<any>(urlApp + `/teams/info/${setup.team.teamId}`).subscribe({
-        next: info => {
-          if (this.setup !== setup) return;
-          if (info?.color1) this.teamColor1 = self.normalizeColor(info.color1);
-          if (info?.color2) this.teamColor2 = self.normalizeColor(info.color2);
-        }
-      });
-    }
     this.players = (setup.players || [])
       .map(player => ({ ...player, condition: player.condition ?? 95, sharpness: player.sharpness ?? 88 }))
       .sort((left, right) => right.rating - left.rating);
@@ -86,7 +167,22 @@ export class TacticArenaEditorComponent extends Tactics4Component implements OnC
     const teamView = setup.teamView || null;
     this.managerName = teamView?.managerName || setup.team.name;
     this.managerTacticSource = setup.savedTactic ? 'SAVED' : 'MANAGER_PREFERENCE';
-    this.managerTacticSnapshot = (setup.savedTactic || teamView?.managerTactic || null) as any;
+    // A new world's club often has a saved formation and instructions but no eleven: keep its
+    // settings and take the eleven (and set-piece takers) from the best possible tactic.
+    const best = teamView?.bestPossibleTactic || teamView?.managerTactic || null;
+    let start: any = setup.savedTactic || teamView?.managerTactic || null;
+    if (start && !(start.formationDataList || []).length && best?.formationDataList?.length) {
+      start = {
+        ...start,
+        tactic: best.tactic || start.tactic,
+        formationDataList: best.formationDataList,
+        penaltyTakerId: start.penaltyTakerId ?? best.penaltyTakerId ?? null,
+        freeKickTakerId: start.freeKickTakerId ?? best.freeKickTakerId ?? null,
+        cornerTakerLeftId: start.cornerTakerLeftId ?? best.cornerTakerLeftId ?? null,
+        cornerTakerRightId: start.cornerTakerRightId ?? best.cornerTakerRightId ?? null
+      };
+    }
+    this.managerTacticSnapshot = start;
     this.bestPossibleTacticSnapshot = (teamView?.bestPossibleTactic || null) as any;
     self.applyManagerTacticWhenReady();
   }

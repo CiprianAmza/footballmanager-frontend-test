@@ -4,6 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { EMPTY, Subscription, timer } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
+import { AuthService } from '../services/auth.service';
+import { ArenaBaselineComponent } from './arena-baseline.component';
+import { ARENA_SAME_ORIGIN } from './arena-env';
 import { ArenaProgressComponent } from './arena-progress.component';
 import { ArenaResultsComponent } from './arena-results.component';
 import { TacticArenaEditorComponent } from './tactic-arena-editor.component';
@@ -19,7 +22,8 @@ import {
 @Component({
   selector: 'app-tactic-arena-new',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, TacticArenaEditorComponent, ArenaProgressComponent, ArenaResultsComponent],
+  imports: [CommonModule, FormsModule, RouterModule, TacticArenaEditorComponent, ArenaProgressComponent, ArenaResultsComponent,
+    ArenaBaselineComponent],
   styleUrls: ['./tactic-arena.css'],
   template: `
     <div class="ta-page">
@@ -27,8 +31,8 @@ import {
         <div>
           <span class="ta-eyebrow">Tactic Arena</span>
           <h1>Test a tactic</h1>
-          <p class="ta-sub">Four full seasons are simulated on a copy of the world: the chosen club, then the same tactic on
-            the highest, median and lowest reputation clubs of its league. Your career is not changed.</p>
+          <p class="ta-sub">Four full seasons are simulated, each one season 1 of a freshly generated world: the chosen club,
+            then the same tactic on the highest, median and lowest reputation clubs of its league. No career is touched.</p>
         </div>
         <div class="ta-actions"><a class="ta-btn" routerLink="/tactic-arena">Leaderboard</a></div>
       </div>
@@ -49,9 +53,11 @@ import {
 
       <!-- LAUNCH -->
       <ng-container *ngIf="!testId">
+        <app-arena-baseline (ready)="onBaselineReady()"></app-arena-baseline>
         <section class="ta-card">
           <h2>1 · Club</h2>
-          <p class="ta-error" *ngIf="clubsError">{{ clubsError }}</p>
+          <p class="ta-notice" *ngIf="worldMissing">There is no base world yet: generate it above, the clubs appear when it is ready.</p>
+          <p class="ta-error" *ngIf="clubsError && !worldMissing">{{ clubsError }}</p>
           <div class="ta-form">
             <label class="ta-field">
               <span>League</span>
@@ -75,7 +81,7 @@ import {
               <span class="ta-rep">{{ club.reputation }}</span>
             </button>
           </div>
-          <p class="ta-muted" *ngIf="!leagues.length && !clubsError">Loading clubs…</p>
+          <p class="ta-muted" *ngIf="!leagues.length && !clubsError && !worldMissing">Loading clubs…</p>
         </section>
 
         <section class="ta-card" *ngIf="selectedTeamId">
@@ -92,6 +98,10 @@ import {
             <label class="ta-field">
               <span>Test name</span>
               <input type="text" [(ngModel)]="name" maxlength="80" placeholder="e.g. Gegenpress 4-2-3-1">
+            </label>
+            <label class="ta-field" *ngIf="showOwner">
+              <span>Your name (optional)</span>
+              <input type="text" [(ngModel)]="owner" maxlength="40" placeholder="Shown as the owner">
             </label>
             <div class="ta-actions">
               <button type="button" class="ta-btn primary" [disabled]="starting || !name.trim()" (click)="start()">
@@ -112,11 +122,14 @@ export class TacticArenaNewComponent implements OnInit, OnDestroy {
   leagueId: number | null = null;
   clubQuery = '';
   clubsError = '';
+  worldMissing = false;
+  private clubsLoading = false;
   selectedTeamId: number | null = null;
   selectedClubName = '';
   setup: ArenaSetup | null = null;
   setupError = '';
   name = '';
+  owner = '';
   starting = false;
   startError = '';
 
@@ -130,7 +143,8 @@ export class TacticArenaNewComponent implements OnInit, OnDestroy {
   private querySub?: Subscription;
   private initialised = false;
 
-  constructor(private api: TacticArenaService, private route: ActivatedRoute, private router: Router) {}
+  constructor(private api: TacticArenaService, private route: ActivatedRoute, private router: Router,
+              public auth: AuthService) {}
 
   ngOnInit(): void {
     this.querySub = this.route.queryParamMap.subscribe(params => {
@@ -154,6 +168,9 @@ export class TacticArenaNewComponent implements OnInit, OnDestroy {
 
   get active(): boolean { return isActive(this.test?.status); }
 
+  /** Anonymous users name themselves; so does everyone in the simulator build (no game login there). */
+  get showOwner(): boolean { return ARENA_SAME_ORIGIN || !this.auth.isLoggedIn; }
+
   get visibleClubs(): ArenaClub[] {
     const query = this.clubQuery.trim().toLowerCase();
     if (query) {
@@ -165,13 +182,26 @@ export class TacticArenaNewComponent implements OnInit, OnDestroy {
 
   trackClub(_: number, club: ArenaClub): number { return club.teamId; }
 
+  onBaselineReady(): void {
+    if (!this.leagues.length) this.loadClubs();
+  }
+
   private loadClubs(): void {
+    if (this.clubsLoading) return;
+    this.clubsLoading = true;
+    this.clubsError = '';
     this.api.clubs().subscribe({
       next: data => {
+        this.clubsLoading = false;
+        this.worldMissing = false;
         this.leagues = data?.leagues || [];
         if (this.leagueId === null && this.leagues.length) this.leagueId = this.leagues[0].competitionId;
       },
-      error: error => this.clubsError = error?.error?.error || 'The clubs could not be loaded.'
+      error: error => {
+        this.clubsLoading = false;
+        this.worldMissing = error?.status === 409;
+        this.clubsError = error?.error?.error || 'The clubs could not be loaded.';
+      }
     });
   }
 
@@ -194,7 +224,8 @@ export class TacticArenaNewComponent implements OnInit, OnDestroy {
     if (!tactic) { this.startError = 'Pick exactly 11 starters on the pitch first.'; return; }
     this.starting = true;
     this.startError = '';
-    this.api.start(this.name.trim(), this.setup.team.teamId, tactic).subscribe({
+    const owner = this.showOwner ? this.owner.trim() || undefined : undefined;
+    this.api.start(this.name.trim(), this.setup.team.teamId, tactic, owner).subscribe({
       next: response => {
         this.starting = false;
         void this.router.navigate([], { relativeTo: this.route, queryParams: { test: response.id } });

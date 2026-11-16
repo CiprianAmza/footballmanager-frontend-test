@@ -36,6 +36,7 @@ import { ChairmanRegentGuard } from './services/chairman-regent.guard';
 import { LegacyBoardroomGuard } from './services/legacy-boardroom.guard';
 import { RegentGuard } from './services/regent.guard';
 import { SettingsComponent } from './settings/settings.component';
+import { ARENA_SAME_ORIGIN } from './tactic-arena/arena-env';
 
 function prefixMatcher(prefixes: readonly string[], segments: UrlSegment[]): UrlMatchResult | null {
   return segments.length > 0 && prefixes.includes(segments[0].path) ? { consumed: [] } : null;
@@ -243,7 +244,7 @@ export const APP_ROUTES: Routes = [
     loadChildren: () => import('./features/world/world-feature.module').then(module => module.WorldFeatureModule)
   },
 
-  { path: '', redirectTo: '/home', pathMatch: 'full' },
+  { path: '', redirectTo: ARENA_SAME_ORIGIN ? '/tactic-arena' : '/home', pathMatch: 'full' },
   { path: '**', component: NotFoundComponent }
 ];
 

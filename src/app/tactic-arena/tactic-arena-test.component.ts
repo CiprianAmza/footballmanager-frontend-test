@@ -51,10 +51,6 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
               · season {{ test.season }}, days {{ test.startDay }}–{{ test.endDay }} · engine {{ test.engine }}
               · {{ test.createdAt | date:'dd.MM.yyyy HH:mm' }}
             </p>
-            <p class="ta-notice" *ngIf="test.leagueMatchesRemaining < test.leagueMatchesTotal">
-              The season was already under way: {{ test.leagueMatchesRemaining }} of {{ test.leagueMatchesTotal }}
-              league matches were simulated.
-            </p>
           </div>
           <div class="ta-actions"><a class="ta-btn" routerLink="/tactic-arena">Leaderboard</a></div>
         </div>
@@ -72,7 +68,8 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
         </section>
 
         <section class="ta-card" *ngFor="let run of test.runs; trackBy: trackRun">
-          <h2>{{ runLabel(run) }} · {{ run.teamName }} <span class="ta-small">(reputation {{ run.teamReputation }})</span>
+          <h2>{{ runLabel(run) }} · {{ run.teamName || 'chosen when the world is ready' }}
+            <span class="ta-small" *ngIf="run.teamName">(reputation {{ run.teamReputation }})</span>
             <span class="ta-status" [ngClass]="run.status" *ngIf="run.status !== 'DONE'">{{ run.status }}</span></h2>
           <p class="ta-error" *ngIf="run.message">{{ run.message }}</p>
           <app-arena-results *ngIf="run.stats" [results]="run.stats"></app-arena-results>
@@ -148,6 +145,7 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
         this.error = '';
         this.syncShots(test);
         if (!isActive(test.status)) this.poll?.unsubscribe();
+        this.updateCaptureMarker();
       });
     });
   }
@@ -175,7 +173,8 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
       setup = {
         team: {
           teamId: result.teamId, name: result.teamName, competitionId: result.leagueId,
-          competitionName: result.leagueName, reputation: run.teamReputation
+          competitionName: result.leagueName, reputation: run.teamReputation,
+          color1: result.color1 || undefined, color2: result.color2 || undefined
         },
         players: result.squad || [],
         formationCatalog: [],
@@ -207,7 +206,10 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
         if ((run.images || []).includes(kind)) {
           this.shots.set(key, { status: 'loading' });
           this.api.image(test.id, run.id, kind).subscribe({
-            next: blob => this.shots.set(key, { status: 'ready', url: URL.createObjectURL(blob) }),
+            next: blob => {
+              this.shots.set(key, { status: 'ready', url: URL.createObjectURL(blob) });
+              this.updateCaptureMarker();
+            },
             error: () => this.enqueue(run, kind)
           });
         } else {
@@ -252,6 +254,28 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
       }
     } finally {
       this.working = false;
+      this.updateCaptureMarker();
+    }
+  }
+
+  /**
+   * Completion marker for unattended (headless) capture: `<body data-arena-capture>` is
+   * `pending` while anything is still to load, draw or upload, then `done` - or `failed`
+   * (reasons in the console) when a capture failed for good. Only set once the test itself has
+   * finished, so no further run can bring new images.
+   */
+  private updateCaptureMarker(): void {
+    if (this.destroyed || !this.test) return;
+    const body = document.body;
+    const busy = this.working || this.queue.length > 0
+      || [...this.shots.values()].some(state => state.status === 'loading' || state.status === 'queued' || state.status === 'capturing');
+    if (busy || isActive(this.test.status)) { body.setAttribute('data-arena-capture', 'pending'); return; }
+    const failures = [...this.shots.entries()].filter(([, state]) => state.status === 'failed');
+    if (failures.length) {
+      for (const [key, state] of failures) console.error(`Tactic Arena capture failed for run:kind ${key}: ${state.error}`);
+      body.setAttribute('data-arena-capture', 'failed');
+    } else {
+      body.setAttribute('data-arena-capture', 'done');
     }
   }
 
@@ -278,6 +302,7 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
 
   private reset(): void {
     this.poll?.unsubscribe();
+    document.body.removeAttribute('data-arena-capture');
     this.queue = [];
     this.job = null;
     for (const state of this.shots.values()) if (state.url) URL.revokeObjectURL(state.url);

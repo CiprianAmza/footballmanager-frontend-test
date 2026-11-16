@@ -32,6 +32,13 @@ type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'upl
       </div>
 
       <p class="ta-error" *ngIf="error">{{ error }}</p>
+      <p class="ta-small" *ngIf="board?.baseline as b">
+        Every run plays season 1 of the base world:
+        <ng-container *ngIf="b.status === 'READY'">generated {{ b.createdAt | date:'dd.MM.yyyy HH:mm' }}, {{ b.clubs }} clubs.</ng-container>
+        <ng-container *ngIf="b.status === 'BUILDING'">being generated ({{ b.progress | number:'1.0-0' }}%).</ng-container>
+        <ng-container *ngIf="b.status === 'MISSING'">not generated yet (see Test a tactic).</ng-container>
+        <ng-container *ngIf="b.status === 'FAILED'"><span class="ta-neg">last generation failed.</span></ng-container>
+      </p>
       <p class="ta-small" *ngIf="board?.gitPush?.enabled && board?.gitPush?.lastAttemptAt">
         Export push: <span [class.ta-pos]="board?.gitPush?.ok" [class.ta-neg]="board?.gitPush?.ok === false">{{ board?.gitPush?.message }}</span>
       </p>
@@ -69,8 +76,8 @@ type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'upl
               </td>
               <td class="ta-left">{{ formation(test.formation) }}</td>
               <td class="ta-left">{{ test.owner }}</td>
-              <td class="ta-left">{{ test.teamName }}</td>
-              <td class="ta-left">{{ test.leagueName }}</td>
+              <td class="ta-left">{{ test.teamName || '—' }}</td>
+              <td class="ta-left">{{ test.leagueName || '—' }}</td>
               <ng-container *ngIf="row(test) as s; else emptyCells">
                 <td>{{ s.pld }}</td>
                 <td class="ta-strong">{{ s.pts }} / {{ s.ptsMax }}</td>

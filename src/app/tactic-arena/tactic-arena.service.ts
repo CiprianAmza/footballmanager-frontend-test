@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { urlApp } from '../app.component';
+import { ARENA_SAME_ORIGIN } from './arena-env';
 
 /** Shapes from fm-match2d/docs/TACTIC_ARENA_API.md. */
 
@@ -62,7 +63,23 @@ export interface ArenaGitPushStatus {
   message: string | null;
 }
 
-export type ArenaStatus = 'QUEUED' | 'RUNNING' | 'DONE' | 'FAILED' | 'CANCELLED';
+export type ArenaStatus = 'QUEUED' | 'PREPARING' | 'RUNNING' | 'DONE' | 'FAILED' | 'CANCELLED';
+
+/** The base world every run starts from (season 1, day 1). */
+export interface ArenaBaseline {
+  status: 'READY' | 'BUILDING' | 'MISSING' | 'FAILED';
+  progress: number;
+  uid: string | null;
+  createdAt: string | null;
+  appVersion: string | null;
+  season: number | null;
+  startDay: number | null;
+  endDay: number | null;
+  clubs: number | null;
+  buildStartedAt: string | null;
+  builtByOtherInstance: boolean;
+  message: string | null;
+}
 
 export interface ArenaTestSummary {
   id: number;
@@ -90,6 +107,7 @@ export interface ArenaLeaderboard {
   testsCount: number;
   matchesPlayed: number;
   gitPush: ArenaGitPushStatus | null;
+  baseline?: ArenaBaseline | null;
   tests: ArenaTestSummary[];
 }
 
@@ -170,6 +188,8 @@ export interface ArenaTableRow {
 export interface ArenaRunResult {
   teamId: number;
   teamName: string;
+  color1?: string | null;
+  color2?: string | null;
   leagueId: number;
   leagueName: string;
   season: number;
@@ -258,12 +278,24 @@ export const IMAGE_KIND_LABELS: Record<ArenaImageKind, string> = {
   competitions: 'Competition overview'
 };
 
+/** Root of the Arena routes: the game backend, or the page's own origin in the simulator build. */
+export const ARENA_API: string = (ARENA_SAME_ORIGIN ? window.location.origin : urlApp) + '/tactic-arena';
+
 @Injectable({ providedIn: 'root' })
 export class TacticArenaService {
-  private readonly base = urlApp + '/tactic-arena';
+  private readonly base = ARENA_API;
 
   constructor(private http: HttpClient) {}
 
+  baseline(): Observable<ArenaBaseline> {
+    return this.http.get<ArenaBaseline>(`${this.base}/baseline`);
+  }
+
+  rebuildBaseline(): Observable<ArenaBaseline> {
+    return this.http.post<ArenaBaseline>(`${this.base}/baseline/rebuild`, {});
+  }
+
+  /** 409 with `{error, baseline}` while the base world is not READY. */
   clubs(): Observable<{ leagues: ArenaLeague[] }> {
     return this.http.get<{ leagues: ArenaLeague[] }>(`${this.base}/clubs`);
   }
@@ -272,8 +304,11 @@ export class TacticArenaService {
     return this.http.get<ArenaSetup>(`${this.base}/clubs/${teamId}/setup`);
   }
 
-  start(name: string, teamId: number, tactic: ArenaTactic): Observable<{ id: number }> {
-    return this.http.post<{ id: number }>(`${this.base}/tests`, { name, teamId, tactic });
+  /** `owner` is sent only for anonymous users (signed-in users are the owner on the server). */
+  start(name: string, teamId: number, tactic: ArenaTactic, owner?: string): Observable<{ id: number }> {
+    const body: Record<string, unknown> = { name, teamId, tactic };
+    if (owner) body['owner'] = owner;
+    return this.http.post<{ id: number }>(`${this.base}/tests`, body);
   }
 
   leaderboard(): Observable<ArenaLeaderboard> {
@@ -304,7 +339,7 @@ export class TacticArenaService {
 }
 
 export function isActive(status: ArenaStatus | undefined | null): boolean {
-  return status === 'QUEUED' || status === 'RUNNING';
+  return status === 'QUEUED' || status === 'PREPARING' || status === 'RUNNING';
 }
 
 export function signed(value: number | null | undefined): string {

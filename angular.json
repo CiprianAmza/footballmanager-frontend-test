@@ -46,6 +46,28 @@
               ],
               "outputHashing": "all"
             },
+            "simulator": {
+              "outputPath": "dist/simulator",
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "8mb",
+                  "maximumError": "16mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "200kb",
+                  "maximumError": "400kb"
+                }
+              ],
+              "fileReplacements": [
+                {
+                  "replace": "src/app/tactic-arena/arena-env.ts",
+                  "with": "src/app/tactic-arena/arena-env.simulator.ts"
+                }
+              ],
+              "outputHashing": "all"
+            },
             "development": {
               "buildOptimizer": false,
               "optimization": false,
