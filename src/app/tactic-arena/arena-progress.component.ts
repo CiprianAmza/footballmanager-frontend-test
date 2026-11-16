@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { ArenaRun, ArenaTestDetail, RUN_KIND_LABELS, isActive } from './tactic-arena.service';
+import { ArenaRun, ArenaTestDetail, isActive, runRoleLabel } from './tactic-arena.service';
 
 /** Total and per-run progress of a test, with cancel. State comes from the backend, so it survives reloads. */
 @Component({
@@ -57,5 +57,5 @@ export class ArenaProgressComponent {
 
   get active(): boolean { return isActive(this.test?.status); }
 
-  label(run: ArenaRun): string { return RUN_KIND_LABELS[run.kind] || run.kind; }
+  label(run: ArenaRun): string { return runRoleLabel(run); }
 }

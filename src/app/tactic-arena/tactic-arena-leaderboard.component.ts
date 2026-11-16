@@ -4,7 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { EMPTY, Subscription, timer } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import {
-  ArenaLeaderboard, ArenaSplit, ArenaTestSummary, TacticArenaService, formationLabel, isActive, signed
+  ArenaLeaderboard, ArenaSplit, ArenaTestSummary, TacticArenaService, formationLabel, isActive, predictionLabel, referenceNames, signed
 } from './tactic-arena.service';
 
 type Split = 'overall' | 'home' | 'away';
@@ -76,7 +76,8 @@ type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'upl
               </td>
               <td class="ta-left">{{ formation(test.formation) }}</td>
               <td class="ta-left">{{ test.owner }}</td>
-              <td class="ta-left">{{ test.teamName || '—' }}</td>
+              <td class="ta-left">{{ test.teamName || '—' }}
+                <span class="ta-small" *ngIf="test.predictedPosition != null" title="Media prediction">· {{ prediction(test.predictedPosition, test.leagueSize) }}</span></td>
               <td class="ta-left">{{ test.leagueName || '—' }}</td>
               <ng-container *ngIf="row(test) as s; else emptyCells">
                 <td>{{ s.pld }}</td>
@@ -102,7 +103,8 @@ type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'upl
           </tbody>
         </table>
       </div>
-      <p class="ta-small">PTS = average league points per season / maximum possible, from the three reference clubs of the chosen club's league.</p>
+      <p class="ta-small">PTS = average league points per season / maximum possible, from the general simulations: the same tactic
+        on the fixed reference clubs{{ refs ? ' (' + refs + ')' : '' }}, so every test is comparable. The chosen club's own run (custom) is on the test page.</p>
     </div>
   `
 })
@@ -122,6 +124,9 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
   ];
   readonly signed = signed;
   readonly formation = formationLabel;
+  readonly prediction = predictionLabel;
+
+  get refs(): string | null { return referenceNames(this.board?.referenceTeams); }
   readonly active = (test: ArenaTestSummary) => isActive(test.status);
   private poll?: Subscription;
 

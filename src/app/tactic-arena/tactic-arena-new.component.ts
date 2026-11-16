@@ -11,7 +11,7 @@ import { ArenaProgressComponent } from './arena-progress.component';
 import { ArenaResultsComponent } from './arena-results.component';
 import { TacticArenaEditorComponent } from './tactic-arena-editor.component';
 import {
-  ArenaClub, ArenaLeague, ArenaSetup, ArenaTestDetail, TacticArenaService, isActive
+  ArenaClub, ArenaLeague, ArenaSetup, ArenaTestDetail, TacticArenaService, isActive, predictionLabel, referenceNames
 } from './tactic-arena.service';
 
 /**
@@ -31,8 +31,9 @@ import {
         <div>
           <span class="ta-eyebrow">Tactic Arena</span>
           <h1>Test a tactic</h1>
-          <p class="ta-sub">Four full seasons are simulated, each one season 1 of a freshly generated world: the chosen club,
-            then the same tactic on the highest, median and lowest reputation clubs of its league. No career is touched.</p>
+          <p class="ta-sub">Four full seasons are simulated, each one season 1 of a freshly generated world: the general
+            simulations play the same tactic on the fixed reference clubs{{ refs ? ' — ' + refs : '' }} — the same for every test,
+            so results are comparable — and the custom one plays it on the club you choose. No career is touched.</p>
         </div>
         <div class="ta-actions"><a class="ta-btn" routerLink="/tactic-arena">Leaderboard</a></div>
       </div>
@@ -78,14 +79,15 @@ import {
                     [class.active]="club.teamId === selectedTeamId" (click)="pickClub(club)">
               <span class="ta-swatch" [style.background]="club.color1 || '#555'"></span>
               <span>{{ club.name }}</span>
-              <span class="ta-rep">{{ club.reputation }}</span>
+              <span class="ta-rep" title="Reputation · media prediction (place / clubs)">{{ club.reputation }} · {{ prediction(club.predictedPosition, club.leagueSize) }}</span>
             </button>
           </div>
           <p class="ta-muted" *ngIf="!leagues.length && !clubsError && !worldMissing">Loading clubs…</p>
         </section>
 
         <section class="ta-card" *ngIf="selectedTeamId">
-          <h2>2 · Tactic and starting XI — {{ setup?.team?.name || selectedClubName }}</h2>
+          <h2>2 · Tactic and starting XI — {{ setup?.team?.name || selectedClubName }}
+            <span class="ta-small" *ngIf="setup">· reputation {{ setup.team.reputation }} · media prediction {{ prediction(setup.team.predictedPosition, setup.team.leagueSize) }}</span></h2>
           <p class="ta-small">The game's tactics page for this club. SAVE (or Start) only keeps the tactic for the test.</p>
           <p class="ta-error" *ngIf="setupError">{{ setupError }}</p>
           <p class="ta-muted" *ngIf="!setup && !setupError">Loading squad and tactic…</p>
@@ -147,6 +149,8 @@ export class TacticArenaNewComponent implements OnInit, OnDestroy {
               public auth: AuthService) {}
 
   ngOnInit(): void {
+    // The fixed reference clubs are listed with the leaderboard.
+    this.api.leaderboard().subscribe({ next: board => this.refs = referenceNames(board?.referenceTeams), error: () => {} });
     this.querySub = this.route.queryParamMap.subscribe(params => {
       const id = Number(params.get('test')) || null;
       // The first emission must always run: without ?test= the id equals the initial null.
@@ -167,6 +171,9 @@ export class TacticArenaNewComponent implements OnInit, OnDestroy {
   }
 
   get active(): boolean { return isActive(this.test?.status); }
+
+  readonly prediction = predictionLabel;
+  refs: string | null = null;
 
   /** Anonymous users name themselves; so does everyone in the simulator build (no game login there). */
   get showOwner(): boolean { return ARENA_SAME_ORIGIN || !this.auth.isLoggedIn; }

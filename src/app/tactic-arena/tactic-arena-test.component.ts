@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { EMPTY, Subscription, firstValueFrom, timer } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { ArenaCompetitionsPanelComponent } from './arena-competitions-panel.component';
@@ -10,8 +10,8 @@ import { ArenaSchedulePanelComponent } from './arena-schedule-panel.component';
 import { captureElement } from './dom-capture';
 import { TacticArenaEditorComponent } from './tactic-arena-editor.component';
 import {
-  ArenaImageKind, ArenaRun, ArenaSetup, ArenaTestDetail, IMAGE_KIND_LABELS, RUN_KIND_LABELS,
-  TacticArenaService, formationLabel, isActive
+  ArenaImageKind, ArenaRun, ArenaSetup, ArenaTestDetail, IMAGE_KIND_LABELS, runRoleLabel,
+  TacticArenaService, formationLabel, isActive, signed
 } from './tactic-arena.service';
 
 interface ShotState {
@@ -47,7 +47,10 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
             <span class="ta-eyebrow">Tactic Arena · test #{{ test.id }}</span>
             <h1>{{ test.name }}</h1>
             <p class="ta-sub">
-              {{ formation(test.formation) }} · {{ test.teamName }} · {{ test.leagueName }} · by {{ test.owner }}
+              {{ formation(test.formation) }} ·
+              <ng-container *ngIf="test.teamName; else generalTest">{{ test.teamName }} · {{ test.leagueName || '—' }}</ng-container>
+              <ng-template #generalTest>general test (reference clubs only)</ng-template>
+              · by {{ test.owner }}
               · season {{ test.season }}, days {{ test.startDay }}–{{ test.endDay }} · engine {{ test.engine }}
               · {{ test.createdAt | date:'dd.MM.yyyy HH:mm' }}
             </p>
@@ -62,31 +65,82 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
           <app-arena-results [results]="test.results" title="Results · reference clubs"
                              emptyText="Available when the three reference runs have finished."></app-arena-results>
         </section>
-        <section class="ta-card">
-          <app-arena-results [results]="test.chosen" [title]="'Chosen club · ' + test.teamName"
-                             emptyText="Available when the chosen club's run has finished."></app-arena-results>
-        </section>
 
-        <section class="ta-card" *ngFor="let run of test.runs; trackBy: trackRun">
-          <h2>{{ runLabel(run) }} · {{ run.teamName || 'chosen when the world is ready' }}
-            <span class="ta-small" *ngIf="run.teamName">(reputation {{ run.teamReputation }})</span>
-            <span class="ta-status" [ngClass]="run.status" *ngIf="run.status !== 'DONE'">{{ run.status }}</span></h2>
-          <p class="ta-error" *ngIf="run.message">{{ run.message }}</p>
-          <app-arena-results *ngIf="run.stats" [results]="run.stats"></app-arena-results>
-          <div class="ta-shots" *ngIf="run.status === 'DONE' && run.result">
-            <div class="ta-shot" *ngFor="let kind of kinds">
-              <figure *ngIf="shot(run, kind) as state">
-                <figcaption>{{ kindLabel(kind) }}
-                  <span class="ta-small" *ngIf="state.status === 'loading'"> · loading…</span>
-                  <span class="ta-small" *ngIf="state.status === 'queued' || state.status === 'capturing'"> · creating screenshot…</span>
-                  <span class="ta-small ta-error" *ngIf="state.status === 'failed'"> · screenshot failed ({{ state.error }}), live panel below</span>
-                </figcaption>
-                <img *ngIf="state.url" [src]="state.url" [alt]="kindLabel(kind) + ' · ' + run.teamName" (click)="lightbox = state.url!">
-                <div class="ta-live-panel" *ngIf="state.status === 'failed'">
-                  <ng-container *ngTemplateOutlet="panel; context: { run: run, kind: kind }"></ng-container>
-                </div>
-              </figure>
-            </div>
+        <section class="ta-card">
+          <h2>Tested clubs</h2>
+          <p class="ta-small">Click a club to see its season: results, tactic, schedule and competition overview.</p>
+          <div class="ta-table-wrap ta-runs-table">
+            <table class="ta-table">
+              <thead>
+                <tr>
+                  <th class="ta-left" aria-hidden="true"></th>
+                  <th class="ta-left">Club</th>
+                  <th class="ta-left">Role</th>
+                  <th>Reputation</th>
+                  <th title="Media prediction: predicted place / clubs in the league">Media prediction</th>
+                  <th title="Final league place / clubs in the league">Finished</th>
+                  <th>PLD</th><th>PTS</th><th>GD</th><th>GF</th><th>GA</th><th>xGF</th><th>xGA</th><th>xGD</th>
+                  <th class="ta-left">Cups</th>
+                </tr>
+              </thead>
+              <tbody>
+                <ng-container *ngFor="let run of test.runs; trackBy: trackRun">
+                  <tr class="ta-link-row ta-run-head" [class.ta-open]="expanded === run.index"
+                      tabindex="0" role="button" [attr.aria-expanded]="expanded === run.index"
+                      [attr.aria-controls]="'ta-run-' + run.index"
+                      (click)="toggle(run)" (keydown.enter)="toggle(run)" (keydown.space)="$event.preventDefault(); toggle(run)">
+                    <td class="ta-left ta-caret" aria-hidden="true">{{ expanded === run.index ? '▾' : '▸' }}</td>
+                    <td class="ta-left ta-strong">{{ run.teamName || 'Chosen when the world is ready' }}</td>
+                    <td class="ta-left">{{ runLabel(run) }}</td>
+                    <td>{{ run.teamName ? run.teamReputation : '—' }}</td>
+                    <td>{{ prediction(run) }}</td>
+                    <td [class.ta-pos]="finishDelta(run) > 0" [class.ta-neg]="finishDelta(run) < 0"
+                        [attr.title]="finishTitle(run)">{{ finished(run) }}</td>
+                    <ng-container *ngIf="run.status === 'DONE' && run.stats?.overall as s; else runPending">
+                      <td>{{ s.pld }}</td>
+                      <td class="ta-strong">{{ s.pts }} / {{ s.ptsMax }}</td>
+                      <td [class.ta-pos]="s.gd > 0" [class.ta-neg]="s.gd < 0">{{ signed(s.gd) }}</td>
+                      <td>{{ s.gf }}</td>
+                      <td>{{ s.ga }}</td>
+                      <td>{{ s.xgf ?? '—' }}</td>
+                      <td>{{ s.xga ?? '—' }}</td>
+                      <td [class.ta-pos]="(s.xgd ?? 0) > 0" [class.ta-neg]="(s.xgd ?? 0) < 0">{{ signed(s.xgd) }}</td>
+                    </ng-container>
+                    <ng-template #runPending>
+                      <td colspan="8">
+                        <span class="ta-status" [ngClass]="run.status">{{ run.status }}</span>
+                        <span class="ta-small" *ngIf="run.status !== 'DONE'"> {{ run.progress | number:'1.0-0' }}%</span>
+                      </td>
+                    </ng-template>
+                    <td class="ta-left ta-small ta-cups">{{ cups(run) }}</td>
+                  </tr>
+                  <tr class="ta-run-detail" *ngIf="expanded === run.index" [attr.id]="'ta-run-' + run.index">
+                    <td colspan="15" class="ta-left">
+                      <h3>{{ runLabel(run) }} · {{ run.teamName || 'chosen when the world is ready' }}
+                        <span class="ta-small" *ngIf="run.teamName">· reputation {{ run.teamReputation }} · media prediction {{ prediction(run) }}</span></h3>
+                      <p class="ta-error" *ngIf="run.message">{{ run.message }}</p>
+                      <app-arena-results *ngIf="run.stats" [results]="run.stats"></app-arena-results>
+                      <p class="ta-muted" *ngIf="!run.stats">Available when this run has finished ({{ run.progress | number:'1.0-0' }}%).</p>
+                      <div class="ta-shots" *ngIf="run.status === 'DONE' && run.result">
+                        <div class="ta-shot" *ngFor="let kind of kinds">
+                          <figure *ngIf="shot(run, kind) as state">
+                            <figcaption>{{ kindLabel(kind) }}
+                              <span class="ta-small" *ngIf="state.status === 'loading'"> · loading…</span>
+                              <span class="ta-small" *ngIf="state.status === 'queued' || state.status === 'capturing'"> · creating screenshot…</span>
+                              <span class="ta-small ta-error" *ngIf="state.status === 'failed'"> · screenshot failed ({{ state.error }}), live panel below</span>
+                            </figcaption>
+                            <img *ngIf="state.url" [src]="state.url" [alt]="kindLabel(kind) + ' · ' + run.teamName" (click)="lightbox = state.url!">
+                            <div class="ta-live-panel" *ngIf="state.status === 'failed'">
+                              <ng-container *ngTemplateOutlet="panel; context: { run: run, kind: kind }"></ng-container>
+                            </div>
+                          </figure>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </ng-container>
+              </tbody>
+            </table>
           </div>
         </section>
       </ng-container>
@@ -119,6 +173,9 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
   job: CaptureJob | null = null;
   readonly kinds = IMAGE_KINDS;
   readonly formation = formationLabel;
+  readonly signed = signed;
+  /** Index of the run whose details are open (kept in the URL as ?run=), or null. */
+  expanded: number | null = null;
 
   private shots = new Map<string, ShotState>();
   private setups = new Map<number, ArenaSetup>();
@@ -127,10 +184,16 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
   private destroyed = false;
   private poll?: Subscription;
   private routeSub?: Subscription;
+  private querySub?: Subscription;
 
-  constructor(private api: TacticArenaService, private route: ActivatedRoute, private changes: ChangeDetectorRef) {}
+  constructor(private api: TacticArenaService, private route: ActivatedRoute, private router: Router,
+              private changes: ChangeDetectorRef) {}
 
   ngOnInit(): void {
+    this.querySub = this.route.queryParamMap.subscribe(params => {
+      const run = params.get('run');
+      this.expanded = run !== null && run !== '' && !isNaN(Number(run)) ? Number(run) : null;
+    });
     this.routeSub = this.route.paramMap.subscribe(params => {
       const id = Number(params.get('id'));
       this.reset();
@@ -154,11 +217,70 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
     this.destroyed = true;
     this.reset();
     this.routeSub?.unsubscribe();
+    this.querySub?.unsubscribe();
   }
 
-  runLabel(run: ArenaRun): string { return RUN_KIND_LABELS[run.kind] || run.kind; }
+  runLabel(run: ArenaRun): string { return runRoleLabel(run); }
   kindLabel(kind: ArenaImageKind): string { return IMAGE_KIND_LABELS[kind]; }
   trackRun(_: number, run: ArenaRun): number { return run.id; }
+
+  /** Opens / closes a run's details; the open run is kept in the URL so a link leads to it. */
+  toggle(run: ArenaRun): void {
+    const next = this.expanded === run.index ? null : run.index;
+    this.expanded = next;
+    void this.router.navigate([], {
+      relativeTo: this.route, queryParams: { run: next }, queryParamsHandling: 'merge', replaceUrl: true
+    });
+  }
+
+  /** Media prediction "6 / 12", or "—". */
+  prediction(run: ArenaRun): string {
+    if (run.predictedPosition == null) return '—';
+    const size = this.leagueSize(run);
+    return size ? `${run.predictedPosition} / ${size}` : `${run.predictedPosition}`;
+  }
+
+  /** Final league place "3 / 12", or "—" until the run is done. */
+  finished(run: ArenaRun): string {
+    const place = this.finalPlace(run);
+    if (place == null) return '—';
+    const size = this.leagueSize(run);
+    return size ? `${place} / ${size}` : `${place}`;
+  }
+
+  /** > 0: finished above the prediction, < 0: below, 0: as predicted or unknown. */
+  finishDelta(run: ArenaRun): number {
+    const place = this.finalPlace(run);
+    if (place == null || run.predictedPosition == null) return 0;
+    return run.predictedPosition - place;
+  }
+
+  finishTitle(run: ArenaRun): string | null {
+    const delta = this.finishDelta(run);
+    if (!delta) return null;
+    return delta > 0 ? `${delta} place(s) above the media prediction` : `${-delta} place(s) below the media prediction`;
+  }
+
+  /** Cups in one short line: "Cup: Semi-final · Champions Cup 🏆". */
+  cups(run: ArenaRun): string {
+    const cups = (run.result?.competitions || []).filter(comp => !this.isLeague(comp));
+    if (!cups.length) return run.result ? '—' : '';
+    return cups.map(comp => comp.trophy ? `${comp.name} 🏆` : `${comp.name}: ${comp.stageReached || comp.statusLabel || '—'}`)
+      .join(' · ');
+  }
+
+  private leagueSize(run: ArenaRun): number | null {
+    return run.leagueSize ?? (run.result?.leagueTable?.length || null);
+  }
+
+  private finalPlace(run: ArenaRun): number | null {
+    const league = (run.result?.competitions || []).find(comp => this.isLeague(comp) && comp.position != null);
+    return league?.position ?? null;
+  }
+
+  private isLeague(comp: { kind?: string; typeId?: number }): boolean {
+    return comp.kind === 'LEAGUE' || comp.typeId === 1 || comp.typeId === 3;
+  }
 
   shot(run: ArenaRun, kind: ArenaImageKind): ShotState | undefined {
     return this.shots.get(this.key(run, kind));

@@ -100,3 +100,12 @@
   .ta-page { padding: 16px; }
   .ta-run-row { grid-template-columns: 1fr; }
 }
+
+/* Test page: tested clubs table with expandable runs. */
+.ta-runs-table { border-top: 1px solid var(--fm-border); border-radius: var(--fm-radius); }
+.ta-run-head:focus-visible td { outline: 2px solid var(--fm-accent); outline-offset: -2px; }
+.ta-run-head.ta-open td { background: var(--fm-bg-row); }
+.ta-caret { width: 18px; color: var(--fm-accent); font-weight: 800; }
+.ta-cups { white-space: normal !important; max-width: 320px; }
+.ta-run-detail > td { background: var(--fm-bg) !important; padding: 16px !important; white-space: normal !important; }
+.ta-run-detail h3 { margin: 0 0 10px; color: var(--fm-heading); font-size: 1.05em; }

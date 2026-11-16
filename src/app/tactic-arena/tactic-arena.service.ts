@@ -87,10 +87,13 @@ export interface ArenaTestSummary {
   name: string;
   formation: string;
   owner: string;
-  teamId: number;
-  teamName: string;
-  leagueId: number;
-  leagueName: string;
+  teamId: number | null;
+  teamName: string | null;
+  /** Media prediction: predicted league place / clubs in the league (null when unknown). */
+  predictedPosition?: number | null;
+  leagueSize?: number | null;
+  leagueId: number | null;
+  leagueName: string | null;
   season: number;
   startDay: number;
   endDay: number;
@@ -108,11 +111,22 @@ export interface ArenaLeaderboard {
   matchesPlayed: number;
   gitPush: ArenaGitPushStatus | null;
   baseline?: ArenaBaseline | null;
+  /** The fixed reference clubs every test is also run on ("general" part). */
+  referenceTeams?: ArenaReferenceTeam[] | null;
   tests: ArenaTestSummary[];
 }
 
+export interface ArenaReferenceTeam {
+  teamId: number;
+  name?: string | null;
+  teamName?: string | null;
+  reputation?: number | null;
+  predictedPosition?: number | null;
+  leagueSize?: number | null;
+}
+
 export type ArenaImageKind = 'tactic' | 'schedule' | 'competitions';
-export type ArenaRunKind = 'CHOSEN' | 'REFERENCE_TOP' | 'REFERENCE_MEDIAN' | 'REFERENCE_BOTTOM';
+export type ArenaRunKind = 'CHOSEN' | 'REFERENCE_TOP' | 'REFERENCE_MEDIAN' | 'REFERENCE_BOTTOM' | string;
 
 export interface ArenaMatch {
   day: number;
@@ -210,6 +224,11 @@ export interface ArenaRun {
   teamId: number;
   teamName: string;
   teamReputation: number;
+  /** Role label from the backend (e.g. "Reference"); falls back to the kind. */
+  label?: string | null;
+  /** Media prediction: predicted league place / clubs in the league (null when unknown). */
+  predictedPosition?: number | null;
+  leagueSize?: number | null;
   status: ArenaStatus;
   progress: number;
   currentDay: number;
@@ -236,6 +255,9 @@ export interface ArenaClub {
   teamId: number;
   name: string;
   reputation: number;
+  /** Media prediction: predicted league place / clubs in the league (null when unknown). */
+  predictedPosition?: number | null;
+  leagueSize?: number | null;
   color1?: string;
   color2?: string;
 }
@@ -256,6 +278,8 @@ export interface ArenaSetup {
     competitionId: number;
     competitionName: string;
     reputation: number;
+    predictedPosition?: number | null;
+    leagueSize?: number | null;
     color1?: string;
     color2?: string;
   };
@@ -265,12 +289,25 @@ export interface ArenaSetup {
   teamView: any;
 }
 
-export const RUN_KIND_LABELS: Record<ArenaRunKind, string> = {
+export const RUN_KIND_LABELS: Record<string, string> = {
   CHOSEN: 'Chosen club',
   REFERENCE_TOP: 'Reference · highest reputation',
   REFERENCE_MEDIAN: 'Reference · median reputation',
   REFERENCE_BOTTOM: 'Reference · lowest reputation'
 };
+
+/** The run's role: the backend `label` when present, else the label of its kind. */
+export function runRoleLabel(run: { kind: string; label?: string | null }): string {
+  if (run.label) return run.label;
+  return RUN_KIND_LABELS[run.kind] || (run.kind?.startsWith('REFERENCE') ? 'Reference' : run.kind);
+}
+
+/** "Inazuma Japan, Zeus and Desert Lion" from the leaderboard's reference clubs, or null. */
+export function referenceNames(teams: ArenaReferenceTeam[] | null | undefined): string | null {
+  const names = (teams || []).map(team => team.name || team.teamName).filter((name): name is string => !!name);
+  if (!names.length) return null;
+  return names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
 
 export const IMAGE_KIND_LABELS: Record<ArenaImageKind, string> = {
   tactic: 'Tactic',
@@ -345,6 +382,12 @@ export function isActive(status: ArenaStatus | undefined | null): boolean {
 export function signed(value: number | null | undefined): string {
   if (value === null || value === undefined) return '—';
   return value > 0 ? `+${value}` : `${value}`;
+}
+
+/** "6 / 12" from a media prediction, "—" when unknown. */
+export function predictionLabel(position: number | null | undefined, size: number | null | undefined): string {
+  if (position == null) return '—';
+  return size ? `${position} / ${size}` : `${position}`;
 }
 
 export function formationLabel(key: string | null | undefined): string {
