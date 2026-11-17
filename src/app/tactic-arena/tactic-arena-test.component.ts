@@ -12,7 +12,7 @@ import { captureElement } from './dom-capture';
 import { TacticArenaEditorComponent } from './tactic-arena-editor.component';
 import {
   ArenaImageKind, ArenaRun, ArenaSetup, ArenaTestDetail, IMAGE_KIND_LABELS, runRoleLabel,
-  ArenaResults, ENGINE_TITLE, TacticArenaService, engineLabel, formationLabel, isActive, isDiamondLeague, signed
+  ArenaResults, ENGINE_TITLE, TacticArenaService, XPTS_TITLE, engineLabel, ptsVsExpected, xptsText, formationLabel, isActive, isDiamondLeague, signed
 } from './tactic-arena.service';
 
 interface ShotState {
@@ -85,7 +85,7 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                   <th>Reputation</th>
                   <th title="Media prediction: predicted place / clubs in the league">Media prediction</th>
                   <th title="Final league place / clubs in the league">Finished</th>
-                  <th>PLD</th><th>PTS</th><th>GD</th><th>GF</th><th>GA</th><th>xGF</th><th>xGA</th><th>xGD</th>
+                  <th>PLD</th><th>PTS</th><th [attr.title]="xptsTitle">xPts</th><th>GD</th><th>GF</th><th>GA</th><th>xGF</th><th>xGA</th><th>xGD</th>
                   <th title="Diamond League points / maximum · final place / clubs">Diamond League</th>
                   <th class="ta-left" *ngIf="hasPlayerSummary" title="Top scorer · team average rating">Players</th>
                   <th class="ta-left">Cups</th>
@@ -106,7 +106,8 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                         [attr.title]="finishTitle(run)">{{ finished(run) }}</td>
                     <ng-container *ngIf="run.status === 'DONE' && run.stats?.overall as s; else runPending">
                       <td>{{ s.pld }}</td>
-                      <td class="ta-strong">{{ s.pts }} / {{ s.ptsMax }}</td>
+                      <td class="ta-strong" [attr.title]="vsExpected(s)">{{ s.pts }} / {{ s.ptsMax }}</td>
+                      <td>{{ xpts(s.xpts) }}</td>
                       <td [class.ta-pos]="s.gd > 0" [class.ta-neg]="s.gd < 0">{{ signed(s.gd) }}</td>
                       <td>{{ s.gf }}</td>
                       <td>{{ s.ga }}</td>
@@ -115,7 +116,7 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                       <td [class.ta-pos]="(s.xgd ?? 0) > 0" [class.ta-neg]="(s.xgd ?? 0) < 0">{{ signed(s.xgd) }}</td>
                     </ng-container>
                     <ng-template #runPending>
-                      <td colspan="8">
+                      <td colspan="9">
                         <span class="ta-status" [ngClass]="run.status">{{ run.status }}</span>
                         <span class="ta-small" *ngIf="run.status !== 'DONE'"> {{ run.progress | number:'1.0-0' }}%</span>
                       </td>
@@ -125,7 +126,7 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                     <td class="ta-left ta-small ta-cups">{{ cups(run) }}</td>
                   </tr>
                   <tr class="ta-run-detail" *ngIf="expanded === run.index" [attr.id]="'ta-run-' + run.index">
-                    <td [attr.colspan]="hasPlayerSummary ? 17 : 16" class="ta-left">
+                    <td [attr.colspan]="hasPlayerSummary ? 18 : 17" class="ta-left">
                       <h3>{{ runLabel(run) }} · {{ clubName(run) }}
                         <span class="ta-small" *ngIf="run.teamName">· reputation {{ run.teamReputation }} · media prediction {{ prediction(run) }}</span></h3>
                       <p class="ta-error" *ngIf="run.message">{{ run.message }}</p>
@@ -235,6 +236,9 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
 
   readonly engineText = engineLabel;
   readonly engineTitle = ENGINE_TITLE;
+  readonly xpts = xptsText;
+  readonly xptsTitle = XPTS_TITLE;
+  readonly vsExpected = ptsVsExpected;
 
   runLabel(run: ArenaRun): string { return runRoleLabel(run); }
 

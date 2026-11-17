@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
-import { ArenaResults, ArenaSplit, signed } from './tactic-arena.service';
+import { ArenaResults, ArenaSplit, XPTS_TITLE, ptsVsExpected, signed, xptsText } from './tactic-arena.service';
 
 /** The fm-arena results block: Overall / Home / Away rows and "Based on N test result(s)". */
 @Component({
@@ -14,7 +14,7 @@ import { ArenaResults, ArenaSplit, signed } from './tactic-arena.service';
       <table class="ta-table" *ngIf="results; else noResults">
         <thead>
           <tr>
-            <th class="ta-left"></th><th>PLD</th><th>PTS</th><th>GD</th><th>GF</th><th>GA</th>
+            <th class="ta-left"></th><th>PLD</th><th>PTS</th><th [attr.title]="xptsTitle">xPts</th><th>GD</th><th>GF</th><th>GA</th>
             <th>xGF</th><th>xGA</th><th>xGD</th>
           </tr>
         </thead>
@@ -22,7 +22,8 @@ import { ArenaResults, ArenaSplit, signed } from './tactic-arena.service';
           <tr *ngFor="let row of rows">
             <td class="ta-left ta-strong">{{ row.label }}</td>
             <td>{{ row.split.pld }}</td>
-            <td class="ta-strong">{{ row.split.pts }} / {{ row.split.ptsMax }}</td>
+            <td class="ta-strong" [attr.title]="vsExpected(row.split)">{{ row.split.pts }} / {{ row.split.ptsMax }}</td>
+            <td>{{ xpts(row.split.xpts) }}</td>
             <td [class.ta-pos]="row.split.gd > 0" [class.ta-neg]="row.split.gd < 0">{{ signed(row.split.gd) }}</td>
             <td>{{ row.split.gf }}</td>
             <td>{{ row.split.ga }}</td>
@@ -42,6 +43,9 @@ export class ArenaResultsComponent {
   @Input() title = '';
   @Input() emptyText = 'No results yet.';
   readonly signed = signed;
+  readonly xpts = xptsText;
+  readonly xptsTitle = XPTS_TITLE;
+  readonly vsExpected = ptsVsExpected;
 
   get rows(): { label: string; split: ArenaSplit }[] {
     if (!this.results) return [];

@@ -63,6 +63,7 @@ import { ArenaMatch, ArenaRunResult } from './tactic-arena.service';
                   <ng-container *ngIf="match.xgFor !== null && match.xgFor !== undefined">
                     {{ match.xgFor | number:'1.2-2' }} – {{ match.xgAgainst | number:'1.2-2' }}
                   </ng-container>
+                  <span class="arena-decided" *ngIf="match.xptsFor != null" title="Expected points of this match (0-3)">xPts {{ match.xptsFor | number:'1.2-2' }}</span>
                   <ng-container *ngIf="match.xgFor === null || match.xgFor === undefined">—</ng-container>
                 </td>
               </tr>

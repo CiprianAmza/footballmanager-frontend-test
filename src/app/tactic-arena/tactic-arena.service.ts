@@ -47,6 +47,8 @@ export interface ArenaSplit {
   w: number; d: number; l: number;
   gf: number; ga: number; gd: number;
   xgf: number | null; xga: number | null; xgd: number | null;
+  /** Expected points (3 × win chance + 1 × draw chance per match), same scale as `pts`; absent on an older backend. */
+  xpts?: number | null;
   /** Points as a percentage of the maximum (comparable when maxima differ). */
   ptsPct?: number | null;
 }
@@ -181,6 +183,21 @@ export function engineLabel(engine: string | null | undefined): string {
   return engine;
 }
 
+export const XPTS_TITLE = "Expected points: 3 × chance to win + 1 × chance to draw in every match, from the engine's own pre-match chances. Shows how good the tactic is without luck.";
+
+/** xPts with one decimal, "—" when absent. */
+export function xptsText(value: number | null | undefined): string {
+  return value == null ? '—' : Number(value).toFixed(1);
+}
+
+/** PTS cell title: "3.6 above expected" / "2.1 below expected", null when xPts is unknown. */
+export function ptsVsExpected(split: ArenaSplit | null | undefined): string | null {
+  if (!split || split.xpts == null || split.pts == null) return null;
+  const diff = split.pts - split.xpts;
+  if (Math.abs(diff) < 0.05) return 'As expected (xPts ' + xptsText(split.xpts) + ')';
+  return `${Math.abs(diff).toFixed(1)} ${diff > 0 ? 'above' : 'below'} expected (xPts ${xptsText(split.xpts)})`;
+}
+
 export const ENGINE_TITLE = "2D engine for the tested club's matches, classic engine for the rest";
 
 export interface ArenaLeaderboard {
@@ -269,6 +286,8 @@ export interface ArenaMatch {
   teamId1: number;
   teamId2: number;
   xgFor: number | null;
+  /** Expected points of this match for the club (0-3), absent on an older backend. */
+  xptsFor?: number | null;
   xgAgainst: number | null;
   inRun: boolean;
 }

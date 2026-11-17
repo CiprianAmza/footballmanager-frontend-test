@@ -5,8 +5,8 @@ import { EMPTY, Subscription, timer } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import {
   ARENA_SETTING_COLUMNS, ARENA_TIERS, ArenaClubResult, ArenaLeaderboard, ArenaReferenceTeam, ArenaSettingKey, ArenaSplit,
-  ArenaTestSummary, ArenaTier, ArenaTierResult, ENGINE_TITLE, TacticArenaService,
-  engineLabel, formationLabel, isActive, pointsPct, predictionLabel, referenceNames, signed
+  ArenaTestSummary, ArenaTier, ArenaTierResult, ENGINE_TITLE, TacticArenaService, XPTS_TITLE,
+  engineLabel, ptsVsExpected, xptsText, formationLabel, isActive, pointsPct, predictionLabel, referenceNames, signed
 } from './tactic-arena.service';
 
 type Split = 'overall' | 'home' | 'away';
@@ -15,7 +15,7 @@ type EngineFilter = 'all' | 'classic' | '2d';
 type View = 'results' | 'settings';
 /** A club that has CLUB tests, with how many. */
 interface ClubChoice { key: string; label: string; name: string; count: number; }
-type SortKey = 'pld' | 'pts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'leaguePos' | 'diamond' | 'dlPos' | 'uploaded';
+type SortKey = 'pld' | 'pts' | 'xpts' | 'gd' | 'gf' | 'ga' | 'xgf' | 'xga' | 'xgd' | 'leaguePos' | 'diamond' | 'dlPos' | 'uploaded';
 /** One club's entry of a test: a reference tier (General) or a Diamond League club. */
 type ClubEntry = (ArenaTierResult | ArenaClubResult) & { predictedPosition?: number | null };
 const TEAM_TIER: Record<string, ArenaTier> = { top: 'TOP', mid: 'MID', bottom: 'BOTTOM' };
@@ -152,6 +152,8 @@ interface TeamOption { key: string; label: string; }
               <th class="ta-left" *ngFor="let col of settingColumns">{{ col.label }}</th>
               <th class="sortable" [class.sorted]="sortKey === 'pts'" (click)="sortBy('pts')" title="League points as a share of the maximum">
                 Pts %{{ sortKey === 'pts' ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
+              <th class="sortable" [class.sorted]="sortKey === 'xpts'" (click)="sortBy('xpts')" [attr.title]="xptsTitle">
+                xPts{{ sortKey === 'xpts' ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
               <th class="sortable" [class.sorted]="sortKey === 'gd'" (click)="sortBy('gd')">
                 GD{{ sortKey === 'gd' ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
               <th *ngIf="cat === 'club' && showLeaguePos" class="sortable" [class.sorted]="sortKey === 'leaguePos'" (click)="sortBy('leaguePos')"
@@ -168,7 +170,7 @@ interface TeamOption { key: string; label: string; }
                           [selected]="filters[col.key] === value">{{ settingText(col.key, value) }}</option>
                 </select>
               </th>
-              <th></th><th></th>
+              <th></th><th></th><th></th>
               <th *ngIf="cat === 'club' && showLeaguePos"></th>
             </tr>
           </thead>
@@ -182,10 +184,11 @@ interface TeamOption { key: string; label: string; }
                   [attr.title]="isChanged(test, col.key) ? 'Default: ' + settingText(col.key, col.defaultValue) : null">
                 {{ settingText(col.key, settingValue(test, col.key)) }}</td>
               <ng-container *ngIf="row(test) as s; else emptySettingFigures">
-                <td class="ta-strong">{{ pct(s) !== null ? (pct(s) | number:'1.0-0') + '%' : '—' }}</td>
+                <td class="ta-strong" [attr.title]="vsExpected(s)">{{ pct(s) !== null ? (pct(s) | number:'1.0-0') + '%' : '—' }}</td>
+                <td>{{ xpts(s.xpts) }}</td>
                 <td [class.ta-pos]="s.gd > 0" [class.ta-neg]="s.gd < 0">{{ signed(s.gd) }}</td>
               </ng-container>
-              <ng-template #emptySettingFigures><td class="ta-muted">—</td><td class="ta-muted">—</td></ng-template>
+              <ng-template #emptySettingFigures><td class="ta-muted">—</td><td class="ta-muted">—</td><td class="ta-muted">—</td></ng-template>
               <td *ngIf="cat === 'club' && showLeaguePos" [class.ta-pos]="leagueDelta(test) > 0" [class.ta-neg]="leagueDelta(test) < 0"
                   [attr.title]="leaguePosTitle(test)">{{ leaguePosText(test) }}</td>
             </tr>
@@ -218,7 +221,7 @@ interface TeamOption { key: string; label: string; }
               <th class="ta-left">League</th>
               <th *ngIf="cat === 'club'" title="How many times season 1 was played with this club">Seasons</th>
               <th *ngFor="let column of numericColumns" class="sortable" [class.sorted]="sortKey === column.key"
-                  (click)="sortBy(column.key)">{{ column.label }}{{ sortKey === column.key ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
+                  [attr.title]="column.title || null" (click)="sortBy(column.key)">{{ column.label }}{{ sortKey === column.key ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
               <th *ngIf="showLeaguePos" class="sortable" [class.sorted]="sortKey === 'leaguePos'" (click)="sortBy('leaguePos')"
                   [attr.title]="cat === 'club' ? 'Mean final league place over the season runs' : team === 'all' ? 'Final league place of the top · mid-table · bottom club' : 'Final league place / clubs'">
                 League pos{{ sortKey === 'leaguePos' ? (sortDesc ? ' ▼' : ' ▲') : '' }}</th>
@@ -242,8 +245,9 @@ interface TeamOption { key: string; label: string; }
               <td *ngIf="cat === 'club'">{{ seasonsCount(test) ?? '—' }}</td>
               <ng-container *ngIf="row(test) as s; else emptyCells">
                 <td>{{ s.pld }}</td>
-                <td class="ta-strong">{{ s.pts }} / {{ s.ptsMax }}
+                <td class="ta-strong" [attr.title]="vsExpected(s)">{{ s.pts }} / {{ s.ptsMax }}
                   <span class="ta-small" *ngIf="pct(s) !== null">{{ pct(s) | number:'1.0-0' }}%</span></td>
+                <td>{{ xpts(s.xpts) }}</td>
                 <td [class.ta-pos]="s.gd > 0" [class.ta-neg]="s.gd < 0">{{ signed(s.gd) }}</td>
                 <td>{{ s.gf }}</td>
                 <td>{{ s.ga }}</td>
@@ -298,11 +302,15 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
   readonly settingColumns = ARENA_SETTING_COLUMNS;
   readonly engineTitle = ENGINE_TITLE;
   readonly engineText = engineLabel;
+  readonly xpts = xptsText;
+  readonly xptsTitle = XPTS_TITLE;
+  readonly vsExpected = ptsVsExpected;
   readonly tabs: { key: Split; label: string }[] = [
     { key: 'overall', label: 'Overall' }, { key: 'home', label: 'Home' }, { key: 'away', label: 'Away' }
   ];
-  readonly numericColumns: { key: SortKey; label: string }[] = [
-    { key: 'pld', label: 'PLD' }, { key: 'pts', label: 'PTS' }, { key: 'gd', label: 'GD' },
+  readonly numericColumns: { key: SortKey; label: string; title?: string }[] = [
+    { key: 'pld', label: 'PLD' }, { key: 'pts', label: 'PTS' }, { key: 'xpts', label: 'xPts', title: XPTS_TITLE },
+    { key: 'gd', label: 'GD' },
     { key: 'gf', label: 'GF' }, { key: 'ga', label: 'GA' }, { key: 'xgf', label: 'xGF' },
     { key: 'xga', label: 'xGA' }, { key: 'xgd', label: 'xGD' }
   ];
@@ -722,7 +730,7 @@ export class TacticArenaLeaderboardComponent implements OnInit, OnDestroy {
 
   get columnCount(): number {
     if (this.view === 'settings') {
-      return 3 + this.settingColumns.length + 2 + (this.cat === 'club' && this.showLeaguePos ? 1 : 0);
+      return 3 + this.settingColumns.length + 3 + (this.cat === 'club' && this.showLeaguePos ? 1 : 0);
     }
     return this.numericColumns.length + 7 + (this.cat === 'club' ? 1 : 0)
       + [this.showLeaguePos, this.showDiamond, this.showDlPos].filter(Boolean).length;
