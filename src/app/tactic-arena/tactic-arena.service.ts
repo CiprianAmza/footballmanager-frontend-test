@@ -121,11 +121,67 @@ export interface ArenaTestSummary {
   byTier?: Partial<Record<ArenaTier, ArenaTierResult | null>> | null;
   /** Diamond League figures of the category's clubs that play in it, or null. */
   diamond?: ArenaDiamondResults | null;
-  /** GENERAL (3 fixed reference clubs, default) or DIAMOND (the 8 Diamond League clubs). */
+  /** GENERAL (3 fixed reference clubs, default), DIAMOND (the 8 Diamond League clubs) or CLUB (one club, season repeated). */
   category?: ArenaCategory | null;
-  /** DIAMOND: each club's own run (results null while it is not done). */
+  /** DIAMOND: each club's own run; CLUB: each season run, in order (results null while it is not done). */
   byClub?: ArenaClubResult[] | null;
+  /** CLUB: how many times the season is played (null for the other categories). */
+  repeats?: number | null;
+  /** Formation and the 15 team instructions of the tested tactic (absent on an older backend). */
+  settings?: ArenaTacticSettings | null;
 }
+
+/** The formation and the 15 team instructions, flat (TestSummary.settings). */
+export interface ArenaTacticSettings {
+  tactic: string;
+  mentality: string;
+  inPossession: string;
+  passingType: string;
+  tempo: string;
+  timeWasting: string;
+  defensiveLine: string;
+  pressing: string;
+  width: string;
+  dribbling: string;
+  foulFrequency: string;
+  foulHardness: string;
+  tempoFragmentation: string;
+  widePlay: string;
+  transition: string;
+  recovery: string;
+}
+
+export type ArenaSettingKey = keyof ArenaTacticSettings;
+
+/** Leaderboard columns of the "Tactic settings" view, in order, with the game's default values. */
+export const ARENA_SETTING_COLUMNS: { key: ArenaSettingKey; label: string; defaultValue: string }[] = [
+  { key: 'tactic', label: 'Formation', defaultValue: '442' },
+  { key: 'mentality', label: 'Mentality', defaultValue: 'Balanced' },
+  { key: 'inPossession', label: 'Possession', defaultValue: 'Standard' },
+  { key: 'passingType', label: 'Passing', defaultValue: 'Normal' },
+  { key: 'tempo', label: 'Tempo', defaultValue: 'Standard' },
+  { key: 'timeWasting', label: 'Time wasting', defaultValue: 'Sometimes' },
+  { key: 'defensiveLine', label: 'Def line', defaultValue: 'Standard' },
+  { key: 'pressing', label: 'Pressing', defaultValue: 'Normal' },
+  { key: 'width', label: 'Width', defaultValue: 'Balanced' },
+  { key: 'dribbling', label: 'Dribbling', defaultValue: 'Standard' },
+  { key: 'foulFrequency', label: 'Foul freq', defaultValue: 'Normal' },
+  { key: 'foulHardness', label: 'Foul hardness', defaultValue: 'Medium' },
+  { key: 'tempoFragmentation', label: 'Fragmentation', defaultValue: 'Normal' },
+  { key: 'widePlay', label: 'Wide play', defaultValue: 'Shoot' },
+  { key: 'transition', label: 'Transition', defaultValue: 'Balanced' },
+  { key: 'recovery', label: 'Recovery', defaultValue: 'Standard' }
+];
+
+/** "2D" for the 2D engine (the tested club's matches), "Classic" otherwise. */
+export function engineLabel(engine: string | null | undefined): string {
+  if (!engine) return '—';
+  if (engine === 'classic') return 'Classic';
+  if (engine.toLowerCase().startsWith('2d')) return '2D';
+  return engine;
+}
+
+export const ENGINE_TITLE = "2D engine for the tested club's matches, classic engine for the rest";
 
 export interface ArenaLeaderboard {
   testsCount: number;
@@ -141,7 +197,7 @@ export interface ArenaLeaderboard {
 
 /** Which fixed reference club a run is: top, mid-table or bottom club. */
 export type ArenaTier = 'TOP' | 'MID' | 'BOTTOM';
-export type ArenaCategory = 'GENERAL' | 'DIAMOND';
+export type ArenaCategory = 'GENERAL' | 'DIAMOND' | 'CLUB';
 
 export interface ArenaClubResult {
   teamId: number;
@@ -149,6 +205,8 @@ export interface ArenaClubResult {
   predictedPosition?: number | null;
   leagueSize?: number | null;
   leagueName?: string | null;
+  /** The entry's role, e.g. "Season run 1" in the CLUB category. */
+  label?: string | null;
   results: { overall: ArenaSplit; home: ArenaSplit; away: ArenaSplit } | null;
   diamond?: ArenaDiamondResults | null;
   /** Final place in the club's own league and the league's size. */
@@ -179,7 +237,7 @@ export interface ArenaReferenceTeam {
 }
 
 export type ArenaImageKind = 'tactic' | 'schedule' | 'competitions';
-export type ArenaRunKind = 'CHOSEN' | 'REFERENCE_TOP' | 'REFERENCE_MEDIAN' | 'REFERENCE_BOTTOM' | string;
+export type ArenaRunKind = 'CHOSEN' | 'REFERENCE_TOP' | 'REFERENCE_MEDIAN' | 'REFERENCE_BOTTOM' | 'REPEAT' | string;
 
 export interface ArenaMatch {
   day: number;
@@ -399,8 +457,9 @@ export const RUN_KIND_LABELS: Record<string, string> = {
 };
 
 /** The run's role: the backend `label` when present, else the label of its kind. */
-export function runRoleLabel(run: { kind: string; label?: string | null }): string {
+export function runRoleLabel(run: { kind: string; label?: string | null; index?: number | null }): string {
   if (run.label) return run.label;
+  if (run.kind === 'REPEAT') return run.index != null ? `Season run ${run.index}` : 'Season run';
   return RUN_KIND_LABELS[run.kind] || (run.kind?.startsWith('REFERENCE') ? 'Reference' : run.kind);
 }
 

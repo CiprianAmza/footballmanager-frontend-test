@@ -33,7 +33,7 @@ import { ArenaRun, ArenaTestDetail, isActive, runRoleLabel } from './tactic-aren
 
       <div class="ta-runs" style="margin-top: 14px">
         <div class="ta-run-row" *ngFor="let run of test.runs">
-          <div><strong>{{ run.teamName || 'Chosen when the world is ready' }}</strong><div class="ta-small">{{ label(run) }}</div></div>
+          <div><strong>{{ run.teamName || (run.kind === 'REPEAT' || test.category === 'CLUB' ? (test.teamName || '—') : 'Chosen when the world is ready') }}</strong><div class="ta-small">{{ label(run) }}</div></div>
           <div><span class="ta-status" [ngClass]="run.status">{{ run.status }}</span></div>
           <div>
             <div class="ta-bar" [class.done]="run.status === 'DONE'" [class.failed]="run.status === 'FAILED'">

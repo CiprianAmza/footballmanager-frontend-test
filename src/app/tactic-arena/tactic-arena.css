@@ -126,6 +126,29 @@
 .ta-team-pick select { background: var(--fm-bg-input); color: var(--fm-text); border: 1px solid var(--fm-border);
   border-radius: var(--fm-radius); padding: 6px 8px; max-width: 360px; }
 
+/* Leaderboard: column-set switch, engine / club pickers, settings view and its filters. */
+.ta-page { min-width: 0; }
+.ta-table-wrap { max-width: 100%; }
+.ta-bar-controls { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.ta-seg { display: inline-flex; border: 1px solid var(--fm-border); border-radius: var(--fm-radius); overflow: hidden; margin-bottom: 6px; }
+.ta-seg button { background: var(--fm-bg-row); color: var(--fm-text-dim); border: 0; padding: 6px 12px; font-weight: 700; cursor: pointer; font-size: 0.85em; }
+.ta-seg button + button { border-left: 1px solid var(--fm-border); }
+.ta-seg button.active { background: var(--fm-bg-elevated); color: var(--fm-accent); }
+.ta-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 10px; background: var(--fm-bg-elevated);
+  border: 1px solid var(--fm-border); border-bottom: 0; }
+.ta-chip { background: var(--fm-bg-row); color: var(--fm-heading); border: 1px solid var(--fm-accent); border-radius: 999px;
+  padding: 3px 10px; font-size: 0.8em; font-weight: 700; cursor: pointer; }
+.ta-chip:hover { background: var(--fm-bg-row-hover); }
+.ta-chip span { color: var(--fm-accent); margin-left: 4px; }
+.ta-chip-clear { background: transparent; border: 0; color: var(--fm-info); font-size: 0.8em; font-weight: 700; cursor: pointer; padding: 3px 6px; }
+.ta-chip-clear:hover { text-decoration: underline; }
+.ta-filter-row th { padding: 4px 6px; text-transform: none; letter-spacing: 0; }
+.ta-filter-row select { background: var(--fm-bg-input); color: var(--fm-text); border: 1px solid var(--fm-border);
+  border-radius: var(--fm-radius); padding: 2px 4px; font-size: 0.95em; max-width: 120px; }
+.ta-filter-row select.active { border-color: var(--fm-accent); color: var(--fm-accent); font-weight: 700; }
+.ta-settings-table td.ta-set-default { color: var(--fm-text-faded); }
+.ta-settings-table td.ta-set-changed { color: var(--fm-accent); font-weight: 800; }
+
 /* Launch page: simulation category switch. */
 .ta-cat-switch { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
 .ta-cat-switch button { flex: 1 1 260px; text-align: left; background: var(--fm-bg-row); color: var(--fm-text);

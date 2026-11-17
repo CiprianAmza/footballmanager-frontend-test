@@ -12,7 +12,7 @@ import { captureElement } from './dom-capture';
 import { TacticArenaEditorComponent } from './tactic-arena-editor.component';
 import {
   ArenaImageKind, ArenaRun, ArenaSetup, ArenaTestDetail, IMAGE_KIND_LABELS, runRoleLabel,
-  ArenaResults, TacticArenaService, formationLabel, isActive, isDiamondLeague, signed
+  ArenaResults, ENGINE_TITLE, TacticArenaService, engineLabel, formationLabel, isActive, isDiamondLeague, signed
 } from './tactic-arena.service';
 
 interface ShotState {
@@ -52,7 +52,9 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
               <ng-container *ngIf="test.teamName; else generalTest">{{ test.teamName }} · {{ test.leagueName || '—' }}</ng-container>
               <ng-template #generalTest>general test (reference clubs only)</ng-template>
               · by {{ test.owner }}
-              · season {{ test.season }}, days {{ test.startDay }}–{{ test.endDay }} · engine {{ test.engine }}
+              · season {{ test.season }}<ng-container *ngIf="isClub"> played {{ seasons }} time(s)</ng-container>,
+              days {{ test.startDay }}–{{ test.endDay }}
+              · <span [attr.title]="engineTitle">engine <strong>{{ engineText(test.engine) }}</strong></span>
               · {{ test.createdAt | date:'dd.MM.yyyy HH:mm' }}
             </p>
           </div>
@@ -63,21 +65,23 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                             (cancel)="cancelTest()"></app-arena-progress>
 
         <section class="ta-card">
-          <app-arena-results [results]="test.results"
-                             [title]="test.category === 'DIAMOND' ? 'Results · Diamond League clubs' : 'Results · reference clubs'"
-                             emptyText="Available when all reference runs have finished."></app-arena-results>
+          <app-arena-results [results]="test.results" [title]="resultsTitle" [emptyText]="resultsEmptyText"></app-arena-results>
+          <p class="ta-small" *ngIf="isClub && test.results">The mean of {{ test.results.basedOn || seasons }} season(s) of
+            {{ test.teamName || 'the club' }}: season 1 played again from the same start each time.</p>
         </section>
 
         <section class="ta-card">
-          <h2>Tested clubs</h2>
-          <p class="ta-small">Click a club to see its season: results, tactic, schedule and competition overview.</p>
+          <h2>{{ isClub ? 'Season runs' : 'Tested clubs' }}</h2>
+          <p class="ta-small" *ngIf="!isClub">Click a club to see its season: results, tactic, schedule and competition overview.</p>
+          <p class="ta-small" *ngIf="isClub">Every row is one run of season 1 with {{ test.teamName || 'the club' }}. Click a run to see
+            its season: results, tactic, schedule and competition overview.</p>
           <div class="ta-table-wrap ta-runs-table">
             <table class="ta-table">
               <thead>
                 <tr>
                   <th class="ta-left" aria-hidden="true"></th>
                   <th class="ta-left">Club</th>
-                  <th class="ta-left">Role</th>
+                  <th class="ta-left">{{ isClub ? 'Run' : 'Role' }}</th>
                   <th>Reputation</th>
                   <th title="Media prediction: predicted place / clubs in the league">Media prediction</th>
                   <th title="Final league place / clubs in the league">Finished</th>
@@ -94,7 +98,7 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                       [attr.aria-controls]="'ta-run-' + run.index"
                       (click)="toggle(run)" (keydown.enter)="toggle(run)" (keydown.space)="$event.preventDefault(); toggle(run)">
                     <td class="ta-left ta-caret" aria-hidden="true">{{ expanded === run.index ? '▾' : '▸' }}</td>
-                    <td class="ta-left ta-strong">{{ run.teamName || 'Chosen when the world is ready' }}</td>
+                    <td class="ta-left ta-strong">{{ clubName(run) }}</td>
                     <td class="ta-left">{{ runLabel(run) }}</td>
                     <td>{{ run.teamName ? run.teamReputation : '—' }}</td>
                     <td>{{ prediction(run) }}</td>
@@ -122,7 +126,7 @@ const IMAGE_KINDS: ArenaImageKind[] = ['tactic', 'schedule', 'competitions'];
                   </tr>
                   <tr class="ta-run-detail" *ngIf="expanded === run.index" [attr.id]="'ta-run-' + run.index">
                     <td [attr.colspan]="hasPlayerSummary ? 17 : 16" class="ta-left">
-                      <h3>{{ runLabel(run) }} · {{ run.teamName || 'chosen when the world is ready' }}
+                      <h3>{{ runLabel(run) }} · {{ clubName(run) }}
                         <span class="ta-small" *ngIf="run.teamName">· reputation {{ run.teamReputation }} · media prediction {{ prediction(run) }}</span></h3>
                       <p class="ta-error" *ngIf="run.message">{{ run.message }}</p>
                       <app-arena-results *ngIf="run.stats" [results]="run.stats" title="League"></app-arena-results>
@@ -229,7 +233,33 @@ export class TacticArenaTestComponent implements OnInit, OnDestroy {
     this.querySub?.unsubscribe();
   }
 
+  readonly engineText = engineLabel;
+  readonly engineTitle = ENGINE_TITLE;
+
   runLabel(run: ArenaRun): string { return runRoleLabel(run); }
+
+  /** CLUB: one club, season 1 repeated; its runs are season runs, not reference / chosen clubs. */
+  get isClub(): boolean { return this.test?.category === 'CLUB'; }
+
+  get seasons(): number {
+    return this.test?.repeats ?? this.test?.runs?.length ?? 0;
+  }
+
+  get resultsTitle(): string {
+    if (this.isClub) return `Results · mean of ${this.seasons} season(s) of ${this.test?.teamName || 'the club'}`;
+    return this.test?.category === 'DIAMOND' ? 'Results · Diamond League clubs' : 'Results · reference clubs';
+  }
+
+  get resultsEmptyText(): string {
+    return this.isClub ? 'Available when all season runs have finished.' : 'Available when all reference runs have finished.';
+  }
+
+  /** The run's club; a season run falls back to the test's club. */
+  clubName(run: ArenaRun): string {
+    if (run.teamName) return run.teamName;
+    if (this.isClub || run.kind === 'REPEAT') return this.test?.teamName || '—';
+    return 'Chosen when the world is ready';
+  }
   kindLabel(kind: ArenaImageKind): string { return IMAGE_KIND_LABELS[kind]; }
   trackRun(_: number, run: ArenaRun): number { return run.id; }
 
